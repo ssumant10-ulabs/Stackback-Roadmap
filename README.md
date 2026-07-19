@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# StackBack Roadmap
 
-## Getting Started
+Internal team roadmap tool for StackBack. Milestones, owners, and progress across the team, with multiple product roadmaps.
 
-First, run the development server:
+Built with **Next.js 16 (App Router) · React 19 · TypeScript**. Fully client-side today (state persists in the browser) with a clean data seam so a shared backend + auth can be added next.
+
+## Run locally
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev      # http://localhost:3000
+npm run build    # production build
+npm start        # serve the production build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Requires Node 18+ (built and tested on Node 24).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Views
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Timeline** — the whole roadmap. Two layouts:
+  - **Swimlanes** (default): teams as rows × priority waves as columns. A task shared by two teams shows under both, each with only that team's subtasks.
+  - **By wave**: a vertical Now → Later flow grouped by team.
+- **Overview** — the anyone-can-read screen. Toggle **Now / Next / Later** ↔ **By status**; each milestone has a collapsible, plain-language breakdown grouped by team.
+- **Teams & People** — toggle **By team** (each team's milestones + the exact subtasks assigned to it), **By person** (a shareable per-person worklist with progress), and **Load** (capacity bars).
+- **Board** — the editing hub. Drag by the grip to move/nest, ▲▼ to reorder, click status rings to cycle, add tasks and subtasks inline, assign owners, delete.
 
-## Learn More
+Plus: a global **milestone + task progress** bar, a **Filter** by team/person, **Settings** to manage multiple product roadmaps (create / rename / delete / switch), and a light / dark / auto **theme** toggle.
 
-To learn more about Next.js, take a look at the following resources:
+## Project structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+app/
+  layout.tsx, page.tsx, globals.css   # shell + full stylesheet (brand tokens, light/dark)
+lib/
+  types.ts        # domain types (Node tree, Roadmap, Assignee, ...)
+  constants.ts    # roster, teams, priorities, plain-language label maps
+  seed.ts         # the seeded StackBack roadmap
+  derive.ts       # pure helpers (subtreeCounts, effStatus, aggProgress, ...)
+  teams.ts        # roster-bound helpers (teamOf, teamSet, personWork, teamWork, ...)
+  store.ts        # external store (useSyncExternalStore) + all mutations + persistence
+components/
+  RoadmapApp.tsx  # root: hydration gate, popovers/modals, view routing
+  Header, HeroMetrics, ViewRow, FilterPopover, SettingsModal, AddTaskModal,
+  AssigneePopover, RosterPicker, bits, icons
+  views/          # Timeline, Overview, TeamsPeople, Board
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Data & persistence
 
-## Deploy on Vercel
+Today the roadmap tree lives in `localStorage` (`stackback_roadmaps_v3`), managed by `lib/store.ts`. All views read from the same store, so an edit on the Board reflects everywhere.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Next: shared backend + auth
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Planned migration (see `Settings → Account`):
+
+1. **Supabase** for Postgres + Auth + Realtime (matches StackBack's existing Supabase usage).
+2. Replace the `localStorage` calls in `lib/store.ts` with a data layer that reads/writes Supabase; the store's shape (`roadmaps → nodes(tree) → assignees`) maps directly to tables.
+3. Scope roadmaps to a workspace/account; enable sharing.
+4. Deploy on Vercel.
+
+Copy `.env.example` to `.env.local` and fill in credentials when wiring Supabase.
