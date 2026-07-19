@@ -18,6 +18,8 @@ interface BoardCtx {
   onDrop: (e: DragEvent, parent: string, before: string, priority: number | null) => void;
   onNestOver: (e: DragEvent, id: string) => void;
   onNestDrop: (e: DragEvent, id: string) => void;
+  onColOver: (e: DragEvent) => void;
+  onColDrop: (e: DragEvent, priority: number | null) => void;
 }
 const BoardContext = createContext<BoardCtx | null>(null);
 const useBoard = () => useContext(BoardContext)!;
@@ -79,7 +81,8 @@ function Subnode({ node, up, down }: { node: Node; up: boolean; down: boolean })
           <span className={`status-ring ${node.status}`}>{node.status === "done" && <IcCheck />}</span>
         </button>
         <div className="sn-main">
-          <div className="sn-line"><span className="sn-text">{node.title}</span>{hasKids && <span className="sn-count">{counts.done}/{counts.total}</span>}</div>
+          <div className="sn-line"><span className="sn-text" draggable title="Drag to move" onDragStart={(e) => b.start(e, node.id)} onDragEnd={b.end}>{node.title}</span>{hasKids && <span className="sn-count">{counts.done}/{counts.total}</span>}</div>
+          {hasKids && <div className="sn-progress"><span style={{ width: (counts.total ? Math.round((counts.done / counts.total) * 100) : 0) + "%" }} /></div>}
           <div className="sn-line"><span className="sn-assignees"><Assignees node={node} small /></span>{node.eta && <span className="eta-badge">{node.eta}</span>}</div>
         </div>
         <div className="sn-tools">
@@ -105,8 +108,8 @@ function Card({ task }: { task: Node }) {
   return (
     <div className={`card${b.dragId === task.id ? " dragging-src" : ""}`} data-node-id={task.id}>
       <div className={`card-head nest-target${b.overNest === task.id ? " nest-over" : ""}`} onDragOver={(e) => b.onNestOver(e, task.id)} onDrop={(e) => b.onNestDrop(e, task.id)}>
-        <div className="card-head-left">
-          <span className="drag-handle" draggable title="Drag to move" onDragStart={(e) => b.start(e, task.id)} onDragEnd={b.end}><IcGrip /></span>
+        <div className="card-head-left" draggable title="Drag to move" onDragStart={(e) => b.start(e, task.id)} onDragEnd={b.end}>
+          <span className="drag-handle"><IcGrip /></span>
           <span className="card-title">{task.title}</span>
         </div>
         <div className="card-tools">
@@ -133,8 +136,6 @@ function Card({ task }: { task: Node }) {
 
 export function Board() {
   const s = useStore();
-  const h = s.helpers;
-  const f = s.ui.filter;
   const [dragId, setDragId] = useState<string | null>(null);
   const [overDrop, setOverDrop] = useState<string | null>(null);
   const [overNest, setOverNest] = useState<string | null>(null);
@@ -153,22 +154,24 @@ export function Board() {
       document.body.classList.add("is-dragging");
     },
     end,
-    onDropOver(e, key) { if (!dragId) return; e.preventDefault(); e.dataTransfer.dropEffect = "move"; setOverDrop(key); setOverNest(null); },
-    onDrop(e, parent, before, priority) { if (!dragId) return; e.preventDefault(); s.moveNode(dragId, parent, before, priority); end(); },
-    onNestOver(e, id) { if (!dragId || id === dragId || s.isDesc(dragId, id)) return; e.preventDefault(); e.dataTransfer.dropEffect = "move"; setOverNest(id); setOverDrop(null); },
-    onNestDrop(e, id) { if (dragId && id !== dragId && !s.isDesc(dragId, id)) { e.preventDefault(); s.nestNode(dragId, id); } end(); },
+    onDropOver(e, key) { if (!dragId) return; e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "move"; setOverDrop(key); setOverNest(null); },
+    onDrop(e, parent, before, priority) { if (!dragId) return; e.preventDefault(); e.stopPropagation(); s.moveNode(dragId, parent, before, priority); end(); },
+    onNestOver(e, id) { if (!dragId || id === dragId || s.isDesc(dragId, id)) return; e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "move"; setOverNest(id); setOverDrop(null); },
+    onNestDrop(e, id) { if (dragId && id !== dragId && !s.isDesc(dragId, id)) { e.preventDefault(); e.stopPropagation(); s.nestNode(dragId, id); } end(); },
+    onColOver(e) { if (dragId) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; } },
+    onColDrop(e, priority) { if (dragId) { e.preventDefault(); s.moveNode(dragId, "root", "", priority); end(); } },
   };
 
   return (
     <BoardContext.Provider value={ctx}>
       <div className="board">
         {PRIORITIES.map((w) => {
-          const tasks = s.tasks.filter((t) => (t.priority || null) === w.p && h.matchFilter(t, f));
+          const tasks = s.viewTasks.filter((t) => (t.priority || null) === w.p);
           return (
             <div className="column" key={String(w.p)}>
               <div className="column-head"><span className="word">{w.word}</span><span className="pr">{w.p ? `P${w.p}` : "Unscheduled"}</span><span className="n">{tasks.length}</span></div>
               {tasks.length ? (
-                <div className="column-list">
+                <div className="column-list" onDragOver={ctx.onColOver} onDrop={(e) => ctx.onColDrop(e, w.p)}>
                   <DropLine parent="root" priority={w.p} before={tasks.length ? tasks[0].id : ""} />
                   {tasks.map((t, i) => (
                     <Fragment key={t.id}>
@@ -178,7 +181,7 @@ export function Board() {
                   ))}
                 </div>
               ) : (
-                <div className="column-list"><DropLine parent="root" priority={w.p} before="" /><div className="column-empty">{f ? "No matching tasks" : "Nothing here yet"}</div></div>
+                <div className="column-list" onDragOver={ctx.onColOver} onDrop={(e) => ctx.onColDrop(e, w.p)}><DropLine parent="root" priority={w.p} before="" /><div className="column-empty">{s.ui.filter ? "No matching tasks" : "Nothing here yet"}</div></div>
               )}
             </div>
           );

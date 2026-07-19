@@ -45,11 +45,12 @@ function ByTeam() {
   const s = useStore();
   const h = s.helpers;
   const f = s.ui.filter;
+  const teamsToShow = f && f.type === "team" ? [f.name] : TEAM_ORDER;
   return (
     <div className="group-grid cols-team">
-      {TEAM_ORDER.map((team) => {
+      {teamsToShow.map((team) => {
         const v = h.teamVar(team);
-        const w = teamWork(s.tasks, team, h, f);
+        const w = teamWork(s.viewTasks, team, h, null);
         return (
           <div key={team} className={`group-col pp-panel${w.total ? "" : " dim"}`} style={{ "--gc": `var(--team-${v})` } as CSSProperties}>
             <div className="gc-head">
@@ -78,10 +79,12 @@ function ByPerson() {
   const h = s.helpers;
   const f = s.ui.filter;
   const seen: Record<string, 1> = {};
-  const people: { name: string; team: string | null }[] = [];
+  let people: { name: string; team: string | null }[] = [];
   TEAM_ORDER.forEach((tm) => (s.data.roster[tm] || []).forEach((n) => { if (!seen[n]) { seen[n] = 1; people.push({ name: n, team: tm }); } }));
   const walk = (nodes: Node[]) => nodes.forEach((n) => { (n.assignees || []).forEach((a) => { if (!a.isTeam && !seen[a.name]) { seen[a.name] = 1; people.push({ name: a.name, team: h.teamOf(a.name) }); } }); walk(n.children || []); });
   walk(s.tasks);
+  if (f && f.type === "person") people = people.filter((p) => p.name === f.name);
+  else if (f && f.type === "team") people = people.filter((p) => (s.data.roster[f.name] || []).indexOf(p.name) >= 0);
   const scrollTo = (name: string) => {
     const sel = window.CSS && CSS.escape ? CSS.escape(name) : name;
     const el = document.querySelector(`[data-scroll="${sel}"]`);
@@ -91,7 +94,7 @@ function ByPerson() {
     <>
       <div className="people-overview">
         {people.map((pp) => {
-          const w = personWork(s.tasks, pp.name, h, f);
+          const w = personWork(s.viewTasks, pp.name, h, null);
           const v = h.teamVar(pp.team);
           return (
             <button key={pp.name} type="button" className={`po-chip${w.total ? "" : " empty"}`} onClick={() => scrollTo(pp.name)}>
@@ -108,7 +111,7 @@ function ByPerson() {
       <div className="section-label">Everyone&apos;s tasks</div>
       <div className="group-grid cols-person">
         {people.map((pp) => {
-          const w = personWork(s.tasks, pp.name, h, f);
+          const w = personWork(s.viewTasks, pp.name, h, null);
           const v = h.teamVar(pp.team);
           return (
             <div key={pp.name} className={`group-col pp-panel${w.total ? "" : " dim"}`} data-scroll={pp.name} style={{ "--gc": `var(--team-${v})` } as CSSProperties}>
@@ -146,7 +149,7 @@ function Load() {
     o[key].total++;
     if (st === "done") o[key].done++; else if (st === "progress") o[key].prog++; else o[key].plan++;
   };
-  walkAll(s.tasks, (n) => {
+  walkAll(s.viewTasks, (n) => {
     (n.assignees || []).forEach((a) => {
       if (a.isTeam) { if (TEAM_VAR[a.name]) bump(teams, a.name, n.status); }
       else { bump(people, a.name, n.status); const tm = h.teamOf(a.name); if (tm) bump(teams, tm, n.status); }

@@ -3,7 +3,7 @@ import type { Assignee, Filter, Node, Roadmap, Roster, Status, Theme, ViewId, Ti
 import { DEFAULT_ROSTER, STATUS_CYCLE } from "./constants";
 import { seed, stampIds } from "./seed";
 import { uid, newRoadmapId } from "./id";
-import { makeHelpers, type Helpers } from "./teams";
+import { makeHelpers, pruneTasks, type Helpers } from "./teams";
 
 const ROADMAPS_KEY = "stackback_roadmaps_v3";
 const ROSTER_KEY = "stackback_roster_v1";
@@ -118,6 +118,10 @@ class Store {
   get tasks(): Node[] {
     return this.activeRoadmap().tasks;
   }
+  /** Tasks after the active filter is applied (pruned to only relevant nodes). Read views use this. */
+  get viewTasks(): Node[] {
+    return this.ui.filter ? pruneTasks(this.tasks, this.ui.filter, this.helpers) : this.tasks;
+  }
 
   /* ---- tree helpers ---- */
   private findEntry(id: string): Entry | null {
@@ -146,7 +150,7 @@ class Store {
   }
   cardMoves(task: Node): { up: boolean; down: boolean } {
     const same = this.tasks.filter((t) => (t.priority || null) === (task.priority || null));
-    const idx = same.indexOf(task);
+    const idx = same.findIndex((t) => t.id === task.id);
     return { up: idx > 0, down: idx >= 0 && idx < same.length - 1 };
   }
 

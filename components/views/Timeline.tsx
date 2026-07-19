@@ -40,17 +40,22 @@ function TimelineWave() {
   const s = useStore();
   const h = s.helpers;
   const f = s.ui.filter;
-  const waves = PRIORITIES.map((w) => ({ w, tasks: s.tasks.filter((t) => (t.priority || null) === w.p && h.matchFilter(t, f)) })).filter((x) => x.tasks.length);
+  const teamFilter = f && f.type === "team" ? f.name : null;
+  const waves = PRIORITIES.map((w) => ({ w, tasks: s.viewTasks.filter((t) => (t.priority || null) === w.p) })).filter((x) => x.tasks.length);
   if (!waves.length) return <div className="roadmap"><p className="rm-intro">No matching items.</p></div>;
   return (
     <div className="roadmap">
       {waves.map(({ w, tasks }) => {
         const byTeam: Record<string, Node[]> = { Engineering: [], Design: [], PM: [] };
         const un: Node[] = [];
-        tasks.forEach((t) => { const ts = h.teamSet(t); if (!ts.length) un.push(t); else ts.forEach((tm) => byTeam[tm].push(t)); });
+        tasks.forEach((t) => {
+          if (teamFilter) { byTeam[teamFilter].push(t); return; }
+          const ts = h.teamSet(t); if (!ts.length) un.push(t); else ts.forEach((tm) => byTeam[tm].push(t));
+        });
         const lanes: { label: string; tv: string; items: Node[] }[] = [];
-        (["Engineering", "Design", "PM"] as const).forEach((tm) => { if (byTeam[tm].length) lanes.push({ label: tm, tv: h.teamVar(tm), items: byTeam[tm] }); });
-        if (un.length) lanes.push({ label: "Unassigned", tv: "neutral", items: un });
+        const allowed = teamFilter ? [teamFilter] : ["Engineering", "Design", "PM"];
+        allowed.forEach((tm) => { if (byTeam[tm] && byTeam[tm].length) lanes.push({ label: tm, tv: h.teamVar(tm), items: byTeam[tm] }); });
+        if (un.length && !teamFilter) lanes.push({ label: "Unassigned", tv: "neutral", items: un });
         let tot = 0, dn = 0;
         tasks.forEach((t) => { const c = subtreeCounts(t); tot += c.total + 1; dn += c.done + (t.status === "done" ? 1 : 0); });
         const pct = tot ? Math.round((dn / tot) * 100) : 0;
@@ -107,13 +112,19 @@ function TimelineSwim() {
   const s = useStore();
   const h = s.helpers;
   const f = s.ui.filter;
-  const waves = PRIORITIES.filter((w) => s.tasks.some((t) => (t.priority || null) === w.p && h.matchFilter(t, f)));
+  const teamFilter = f && f.type === "team" ? f.name : null;
+  const vt = s.viewTasks;
+  const waves = PRIORITIES.filter((w) => vt.some((t) => (t.priority || null) === w.p));
   if (!waves.length) return <div className="roadmap"><p className="rm-intro">No matching items.</p></div>;
-  const rows: { key: string; tv: string }[] = [{ key: "Engineering", tv: "eng" }, { key: "Design", tv: "dsg" }, { key: "PM", tv: "pm" }];
-  if (s.tasks.some((t) => h.matchFilter(t, f) && h.teamSet(t).length === 0)) rows.push({ key: "__un", tv: "neutral" });
+  const tvOf: Record<string, string> = { Engineering: "eng", Design: "dsg", PM: "pm" };
+  const rows: { key: string; tv: string }[] = teamFilter
+    ? [{ key: teamFilter, tv: tvOf[teamFilter] || "neutral" }]
+    : [{ key: "Engineering", tv: "eng" }, { key: "Design", tv: "dsg" }, { key: "PM", tv: "pm" }];
+  if (!teamFilter && vt.some((t) => h.teamSet(t).length === 0)) rows.push({ key: "__un", tv: "neutral" });
   const itemsFor = (rowKey: string, wp: number | null) =>
-    s.tasks.filter((t) => {
-      if (!h.matchFilter(t, f) || (t.priority || null) !== wp) return false;
+    vt.filter((t) => {
+      if ((t.priority || null) !== wp) return false;
+      if (teamFilter) return true;
       const ts = h.teamSet(t);
       if (rowKey === "__un") return ts.length === 0;
       return ts.indexOf(rowKey) >= 0;

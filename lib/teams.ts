@@ -84,6 +84,26 @@ export function makeHelpers(roster: Roster) {
 
 export type Helpers = ReturnType<typeof makeHelpers>;
 
+/** Prune the tree to only the nodes relevant to the active filter (matching nodes +
+ *  the ancestors needed to reach them). A matching node keeps only its matching
+ *  descendants, so a filtered view shows just that team's / person's tasks. */
+export function pruneTasks(tasks: Node[], filter: Filter, h: Helpers): Node[] {
+  if (!filter) return tasks;
+  const matchNode = (n: Node): boolean => {
+    if (filter.type === "person") return (n.assignees || []).some((a) => !a.isTeam && a.name === filter.name);
+    return (n.assignees || []).some((a) => h.assigneeTeam(a) === filter.name);
+  };
+  const rec = (nodes: Node[]): Node[] => {
+    const out: Node[] = [];
+    for (const n of nodes) {
+      const kids = rec(n.children || []);
+      if (matchNode(n) || kids.length) out.push({ ...n, children: kids });
+    }
+    return out;
+  };
+  return rec(tasks);
+}
+
 /** Every node (any depth) directly assigned to a person, grouped by its milestone. */
 export function personWork(tasks: Node[], name: string, h: Helpers, filter: Filter): WorkSummary {
   const groups: WorkGroup[] = [];

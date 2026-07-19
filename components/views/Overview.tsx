@@ -78,11 +78,9 @@ function SimpleCard({ task }: { task: Node }) {
 
 export function Overview() {
   const s = useStore();
-  const h = s.helpers;
-  const f = s.ui.filter;
-  const all = s.tasks.filter((t) => h.matchFilter(t, f));
+  const all = s.viewTasks;
   let totalNodes = 0, doneNodes = 0;
-  walkAll(s.tasks, (n) => { totalNodes++; if (n.status === "done") doneNodes++; });
+  walkAll(all, (n) => { totalNodes++; if (n.status === "done") doneNodes++; });
   const overall = totalNodes ? Math.round((doneNodes / totalNodes) * 100) : 0;
   const mode = s.ui.simpleMode;
   const groups = mode === "status"
@@ -112,7 +110,7 @@ export function Overview() {
       <div className="simple">
         <div className="simple-hero">
           <div className="line">We are <b>{overall}%</b> of the way there.</div>
-          <div className="sub">{s.tasks.length} milestones · {totalNodes} tasks</div>
+          <div className="sub">{all.length} milestones · {totalNodes} tasks</div>
         </div>
         <div className="simple-buckets">
           {groups.map((b) => {

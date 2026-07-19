@@ -247,9 +247,15 @@
   .add-row button:hover{background:var(--card-2);color:var(--ink);}
 
   /* drag + drop */
-  .dropline{height:4px;margin:1px 0;border-radius:4px;background:transparent;transition:background .08s;}
-  body.is-dragging .dropline{height:12px;margin:-4px 0;}
-  body.is-dragging .dropline.over{background:var(--accent);height:12px;box-shadow:0 0 0 1px var(--accent);}
+  .dropline{height:4px;margin:1px 0;border-radius:4px;background:transparent;}
+  body.is-dragging .dropline{height:22px;margin:-9px 0;position:relative;z-index:2;}
+  body.is-dragging .dropline.over::after{content:"";position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:3px;border-radius:3px;background:var(--accent);box-shadow:0 0 0 1px var(--accent);}
+  .card-head-left{cursor:grab;user-select:none;}
+  .card-head-left:active{cursor:grabbing;}
+  .sn-text[draggable="true"]{cursor:grab;user-select:none;}
+  .sub-grip{padding:2px;margin-left:-2px;}
+  .sn-progress{height:4px;border-radius:3px;background:var(--track);overflow:hidden;margin:1px 0 2px;max-width:220px;}
+  .sn-progress>span{display:block;height:100%;background:var(--accent);border-radius:3px;transition:width .25s;}
   .nest-over{outline:2px dashed var(--brand-deep);outline-offset:2px;border-radius:10px;background:var(--accent-soft,transparent);}
   .dragging-src{opacity:.4;}
 
