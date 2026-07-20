@@ -4,6 +4,7 @@ import { DEFAULT_ROSTER, STATUS_CYCLE } from "./constants";
 import { seed, stampIds } from "./seed";
 import { uid, newRoadmapId } from "./id";
 import { makeHelpers, pruneTasks, type Helpers } from "./teams";
+import { loadRemote, saveRemote, supabaseEnabled } from "./remote";
 
 const ROADMAPS_KEY = "stackback_roadmaps_v3";
 const ROSTER_KEY = "stackback_roster_v1";
@@ -65,42 +66,69 @@ class Store {
     this.helpers = makeHelpers(this.data.roster);
   }
 
+  private saveTimer: ReturnType<typeof setTimeout> | null = null;
+
   /* ---- persistence ---- */
-  hydrate() {
+  async hydrate() {
     if (this.hydrated || typeof window === "undefined") return;
     this.hydrated = true;
-    try {
-      const raw = localStorage.getItem(ROADMAPS_KEY);
-      if (raw) {
-        const p = JSON.parse(raw);
-        if (p && p.roadmaps && p.roadmaps.length) {
-          p.roadmaps.forEach((r: Roadmap) => (r.tasks = (r.tasks || []).map(stampIds)));
-          this.data.roadmaps = p.roadmaps;
-          this.data.activeId = p.activeId || p.roadmaps[0].id;
+    try { this.ui.theme = (localStorage.getItem(THEME_KEY) as Theme) || "auto"; } catch {}
+
+    if (supabaseEnabled) {
+      // Shared backend. Falls back to the seeded default on any error.
+      try {
+        const r = await loadRemote();
+        if (r) {
+          r.roadmaps.forEach((rm) => (rm.tasks = (rm.tasks || []).map(stampIds)));
+          this.data.roadmaps = r.roadmaps;
+          this.data.activeId = r.activeId || r.roadmaps[0].id;
+          if (r.roster && r.roster.Engineering) this.data.roster = r.roster;
+        } else {
+          // First run: seed the remote with the default StackBack roadmap.
+          await saveRemote({ roadmaps: this.data.roadmaps, activeId: this.data.activeId, roster: this.data.roster });
         }
-      } else {
-        const old = localStorage.getItem(LEGACY_KEY);
-        if (old) {
-          const arr = JSON.parse(old);
-          if (Array.isArray(arr) && arr.length) {
-            this.data.roadmaps = [{ id: "stackback", name: "StackBack", tasks: arr.map(stampIds) }];
-            this.data.activeId = "stackback";
+      } catch (e) {
+        console.warn("Supabase hydrate failed, using defaults:", e);
+      }
+    } else {
+      try {
+        const raw = localStorage.getItem(ROADMAPS_KEY);
+        if (raw) {
+          const p = JSON.parse(raw);
+          if (p && p.roadmaps && p.roadmaps.length) {
+            p.roadmaps.forEach((r: Roadmap) => (r.tasks = (r.tasks || []).map(stampIds)));
+            this.data.roadmaps = p.roadmaps;
+            this.data.activeId = p.activeId || p.roadmaps[0].id;
+          }
+        } else {
+          const old = localStorage.getItem(LEGACY_KEY);
+          if (old) {
+            const arr = JSON.parse(old);
+            if (Array.isArray(arr) && arr.length) {
+              this.data.roadmaps = [{ id: "stackback", name: "StackBack", tasks: arr.map(stampIds) }];
+              this.data.activeId = "stackback";
+            }
           }
         }
-      }
-    } catch {}
-    try {
-      const r = JSON.parse(localStorage.getItem(ROSTER_KEY) || "null");
-      if (r && r.Engineering && r.Design && r.PM) this.data.roster = r;
-    } catch {}
-    try {
-      this.ui.theme = (localStorage.getItem(THEME_KEY) as Theme) || "auto";
-    } catch {}
+      } catch {}
+      try {
+        const r = JSON.parse(localStorage.getItem(ROSTER_KEY) || "null");
+        if (r && r.Engineering && r.Design && r.PM) this.data.roster = r;
+      } catch {}
+    }
+
     this.rebuildHelpers();
     this.applyTheme();
     this.notify();
   }
   private persist() {
+    if (supabaseEnabled) {
+      if (this.saveTimer) clearTimeout(this.saveTimer);
+      this.saveTimer = setTimeout(() => {
+        saveRemote({ roadmaps: this.data.roadmaps, activeId: this.data.activeId, roster: this.data.roster });
+      }, 400);
+      return;
+    }
     try {
       localStorage.setItem(ROADMAPS_KEY, JSON.stringify({ activeId: this.data.activeId, roadmaps: this.data.roadmaps }));
       localStorage.setItem(ROSTER_KEY, JSON.stringify(this.data.roster));

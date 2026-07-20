@@ -24,7 +24,7 @@ export default function RoadmapApp() {
   const [addOpen, setAddOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  useEffect(() => { s.hydrate(); setMounted(true); }, [s]);
+  useEffect(() => { let alive = true; s.hydrate().then(() => { if (alive) setMounted(true); }); return () => { alive = false; }; }, [s]);
 
   const ui: AppUi = useMemo(() => ({
     openAssignee(nodeId, anchor) {
