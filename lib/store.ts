@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 import type { Assignee, Filter, Node, Roadmap, Roster, Status, Theme, ViewId, TimelineMode, SimpleMode, TeamGran } from "./types";
 import { DEFAULT_ROSTER, STATUS_CYCLE } from "./constants";
-import { seed, stampIds } from "./seed";
+import { SEED_VERSION, seed, stampIds } from "./seed";
 import { uid, newRoadmapId } from "./id";
 import { makeHelpers, pruneTasks, type Helpers } from "./teams";
 import { loadRemote, saveRemote, supabaseEnabled } from "./remote";
@@ -9,7 +9,9 @@ import { loadRemote, saveRemote, supabaseEnabled } from "./remote";
 const ROADMAPS_KEY = "stackback_roadmaps_v3";
 const ROSTER_KEY = "stackback_roster_v1";
 const THEME_KEY = "stackback_theme";
-const LEGACY_KEY = "stackback_roadmap_v2";
+/** The id of the roadmap that mirrors the roadmap sheet. Any other roadmap is hand-made
+ *  by the team and is never touched by a re-seed. */
+const SHEET_ROADMAP_ID = "stackback";
 
 interface Data {
   roadmaps: Roadmap[];
@@ -35,8 +37,20 @@ interface Entry {
   parentId: string;
 }
 
+function sheetRoadmap(): Roadmap {
+  return { id: SHEET_ROADMAP_ID, name: "StackBack", tasks: seed().map(stampIds), seedVersion: SEED_VERSION };
+}
 function defaultData(): Data {
-  return { roadmaps: [{ id: "stackback", name: "StackBack", tasks: seed().map(stampIds) }], activeId: "stackback", roster: clone(DEFAULT_ROSTER) };
+  return { roadmaps: [sheetRoadmap()], activeId: SHEET_ROADMAP_ID, roster: clone(DEFAULT_ROSTER) };
+}
+/** Replace a stored copy of the sheet roadmap that predates the current SEED_VERSION.
+ *  Returns true when something was re-seeded, so the caller can persist the fresh copy. */
+function reseedIfStale(roadmaps: Roadmap[]): boolean {
+  const i = roadmaps.findIndex((r) => r.id === SHEET_ROADMAP_ID);
+  if (i < 0) { roadmaps.unshift(sheetRoadmap()); return true; }
+  if ((roadmaps[i].seedVersion || 1) >= SEED_VERSION) return false;
+  roadmaps[i] = { ...sheetRoadmap(), name: roadmaps[i].name };
+  return true;
 }
 function clone<T>(v: T): T {
   return JSON.parse(JSON.stringify(v));
@@ -80,9 +94,11 @@ class Store {
         const r = await loadRemote();
         if (r) {
           r.roadmaps.forEach((rm) => (rm.tasks = (rm.tasks || []).map(stampIds)));
+          const stale = reseedIfStale(r.roadmaps);
           this.data.roadmaps = r.roadmaps;
           this.data.activeId = r.activeId || r.roadmaps[0].id;
           if (r.roster && r.roster.Engineering) this.data.roster = r.roster;
+          if (stale) await saveRemote({ roadmaps: this.data.roadmaps, activeId: this.data.activeId, roster: this.data.roster });
         } else {
           // First run: seed the remote with the default StackBack roadmap.
           await saveRemote({ roadmaps: this.data.roadmaps, activeId: this.data.activeId, roster: this.data.roster });
@@ -97,17 +113,10 @@ class Store {
           const p = JSON.parse(raw);
           if (p && p.roadmaps && p.roadmaps.length) {
             p.roadmaps.forEach((r: Roadmap) => (r.tasks = (r.tasks || []).map(stampIds)));
+            const stale = reseedIfStale(p.roadmaps);
             this.data.roadmaps = p.roadmaps;
             this.data.activeId = p.activeId || p.roadmaps[0].id;
-          }
-        } else {
-          const old = localStorage.getItem(LEGACY_KEY);
-          if (old) {
-            const arr = JSON.parse(old);
-            if (Array.isArray(arr) && arr.length) {
-              this.data.roadmaps = [{ id: "stackback", name: "StackBack", tasks: arr.map(stampIds) }];
-              this.data.activeId = "stackback";
-            }
+            if (stale) this.persist();
           }
         }
       } catch {}
@@ -339,7 +348,8 @@ class Store {
   }
   resetActive() {
     const r = this.activeRoadmap();
-    r.tasks = r.id === "stackback" ? seed().map(stampIds) : [];
+    if (r.id === SHEET_ROADMAP_ID) { r.tasks = seed().map(stampIds); r.seedVersion = SEED_VERSION; }
+    else r.tasks = [];
     this.ui.filter = null; this.ui.collapsed = {}; this.ui.simpleOpen = {};
     this.commit();
   }

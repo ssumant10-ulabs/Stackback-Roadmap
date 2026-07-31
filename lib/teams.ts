@@ -28,10 +28,21 @@ export function makeHelpers(roster: Roster) {
   function teamVar(team: string | null): string {
     return team ? TEAM_VAR[team] || "neutral" : "neutral";
   }
+  /** The team a single node belongs to. The sheet's explicit Team column wins; without it
+   *  we fall back to whoever is assigned (Sumant -> PM, Neel -> Design, and so on). */
+  function nodeTeams(n: Node): string[] {
+    if (n.team && TEAM_VAR[n.team]) return [n.team];
+    const set: Record<string, 1> = {};
+    for (const a of n.assignees || []) { const t = assigneeTeam(a); if (t) set[t] = 1; }
+    return TEAM_ORDER.filter((t) => set[t]);
+  }
+  function nodeInTeam(n: Node, team: string): boolean {
+    return nodeTeams(n).indexOf(team) >= 0;
+  }
   function teamSet(task: Node): string[] {
     const set: Record<string, 1> = {};
     const rec = (n: Node) => {
-      for (const a of n.assignees || []) { const t = assigneeTeam(a); if (t) set[t] = 1; }
+      for (const t of nodeTeams(n)) set[t] = 1;
       for (const c of n.children || []) rec(c);
     };
     rec(task);
@@ -40,7 +51,7 @@ export function makeHelpers(roster: Roster) {
   function primaryTeam(task: Node): string | null {
     const counts: Record<string, number> = {};
     const rec = (n: Node) => {
-      for (const a of n.assignees || []) { const t = assigneeTeam(a); if (t) counts[t] = (counts[t] || 0) + 1; }
+      for (const t of nodeTeams(n)) counts[t] = (counts[t] || 0) + 1;
       for (const c of n.children || []) rec(c);
     };
     rec(task);
@@ -52,34 +63,42 @@ export function makeHelpers(roster: Roster) {
     if ((n.assignees || []).some(match)) return true;
     return (n.children || []).some((c) => subtreeHasAssignee(c, match));
   }
+  function subtreeInTeam(n: Node, team: string): boolean {
+    if (nodeInTeam(n, team)) return true;
+    return (n.children || []).some((c) => subtreeInTeam(c, team));
+  }
   function matchFilter(n: Node, filter: Filter): boolean {
     if (!filter) return true;
     if (filter.type === "person") return subtreeHasAssignee(n, (a) => !a.isTeam && a.name === filter.name);
-    return subtreeHasAssignee(n, (a) => assigneeTeam(a) === filter.name);
+    return subtreeInTeam(n, filter.name);
   }
   function teamNodesIn(task: Node, team: string): Node[] {
     const out: Node[] = [];
     const rec = (n: Node) => {
       for (const c of n.children || []) {
-        if ((c.assignees || []).some((a) => assigneeTeam(a) === team)) out.push(c);
+        if (nodeInTeam(c, team)) out.push(c);
         rec(c);
       }
     };
     rec(task);
     return out;
   }
+  /** People to show for a team on a card: everyone assigned to that team's nodes. Falls back
+   *  to roster membership when the node's team came from the sheet rather than its owners. */
   function teamPeople(task: Node, team: string): Assignee[] {
     const seen: Record<string, 1> = {}; const out: Assignee[] = [];
+    const take = (a: Assignee) => {
+      const k = (a.isTeam ? "T:" : "P:") + a.name;
+      if (!seen[k]) { seen[k] = 1; out.push(a); }
+    };
     const rec = (n: Node) => {
-      for (const a of n.assignees || []) {
-        if (assigneeTeam(a) === team) { const k = (a.isTeam ? "T:" : "P:") + a.name; if (!seen[k]) { seen[k] = 1; out.push(a); } }
-      }
+      if (nodeInTeam(n, team)) for (const a of n.assignees || []) take(a);
       for (const c of n.children || []) rec(c);
     };
     rec(task);
     return out;
   }
-  return { teamOf, assigneeTeam, teamVar, teamSet, primaryTeam, subtreeHasAssignee, matchFilter, teamNodesIn, teamPeople };
+  return { teamOf, assigneeTeam, teamVar, nodeTeams, nodeInTeam, teamSet, primaryTeam, subtreeHasAssignee, subtreeInTeam, matchFilter, teamNodesIn, teamPeople };
 }
 
 export type Helpers = ReturnType<typeof makeHelpers>;
@@ -91,7 +110,7 @@ export function pruneTasks(tasks: Node[], filter: Filter, h: Helpers): Node[] {
   if (!filter) return tasks;
   const matchNode = (n: Node): boolean => {
     if (filter.type === "person") return (n.assignees || []).some((a) => !a.isTeam && a.name === filter.name);
-    return (n.assignees || []).some((a) => h.assigneeTeam(a) === filter.name);
+    return h.nodeInTeam(n, filter.name);
   };
   const rec = (nodes: Node[]): Node[] => {
     const out: Node[] = [];
@@ -133,11 +152,11 @@ export function teamWork(tasks: Node[], team: string, h: Helpers, filter: Filter
   let total = 0, done = 0, prog = 0;
   for (const ms of tasks) {
     if (!h.matchFilter(ms, filter)) continue;
-    const ownsMs = (ms.assignees || []).some((a) => h.assigneeTeam(a) === team);
+    const ownsMs = h.nodeInTeam(ms, team);
     const nodes: Node[] = [];
     const rec = (n: Node) => {
       for (const c of n.children || []) {
-        if ((c.assignees || []).some((a) => h.assigneeTeam(a) === team)) nodes.push(c);
+        if (h.nodeInTeam(c, team)) nodes.push(c);
         rec(c);
       }
     };

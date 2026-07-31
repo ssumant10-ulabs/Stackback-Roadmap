@@ -31,10 +31,13 @@ Plus: a global **milestone + task progress** bar, a **Filter** by team/person, *
 ```
 app/
   layout.tsx, page.tsx, globals.css   # shell + full stylesheet (brand tokens, light/dark)
+data/
+  roadmap_tab.tsv # the roadmap sheet's Roadmap tab, verbatim (source of truth)
+  gen_seed.py     # regenerates lib/seed.ts from that TSV
 lib/
   types.ts        # domain types (Node tree, Roadmap, Assignee, ...)
   constants.ts    # roster, teams, priorities, plain-language label maps
-  seed.ts         # the seeded StackBack roadmap
+  seed.ts         # the seeded StackBack roadmap (GENERATED, do not hand-edit)
   derive.ts       # pure helpers (subtreeCounts, effStatus, aggProgress, ...)
   teams.ts        # roster-bound helpers (teamOf, teamSet, personWork, teamWork, ...)
   store.ts        # external store (useSyncExternalStore) + all mutations + persistence
@@ -48,6 +51,26 @@ components/
 ## Data & persistence
 
 Today the roadmap tree lives in `localStorage` (`stackback_roadmaps_v3`), managed by `lib/store.ts`. All views read from the same store, so an edit on the Board reflects everywhere.
+
+### Refreshing from the roadmap sheet
+
+`lib/seed.ts` is generated from the **Roadmap tab** of `StackBack_Roadmap_Tasks_Updated.xlsx`
+(Drive `1tHa3FtlnUOaCg5kH7zmUgkV2IfiUDmSb`). Never hand-edit it. To pull in sheet changes:
+
+```bash
+# 1. update data/roadmap_tab.tsv so it matches the Roadmap tab (9 tab-separated columns)
+python3 data/gen_seed.py            # dry run, prints milestone/task/horizon/team counts
+python3 data/gen_seed.py --write    # rewrites lib/seed.ts
+# 2. bump SEED_VERSION in lib/seed.ts
+```
+
+The `SEED_VERSION` bump matters. Everyone's browser (and the shared Supabase row, when it is
+switched on) holds a saved copy of the tree; on load, a copy stamped with an older
+`SEED_VERSION` is replaced by the fresh seed. Roadmaps the team created by hand in Settings
+are never touched, only the sheet-derived `stackback` roadmap.
+
+The sheet's Team column is authoritative for which discipline owns a row. Where it is blank,
+the app falls back to inferring the team from who is assigned.
 
 ## Next: shared backend + auth
 

@@ -642,6 +642,17 @@
   .hm-stat{display:flex;flex-direction:column;line-height:1.1;}
   .hm-stat b{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.01em;}
   .hm-stat span{font-size:10px;color:var(--ink-3);font-weight:800;text-transform:uppercase;letter-spacing:.03em;margin-top:2px;}
+  .hm-horizons{display:flex;gap:6px;flex:none;padding-left:18px;border-left:1px solid var(--border);}
+  .hm-horizon{display:flex;flex-direction:column;align-items:center;line-height:1.1;min-width:44px;
+    background:var(--sunken);border-radius:8px;padding:5px 7px;}
+  .hm-horizon b{font-size:14.5px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.01em;}
+  .hm-horizon span{font-size:9.5px;color:var(--ink-3);font-weight:800;text-transform:uppercase;letter-spacing:.03em;margin-top:2px;}
+  .hm-horizon[data-word="Now"]{background:color-mix(in srgb, var(--brand) 16%, transparent);}
+  .hm-horizon[data-word="Now"] b{color:var(--brand-deep);}
+
+  /* sheet columns that are only shown once the team fills them in */
+  .rm-date-chip{font-size:10.5px;font-weight:800;letter-spacing:.02em;color:var(--ink-2);
+    background:var(--sunken);border:1px solid var(--border);border-radius:100px;padding:1px 7px;flex:none;}
 
   /* filter popover */
   .filter-pop{width:290px;}
@@ -688,6 +699,7 @@
     .status-grid{grid-template-columns:1fr;}
     .simple-buckets{grid-template-columns:1fr;}
     .hm-pips,.hm-stats{order:3;}
+    .hm-horizons{order:4;padding-left:0;border-left:none;flex-wrap:wrap;}
   }
   @media (max-width:640px){
     .app{padding:16px 12px 40px;}

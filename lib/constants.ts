@@ -32,12 +32,14 @@ export const VIEWS: { id: string; label: string }[] = [
   { id: "teams", label: "Teams & People" },
 ];
 
-/** Plain-language milestone labels for the Overview view. */
+/** Plain-language milestone labels for the Overview view.
+ *  Keys must match the milestone titles in the roadmap sheet exactly. */
 export const SIMPLE_LABELS: Record<string, { simple: string; sub: string }> = {
   "Billing Plans": { simple: "Billing & Plans", sub: "The subscription plans customers pick and pay for." },
+  "Subscription & Bundle Widgets": { simple: "Storefront Widgets", sub: "The widgets customers use to subscribe or build a bundle." },
+  "Landing Page & Customer Portal UI": { simple: "Customer Screens", sub: "The landing pages and portal customers actually use." },
   "Self-Serving Merchant Dashboard & Reporting": { simple: "Merchant Dashboard", sub: "One place for merchants to manage and track everything." },
   Autodebit: { simple: "Auto-Pay", sub: "Charge customers automatically so payments are never late." },
-  "Widgets, Landing Page & Customer Portal UI": { simple: "Customer Screens", sub: "The pages and widgets customers actually see and use." },
   "StackBack's own WhatsApp & WA Meta Account Integration": { simple: "WhatsApp Updates", sub: "Message customers on WhatsApp from our own account." },
   "OTP-based login for customer portal": { simple: "Quick Login", sub: "Sign in with a one-time code, no password needed." },
   "Prepaid & PAYG enhancement": { simple: "Flexible Payments", sub: "Better prepaid and pay-as-you-go options for customers." },
@@ -46,34 +48,57 @@ export const SIMPLE_LABELS: Record<string, { simple: string; sub: string }> = {
   "Event tracking to be set up": { simple: "Usage Tracking", sub: "Measure what customers do so we can keep improving." },
 };
 
-/** Plain-language versions of the milestone subtasks (Overview + By person). */
+/** Plain-language versions of the milestone subtasks (Overview + By person).
+ *  Only the subtasks whose sheet wording is long or jargon-heavy are rewritten here;
+ *  anything absent falls through and renders exactly as the sheet has it. */
 export const SIMPLE_SUB: Record<string, string> = {
-  "Prices finalized & configuration": "Set and configure the plan prices",
-  "Shopify-managed price to be migrated": "Move pricing over to Shopify",
-  "Configure monthly timer": "Set up the monthly billing timer",
-  "Overdue consequences / restriction to be added": "Add rules for missed payments",
-  "Internal admin plan management via partner APIs": "Manage plans from our internal admin",
-  "Wireframing logic & information architecture": "Design the layout and structure",
-  "PM-level scope": "Plan the product scope",
-  "Admin module - complete architecture for entire dashboard": "Build the full dashboard architecture",
-  "Tech handover of the entire admin dashboard": "Hand the dashboard to engineering",
-  "Full refactor of admin": "Rebuild the admin cleanly",
-  "Razorpay integration & partnership": "Partner and integrate with Razorpay",
-  "Custom-app implementation to circumvent Shopify routes": "Build a custom app for payments",
-  "4 subscription widgets confirmed & designed": "Design the 4 subscription widgets",
-  "4 bundle widgets - Fixed / BXGY / BYOB / Add-on / Mix & Match": "Design the 4 bundle widgets",
-  "Customer portal - tracking-centric V2": "Build the new customer portal",
-  "Engineering pipeline to add subscription widgets": "Ship the subscription widgets to code",
-  "Engineering pipeline to add customer portal": "Ship the customer portal to code",
-  "Partner with Gupshup & set up our account": "Set up our WhatsApp account with Gupshup",
-  "Integrate with Gupshup & figure billing logic with merchants": "Connect Gupshup and sort merchant billing",
-  "PAYG: first 2-3 orders prepaid, then PAYG email reminders": "Start prepaid, then switch to pay-as-you-go",
-  "PAYG without an end timeline (continuous)": "Allow pay-as-you-go with no end date",
-  "Partial prepaid & convert to PAYG": "Let customers pay part now, rest later",
-  "Health reporting": "Report on account health",
-  "WhatsApp delivery report": "Track WhatsApp message delivery",
-  "Partner API integration for merchant accounting / subscriptions to our app": "Connect partner APIs for our own billing",
-  "Overall business metrics": "Track overall business metrics",
-  "Internal admin migration": "Move the internal admin over",
-  "Finalize the tool": "Pick the tracking tool",
+  // Billing & Plans
+  "Finalize subscription plan prices & configure them in the system": "Set and configure the plan prices",
+  "Migrate existing Shopify-managed prices into StackBack pricing": "Move Shopify pricing into StackBack",
+  "Configure monthly billing cycle timer": "Set up the monthly billing timer",
+  "Add restrictions/consequences for overdue subscription payments": "Add rules for missed payments",
+  "Enable internal admin to manage merchant plans via partner APIs": "Manage plans from our internal admin",
+  // Storefront widgets
+  "4 subscription widgets confirmed & designed; 4 more widget types to be scoped": "The 4 subscription widgets, plus 4 more to scope",
+  "5 bundle widget types - Fixed, BXGY, BYOB, Add-on, Mix & Match": "The 5 bundle widget types",
+  "Define engineering pipeline to add subscription widgets to storefront": "Ship the widgets into the storefront code",
+  "Develop subscription & bundle widgets": "Build the widgets",
+  "Handover widgets to QA for review": "Hand the widgets to QA",
+  "Get approval & deploy widgets to live store": "Approve and go live with the widgets",
+  // Customer screens
+  "Customer portal V2 & Minima - tracking-centric redesign": "Redesign the portal around order tracking",
+  "Design subscription builder page (Atlas Coffee pilot)": "Design the subscription builder page",
+  "Define engineering pipeline to build customer portal": "Ship the customer portal into code",
+  // Merchant dashboard
+  "Audit & reference existing dashboard modules before redesign": "Review what the dashboard already does",
+  "PM scope: wireframe & JSX each dashboard module below": "Wireframe and build each dashboard screen",
+  "Define complete information architecture for admin module": "Map out how the admin is organised",
+  "Handover entire admin dashboard to engineering": "Hand the dashboard to engineering",
+  "Full refactor of admin dashboard": "Rebuild the admin cleanly",
+  // Auto-Pay
+  "Set up Razorpay partnership & integration for autodebit": "Partner and integrate with Razorpay",
+  "Build custom app to bypass Shopify's native payment routes for autodebit": "Build a custom app for auto-pay charges",
+  // WhatsApp
+  "Partner with Gupshup & set up StackBack's WhatsApp Business account": "Set up our own WhatsApp Business account",
+  "Integrate with Gupshup & define billing logic for merchants": "Connect Gupshup and sort merchant billing",
+  // Quick login
+  "Decide OTP delivery channel (SMS/WhatsApp) & finalize login flow": "Pick the OTP channel and lock the flow",
+  "Build OTP generation, verification & session handling on backend": "Build the OTP and session backend",
+  "Handle edge cases - resend OTP, rate-limiting, invalid/expired codes": "Handle resends, rate limits and bad codes",
+  // Flexible payments
+  "PAYG plans: first 2-3 orders prepaid, then switch to PAYG with email reminders": "Start prepaid, then switch to pay-as-you-go",
+  "Support continuous PAYG plans with no end date": "Allow pay-as-you-go with no end date",
+  "Support partial prepaid plans that convert to PAYG": "Let customers pay part now, rest later",
+  // Internal tools
+  "Build internal health-reporting system": "Report on account health",
+  "Build WhatsApp message delivery report": "Track WhatsApp message delivery",
+  "Partner API integration for merchant accounting & subscription sync into StackBack": "Connect partner APIs for our own billing",
+  "Build overall business metrics dashboard (internal)": "Track overall business metrics",
+  "Migrate internal admin to new system/architecture": "Move the internal admin over",
+  // Renewal reminders
+  "Build email reminder before subscription expiry with renewal CTA": "Email a renewal nudge before expiry",
+  "Generate secure payment link for renewal (mail + portal)": "Generate a secure renewal payment link",
+  "Add 'Renew Now' button in customer portal linked to payment": "Add a Renew Now button to the portal",
+  // Usage tracking
+  "Finalize event-tracking tool": "Pick the tracking tool",
 };

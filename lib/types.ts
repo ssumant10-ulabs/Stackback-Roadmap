@@ -15,12 +15,23 @@ export interface Node {
   priority?: number | null;
   eta?: string | null;
   note?: string;
+  /** Owning discipline as declared in the roadmap sheet's Team column. When set it wins
+   *  over guessing the team from who is assigned (the sheet is the source of truth). */
+  team?: string | null;
+  /** Roadmap sheet: Handover Timeline column. */
+  handover?: string | null;
+  /** Roadmap sheet: Deadline column. */
+  deadline?: string | null;
 }
 
 export interface Roadmap {
   id: string;
   name: string;
   tasks: Node[];
+  /** Only on the sheet-derived "stackback" roadmap: which SEED_VERSION these tasks came from.
+   *  A stored value behind the current one is re-seeded on load so a saved browser (or the
+   *  shared Supabase row) never pins the team to a superseded copy of the roadmap sheet. */
+  seedVersion?: number;
 }
 
 export type Roster = Record<string, string[]>;

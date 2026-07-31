@@ -150,10 +150,9 @@ function Load() {
     if (st === "done") o[key].done++; else if (st === "progress") o[key].prog++; else o[key].plan++;
   };
   walkAll(s.viewTasks, (n) => {
-    (n.assignees || []).forEach((a) => {
-      if (a.isTeam) { if (TEAM_VAR[a.name]) bump(teams, a.name, n.status); }
-      else { bump(people, a.name, n.status); const tm = h.teamOf(a.name); if (tm) bump(teams, tm, n.status); }
-    });
+    (n.assignees || []).forEach((a) => { if (!a.isTeam) bump(people, a.name, n.status); });
+    // Team load follows the sheet's Team column when it is set, otherwise who is assigned.
+    h.nodeTeams(n).forEach((tm) => { if (TEAM_VAR[tm]) bump(teams, tm, n.status); });
   });
   const rows = (obj: Record<string, Load3>, order: string[], teamFor: (k: string) => string | null) => {
     let max = 1;

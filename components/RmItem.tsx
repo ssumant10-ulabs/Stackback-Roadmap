@@ -30,6 +30,8 @@ export function RmItem({ task, railVar, showWave, inflight }: { task: Node; rail
       {lv.length > 0 && <div className="rm-inflight">{lv.map((x, i) => <span key={i}>▸ {x}</span>)}</div>}
       <div className="rm-item-foot">
         {showWave && <span className="rm-wave-chip">{waveWord(task.priority)}</span>}
+        {task.deadline && <span className="rm-date-chip" title="Deadline">Due {task.deadline}</span>}
+        {task.handover && <span className="rm-date-chip" title="Handover timeline">Handover {task.handover}</span>}
         <span className="assignees"><OwnerAvatars task={task} /></span>
         <MiniBar pct={pct} />
         <span className="rm-mini-lbl">{lbl}</span>

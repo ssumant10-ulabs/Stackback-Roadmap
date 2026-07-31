@@ -40,6 +40,8 @@ function SimpleCard({ task }: { task: Node }) {
             <span className="sword">{statusLabel(es)}</span>
             {es === "progress" && <span className="sbar"><span style={{ width: pctv + "%" }} /></span>}
             {c.total > 0 && <span>{c.done} of {c.total} done</span>}
+            {task.deadline && <span className="rm-date-chip" title="Deadline">Due {task.deadline}</span>}
+            {task.handover && <span className="rm-date-chip" title="Handover timeline">Handover {task.handover}</span>}
             <span className="sowners"><OwnerAvatars task={task} /></span>
           </div>
         </div>

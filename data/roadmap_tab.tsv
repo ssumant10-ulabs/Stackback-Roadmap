@@ -1,0 +1,102 @@
+milestone	subtask	subsub	priority	owners	team	status	handover	deadline
+Billing Plans			Now	Shubham, Rohan	Engineering	In Progress
+	Finalize subscription plan prices & configure them in the system		Now	Shubham	Engineering	In Progress
+	Migrate existing Shopify-managed prices into StackBack pricing		Now	Shubham	Engineering	Planned
+	Configure monthly billing cycle timer		Now	Shubham, Rohan	Engineering	Planned
+	Add restrictions/consequences for overdue subscription payments		Now	Shubham, Rohan	Engineering	Planned
+	Enable internal admin to manage merchant plans via partner APIs		Now	Shubham	Engineering	Planned
+Subscription & Bundle Widgets	4 subscription widgets confirmed & designed; 4 more widget types to be scoped	Plan bundle widget requirements & scope	Now	Shubham, Rohan	Design	Done
+		Plan Bundle widget design brief	Now	Rohan & Sumant	Design	Done
+		Widget ideation - low-fidelity wireframes & HTML mockups	Now	Neel, Anshuman	Design	Done
+		Internal review of bundle widget designs	Now	Neel, Anshuman	Design	Done
+		Build bundle widget JSX (high-fidelity prototype)	Now	Neel, Anshuman	Design	In Progress
+		Get final prototype approval from stakeholders	Now	Neel, Anshuman	Design	Planned
+		Prepare developer handover file for bundle widgets	Now	Neel, Anshuman	Design	Planned
+	5 bundle widget types - Fixed, BXGY, BYOB, Add-on, Mix & Match	Plan bundle widget requirements & scope	Now	Rohan & Sumant	Design	Done
+		Plan Bundle widget design brief	Now	Rohan & Sumant	Design	Done
+		Widget ideation - low-fidelity wireframes & HTML mockups	Now	Neel, Anshuman	Design	Done
+		Internal review of bundle widget designs	Now	Neel, Anshuman	Design	Done
+		Build bundle widget JSX (high-fidelity prototype)	Now	Neel, Anshuman	Design	In Progress
+		Get final prototype approval from stakeholders	Now	Neel, Anshuman	Design	In Progress
+		Prepare developer handover file for bundle widgets	Now	Neel, Anshuman	Design	In Progress
+	Define engineering pipeline to add subscription widgets to storefront	Technical approach still to be finalized	Now	Sachin, Mansi, Yogesh	Engineering	Planned
+	Develop subscription & bundle widgets		Now	Sachin, Yogesh	Engineering	Planned
+	Handover widgets to QA for review		Now	Sachin, Yogesh, Sumant	Engineering	Planned
+	Get approval & deploy widgets to live store		Now	Sachin, Yogesh	Engineering	Planned
+Landing Page & Customer Portal UI	Customer portal V2 & Minima - tracking-centric redesign	Plan customer portal V2/ Minima scope & requirements	Now	Rohan & Sumant	Design	In Progress
+		Plan customer portal design brief	Now	Rohan & Sumant	Design	In Progress
+		Portal ideation - low-fidelity wireframes & HTML mockups	Now	Rohan & Sumant	Design	In Progress
+		Internal review of customer portal designs	Now	Rohan & Sumant	Design	Planned
+		Build customer portal JSX (high-fidelity prototype)	Now	Rohan & Sumant	Design	Planned
+		Get final prototype approval from stakeholders	Now	Rohan & Sumant	Design	Planned
+		Prepare developer handover file for customer portal	Now	Rohan & Sumant	Design	Planned
+	Design subscription builder page (Atlas Coffee pilot)		Now	Neel	Design	Planned
+	Define engineering pipeline to build customer portal	Technical approach still to be finalized	Now		Engineering	Planned
+	Develop customer portal	Frontend & backend build	Now		Engineering	Planned
+	QA testing & review of customer portal		Now		Engineering	Planned
+	Deploy customer portal to live store		Now		Engineering	Planned
+Self-Serving Merchant Dashboard & Reporting	Audit & reference existing dashboard modules before redesign	Dashboard overview module (ongoing)	Now	Sumant, Ishita	PM	Planned
+		Onboarding module (ongoing)	Now	Sumant, Ishita	PM	Planned
+		Orders module (ongoing)	Now	Sumant, Ishita	PM	In Progress
+		Subscription listing module (ongoing)	Now	Sumant, Ishita	PM	Done
+		Subscription Plan Creation Screen	Now	Sumant, Ishita		Done
+		Bundle Creation Screen	Now	Sumant, Ishita		Done
+		Inventory route module (ongoing)	Now	Sumant, Ishita	PM	Done
+		Analytics module (ongoing)	Now	Sumant, Ishita	PM	In Progress
+		Payment configuration - cleaned-up reference version	Now	Sumant, Ishita	PM	In Progress
+		Payment reminder - cleaned-up reference version	Now	Sumant, Ishita	PM	In Progress
+		Order management & reporting module (reference)	Now	Sumant, Ishita	PM	Done
+	PM scope: wireframe & JSX each dashboard module below		Now	Sumant	PM	Planned
+		Wireframe - Inventory route	Now	Sumant	PM	In Progress
+		Wireframe & - Onboarding (multistep flow)	Now	Sumant	PM	Planned
+		Wireframe & JSX - Payment configuration	Now	Sumant	PM	Planned
+		Wireframe & JSX - Payment reminder	Now	Sumant	PM	Planned
+		Wireframe & JSX - Order management & reporting	Now	Sumant	PM	Planned
+		Wireframe & JSX - Inventory management (reference, ongoing)	Now	Sumant	PM	Planned
+		Wireframe & JSX - Business metrics & analytics	Now	Sumant	PM	Planned
+		Wireframe & JSX - Issue/resync nudges on dashboard & widget (ongoing)	Now	Sumant	PM	Planned
+		Wireframe & JSX - WhatsApp management	Now	Sumant	PM	Planned
+		Wireframe & JSX - Plan/product view in Purchase Options, incl. landing page & widget (ongoing)	Now	Sumant	PM	In Progress
+		Compile JSX for all dashboard handover files	Now	Sumant	PM
+	Define complete information architecture for admin module	Information architecture brief	Now	Sumant, Shubham	PM	Done
+		Create v1 of the information architecture	Now	Sumant	PM	Planned
+		Get approval & update remaining modules & routes	Now	Sumant	PM	Planned
+	Handover entire admin dashboard to engineering		Now	Engineering Team & Sumant	Engineering	Planned
+	Full refactor of admin dashboard		Now	Engineering Team & Sumant	Engineering	Planned
+Autodebit	Set up Razorpay partnership & integration for autodebit		Next	Shubham	Engineering	Planned
+	Build custom app to bypass Shopify's native payment routes for autodebit		Next	Shubham	Engineering	Planned
+		Finalize Razorpay implementation approach	Next	~Shubham	Engineering	Planned
+		Support autodebit for both existing & new merchants	Next	~Shubham	Engineering	Planned
+		Build required Razorpay onboarding flow	Next	~Shubham	Engineering	Planned
+		Assess design implications of autodebit flow	Next	~Shubham	Engineering	Planned
+		Configure autodebit reminder settings	Next	~Shubham	Engineering	Planned
+		Build autodebit transaction logs	Next	~Shubham	Engineering	Planned
+StackBack's own WhatsApp & WA Meta Account Integration	Partner with Gupshup & set up StackBack's WhatsApp Business account		Next	Shubham	Engineering	Planned
+	Integrate with Gupshup & define billing logic for merchants		Next	Shubham	Engineering	Planned
+		Finalize tool-level integration with WhatsApp Business tool	Next	Shubham	Engineering	Planned
+OTP-based login for customer portal			Then	Shubham	Engineering	Planned
+	Decide OTP delivery channel (SMS/WhatsApp) & finalize login flow		Then	Shubham	Engineering	Planned
+	Build OTP generation, verification & session handling on backend		Then	Shubham	Engineering	Planned
+	Handle edge cases - resend OTP, rate-limiting, invalid/expired codes		Then	Shubham	Engineering	Planned
+	QA testing & deploy to live		Then	Shubham	Engineering	Planned
+Prepaid & PAYG enhancement	PAYG plans: first 2-3 orders prepaid, then switch to PAYG with email reminders		Later	Shubham	Engineering	Planned
+	Support continuous PAYG plans with no end date		Later	~Shubham	Engineering	Planned
+	Support partial prepaid plans that convert to PAYG		Later	~Shubham	Engineering	Planned
+Internal Systems	Build internal health-reporting system	Background jobs to detect data/config drifts	Future	Shubham	Engineering	Planned
+		Track merchant actions that changed settings	Future	Shubham	Engineering	Planned
+	Build WhatsApp message delivery report		Future	~Shubham	Engineering	Planned
+	Partner API integration for merchant accounting & subscription sync into StackBack		Future	~Shubham	Engineering	Planned
+	Build overall business metrics dashboard (internal)		Future	~Shubham & Ishita	Engineering	Planned
+	Migrate internal admin to new system/architecture		Future	~Shubham	Engineering	Planned
+Subscription renewal nudge (mail + payment link + renew button in portal)			Future	Shubham	Engineering	Planned
+	Build email reminder before subscription expiry with renewal CTA		Future	Shubham	Engineering	Planned
+	Generate secure payment link for renewal (mail + portal)		Future	Shubham	Engineering	Planned
+	Add 'Renew Now' button in customer portal linked to payment		Future	Shubham	Engineering	Planned
+	QA testing & deploy to live		Future	Shubham	Engineering	Planned
+Event tracking to be set up	Finalize event-tracking tool		Future	Mansi	Engineering	Planned
+		Research available event-tracking tools	Future	Mansi	Engineering	Planned
+		Cost analysis of shortlisted tools	Future	~Mansi	Engineering	Planned
+		Assess implementation approach	Future	~Mansi	Engineering	Planned
+		Define event configurations to track	Future	~Mansi	Engineering	Planned
+		Define user-level tracking requirements	Future	~Mansi	Engineering	Planned
+		Check tool-level integration with WhatsApp tool	Future	~Mansi	Engineering	Planned
