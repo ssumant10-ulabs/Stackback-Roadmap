@@ -1,16 +1,11 @@
 "use client";
 import { useStore } from "@/lib/store";
-import { effStatus } from "@/lib/derive";
-import { PRIORITIES, TEAM_ORDER } from "@/lib/constants";
+import { STATES, effStatus, nodeState, type RoadmapState } from "@/lib/derive";
+import { TEAM_ORDER } from "@/lib/constants";
 import type { Node } from "@/lib/types";
 
 function walkAll(nodes: Node[], cb: (n: Node) => void) {
   nodes.forEach((n) => { cb(n); walkAll(n.children || [], cb); });
-}
-function countIn(nodes: Node[]): number {
-  let n = 0;
-  walkAll(nodes, () => n++);
-  return n;
 }
 
 export function HeroMetrics() {
@@ -19,11 +14,12 @@ export function HeroMetrics() {
   let total = 0, done = 0, prog = 0;
   walkAll(tasks, (n) => { total++; if (n.status === "done") done++; else if (n.status === "progress") prog++; });
   const planned = total - done - prog;
-  /** Items per horizon, counted the same way the roadmap sheet counts them: every
-   *  task and subtask under the milestones sitting in that horizon. */
-  const horizons = PRIORITIES
-    .map((w) => ({ word: w.word, n: countIn(tasks.filter((t) => (t.priority || null) === w.p)) }))
-    .filter((h) => h.n > 0);
+  /** Every task and subtask placed in exactly one of the four states: Done if it is
+   *  checked off, otherwise the state of the milestone it belongs to. The four numbers
+   *  add up to the task total. */
+  const perState: Record<RoadmapState, number> = { now: 0, next: 0, future: 0, done: 0 };
+  tasks.forEach((ms) => walkAll([ms], (n) => { perState[nodeState(n, ms)]++; }));
+  const horizons = STATES.map((st) => ({ key: st.k, word: st.word, n: perState[st.k] }));
   const pd = total ? (done / total) * 100 : 0;
   const pp = total ? (prog / total) * 100 : 0;
   const pl = total ? (planned / total) * 100 : 0;
@@ -49,9 +45,9 @@ export function HeroMetrics() {
           </span>
         </div>
       </div>
-      <div className="hm-horizons" title="Tasks and subtasks per horizon">
+      <div className="hm-horizons" title="Every task and subtask, split across the four states">
         {horizons.map((h) => (
-          <div className="hm-horizon" key={h.word} data-word={h.word}><b>{h.n}</b><span>{h.word}</span></div>
+          <div className="hm-horizon" key={h.key} data-word={h.word}><b>{h.n}</b><span>{h.word}</span></div>
         ))}
       </div>
       <div className="hm-stats">

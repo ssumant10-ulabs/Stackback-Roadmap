@@ -17,7 +17,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 TSV = os.path.join(HERE, "roadmap_tab.tsv")
 OUT = os.path.join(HERE, os.pardir, "lib", "seed.ts")
 
-PRIORITY = {"Now": 1, "Next": 2, "Then": 3, "Later": 4, "Future": 5}
+# The app has four states: Now, Next, Future and Done. Done is derived from the work being
+# checked off, never authored, so only three priorities are written. The sheet still uses
+# five words, so Then folds into Next and Later folds into Future.
+PRIORITY = {"Now": 1, "Next": 2, "Then": 2, "Later": 3, "Future": 3}
+STATE_WORD = {1: "Now", 2: "Next", 3: "Future"}
 STATUS = {"Done": "done", "In Progress": "progress", "Planned": "planned", "": "planned"}
 TEAMS = {"Engineering", "Design", "PM"}
 ROSTER = {
@@ -166,7 +170,7 @@ import { uid } from "./id";
 
 /** Bumped whenever the seed data below is regenerated from the roadmap sheet.
  *  A bump invalidates saved browser/Supabase state so everyone picks up the new tree. */
-export const SEED_VERSION = 2;
+export const SEED_VERSION = 3;
 
 /** Source of truth: the `Roadmap` tab of StackBack_Roadmap_Tasks_Updated.xlsx
  *  (Google Drive 1tHa3FtlnUOaCg5kH7zmUgkV2IfiUDmSb, last modified 2026-07-31).
@@ -202,14 +206,21 @@ export function seed(): Node[] {
 
 
 def stats(nodes):
-    horizon = {1: "Now", 2: "Next", 3: "Then", 4: "Later", 5: "Future"}
     tot = Counter()
+    state = Counter()
+    ms_state = Counter()
     st = Counter()
     team = Counter()
     people = Counter()
 
+    def all_done(n):
+        kids = n["children"]
+        return all(c["status"] == "done" and all_done(c) for c in kids) if kids else n["status"] == "done"
+
     def walk(n, h):
         tot[h] += 1
+        # Done wins over the horizon, matching lib/derive.ts nodeState().
+        state["Done" if n["status"] == "done" else h] += 1
         st[n["status"]] += 1
         team[n["team"] or "(none)"] += 1
         for a in n["assignees"]:
@@ -218,10 +229,13 @@ def stats(nodes):
             walk(c, h)
 
     for m in nodes:
-        walk(m, horizon[m["priority"]])
-    print("milestones:", len(nodes))
+        h = STATE_WORD[m["priority"]]
+        walk(m, h)
+        ms_state["Done" if all_done(m) else h] += 1
+    print("milestones:", len(nodes), dict(ms_state))
     print("nodes total:", sum(tot.values()))
-    print("by horizon:", dict(tot))
+    print("by horizon (ignoring done):", dict(tot))
+    print("by state (done wins):", dict(state), "sum:", sum(state.values()))
     print("by status:", dict(st))
     print("by team:", dict(team))
     print("owners:", dict(people))

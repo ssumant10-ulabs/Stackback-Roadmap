@@ -36,19 +36,17 @@ export function AddTaskModal({ onClose }: { onClose: () => void }) {
     <div className="modal-backdrop open" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal">
         <h3>Add a roadmap task</h3>
-        <div className="modal-sub">Give it a title, a priority column and assign owners.</div>
+        <div className="modal-sub">Give it a title, a state and assign owners.</div>
         <div className="field"><label>Title</label>
           <input type="text" value={title} placeholder="e.g. Shipping rate intelligence" onChange={(e) => setTitle(e.target.value)} autoFocus />
         </div>
-        <div className="field"><label>Priority</label>
+        <div className="field"><label>State</label>
           <select value={priority} onChange={(e) => setPriority(e.target.value)}>
             <option value="1">Now · Priority 1</option>
             <option value="2">Next · Priority 2</option>
-            <option value="3">Then · Priority 3</option>
-            <option value="4">Later · Priority 4</option>
-            <option value="5">Future · Priority 5</option>
-            <option value="">Backlog · Unscheduled</option>
+            <option value="3">Future · Priority 3</option>
           </select>
+          <div className="field-hint">Done is the fourth state, and it is not set here: a milestone reaches it once every subtask under it is checked off.</div>
         </div>
         <div className="field"><label>Assign owners</label>
           <RosterPicker assignees={pending} onToggle={toggle} />

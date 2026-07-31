@@ -4,6 +4,7 @@ import { DEFAULT_ROSTER, STATUS_CYCLE } from "./constants";
 import { SEED_VERSION, seed, stampIds } from "./seed";
 import { uid, newRoadmapId } from "./id";
 import { makeHelpers, pruneTasks, type Helpers } from "./teams";
+import { normPriority } from "./derive";
 import { loadRemote, saveRemote, supabaseEnabled } from "./remote";
 
 const ROADMAPS_KEY = "stackback_roadmaps_v3";
@@ -186,7 +187,7 @@ class Store {
     return e.arr.splice(e.index, 1)[0];
   }
   cardMoves(task: Node): { up: boolean; down: boolean } {
-    const same = this.tasks.filter((t) => (t.priority || null) === (task.priority || null));
+    const same = this.tasks.filter((t) => normPriority(t.priority) === normPriority(task.priority));
     const idx = same.findIndex((t) => t.id === task.id);
     return { up: idx > 0, down: idx >= 0 && idx < same.length - 1 };
   }
@@ -198,10 +199,10 @@ class Store {
     if (e.parentId === "root") {
       const arr = this.tasks;
       const i = arr.indexOf(e.node);
-      const p = arr[i].priority || null;
+      const p = normPriority(arr[i].priority);
       let j = -1;
-      if (dir === "up") { for (let k = i - 1; k >= 0; k--) if ((arr[k].priority || null) === p) { j = k; break; } }
-      else { for (let k = i + 1; k < arr.length; k++) if ((arr[k].priority || null) === p) { j = k; break; } }
+      if (dir === "up") { for (let k = i - 1; k >= 0; k--) if (normPriority(arr[k].priority) === p) { j = k; break; } }
+      else { for (let k = i + 1; k < arr.length; k++) if (normPriority(arr[k].priority) === p) { j = k; break; } }
       if (j < 0) return;
       [arr[i], arr[j]] = [arr[j], arr[i]];
     } else {

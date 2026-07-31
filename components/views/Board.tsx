@@ -1,8 +1,7 @@
 "use client";
 import { createContext, DragEvent, Fragment, useContext, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
-import { PRIORITIES } from "@/lib/constants";
-import { statusLabel, subtreeCounts } from "@/lib/derive";
+import { STATES, stateOf, statusLabel, subtreeCounts } from "@/lib/derive";
 import type { Node } from "@/lib/types";
 import { Avatar, ReorderBtns } from "../bits";
 import { IcAddSub, IcCheck, IcChevron, IcGrip, IcPlus, IcTrash } from "../icons";
@@ -165,11 +164,25 @@ export function Board() {
   return (
     <BoardContext.Provider value={ctx}>
       <div className="board">
-        {PRIORITIES.map((w) => {
-          const tasks = s.viewTasks.filter((t) => (t.priority || null) === w.p);
+        {STATES.map((w) => {
+          const tasks = s.viewTasks.filter((t) => stateOf(t) === w.k);
+          // Done is not a column you drag into. A milestone earns it by having every
+          // subtask checked off, so the column reflects the work rather than setting it.
+          if (w.k === "done") {
+            return (
+              <div className="column done-col" key={w.k}>
+                <div className="column-head"><span className="word">{w.word}</span><span className="pr">Shipped</span><span className="n">{tasks.length}</span></div>
+                <div className="column-list">
+                  {tasks.length
+                    ? tasks.map((t) => <Card key={t.id} task={t} />)
+                    : <div className="column-empty">{s.ui.filter ? "No matching tasks" : "Milestones arrive here once every subtask under them is checked off."}</div>}
+                </div>
+              </div>
+            );
+          }
           return (
-            <div className="column" key={String(w.p)}>
-              <div className="column-head"><span className="word">{w.word}</span><span className="pr">{w.p ? `P${w.p}` : "Unscheduled"}</span><span className="n">{tasks.length}</span></div>
+            <div className="column" key={w.k}>
+              <div className="column-head"><span className="word">{w.word}</span><span className="pr">{`P${w.p}`}</span><span className="n">{tasks.length}</span></div>
               {tasks.length ? (
                 <div className="column-list" onDragOver={ctx.onColOver} onDrop={(e) => ctx.onColDrop(e, w.p)}>
                   <DropLine parent="root" priority={w.p} before={tasks.length ? tasks[0].id : ""} />

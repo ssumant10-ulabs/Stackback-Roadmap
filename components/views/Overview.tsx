@@ -1,7 +1,7 @@
 "use client";
 import { useStore } from "@/lib/store";
 import { SIMPLE_LABELS, SIMPLE_SUB, TEAM_ORDER, TEAM_SHORT, TEAM_VAR } from "@/lib/constants";
-import { bucketOf, effStatus, statusLabel, subtreeCounts } from "@/lib/derive";
+import { STATES, effStatus, stateOf, statusLabel, subtreeCounts } from "@/lib/derive";
 import type { Node } from "@/lib/types";
 import { OwnerAvatars, ReorderBtns, StatusDot } from "../bits";
 import { IcChevron, IcTeam } from "../icons";
@@ -85,27 +85,29 @@ export function Overview() {
   walkAll(all, (n) => { totalNodes++; if (n.status === "done") doneNodes++; });
   const overall = totalNodes ? Math.round((doneNodes / totalNodes) * 100) : 0;
   const mode = s.ui.simpleMode;
+  const EMPTY: Record<string, string> = {
+    now: "Nothing shipping right now.",
+    next: "Nothing queued up next.",
+    future: "Nothing parked for the future.",
+    done: "Nothing fully shipped yet.",
+  };
   const groups = mode === "status"
     ? [
         { k: "progress", title: "In progress", empty: "Nothing in flight.", test: (t: Node) => effStatus(t) === "progress" },
         { k: "planned", title: "Planned", empty: "Nothing waiting.", test: (t: Node) => effStatus(t) === "planned" },
         { k: "done", title: "Done", empty: "Nothing shipped yet.", test: (t: Node) => effStatus(t) === "done" },
       ]
-    : [
-        { k: "now", title: "Now", empty: "Nothing shipping right now.", test: (t: Node) => bucketOf(t.priority) === "now" },
-        { k: "next", title: "Next", empty: "Nothing queued up next.", test: (t: Node) => bucketOf(t.priority) === "next" },
-        { k: "later", title: "Later", empty: "Nothing parked for later.", test: (t: Node) => bucketOf(t.priority) === "later" },
-      ];
+    : STATES.map((st) => ({ k: st.k, title: st.word, empty: EMPTY[st.k], test: (t: Node) => stateOf(t) === st.k }));
   return (
     <>
       <div className="view-toolbar">
         <div className="gran-toggle">
-          <button type="button" className={mode === "stage" ? "active" : ""} onClick={() => s.setSimpleMode("stage")}>Now / Next / Later</button>
+          <button type="button" className={mode === "stage" ? "active" : ""} onClick={() => s.setSimpleMode("stage")}>Now / Next / Future / Done</button>
           <button type="button" className={mode === "status" ? "active" : ""} onClick={() => s.setSimpleMode("status")}>By status</button>
         </div>
         <div className="vt-note">
           {mode === "stage"
-            ? "Where each milestone sits on the horizon. Open a card for the plain-language breakdown."
+            ? "Which of the four states each milestone is in. A milestone reaches Done when every subtask under it is checked off. Open a card for the plain-language breakdown."
             : "What is moving, waiting or done, rolled up from every subtask. Open a card for the breakdown."}
         </div>
       </div>

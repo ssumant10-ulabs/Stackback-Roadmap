@@ -15,13 +15,14 @@ export const TEAM_SHORT: Record<string, string> = { Engineering: "Eng", Design: 
 export const FOUNDERS: Record<string, number> = { Shubham: 1, Rohan: 1 };
 export const TEAM_NEUTRAL: Record<string, number> = { Rohan: 1 };
 
-export const PRIORITIES: { p: number | null; word: string }[] = [
+/** The roadmap has four states: three schedulable horizons plus Done.
+ *  Done is derived, never stored: anything whose work is all checked off leaves its
+ *  horizon and shows under Done, so the four states partition the roadmap exactly.
+ *  Only these three priorities are ever written to a node. */
+export const PRIORITIES: { p: number; word: string }[] = [
   { p: 1, word: "Now" },
   { p: 2, word: "Next" },
-  { p: 3, word: "Then" },
-  { p: 4, word: "Later" },
-  { p: 5, word: "Future" },
-  { p: null, word: "Backlog" },
+  { p: 3, word: "Future" },
 ];
 
 export const STATUS_CYCLE: ("planned" | "progress" | "done")[] = ["planned", "progress", "done"];

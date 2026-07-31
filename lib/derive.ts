@@ -57,17 +57,47 @@ export function inflightLeaves(task: Node): string[] {
   return out;
 }
 
-export function waveWord(p: number | null | undefined): string {
-  const pp = p == null ? null : p;
-  for (const w of PRIORITIES) if (w.p === pp) return w.word;
-  return "Backlog";
+/** The four roadmap states. `done` carries no priority: it is derived from the work. */
+export type RoadmapState = "now" | "next" | "future" | "done";
+
+export const STATES: { k: RoadmapState; word: string; p: number | null }[] = [
+  { k: "now", word: "Now", p: 1 },
+  { k: "next", word: "Next", p: 2 },
+  { k: "future", word: "Future", p: 3 },
+  { k: "done", word: "Done", p: null },
+];
+
+/** Clamp a stored priority onto the three live horizons: 1 Now, 2 Next, 3 Future.
+ *  Anything else, including the 4 / 5 / null that older data used for Later, Future and
+ *  Backlog, lands on Future, which is where all three of those belonged anyway.
+ *  The sheet's five words are folded down at generation time, not here: see
+ *  data/gen_seed.py, where Then folds into Next and Later folds into Future. */
+export function normPriority(p: number | null | undefined): 1 | 2 | 3 {
+  return p === 1 ? 1 : p === 2 ? 2 : 3;
 }
 
-export function bucketOf(p: number | null | undefined): "now" | "next" | "later" {
-  const pp = p == null ? null : p;
-  if (pp === 1) return "now";
-  if (pp === 2 || pp === 3) return "next";
-  return "later";
+/** Which of the four states a milestone sits in. Done wins over the horizon: once every
+ *  subtask is checked off, a milestone has shipped and no longer belongs on a horizon. */
+export function stateOf(t: Node): RoadmapState {
+  if (effStatus(t) === "done") return "done";
+  const p = normPriority(t.priority);
+  return p === 1 ? "now" : p === 2 ? "next" : "future";
+}
+
+/** Same rule one level down: a task counts as Done if it is checked off, or if the whole
+ *  milestone it belongs to has shipped. Otherwise it counts under that milestone's horizon.
+ *  Partitions every task exactly once, and keeps the header counts agreeing with the
+ *  columns, where a milestone is placed by its rolled-up status. */
+export function nodeState(n: Node, milestone: Node): RoadmapState {
+  if (n.status === "done") return "done";
+  const ms = stateOf(milestone);
+  return ms === "done" ? "done" : ms;
+}
+
+export function waveWord(p: number | null | undefined): string {
+  const pp = normPriority(p);
+  for (const w of PRIORITIES) if (w.p === pp) return w.word;
+  return "Future";
 }
 
 export function milestoneDone(t: Node): boolean {

@@ -3,7 +3,7 @@ import { uid } from "./id";
 
 /** Bumped whenever the seed data below is regenerated from the roadmap sheet.
  *  A bump invalidates saved browser/Supabase state so everyone picks up the new tree. */
-export const SEED_VERSION = 2;
+export const SEED_VERSION = 3;
 
 /** Source of truth: the `Roadmap` tab of StackBack_Roadmap_Tasks_Updated.xlsx
  *  (Google Drive 1tHa3FtlnUOaCg5kH7zmUgkV2IfiUDmSb, last modified 2026-07-31).
@@ -148,13 +148,13 @@ export function seed(): Node[] {
       N("Build OTP generation, verification & session handling on backend", "planned", [P("Shubham")], [], { team: "Engineering" }),
       N("Handle edge cases - resend OTP, rate-limiting, invalid/expired codes", "planned", [P("Shubham")], [], { team: "Engineering" }),
       N("QA testing & deploy to live", "planned", [P("Shubham")], [], { team: "Engineering" })
-    ], { priority: 3, team: "Engineering" }),
+    ], { priority: 2, team: "Engineering" }),
 
     N("Prepaid & PAYG enhancement", "planned", [T("Engineering")], [
       N("PAYG plans: first 2-3 orders prepaid, then switch to PAYG with email reminders", "planned", [P("Shubham")], [], { team: "Engineering" }),
       N("Support continuous PAYG plans with no end date", "planned", [P("Shubham")], [], { team: "Engineering" }),
       N("Support partial prepaid plans that convert to PAYG", "planned", [P("Shubham")], [], { team: "Engineering" })
-    ], { priority: 4, team: "Engineering" }),
+    ], { priority: 3, team: "Engineering" }),
 
     N("Internal Systems", "planned", [T("Engineering")], [
       N("Build internal health-reporting system", "planned", [T("Engineering")], [
@@ -165,14 +165,14 @@ export function seed(): Node[] {
       N("Partner API integration for merchant accounting & subscription sync into StackBack", "planned", [P("Shubham")], [], { team: "Engineering" }),
       N("Build overall business metrics dashboard (internal)", "planned", [P("Shubham"), P("Ishita")], [], { team: "Engineering" }),
       N("Migrate internal admin to new system/architecture", "planned", [P("Shubham")], [], { team: "Engineering" })
-    ], { priority: 5, team: "Engineering" }),
+    ], { priority: 3, team: "Engineering" }),
 
     N("Subscription renewal nudge (mail + payment link + renew button in portal)", "planned", [P("Shubham")], [
       N("Build email reminder before subscription expiry with renewal CTA", "planned", [P("Shubham")], [], { team: "Engineering" }),
       N("Generate secure payment link for renewal (mail + portal)", "planned", [P("Shubham")], [], { team: "Engineering" }),
       N("Add 'Renew Now' button in customer portal linked to payment", "planned", [P("Shubham")], [], { team: "Engineering" }),
       N("QA testing & deploy to live", "planned", [P("Shubham")], [], { team: "Engineering" })
-    ], { priority: 5, team: "Engineering" }),
+    ], { priority: 3, team: "Engineering" }),
 
     N("Event tracking to be set up", "planned", [T("Engineering")], [
       N("Finalize event-tracking tool", "planned", [P("Mansi")], [
@@ -183,6 +183,6 @@ export function seed(): Node[] {
         N("Define user-level tracking requirements", "planned", [P("Mansi")], [], { team: "Engineering" }),
         N("Check tool-level integration with WhatsApp tool", "planned", [P("Mansi")], [], { team: "Engineering" })
       ], { team: "Engineering" })
-    ], { priority: 5, team: "Engineering" }),
+    ], { priority: 3, team: "Engineering" }),
   ];
 }

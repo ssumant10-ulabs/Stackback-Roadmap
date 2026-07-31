@@ -1,8 +1,7 @@
 "use client";
 import { CSSProperties, Fragment } from "react";
 import { useStore } from "@/lib/store";
-import { PRIORITIES } from "@/lib/constants";
-import { effStatus, statusLabel, subtreeCounts } from "@/lib/derive";
+import { STATES, effStatus, stateOf, statusLabel, subtreeCounts } from "@/lib/derive";
 import type { Node } from "@/lib/types";
 import { RmItem } from "../RmItem";
 import { ViewIcon } from "../icons";
@@ -19,8 +18,8 @@ function Toolbar() {
       </div>
       <div className="vt-note">
         {s.ui.tlMode === "swim"
-          ? "Teams as rows, priority waves as columns. Read across a team to see their Now to Later work; every card names its team."
-          : "The whole roadmap top to bottom, Now flowing to Later, grouped into each wave by the owning team."}
+          ? "Teams as rows, the four states as columns. Read across a team to see their Now to Future work; every card names its team."
+          : "The whole roadmap top to bottom, Now flowing to Done, grouped into each state by the owning team."}
       </div>
     </div>
   );
@@ -41,7 +40,7 @@ function TimelineWave() {
   const h = s.helpers;
   const f = s.ui.filter;
   const teamFilter = f && f.type === "team" ? f.name : null;
-  const waves = PRIORITIES.map((w) => ({ w, tasks: s.viewTasks.filter((t) => (t.priority || null) === w.p) })).filter((x) => x.tasks.length);
+  const waves = STATES.map((w) => ({ w, tasks: s.viewTasks.filter((t) => stateOf(t) === w.k) })).filter((x) => x.tasks.length);
   if (!waves.length) return <div className="roadmap"><p className="rm-intro">No matching items.</p></div>;
   return (
     <div className="roadmap">
@@ -60,9 +59,9 @@ function TimelineWave() {
         tasks.forEach((t) => { const c = subtreeCounts(t); tot += c.total + 1; dn += c.done + (t.status === "done" ? 1 : 0); });
         const pct = tot ? Math.round((dn / tot) * 100) : 0;
         return (
-          <section className="wave" key={String(w.p)}>
+          <section className="wave" key={w.k}>
             <span className="wave-marker"><span /></span>
-            <div className="wave-head"><h3>{w.word}</h3><span className="pr">{w.p ? `Priority ${w.p}` : "Unscheduled"}</span>
+            <div className="wave-head"><h3>{w.word}</h3><span className="pr">{w.p ? `Priority ${w.p}` : "Shipped"}</span>
               <span className="wmeta">{tasks.length} item{tasks.length > 1 ? "s" : ""} · {pct}% done</span></div>
             <div className="wave-body">
               {lanes.map((l) => (
@@ -114,16 +113,17 @@ function TimelineSwim() {
   const f = s.ui.filter;
   const teamFilter = f && f.type === "team" ? f.name : null;
   const vt = s.viewTasks;
-  const waves = PRIORITIES.filter((w) => vt.some((t) => (t.priority || null) === w.p));
-  if (!waves.length) return <div className="roadmap"><p className="rm-intro">No matching items.</p></div>;
+  // All four states always show, empty or not: the columns are the model, not a summary of it.
+  const waves = STATES;
+  if (!vt.length) return <div className="roadmap"><p className="rm-intro">No matching items.</p></div>;
   const tvOf: Record<string, string> = { Engineering: "eng", Design: "dsg", PM: "pm" };
   const rows: { key: string; tv: string }[] = teamFilter
     ? [{ key: teamFilter, tv: tvOf[teamFilter] || "neutral" }]
     : [{ key: "Engineering", tv: "eng" }, { key: "Design", tv: "dsg" }, { key: "PM", tv: "pm" }];
   if (!teamFilter && vt.some((t) => h.teamSet(t).length === 0)) rows.push({ key: "__un", tv: "neutral" });
-  const itemsFor = (rowKey: string, wp: number | null) =>
+  const itemsFor = (rowKey: string, stateKey: string) =>
     vt.filter((t) => {
-      if ((t.priority || null) !== wp) return false;
+      if (stateOf(t) !== stateKey) return false;
       if (teamFilter) return true;
       const ts = h.teamSet(t);
       if (rowKey === "__un") return ts.length === 0;
@@ -134,19 +134,19 @@ function TimelineSwim() {
       <div className="swim-scroll">
         <div className="swim-grid" style={{ gridTemplateColumns: `132px repeat(${waves.length}, minmax(210px, 1fr))` }}>
           <div className="swim-corner">Team</div>
-          {waves.map((w) => <div className="swim-colhead" key={String(w.p)}><span className="word">{w.word}</span><span className="pr">{w.p ? `Priority ${w.p}` : "Backlog"}</span></div>)}
+          {waves.map((w) => <div className={`swim-colhead${w.k === "done" ? " shipped" : ""}`} key={w.k}><span className="word">{w.word}</span><span className="pr">{w.p ? `Priority ${w.p}` : "Shipped"}</span></div>)}
           {rows.map((r) => (
             <Fragment key={r.key}>
               <div className="swim-rowhead" style={{ "--tc": `var(--team-${r.tv})` } as CSSProperties}><span className="dot" />{r.key === "__un" ? "Unassigned" : r.key}</div>
               {waves.map((w) => {
-                const items = itemsFor(r.key, w.p);
-                return <div className="swim-cell" key={String(w.p)}>{items.length ? items.map((t) => <SwimCard key={t.id} task={t} teamKey={r.key} tv={r.tv} />) : <span className="swim-empty">·</span>}</div>;
+                const items = itemsFor(r.key, w.k);
+                return <div className="swim-cell" key={w.k}>{items.length ? items.map((t) => <SwimCard key={t.id} task={t} teamKey={r.key} tv={r.tv} />) : <span className="swim-empty">·</span>}</div>;
               })}
             </Fragment>
           ))}
         </div>
       </div>
-      <p className="rm-intro" style={{ marginTop: 12 }}>Each row is a team, each column a priority wave. A task shared by two teams appears under both, each showing only that team&apos;s subtasks.</p>
+      <p className="rm-intro" style={{ marginTop: 12 }}>Each row is a team, each column one of the four states. A milestone moves into Done once every subtask under it is checked off. A milestone shared by two teams appears under both, each showing only that team&apos;s subtasks.</p>
     </div>
   );
 }
