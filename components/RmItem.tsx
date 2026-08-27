@@ -3,7 +3,7 @@ import type { CSSProperties } from "react";
 import { useStore } from "@/lib/store";
 import { effStatus, inflightLeaves, statusLabel, subtreeCounts, waveWord } from "@/lib/derive";
 import type { Node } from "@/lib/types";
-import { MiniBar, OwnerAvatars, ReorderBtns, StatusDot } from "./bits";
+import { DateChip, MiniBar, OwnerAvatars, ReorderBtns, StatusDot } from "./bits";
 import { useAppUi } from "./appui";
 
 export function RmItem({ task, railVar, showWave, inflight }: { task: Node; railVar: string; showWave?: boolean; inflight?: boolean }) {
@@ -30,6 +30,7 @@ export function RmItem({ task, railVar, showWave, inflight }: { task: Node; rail
       {lv.length > 0 && <div className="rm-inflight">{lv.map((x, i) => <span key={i}>▸ {x}</span>)}</div>}
       <div className="rm-item-foot">
         {showWave && <span className="rm-wave-chip">{waveWord(task.priority)}</span>}
+        <DateChip node={task} variant="hide" />
         {task.deadline && <span className="rm-date-chip" title="Deadline">Due {task.deadline}</span>}
         {task.handover && <span className="rm-date-chip" title="Handover timeline">Handover {task.handover}</span>}
         <span className="assignees"><OwnerAvatars task={task} /></span>

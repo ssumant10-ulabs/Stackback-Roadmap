@@ -24,6 +24,12 @@ export const IcCaretDown = (p: React.SVGProps<SVGSVGElement>) => S({ strokeWidth
 export const IcClose = (p: React.SVGProps<SVGSVGElement>) => S({ strokeWidth: 2.2, ...p } as never, <path d="M6 6l12 12M18 6L6 18" />);
 export const IcFilter = (p: React.SVGProps<SVGSVGElement>) => S(p, <path d="M3 5h18M6 12h12M10 19h4" />);
 export const IcBoard = (p: React.SVGProps<SVGSVGElement>) => S(p, <><rect x="3" y="4" width="5" height="16" rx="1" /><rect x="10" y="4" width="5" height="11" rx="1" /><rect x="17" y="4" width="4" height="14" rx="1" /></>);
+export const IcClock = (p: React.SVGProps<SVGSVGElement>) => S(p, <><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></>);
+export const IcComment = (p: React.SVGProps<SVGSVGElement>) => S(p, <path d="M20 12a7.5 7.5 0 0 1-7.5 7.5H8l-4 3v-3.6A7.5 7.5 0 0 1 12.5 4.5 7.5 7.5 0 0 1 20 12z" />);
+export const IcActivity = (p: React.SVGProps<SVGSVGElement>) => S(p, <path d="M3 12h4l2.5-6 4 12 2.5-6h5" />);
+export const IcCollapseAll = (p: React.SVGProps<SVGSVGElement>) => S(p, <><path d="M8 9l4-4 4 4" /><path d="M8 15l4 4 4-4" /></>);
+export const IcExpandAll = (p: React.SVGProps<SVGSVGElement>) => S(p, <><path d="M8 5l4 4 4-4" /><path d="M8 19l4-4 4 4" /></>);
+export const IcLink = (p: React.SVGProps<SVGSVGElement>) => S(p, <><path d="M10.5 13.5a3.5 3.5 0 0 0 5 0l3-3a3.5 3.5 0 0 0-5-5l-1.5 1.5" /><path d="M13.5 10.5a3.5 3.5 0 0 0-5 0l-3 3a3.5 3.5 0 0 0 5 5L12 17" /></>);
 export const IcSettings = (p: React.SVGProps<SVGSVGElement>) => S(p, <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></>);
 
 export function ViewIcon({ id }: { id: string }) {

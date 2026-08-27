@@ -5,17 +5,25 @@ Source of truth: the `Roadmap` tab of StackBack_Roadmap_Tasks_Updated.xlsx
 (Drive id 1tHa3FtlnUOaCg5kH7zmUgkV2IfiUDmSb).
 
 To refresh the app after the team edits the sheet:
-  1. Update data/roadmap_tab.tsv to match the Roadmap tab (tab-separated, same 9 columns).
-  2. python3 data/gen_seed.py            # dry run, prints the counts to eyeball
-  3. python3 data/gen_seed.py --write    # rewrites lib/seed.ts
-  4. Bump SEED_VERSION in lib/seed.ts so saved browsers pick the new tree up.
+  1. Update data/roadmap_tab.tsv to match the Roadmap tab (tab-separated; the 9 original
+     columns, optionally followed by start / end / tat).
+  2. python3 data/gen_seed.py --diff     # what would change vs the committed snapshot
+  3. python3 data/gen_seed.py --write    # rewrites lib/seed.ts, bumps SEED_VERSION,
+                                         # and refreshes data/roadmap_snapshot.json
+
+SEED_VERSION is bumped automatically on --write: forgetting step 4 by hand is exactly how
+a saved browser ends up pinned to a superseded copy of the sheet.
+
+Columns are matched by HEADER NAME, not position, so adding a column to the sheet does not
+silently shift the data by one.
 """
-import csv, json, os, re, sys
+import csv, datetime, json, os, re, sys
 from collections import Counter, OrderedDict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TSV = os.path.join(HERE, "roadmap_tab.tsv")
 OUT = os.path.join(HERE, os.pardir, "lib", "seed.ts")
+SNAP = os.path.join(HERE, "roadmap_snapshot.json")
 
 # The app has four states: Now, Next, Future and Done. Done is derived from the work being
 # checked off, never authored, so only three priorities are written. The sheet still uses
@@ -52,29 +60,77 @@ def parse_owners(raw):
     return out
 
 
-def read_rows():
+# Sheet header -> internal field. Matched case-insensitively on the header row so a
+# reordered or extended sheet cannot shift every value one column to the left.
+COLMAP = {
+    "milestone": "ms", "subtask": "sub", "subsub": "subsub", "priority": "pri",
+    "owners": "owners", "team": "team", "status": "status",
+    "handover": "handover", "deadline": "deadline",
+    "start": "start", "end": "end", "tat": "tat",
+}
+FIELDS = ["ms", "sub", "subsub", "pri", "owners", "team", "status", "handover", "deadline",
+          "start", "end", "tat"]
+
+
+def read_rows(path=None):
     rows = []
-    with open(TSV, newline="") as f:
+    with open(path or TSV, newline="") as f:
         r = csv.reader(f, delimiter="\t")
-        header = next(r)
+        header = [h.strip().lower() for h in next(r)]
+        idx = {}
+        for i, h in enumerate(header):
+            key = COLMAP.get(h)
+            if key and key not in idx:
+                idx[key] = i
+        missing = [k for k in ("ms", "sub", "subsub", "pri") if k not in idx]
+        if missing:
+            sys.exit("TSV header is missing required column(s): %s (found: %s)" % (missing, header))
         for raw in r:
-            raw = raw + [""] * (9 - len(raw))
-            ms, sub, subsub, pri, owners, team, status, handover, deadline = [c.strip() for c in raw[:9]]
-            if not (ms or sub or subsub):
+            get = lambda k: (raw[idx[k]].strip() if k in idx and idx[k] < len(raw) else "")
+            row = {k: get(k) for k in FIELDS}
+            if not (row["ms"] or row["sub"] or row["subsub"]):
                 continue
-            rows.append(dict(ms=ms, sub=sub, subsub=subsub, pri=pri, owners=owners,
-                             team=team, status=status, handover=handover, deadline=deadline))
+            rows.append(row)
     return rows
+
+
+ISO_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def norm_day(v):
+    """Accepts yyyy-mm-dd and dd/mm/yyyy, the two shapes the sheet actually uses."""
+    v = (v or "").strip()
+    if not v:
+        return None
+    if ISO_RE.match(v):
+        return v
+    m = re.match(r"^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$", v)
+    if m:
+        d, mo, y = m.groups()
+        return "%s-%s-%s" % (y, mo.zfill(2), d.zfill(2))
+    print("  ! unparseable date, ignoring: %r" % v)
+    return None
+
+
+def norm_tat(v):
+    v = (v or "").strip()
+    if not v:
+        return None
+    m = re.match(r"^(\d+)", v)
+    return int(m.group(1)) if m and int(m.group(1)) > 0 else None
 
 
 def node(title, row, own_row):
     n = OrderedDict()
     n["title"] = title
-    n["status"] = STATUS[row["status"]] if own_row else "planned"
+    n["status"] = (STATUS.get(row["status"], "planned") if own_row else "planned")
     n["assignees"] = parse_owners(row["owners"]) if own_row else []
     n["team"] = row["team"] if (own_row and row["team"] in TEAMS) else None
     n["handover"] = (row["handover"] or None) if own_row else None
     n["deadline"] = (row["deadline"] or None) if own_row else None
+    n["start"] = (norm_day(row.get("start")) if own_row else None)
+    n["end"] = (norm_day(row.get("end")) if own_row else None)
+    n["tat"] = (norm_tat(row.get("tat")) if own_row else None)
     n["children"] = []
     return n
 
@@ -131,7 +187,7 @@ def strip_meta(n):
         strip_meta(c)
 
 
-def emit(nodes):
+def emit(nodes, version):
     def esc(s):
         return json.dumps(s, ensure_ascii=False)
 
@@ -150,6 +206,12 @@ def emit(nodes):
             bits.append("handover: %s" % esc(n["handover"]))
         if n.get("deadline"):
             bits.append("deadline: %s" % esc(n["deadline"]))
+        if n.get("start"):
+            bits.append("start: %s" % esc(n["start"]))
+        if n.get("end"):
+            bits.append("end: %s" % esc(n["end"]))
+        if n.get("tat"):
+            bits.append("tat: %d" % n["tat"])
         return "{ " + ", ".join(bits) + " }" if bits else ""
 
     def render(n, ind):
@@ -170,7 +232,7 @@ import { uid } from "./id";
 
 /** Bumped whenever the seed data below is regenerated from the roadmap sheet.
  *  A bump invalidates saved browser/Supabase state so everyone picks up the new tree. */
-export const SEED_VERSION = 3;
+export const SEED_VERSION = %d;
 
 /** Source of truth: the `Roadmap` tab of StackBack_Roadmap_Tasks_Updated.xlsx
  *  (Google Drive 1tHa3FtlnUOaCg5kH7zmUgkV2IfiUDmSb, last modified 2026-07-31).
@@ -202,7 +264,111 @@ export function seed(): Node[] {
 %s,
   ];
 }
-""" % body
+""" % (version, body)
+
+
+# ---------------------------------------------------------------- diff vs snapshot
+
+TRACKED = ("status", "priority", "team", "handover", "deadline", "start", "end", "tat")
+
+
+def flatten(nodes, parent="", out=None):
+    """Path-keyed map of every node, so a diff can name what moved rather than just
+    reporting a count. The path is milestone/subtask/subsub, which is how the sheet
+    identifies a row anyway."""
+    if out is None:
+        out = {}
+    for n in nodes:
+        path = (parent + " / " if parent else "") + n["title"]
+        rec = {k: n.get(k) for k in TRACKED}
+        rec["owners"] = ", ".join(
+            (a["name"] + (" [team]" if a.get("isTeam") else "")) for a in n.get("assignees", [])
+        )
+        out[path] = rec
+        flatten(n.get("children", []), path, out)
+    return out
+
+
+def load_snapshot():
+    if not os.path.exists(SNAP):
+        return None
+    try:
+        with open(SNAP) as f:
+            return json.load(f)
+    except (ValueError, OSError) as e:
+        print("  ! snapshot unreadable (%s), treating as first run" % e)
+        return None
+
+
+def compute_diff(tree):
+    """(added, removed, changed, prev) against the committed snapshot, or None for prev
+    when there is no snapshot to compare with yet."""
+    now = flatten(tree)
+    prev = load_snapshot()
+    if prev is None:
+        return [], [], [], None
+    old = prev.get("nodes", {})
+    added = [k for k in now if k not in old]
+    removed = [k for k in old if k not in now]
+    changed = []
+    for k in now:
+        if k not in old:
+            continue
+        for f in list(TRACKED) + ["owners"]:
+            a, b = old[k].get(f), now[k].get(f)
+            if (a or None) != (b or None):
+                changed.append((k, f, a, b))
+    return added, removed, changed, prev
+
+
+def show_diff(tree):
+    added, removed, changed, prev = compute_diff(tree)
+    now = flatten(tree)
+    if prev is None:
+        print("\nNo snapshot at data/roadmap_snapshot.json: nothing to diff against.")
+        print("Run --snapshot-only to record the current tree as the baseline.")
+        return True
+
+    print("\n=== diff vs snapshot %s ===" % prev.get("generated", "(undated)"))
+    if not (added or removed or changed):
+        print("No changes. lib/seed.ts already matches this TSV.")
+        return False
+
+    if added:
+        print("\nADDED (%d):" % len(added))
+        for k in added:
+            print("  + %s  [%s]" % (k, now[k].get("status")))
+    if removed:
+        print("\nREMOVED (%d):" % len(removed))
+        for k in removed:
+            print("  - %s" % k)
+    if changed:
+        print("\nCHANGED (%d field%s):" % (len(changed), "" if len(changed) == 1 else "s"))
+        for k, f, a, b in changed:
+            print("  ~ %s\n      %s: %r -> %r" % (k, f, a, b))
+    print("\n%d added, %d removed, %d field change%s. Re-run with --write to apply."
+          % (len(added), len(removed), len(changed), "" if len(changed) == 1 else "s"))
+    return True
+
+
+def current_seed_version():
+    try:
+        with open(OUT) as f:
+            m = re.search(r"export const SEED_VERSION = (\d+)", f.read())
+            return int(m.group(1)) if m else 1
+    except OSError:
+        return 1
+
+
+def write_snapshot(tree, version):
+    with open(SNAP, "w") as f:
+        json.dump({
+            "seedVersion": version,
+            "generated": datetime.date.today().isoformat(),
+            "source": os.path.basename(TSV),
+            "nodes": flatten(tree),
+        }, f, indent=1, sort_keys=True)
+        f.write("\n")
 
 
 def stats(nodes):
@@ -241,8 +407,20 @@ def stats(nodes):
     print("owners:", dict(people))
 
 
+def arg_value(flag):
+    if flag in sys.argv:
+        i = sys.argv.index(flag)
+        if i + 1 < len(sys.argv):
+            return sys.argv[i + 1]
+    return None
+
+
 if __name__ == "__main__":
-    rows = read_rows()
+    tsv = arg_value("--tsv")
+    if tsv:
+        TSV = os.path.abspath(tsv)
+        print("source:", TSV)
+    rows = read_rows(TSV)
     print("data rows:", len(rows))
     tree = build(rows)
     for m in tree:
@@ -250,8 +428,35 @@ if __name__ == "__main__":
     stats(tree)
     for m in tree:
         strip_meta(m)
-    src = emit(tree)
+
+    if "--snapshot-only" in sys.argv:
+        v = current_seed_version()
+        write_snapshot(tree, v)
+        print("recorded baseline snapshot at SEED_VERSION %d: %s" % (v, SNAP))
+        sys.exit(0)
+
+    if "--diff" in sys.argv:
+        show_diff(tree)
+        if "--write" not in sys.argv:
+            sys.exit(0)
+
     if "--write" in sys.argv:
+        added, removed, changed, prev = compute_diff(tree)
+        moved = bool(added or removed or changed) or prev is None
+        cur = current_seed_version()
+        # Bumping SEED_VERSION forces every saved browser and the shared Supabase row to
+        # re-seed, which throws away whatever the team has edited on the board. So bump
+        # only when the sheet actually moved: a no-op regeneration must stay a no-op.
+        version = cur + 1 if moved else cur
+        src = emit(tree, version)
         with open(OUT, "w") as f:
             f.write(src)
-        print("wrote", OUT, len(src), "bytes")
+        write_snapshot(tree, version)
+        if moved:
+            print("wrote %s (%d bytes), SEED_VERSION %d -> %d" % (OUT, len(src), cur, version))
+            print("Saved browsers and the Supabase row will re-seed on next load.")
+        else:
+            print("wrote %s (%d bytes), SEED_VERSION held at %d (no content change)" % (OUT, len(src), cur))
+        print("wrote %s" % SNAP)
+    else:
+        print("\nDry run. --diff to see what would change, --write to apply.")

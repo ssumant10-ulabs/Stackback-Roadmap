@@ -1,11 +1,13 @@
 "use client";
 import { createContext, DragEvent, Fragment, useContext, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
-import { STATES, stateOf, statusLabel, subtreeCounts } from "@/lib/derive";
+import { STATES, stateOf, subtreeCounts } from "@/lib/derive";
 import type { Node } from "@/lib/types";
-import { Avatar, ReorderBtns } from "../bits";
-import { IcAddSub, IcCheck, IcChevron, IcGrip, IcPlus, IcTrash } from "../icons";
-import { useAppUi } from "../appui";
+import { Assignees } from "../Assignees";
+import { CommentChip, DateChip, ReorderBtns, StatusButton } from "../bits";
+import { CommentsThread } from "../CommentsThread";
+import { IcAddSub, IcChevron, IcGrip, IcTrash } from "../icons";
+import { useFlip } from "../useFlip";
 
 interface BoardCtx {
   dragId: string | null;
@@ -27,17 +29,6 @@ function DropLine({ parent, priority, before }: { parent: string; priority: numb
   const b = useBoard();
   const key = `${parent}|${priority ?? ""}|${before}`;
   return <div className={`dropline${b.overDrop === key ? " over" : ""}`} onDragOver={(e) => b.onDropOver(e, key)} onDrop={(e) => b.onDrop(e, parent, before, priority)} />;
-}
-
-function Assignees({ node, small }: { node: Node; small?: boolean }) {
-  const ui = useAppUi();
-  const ref = useRef<HTMLButtonElement>(null);
-  return (
-    <>
-      {(node.assignees || []).map((a, i) => <Avatar key={i} a={a} small={small} />)}
-      <button ref={ref} type="button" className="assign-add" data-assign-anchor aria-label="Assign owners" onClick={() => ref.current && ui.openAssignee(node.id, ref.current)}><IcPlus /></button>
-    </>
-  );
 }
 
 function AddRow({ parentId }: { parentId: string }) {
@@ -71,18 +62,17 @@ function Subnode({ node, up, down }: { node: Node; up: boolean; down: boolean })
   const b = useBoard();
   const counts = subtreeCounts(node);
   const hasKids = (node.children || []).length > 0;
-  const open = s.ui.collapsed[node.id] !== true;
+  const open = s.isBoardOpen(node.id);
+  const cmtOpen = s.ui.commentsOpen[node.id] === true;
   return (
     <div className={`subnode${node.status === "done" ? " done" : ""}${b.dragId === node.id ? " dragging-src" : ""}`} data-node-id={node.id}>
       <div className={`subnode-row nest-target${b.overNest === node.id ? " nest-over" : ""}`} onDragOver={(e) => b.onNestOver(e, node.id)} onDrop={(e) => b.onNestDrop(e, node.id)}>
         <span className="sub-grip" draggable title="Drag to move" onDragStart={(e) => b.start(e, node.id)} onDragEnd={b.end}><IcGrip /></span>
-        <button type="button" className="status-btn" aria-label={`Status: ${statusLabel(node.status)}. Click to change.`} onClick={() => s.cycleStatus(node.id)}>
-          <span className={`status-ring ${node.status}`}>{node.status === "done" && <IcCheck />}</span>
-        </button>
+        <StatusButton node={node} />
         <div className="sn-main">
           <div className="sn-line"><span className="sn-text" draggable title="Drag to move" onDragStart={(e) => b.start(e, node.id)} onDragEnd={b.end}>{node.title}</span>{hasKids && <span className="sn-count">{counts.done}/{counts.total}</span>}</div>
           {hasKids && <div className="sn-progress"><span style={{ width: (counts.total ? Math.round((counts.done / counts.total) * 100) : 0) + "%" }} /></div>}
-          <div className="sn-line"><span className="sn-assignees"><Assignees node={node} small /></span>{node.eta && <span className="eta-badge">{node.eta}</span>}</div>
+          <div className="sn-line"><span className="sn-assignees"><Assignees node={node} small /></span><DateChip node={node} variant="icon" /><CommentChip node={node} /></div>
         </div>
         <div className="sn-tools">
           <ReorderBtns id={node.id} up={up} down={down} />
@@ -90,7 +80,8 @@ function Subnode({ node, up, down }: { node: Node; up: boolean; down: boolean })
           <button type="button" className="icon-btn danger" aria-label="Delete" onClick={() => { if (counts.total && !confirm(`Delete this and its ${counts.total} subtask(s)?`)) return; s.del(node.id); }}><IcTrash /></button>
         </div>
       </div>
-      {hasKids && <button type="button" className={`collapse-toggle${open ? " open" : ""}`} style={{ marginLeft: 22 }} onClick={() => s.toggleCollapse(node.id)}><IcChevron />{open ? "Hide" : `Show ${counts.total}`}</button>}
+      {cmtOpen && <div style={{ marginLeft: 22 }}><CommentsThread node={node} /></div>}
+      {hasKids && <button type="button" className={`collapse-toggle${open ? " open" : ""}`} style={{ marginLeft: 22 }} onClick={() => s.toggleBoardOpen(node.id)}><IcChevron />{open ? "Hide" : `Show ${counts.total}`}</button>}
       {hasKids && open && <div className="child-wrap"><NodeList items={node.children} parentId={node.id} /><AddRow parentId={node.id} /></div>}
     </div>
   );
@@ -101,7 +92,8 @@ function Card({ task }: { task: Node }) {
   const b = useBoard();
   const counts = subtreeCounts(task);
   const hasKids = (task.children || []).length > 0;
-  const open = s.ui.collapsed[task.id] !== true;
+  const open = s.isBoardOpen(task.id);
+  const cmtOpen = s.ui.commentsOpen[task.id] === true;
   const pct = counts.total ? Math.round((counts.done / counts.total) * 100) : 0;
   const m = s.cardMoves(task);
   return (
@@ -113,19 +105,18 @@ function Card({ task }: { task: Node }) {
         </div>
         <div className="card-tools">
           <ReorderBtns id={task.id} up={m.up} down={m.down} />
-          <button type="button" className="icon-btn" title="Set status" aria-label={`Status: ${statusLabel(task.status)}`} onClick={() => s.cycleStatus(task.id)}>
-            <span className={`status-ring ${task.status}`} style={{ width: 15, height: 15 }}>{task.status === "done" && <IcCheck />}</span>
-          </button>
+          <StatusButton node={task} size={15} />
           <button type="button" className="icon-btn danger" aria-label="Delete task" onClick={() => { if (counts.total && !confirm(`Delete this and its ${counts.total} subtask(s)?`)) return; s.del(task.id); }}><IcTrash /></button>
         </div>
       </div>
-      <div className="meta-row"><span className="assignees"><Assignees node={task} /></span>{task.eta && <span className="eta-badge">Target: {task.eta}</span>}</div>
+      <div className="meta-row"><span className="assignees"><Assignees node={task} /></span><DateChip node={task} /><CommentChip node={task} /></div>
       {hasKids ? (
         <div className="progress-row"><div className="progress-track"><div className="progress-fill" style={{ width: pct + "%" }} /></div><div className="progress-label">{counts.done}/{counts.total}</div></div>
       ) : (
-        <div className="progress-row"><span className={`status-pill ${task.status}`}>{statusLabel(task.status)}</span></div>
+        <div className="progress-row"><span className={`status-pill ${task.status}`}>{task.status === "done" ? "Done" : task.status === "progress" ? "In progress" : "Planned"}</span></div>
       )}
-      {hasKids && <button type="button" className={`collapse-toggle${open ? " open" : ""}`} onClick={() => s.toggleCollapse(task.id)}><IcChevron />{open ? "Hide checklist" : `Show checklist (${counts.total})`}</button>}
+      {cmtOpen && <CommentsThread node={task} />}
+      {hasKids && <button type="button" className={`collapse-toggle${open ? " open" : ""}`} onClick={() => s.toggleBoardOpen(task.id)}><IcChevron />{open ? "Hide checklist" : `Show checklist (${counts.total})`}</button>}
       {hasKids && open ? (
         <div className="children"><NodeList items={task.children} parentId={task.id} /><AddRow parentId={task.id} /></div>
       ) : (!hasKids && <AddRow parentId={task.id} />)}
@@ -133,13 +124,57 @@ function Card({ task }: { task: Node }) {
   );
 }
 
+/** Scrolls the board while a card is held near an edge, so a drag from Now to Future does
+ *  not need the user to let go, scroll, and pick the card back up. */
+function useEdgeScroll() {
+  const raf = useRef<number | null>(null);
+  const vec = useRef({ x: 0, y: 0 });
+  const el = useRef<HTMLElement | null>(null);
+
+  const tick = () => {
+    const { x, y } = vec.current;
+    if (!x && !y) { raf.current = null; return; }
+    if (x && el.current) el.current.scrollLeft += x;
+    if (y) window.scrollBy(0, y);
+    raf.current = requestAnimationFrame(tick);
+  };
+
+  const onDragOver = (e: DragEvent<HTMLDivElement>) => {
+    el.current = e.currentTarget;
+    const r = e.currentTarget.getBoundingClientRect();
+    const EDGE = 90, SPEED = 16;
+    let x = 0, y = 0;
+    if (e.clientX - r.left < EDGE) x = -SPEED * (1 - (e.clientX - r.left) / EDGE);
+    else if (r.right - e.clientX < EDGE) x = SPEED * (1 - (r.right - e.clientX) / EDGE);
+    if (e.clientY < EDGE) y = -SPEED * (1 - e.clientY / EDGE);
+    else if (window.innerHeight - e.clientY < EDGE) y = SPEED * (1 - (window.innerHeight - e.clientY) / EDGE);
+    vec.current = { x: Math.round(x), y: Math.round(y) };
+    if ((vec.current.x || vec.current.y) && raf.current === null) raf.current = requestAnimationFrame(tick);
+  };
+
+  const stop = () => {
+    vec.current = { x: 0, y: 0 };
+    if (raf.current !== null) { cancelAnimationFrame(raf.current); raf.current = null; }
+  };
+
+  return { onDragOver, stop };
+}
+
 export function Board() {
   const s = useStore();
   const [dragId, setDragId] = useState<string | null>(null);
   const [overDrop, setOverDrop] = useState<string | null>(null);
   const [overNest, setOverNest] = useState<string | null>(null);
+  const edge = useEdgeScroll();
 
-  const end = () => { setDragId(null); setOverDrop(null); setOverNest(null); if (typeof document !== "undefined") document.body.classList.remove("is-dragging"); };
+  // Animate cards to their new home after any tree change, rather than teleporting them.
+  useFlip(s.getSnapshot(), ".board .card, .board .subnode");
+
+  const end = () => {
+    setDragId(null); setOverDrop(null); setOverNest(null);
+    edge.stop();
+    if (typeof document !== "undefined") document.body.classList.remove("is-dragging");
+  };
   const ctx: BoardCtx = {
     dragId, overDrop, overNest,
     start(e, id) {
@@ -163,7 +198,7 @@ export function Board() {
 
   return (
     <BoardContext.Provider value={ctx}>
-      <div className="board">
+      <div className="board" onDragOver={edge.onDragOver} onDragLeave={edge.stop} onDrop={edge.stop}>
         {STATES.map((w) => {
           const tasks = s.viewTasks.filter((t) => stateOf(t) === w.k);
           // Done is not a column you drag into. A milestone earns it by having every

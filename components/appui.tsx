@@ -3,6 +3,7 @@ import { createContext, useContext } from "react";
 
 export interface AppUi {
   openAssignee: (nodeId: string, anchor: HTMLElement) => void;
+  openDates: (nodeId: string, anchor: HTMLElement) => void;
   openFilter: (anchor: HTMLElement) => void;
   openAddTask: () => void;
   openSettings: () => void;

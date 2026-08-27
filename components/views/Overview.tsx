@@ -3,7 +3,8 @@ import { useStore } from "@/lib/store";
 import { SIMPLE_LABELS, SIMPLE_SUB, TEAM_ORDER, TEAM_SHORT, TEAM_VAR } from "@/lib/constants";
 import { STATES, effStatus, stateOf, statusLabel, subtreeCounts } from "@/lib/derive";
 import type { Node } from "@/lib/types";
-import { OwnerAvatars, ReorderBtns, StatusDot } from "../bits";
+import { CommentChip, DateChip, OwnerAvatars, ReorderBtns, StatusDot } from "../bits";
+import { CommentsThread } from "../CommentsThread";
 import { IcChevron, IcTeam } from "../icons";
 import { useAppUi } from "../appui";
 
@@ -40,13 +41,18 @@ function SimpleCard({ task }: { task: Node }) {
             <span className="sword">{statusLabel(es)}</span>
             {es === "progress" && <span className="sbar"><span style={{ width: pctv + "%" }} /></span>}
             {c.total > 0 && <span>{c.done} of {c.total} done</span>}
+            <DateChip node={task} />
             {task.deadline && <span className="rm-date-chip" title="Deadline">Due {task.deadline}</span>}
             {task.handover && <span className="rm-date-chip" title="Handover timeline">Handover {task.handover}</span>}
             <span className="sowners"><OwnerAvatars task={task} /></span>
+            <CommentChip node={task} />
           </div>
         </div>
         <ReorderBtns id={task.id} up={m.up} down={m.down} />
       </div>
+      {s.ui.commentsOpen[task.id] === true && (
+        <div style={{ padding: "0 19px 4px" }}><CommentsThread node={task} /></div>
+      )}
       {kids.length > 0 && (
         <button type="button" className="sc-detail-toggle" onClick={() => s.toggleSimpleOpen(task.id)}>
           <IcChevron />{open ? "Hide the breakdown" : `Show what's inside (${kids.length})`}

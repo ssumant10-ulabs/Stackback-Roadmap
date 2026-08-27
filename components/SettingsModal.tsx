@@ -1,17 +1,35 @@
 "use client";
 import { useState } from "react";
 import { useStore } from "@/lib/store";
+import { TEAM_ORDER } from "@/lib/constants";
+import { supabaseEnabled } from "@/lib/remote";
 import { IcTrash } from "./icons";
 
 export function SettingsModal({ onClose }: { onClose: () => void }) {
   const s = useStore();
   const [newName, setNewName] = useState("");
   const add = () => { if (s.addRoadmap(newName)) setNewName(""); };
+  const seen: Record<string, 1> = {};
+  const people: string[] = [];
+  TEAM_ORDER.forEach((t) => (s.data.roster[t] || []).forEach((n) => { if (!seen[n]) { seen[n] = 1; people.push(n); } }));
   return (
     <div className="modal-backdrop open" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal">
         <h3>Settings</h3>
         <div className="modal-sub">Manage your product roadmaps and account.</div>
+        <div className="settings-section">
+          <div className="ss-head">You</div>
+          <div className="ss-desc">Your name is stamped on comments and on anything you change. Stored in this browser only, so everyone picks their own.</div>
+          <div className="me-row">
+            <input type="text" className="me-input" placeholder="Your name" value={s.me}
+              onChange={(e) => s.setMe(e.target.value)} spellCheck={false} />
+            <div className="me-chips">
+              {people.map((n) => (
+                <button type="button" key={n} className={`chip${s.me === n ? " active" : ""}`} onClick={() => s.setMe(n)}>{n}</button>
+              ))}
+            </div>
+          </div>
+        </div>
         <div className="settings-section">
           <div className="ss-head">Product roadmaps</div>
           <div className="ss-desc">Each product gets its own roadmap. Switch between them or create a new one.</div>
@@ -39,10 +57,17 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
           </div>
         </div>
         <div className="settings-section">
-          <div className="ss-head">Account</div>
+          <div className="ss-head">Storage</div>
           <div className="ss-auth">
-            <div className="ss-auth-row"><strong>Sign in</strong><span className="ss-soon">Coming soon</span></div>
-            <p className="ss-desc">Accounts and login are on the way. Once added, your roadmaps sync to your account and you can share them with your team.</p>
+            <div className="ss-auth-row">
+              <strong>{supabaseEnabled ? "Shared (Supabase)" : "This browser only"}</strong>
+              <span className={supabaseEnabled ? "ss-live" : "ss-soon"}>{supabaseEnabled ? "Live" : "Local"}</span>
+            </div>
+            <p className="ss-desc">
+              {supabaseEnabled
+                ? "Edits save to the shared backend and appear in everyone else's browser without a reload."
+                : "Edits are saved in this browser only, so each teammate sees their own copy. Set the two Supabase env vars to switch the whole team onto one shared roadmap. See SUPABASE.md."}
+            </p>
           </div>
         </div>
         <div className="modal-actions"><button className="btn primary" onClick={onClose}>Done</button></div>
