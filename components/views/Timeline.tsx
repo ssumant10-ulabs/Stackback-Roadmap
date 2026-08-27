@@ -4,7 +4,8 @@ import { useStore } from "@/lib/store";
 import { STATES, effStatus, stateOf, statusLabel, subtreeCounts } from "@/lib/derive";
 import type { Node } from "@/lib/types";
 import { RmItem } from "../RmItem";
-import { ViewIcon } from "../icons";
+import { Gantt } from "./Gantt";
+import { IcClock, ViewIcon } from "../icons";
 import { Avatar, StatusDot } from "../bits";
 import { useAppUi } from "../appui";
 
@@ -15,11 +16,14 @@ function Toolbar() {
       <div className="gran-toggle">
         <button type="button" className={s.ui.tlMode === "wave" ? "active" : ""} onClick={() => s.setTlMode("wave")}><ViewIcon id="timeline" />By wave</button>
         <button type="button" className={s.ui.tlMode === "swim" ? "active" : ""} onClick={() => s.setTlMode("swim")}><ViewIcon id="swim" />Swimlanes</button>
+        <button type="button" className={s.ui.tlMode === "gantt" ? "active" : ""} onClick={() => s.setTlMode("gantt")}><IcClock />Dates</button>
       </div>
       <div className="vt-note">
-        {s.ui.tlMode === "swim"
-          ? "Teams as rows, the four states as columns. Read across a team to see their Now to Future work; every card names its team."
-          : "The whole roadmap top to bottom, Now flowing to Done, grouped into each state by the owning team."}
+        {s.ui.tlMode === "gantt"
+          ? "Everything with a start, an end or a TAT, plotted against real dates."
+          : s.ui.tlMode === "swim"
+            ? "Teams as rows, the four states as columns. Read across a team to see their Now to Future work; every card names its team."
+            : "The whole roadmap top to bottom, Now flowing to Done, grouped into each state by the owning team."}
       </div>
     </div>
   );
@@ -30,7 +34,7 @@ export function Timeline() {
   return (
     <>
       <Toolbar />
-      {s.ui.tlMode === "swim" ? <TimelineSwim /> : <TimelineWave />}
+      {s.ui.tlMode === "gantt" ? <Gantt /> : s.ui.tlMode === "swim" ? <TimelineSwim /> : <TimelineWave />}
     </>
   );
 }
