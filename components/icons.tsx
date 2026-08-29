@@ -30,6 +30,10 @@ export const IcActivity = (p: React.SVGProps<SVGSVGElement>) => S(p, <path d="M3
 export const IcCollapseAll = (p: React.SVGProps<SVGSVGElement>) => S(p, <><path d="M8 9l4-4 4 4" /><path d="M8 15l4 4 4-4" /></>);
 export const IcExpandAll = (p: React.SVGProps<SVGSVGElement>) => S(p, <><path d="M8 5l4 4 4-4" /><path d="M8 19l4-4 4 4" /></>);
 export const IcLink = (p: React.SVGProps<SVGSVGElement>) => S(p, <><path d="M10.5 13.5a3.5 3.5 0 0 0 5 0l3-3a3.5 3.5 0 0 0-5-5l-1.5 1.5" /><path d="M13.5 10.5a3.5 3.5 0 0 0-5 0l-3 3a3.5 3.5 0 0 0 5 5L12 17" /></>);
+export const IcAdmin = (p: React.SVGProps<SVGSVGElement>) => S(p, <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18M8 9v11" /></>);
+export const IcPalette = (p: React.SVGProps<SVGSVGElement>) => S(p, <><path d="M12 3a9 9 0 1 0 0 18c1.4 0 2-.9 2-1.8 0-1.3-1.2-1.7-1.2-2.9 0-.8.7-1.3 1.6-1.3H16a5 5 0 0 0 5-5c0-4-4-7-9-7z" /><circle cx="7.8" cy="11.5" r="1.1" fill="currentColor" /><circle cx="11" cy="7.6" r="1.1" fill="currentColor" /><circle cx="15.6" cy="9.2" r="1.1" fill="currentColor" /></>);
+export const IcPilots = (p: React.SVGProps<SVGSVGElement>) => S(p, <><path d="M3 20h18" /><rect x="5" y="11" width="4" height="9" rx="1" /><rect x="11" y="6" width="4" height="14" rx="1" /><rect x="17" y="14" width="4" height="6" rx="1" /></>);
+export const IcRoadmap = (p: React.SVGProps<SVGSVGElement>) => S(p, <><path d="M4 7h8M4 12h16M4 17h6" /><circle cx="16" cy="7" r="1.7" /><circle cx="12" cy="17" r="1.7" /></>);
 export const IcSettings = (p: React.SVGProps<SVGSVGElement>) => S(p, <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></>);
 
 export function ViewIcon({ id }: { id: string }) {
@@ -42,6 +46,8 @@ export function ViewIcon({ id }: { id: string }) {
     workload: <><path d="M4 19V5" /><rect x="7" y="12" width="3.5" height="7" /><rect x="13" y="8" width="3.5" height="11" /><rect x="19" y="14" width="1.5" height="5" /></>,
     swim: <><rect x="3" y="4" width="18" height="5" rx="1" /><rect x="3" y="10.5" width="18" height="5" rx="1" /><rect x="3" y="17" width="18" height="3.5" rx="1" /></>,
     board: <><rect x="3" y="4" width="5" height="16" rx="1" /><rect x="10" y="4" width="5" height="11" rx="1" /><rect x="17" y="4" width="4" height="14" rx="1" /></>,
+    features: <><path d="M12 3l2.4 5.3 5.6.6-4.2 3.9 1.2 5.6L12 15.6 6.9 18.4l1.2-5.6L4 8.9l5.6-.6z" /></>,
+    pilots: <><path d="M3 20h18" /><rect x="5" y="11" width="4" height="9" rx="1" /><rect x="11" y="7" width="4" height="13" rx="1" /><rect x="17" y="13" width="4" height="7" rx="1" /></>,
   };
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">{map[id] || null}</svg>;
 }

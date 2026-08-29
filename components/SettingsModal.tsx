@@ -57,6 +57,14 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
           </div>
         </div>
         <div className="settings-section">
+          <div className="ss-head">Admin UI</div>
+          <div className="ss-desc">Where the <b>Admin UI</b> button in the header points, currently the merchant admin module tracker. Shared with the team, so hosting the build somewhere real is a one-time change here.</div>
+          <input type="text" className="me-input admin-url-input" spellCheck={false}
+            placeholder="http://localhost:4340/Design/Wireframes/StackBack_WIP_Prototype.html" defaultValue={s.adminUrl}
+            onBlur={(e) => s.setAdminUrl(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} />
+        </div>
+        <div className="settings-section">
           <div className="ss-head">Storage</div>
           <div className="ss-auth">
             <div className="ss-auth-row">

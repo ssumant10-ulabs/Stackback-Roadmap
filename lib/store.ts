@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 import type {
   Activity, ActivityKind, Assignee, Comment, Filter, Node, Roadmap, Roster, Status,
-  Theme, ViewId, TimelineMode, SimpleMode, TeamGran,
+  Theme, ViewId, TimelineMode, SimpleMode, TeamGran, Feature, FeatureBand, PilotStore,
 } from "./types";
 import { DEFAULT_ROSTER, STATUS_CYCLE } from "./constants";
 import { SEED_VERSION, seed, stampIds } from "./seed";
@@ -9,6 +9,9 @@ import { uid, newRoadmapId } from "./id";
 import { makeHelpers, pruneTasks, type Helpers } from "./teams";
 import { effStatus, normPriority, subtreeCounts, waveWord } from "./derive";
 import { reconcile } from "./dates";
+import { featureSeed } from "./featureSeed";
+import { pilotSeed } from "./pilotSeed";
+import { autoLink, boardStatusOf, isDrifted, matchTask } from "./featureLink";
 import { CLIENT_ID, loadRemote, saveRemote, subscribeRemote, supabaseEnabled } from "./remote";
 
 const ROADMAPS_KEY = "stackback_roadmaps_v3";
@@ -19,6 +22,14 @@ const ME_KEY = "stackback_me_v1";
 /** The id of the roadmap that mirrors the roadmap sheet. Any other roadmap is hand-made
  *  by the team and is never touched by a re-seed. */
 const SHEET_ROADMAP_ID = "stackback";
+/** Two surfaces hang off the roadmap header.
+ *  UI/UX work: the hosted admin UI where prototypes are reviewed.
+ *  Merchant UI: the WIP prototype, the approved state of every screen. It is the front
+ *  door: its top-right link opens the module tracker, which holds the work in progress,
+ *  the site map and every file and backlog item. Served on 4340 because the approved
+ *  screens use /Design/... absolute paths, which need that server root. */
+const DEFAULT_UIUX_URL = "https://stackback-admin-ui-iota.vercel.app/";
+const DEFAULT_ADMIN_URL = "http://localhost:4340/Design/Wireframes/StackBack_WIP_Prototype.html";
 /** The activity log lives in the shared blob, so it has to stay bounded. */
 const ACTIVITY_CAP = 300;
 
@@ -27,6 +38,15 @@ interface Data {
   activeId: string;
   roster: Roster;
   activity: Activity[];
+  /** Everything StackBack, tracked in one place: the pilot sheet's feature list and its
+   *  store list, alongside the roadmap itself. */
+  features: Feature[];
+  pilots: PilotStore[];
+  seeded?: { features?: boolean; pilots?: boolean };
+  /** Where the two admin surfaces live. Shared, so hosting them somewhere real is a
+   *  one-time change for the whole team rather than a per-browser setting. */
+  adminUrl?: string;
+  uiuxUrl?: string;
 }
 export interface UiState {
   view: ViewId;
@@ -56,7 +76,11 @@ function sheetRoadmap(): Roadmap {
   return { id: SHEET_ROADMAP_ID, name: "StackBack", tasks: seed().map(stampIds), seedVersion: SEED_VERSION };
 }
 function defaultData(): Data {
-  return { roadmaps: [sheetRoadmap()], activeId: SHEET_ROADMAP_ID, roster: clone(DEFAULT_ROSTER), activity: [] };
+  return {
+    roadmaps: [sheetRoadmap()], activeId: SHEET_ROADMAP_ID, roster: clone(DEFAULT_ROSTER),
+    activity: [], features: [], pilots: [], seeded: {},
+    adminUrl: DEFAULT_ADMIN_URL, uiuxUrl: DEFAULT_UIUX_URL,
+  };
 }
 /** Replace a stored copy of the sheet roadmap that predates the current SEED_VERSION.
  *  Returns true when something was re-seeded, so the caller can persist the fresh copy. */
@@ -119,6 +143,11 @@ class Store {
           this.data.activeId = r.activeId || r.roadmaps[0].id;
           if (r.roster && r.roster.Engineering) this.data.roster = r.roster;
           this.data.activity = Array.isArray(r.activity) ? r.activity : [];
+          this.data.adminUrl = r.adminUrl || DEFAULT_ADMIN_URL;
+          this.data.uiuxUrl = r.uiuxUrl || DEFAULT_UIUX_URL;
+          this.data.features = Array.isArray(r.features) ? r.features : [];
+          this.data.pilots = Array.isArray(r.pilots) ? r.pilots : [];
+          this.data.seeded = r.seeded || {};
           if (stale) await saveRemote(this.remoteState());
         } else {
           // First run: seed the remote with the default StackBack roadmap.
@@ -131,6 +160,11 @@ class Store {
           this.data.activeId = incoming.activeId || incoming.roadmaps[0].id;
           if (incoming.roster && incoming.roster.Engineering) this.data.roster = incoming.roster;
           this.data.activity = Array.isArray(incoming.activity) ? incoming.activity : [];
+          this.data.adminUrl = incoming.adminUrl || DEFAULT_ADMIN_URL;
+          this.data.uiuxUrl = incoming.uiuxUrl || DEFAULT_UIUX_URL;
+          this.data.features = Array.isArray(incoming.features) ? incoming.features : [];
+          this.data.pilots = Array.isArray(incoming.pilots) ? incoming.pilots : [];
+          this.data.seeded = incoming.seeded || {};
           this.rebuildHelpers();
           this.notify(); // no persist: adopting someone else's write must not echo back
         });
@@ -148,6 +182,11 @@ class Store {
             this.data.roadmaps = p.roadmaps;
             this.data.activeId = p.activeId || p.roadmaps[0].id;
             this.data.activity = Array.isArray(p.activity) ? p.activity : [];
+            this.data.adminUrl = p.adminUrl || DEFAULT_ADMIN_URL;
+            this.data.uiuxUrl = p.uiuxUrl || DEFAULT_UIUX_URL;
+            this.data.features = Array.isArray(p.features) ? p.features : [];
+            this.data.pilots = Array.isArray(p.pilots) ? p.pilots : [];
+            this.data.seeded = p.seeded || {};
             if (stale) this.persist();
           }
         }
@@ -158,9 +197,28 @@ class Store {
       } catch {}
     }
 
+    this.seedModulesOnce();
     this.rebuildHelpers();
     this.applyTheme();
     this.notify();
+  }
+  /** First run only: load the pilot sheet's feature and store lists, and auto-link each
+   *  feature to the roadmap task that delivers it where the titles clearly agree. */
+  private seedModulesOnce() {
+    const sd = (this.data.seeded = this.data.seeded || {});
+    let changed = false;
+    if (!sd.features && !(this.data.features || []).length) {
+      const rows = featureSeed().map((f) => ({ ...f, id: uid("f_"), updatedAt: new Date().toISOString() }));
+      autoLink(rows, this.tasks);
+      this.data.features = rows;
+      sd.features = true; changed = true;
+    }
+    if (!sd.pilots && !(this.data.pilots || []).length) {
+      this.data.pilots = pilotSeed().map((r) => ({ ...r, id: uid("p_") }));
+      sd.pilots = true; changed = true;
+    }
+    if (changed) this.persist();
+    this.linkRequestStoresOnce();
   }
   private remoteState() {
     return {
@@ -168,6 +226,11 @@ class Store {
       activeId: this.data.activeId,
       roster: this.data.roster,
       activity: this.data.activity,
+      adminUrl: this.data.adminUrl,
+      uiuxUrl: this.data.uiuxUrl,
+      features: this.data.features,
+      pilots: this.data.pilots,
+      seeded: this.data.seeded,
     };
   }
   private persist() {
@@ -179,6 +242,8 @@ class Store {
     try {
       localStorage.setItem(ROADMAPS_KEY, JSON.stringify({
         activeId: this.data.activeId, roadmaps: this.data.roadmaps, activity: this.data.activity,
+        adminUrl: this.data.adminUrl, uiuxUrl: this.data.uiuxUrl,
+        features: this.data.features, pilots: this.data.pilots, seeded: this.data.seeded,
       }));
       localStorage.setItem(ROSTER_KEY, JSON.stringify(this.data.roster));
     } catch {}
@@ -199,6 +264,22 @@ class Store {
   }
   get who(): string {
     return this.me || "Someone";
+  }
+
+  /* ---- admin UI ---- */
+  get adminUrl(): string {
+    return this.data.adminUrl || DEFAULT_ADMIN_URL;
+  }
+  setAdminUrl(url: string) {
+    this.data.adminUrl = (url || "").trim() || DEFAULT_ADMIN_URL;
+    this.commit();
+  }
+  get uiuxUrl(): string {
+    return this.data.uiuxUrl || DEFAULT_UIUX_URL;
+  }
+  setUiuxUrl(url: string) {
+    this.data.uiuxUrl = (url || "").trim() || DEFAULT_UIUX_URL;
+    this.commit();
   }
 
   /* ---- activity ---- */
@@ -446,6 +527,200 @@ class Store {
     return total;
   }
 
+
+  /* ---- features ---- */
+  get features(): Feature[] {
+    return this.data.features || [];
+  }
+  featuresIn(band: FeatureBand): Feature[] {
+    return this.features.filter((f) => f.band === band);
+  }
+  /** The roadmap task delivering a feature, repairing a stale id in passing. */
+  featureTask(f: Feature): Node | null {
+    if (f.taskId) {
+      const byId = this.find(f.taskId);
+      if (byId) return byId;
+    }
+    if (f.taskTitle) {
+      const byTitle = this.findByTitle(f.taskTitle);
+      if (byTitle) { f.taskId = byTitle.id; return byTitle; }
+    }
+    return null;
+  }
+  /** Board status when linked, otherwise null. This is the sync: a linked feature reports
+   *  where the work actually is, not what the sheet last said. */
+  featureBoardStatus(f: Feature): string | null {
+    const t = this.featureTask(f);
+    return t ? boardStatusOf(t) : null;
+  }
+  featureStatus(f: Feature): string {
+    /* A feature the sheet records as Done stays Done. Most features map to a milestone
+       broader than themselves (Flash sale sits under the widgets milestone), so taking the
+       milestone's rolled-up status would un-ship things that actually shipped. The board
+       is the authority for work in flight, not for work already delivered. */
+    if ((f.sheetStatus || "").toLowerCase() === "done") return "Done";
+    return this.featureBoardStatus(f) || f.sheetStatus || "Not started";
+  }
+  featureDrifted(f: Feature): boolean {
+    if ((f.sheetStatus || "").toLowerCase() === "done") return false;
+    return isDrifted(f, this.featureBoardStatus(f));
+  }
+  /** Merchant requests logged from the Pilots module. Same records as the Features
+   *  module's merchant block, so CS and PM read one list rather than two. */
+  get requests(): Feature[] {
+    return this.features.filter((f) => f.band === "merchant");
+  }
+  addRequest(storeId: string, title: string, kind: "feature" | "bug", urgency: string): string | null {
+    title = (title || "").trim();
+    if (!title) return null;
+    const store = this.pilots.find((p) => p.id === storeId);
+    const f: Feature = {
+      id: uid("f_"), ref: "", band: "merchant", title,
+      priority: null, sheetStatus: "Not started", requestedBy: store ? store.name : this.me || null,
+      effort: null, urgency: urgency || null, importance: null, team: null,
+      objective: null, nextSteps: null, blockers: null,
+      taskId: null, taskTitle: null,
+      storeId: store ? store.id : null, storeName: store ? store.name : null,
+      kind, updatedAt: new Date().toISOString(),
+    };
+    this.data.features.push(f);
+    this.log("add", title, store ? `${kind} from ${store.name}` : kind, undefined);
+    this.commit();
+    return f.id;
+  }
+  setRequestStore(id: string, storeId: string | null) {
+    const f = this.features.find((x) => x.id === id);
+    if (!f) return;
+    const store = storeId ? this.pilots.find((p) => p.id === storeId) : null;
+    f.storeId = store ? store.id : null;
+    f.storeName = store ? store.name : null;
+    if (store) f.requestedBy = store.name;
+    f.updatedAt = new Date().toISOString();
+    this.commit();
+  }
+  setRequestKind(id: string, kind: "feature" | "bug") {
+    const f = this.features.find((x) => x.id === id);
+    if (!f) return;
+    f.kind = kind;
+    f.updatedAt = new Date().toISOString();
+    this.commit();
+  }
+  setRequestUrgency(id: string, urgency: string) {
+    const f = this.features.find((x) => x.id === id);
+    if (!f) return;
+    f.urgency = urgency || null;
+    f.updatedAt = new Date().toISOString();
+    this.commit();
+  }
+  /** Attach seeded merchant rows to a store record. The sheet's "requested by" column mixes
+   *  store names, abbreviations and internal people, so match on the store name first, then
+   *  known abbreviations, then a containment check. Anything left is an internal request and
+   *  correctly stays unattached rather than being guessed at. */
+  linkRequestStoresOnce() {
+    const ALIAS: Record<string, string> = { tbw: "The Basics Woman", arusha: "Arusha Foods", milld: "MillD" };
+    const norm = (v: string) => v.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    let n = 0;
+    this.requests.forEach((f) => {
+      if (f.storeId) return;
+      const raw = (f.storeName || f.requestedBy || "").trim();
+      if (!raw) return;
+      const key = norm(raw);
+      let hit = this.pilots.find((p) => norm(p.name) === key);
+      if (!hit && ALIAS[key]) hit = this.pilots.find((p) => p.name === ALIAS[key]);
+      if (!hit && key.length > 3) {
+        hit = this.pilots.find((p) => norm(p.name).startsWith(key) || key.startsWith(norm(p.name)));
+      }
+      if (hit) { f.storeId = hit.id; f.storeName = hit.name; n++; }
+    });
+    if (n) this.persist();
+    return n;
+  }
+  addFeature(title: string, band: FeatureBand, ref = ""): string | null {
+    title = (title || "").trim();
+    if (!title) return null;
+    const f: Feature = {
+      id: uid("f_"), ref: ref.trim(), band, title,
+      priority: null, sheetStatus: "Not started", requestedBy: this.me || null,
+      effort: null, urgency: null, importance: null, team: null,
+      objective: null, nextSteps: null, blockers: null,
+      taskId: null, taskTitle: null, updatedAt: new Date().toISOString(),
+    };
+    const hit = matchTask(f, this.tasks);
+    if (hit) { f.taskId = hit.id; f.taskTitle = hit.title; }
+    this.data.features.push(f);
+    this.log("add", title, "feature", undefined);
+    this.commit();
+    return f.id;
+  }
+  setFeatureField(id: string, field: "title" | "ref" | "priority" | "sheetStatus" | "requestedBy" | "effort" | "objective" | "nextSteps" | "blockers", value: string) {
+    const f = this.features.find((x) => x.id === id);
+    if (!f) return;
+    const v = (value || "").trim();
+    if (field === "title") { if (!v) return; f.title = v; }
+    else (f as unknown as Record<string, string | null>)[field] = v || null;
+    f.updatedAt = new Date().toISOString();
+    this.commit();
+  }
+  linkFeature(id: string, taskId: string | null) {
+    const f = this.features.find((x) => x.id === id);
+    if (!f) return;
+    const t = taskId ? this.find(taskId) : null;
+    f.taskId = t ? t.id : null;
+    f.taskTitle = t ? t.title : null;
+    f.updatedAt = new Date().toISOString();
+    this.log("status", f.title, t ? `linked to ${t.title}` : "unlinked", t ? t.id : undefined);
+    this.commit();
+  }
+  delFeature(id: string) {
+    const f = this.features.find((x) => x.id === id);
+    if (f) this.log("delete", f.title, "feature", undefined);
+    this.data.features = this.features.filter((x) => x.id !== id);
+    this.commit();
+  }
+  relinkAllFeatures(): number {
+    const n = autoLink(this.features, this.tasks);
+    if (n) this.commit();
+    return n;
+  }
+  findByTitle(title: string): Node | null {
+    let hit: Node | null = null;
+    const walk = (ns: Node[]) => ns.forEach((n) => { if (!hit && n.title === title) hit = n; walk(n.children || []); });
+    walk(this.tasks);
+    return hit;
+  }
+
+  /* ---- pilots ---- */
+  get pilots(): PilotStore[] {
+    return this.data.pilots || [];
+  }
+  setPilotField(id: string, field: keyof PilotStore, value: string) {
+    const p = this.pilots.find((x) => x.id === id);
+    if (!p) return;
+    const numeric = ["totalSubs", "activeSubs", "oneTimeBundles", "prepaidSubs", "openBugs"];
+    const v = (value || "").trim();
+    if (numeric.includes(field as string)) {
+      (p as unknown as Record<string, number | null>)[field as string] = v ? Number(v) : null;
+    } else {
+      (p as unknown as Record<string, string | null>)[field as string] = v || null;
+    }
+    this.commit();
+  }
+  addPilot(name: string): string | null {
+    name = (name || "").trim();
+    if (!name) return null;
+    const n = this.pilots.reduce((a, p) => Math.max(a, p.n), 0) + 1;
+    this.data.pilots.push({ id: uid("p_"), n, name });
+    this.log("add", name, "pilot store", undefined);
+    this.commit();
+    return name;
+  }
+  delPilot(id: string) {
+    const p = this.pilots.find((x) => x.id === id);
+    if (p) this.log("delete", p.name, "pilot store", undefined);
+    this.data.pilots = this.pilots.filter((x) => x.id !== id);
+    this.commit();
+  }
+
   addPersonToTeam(team: string, name: string): boolean {
     name = (name || "").trim();
     if (!name) return false;
@@ -502,7 +777,7 @@ class Store {
   applyUrl(qs: string) {
     const p = new URLSearchParams(qs);
     const v = p.get("view");
-    if (v === "timeline" || v === "simple" || v === "teams" || v === "board") this.ui.view = v;
+    if (["timeline","simple","teams","board","features","pilots"].includes(v || "")) this.ui.view = v as ViewId;
     const tl = p.get("tl");
     if (tl === "wave" || tl === "swim" || tl === "gantt") this.ui.tlMode = tl;
     const team = p.get("team");

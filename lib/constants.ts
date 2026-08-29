@@ -27,9 +27,11 @@ export const PRIORITIES: { p: number; word: string }[] = [
 
 export const STATUS_CYCLE: ("planned" | "progress" | "done")[] = ["planned", "progress", "done"];
 
+/** Board is appended by ViewRow so it always sits last, next to its own actions.
+ *  Overview was dropped: it restated the Timeline for an audience that reads the
+ *  shared link instead. Pilots moved out to its own module at /pilots. */
 export const VIEWS: { id: string; label: string }[] = [
   { id: "timeline", label: "Timeline" },
-  { id: "simple", label: "Overview" },
   { id: "teams", label: "Teams & People" },
 ];
 
