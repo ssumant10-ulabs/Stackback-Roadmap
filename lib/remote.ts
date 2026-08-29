@@ -1,4 +1,4 @@
-import type { Activity, Roadmap, Roster } from "./types";
+import type { Activity, Feature, PilotStore, Roadmap, Roster } from "./types";
 import { supabase, supabaseEnabled } from "./supabase";
 
 /** The whole app state is stored as a single JSONB row (id = 1) in `app_state`.
@@ -9,6 +9,11 @@ export interface RemoteState {
   activeId: string;
   roster: Roster;
   activity: Activity[];
+  adminUrl?: string;
+  uiuxUrl?: string;
+  features: Feature[];
+  pilots: PilotStore[];
+  seeded?: { features?: boolean; pilots?: boolean };
 }
 
 /** Identifies this browser tab for the lifetime of the page. Written alongside every
@@ -21,7 +26,7 @@ export { supabaseEnabled };
 export async function loadRemote(): Promise<RemoteState | null> {
   if (!supabase) return null;
   const { data, error } = await supabase
-    .from("app_state").select("roadmaps, active_id, roster, activity").eq("id", 1).maybeSingle();
+    .from("app_state").select("roadmaps, active_id, roster, activity, admin_url, uiux_url, features, pilots, seeded").eq("id", 1).maybeSingle();
   if (error) { console.warn("Supabase load failed:", error.message); return null; }
   if (!data || !Array.isArray(data.roadmaps) || !data.roadmaps.length) return null;
   return {
@@ -29,6 +34,11 @@ export async function loadRemote(): Promise<RemoteState | null> {
     activeId: data.active_id as string,
     roster: data.roster as Roster,
     activity: (data.activity as Activity[]) || [],
+    adminUrl: (data.admin_url as string) || undefined,
+    uiuxUrl: (data.uiux_url as string) || undefined,
+    features: (data.features as Feature[]) || [],
+    pilots: (data.pilots as PilotStore[]) || [],
+    seeded: (data.seeded as { features?: boolean; pilots?: boolean }) || {},
   };
 }
 
@@ -40,6 +50,11 @@ export async function saveRemote(state: RemoteState): Promise<void> {
     active_id: state.activeId,
     roster: state.roster,
     activity: state.activity,
+    admin_url: state.adminUrl,
+    uiux_url: state.uiuxUrl,
+    features: state.features,
+    pilots: state.pilots,
+    seeded: state.seeded || {},
     updated_at: new Date().toISOString(),
     updated_by: CLIENT_ID,
   });
@@ -67,6 +82,11 @@ export function subscribeRemote(onChange: (s: RemoteState) => void): (() => void
           activeId: row.active_id as string,
           roster: row.roster as Roster,
           activity: (row.activity as Activity[]) || [],
+          adminUrl: (row.admin_url as string) || undefined,
+          uiuxUrl: (row.uiux_url as string) || undefined,
+          features: (row.features as Feature[]) || [],
+          pilots: (row.pilots as PilotStore[]) || [],
+          seeded: (row.seeded as { features?: boolean; pilots?: boolean }) || {},
         });
       },
     )

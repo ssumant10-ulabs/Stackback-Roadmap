@@ -69,11 +69,82 @@ export interface Activity {
   detail?: string;
 }
 
+/** A row from the pilot sheet's Priority Features tab. `sheetStatus` is what the sheet
+ *  says; once a feature is linked to a roadmap task the board becomes the authority and
+ *  the two are shown side by side so drift between them is visible rather than silent. */
+export type FeatureBand = "upcoming" | "merchant" | "partner";
+
+export interface Feature {
+  id: string;
+  /** Sheet id, INT-01 / MR-04 / PT-02. Blank for the unnumbered rows and for new ones. */
+  ref: string;
+  band: FeatureBand;
+  title: string;
+  priority?: string | null;
+  sheetStatus?: string | null;
+  requestedBy?: string | null;
+  effort?: string | null;
+  urgency?: string | null;
+  importance?: string | null;
+  team?: string | null;
+  objective?: string | null;
+  nextSteps?: string | null;
+  blockers?: string | null;
+  /** Roadmap task delivering this feature. Resolved by id, falling back to title. */
+  taskId?: string | null;
+  taskTitle?: string | null;
+  /** Which pilot store asked for it. Set when CS logs it from the Pilots module, so a
+   *  request carries its origin rather than a name in a free-text "requested by" cell. */
+  storeId?: string | null;
+  storeName?: string | null;
+  /** A merchant raises both. Bugs are the gap the pilot sheet never covered: it counts
+   *  open bugs per store but never says what they are. */
+  kind?: "feature" | "bug";
+  updatedAt: string;
+}
+
+/** One pilot store, merging the sheet's Overview and Activation Pointers tabs, which are
+ *  the same 44 stores described twice. */
+export interface PilotStore {
+  id: string;
+  n: number;
+  name: string;
+  url?: string | null;
+  /** Overview tab */
+  status?: string | null;
+  pilotStart?: string | null;
+  groupCreated?: string | null;
+  pilotEnd?: string | null;
+  appStatus?: string | null;
+  primaryDev?: string | null;
+  totalSubs?: number | null;
+  activeSubs?: number | null;
+  oneTimeBundles?: number | null;
+  prepaidSubs?: number | null;
+  openBugs?: number | null;
+  sentiment?: string | null;
+  overviewNotes?: string | null;
+  /** Activation Pointers tab, every column it carries. */
+  category?: string | null;
+  poc?: string | null;
+  activationStatus?: string | null;
+  paymentType?: string | null;
+  discountMargin?: string | null;
+  shipping?: string | null;
+  frequency?: string | null;
+  bundles?: string | null;
+  themeNotes?: string | null;
+  email?: string | null;
+  lastTouch?: string | null;
+  activationNotes?: string | null;
+  onboardingNotes?: string | null;
+}
+
 export type Roster = Record<string, string[]>;
 
 export type Theme = "auto" | "light" | "dark";
 
-export type ViewId = "timeline" | "simple" | "teams" | "board";
+export type ViewId = "timeline" | "simple" | "teams" | "board" | "features" | "pilots";
 export type TimelineMode = "wave" | "swim" | "gantt";
 export type SimpleMode = "stage" | "status";
 export type TeamGran = "team" | "person" | "load";

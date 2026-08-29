@@ -14,12 +14,22 @@ create table if not exists app_state (
   activity   jsonb not null default '[]'::jsonb,
   updated_at timestamptz not null default now(),
   updated_by text,
+  admin_url  text,
+  uiux_url   text,
+  features   jsonb not null default '[]'::jsonb,
+  pilots     jsonb not null default '[]'::jsonb,
+  seeded     jsonb not null default '{}'::jsonb,
   constraint app_state_singleton check (id = 1)
 );
 
 -- Upgrading an app_state table created before the activity log and client id existed.
 alter table app_state add column if not exists activity   jsonb not null default '[]'::jsonb;
 alter table app_state add column if not exists updated_by text;
+alter table app_state add column if not exists admin_url  text;
+alter table app_state add column if not exists uiux_url   text;
+alter table app_state add column if not exists features   jsonb not null default '[]'::jsonb;
+alter table app_state add column if not exists pilots     jsonb not null default '[]'::jsonb;
+alter table app_state add column if not exists seeded     jsonb not null default '{}'::jsonb;
 
 -- Seed the singleton row.
 insert into app_state (id, roadmaps) values (1, '[]'::jsonb)

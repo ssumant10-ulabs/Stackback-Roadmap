@@ -9,6 +9,7 @@ import { Timeline } from "./views/Timeline";
 import { Overview } from "./views/Overview";
 import { TeamsPeople } from "./views/TeamsPeople";
 import { Board } from "./views/Board";
+import { Features } from "./views/Features";
 import { FilterPopover } from "./FilterPopover";
 import { AssigneePopover } from "./AssigneePopover";
 import { DatesPopover } from "./DatesPopover";
@@ -111,10 +112,10 @@ export default function RoadmapApp() {
           <ViewRow />
         </div>
         <main data-view={view}>
-          {view === "board" ? <Board /> : view === "simple" ? <Overview /> : view === "teams" ? <TeamsPeople /> : <Timeline />}
+          {view === "board" ? <Board /> : view === "simple" ? <Overview /> : view === "teams" ? <TeamsPeople /> : view === "features" ? <Features /> : <Timeline />}
         </main>
         <div className="footnote">
-          Switch views along the top. The <strong>Board</strong> is the editing hub: drag the grip to move a card, drop one onto another to nest it, click a status ring to check off a whole milestone, and use the clock to set a start, end or TAT. Every view reads the same data, so edits show up everywhere. &nbsp;·&nbsp;
+          The <strong>Board</strong> is the editing hub: drag the grip to move a card, drop one onto another to nest it, click a status ring to check off a whole milestone, and use the clock to set a start, end or TAT. Every view reads the same data. &nbsp;·&nbsp;
           <button onClick={() => { if (confirm(`Reset “${s.activeRoadmap().name}”? Added tasks and edits in this roadmap will be lost.`)) s.resetActive(); }}>Reset this roadmap</button>
         </div>
       </div>
