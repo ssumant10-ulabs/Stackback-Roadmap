@@ -1111,6 +1111,16 @@
   .rq-none{font-size:11px;color:var(--ink-3);font-style:italic;}
   .pl-table.log tr.rq-bug td:first-child{border-left:3px solid var(--status-late);}
 
+  .bk-now{font-size:12.5px;color:var(--ink-2);margin:9px 0;padding:9px 11px;background:var(--sunken);
+    border-radius:9px;}
+  .bk-now b{color:var(--ink);font-weight:800;}
+  .bk-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .bk-snaps{margin-top:12px;border-top:1px solid var(--border);padding-top:10px;}
+  .bk-snaps-h{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;
+    color:var(--ink-3);margin-bottom:7px;}
+  .bk-snap{display:flex;align-items:center;gap:10px;font-size:12px;padding:5px 0;color:var(--ink-2);}
+  .bk-snap em{font-style:normal;color:var(--ink-3);flex:1;font-size:11.5px;}
+
   @media (prefers-reduced-motion: reduce){ *{transition:none !important;animation-duration:1ms !important;} }
   @media (max-width:900px){
     .status-grid{grid-template-columns:1fr;}

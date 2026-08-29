@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import { TEAM_ORDER } from "@/lib/constants";
 import { supabaseEnabled } from "@/lib/remote";
@@ -9,6 +9,28 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
   const s = useStore();
   const [newName, setNewName] = useState("");
   const add = () => { if (s.addRoadmap(newName)) setNewName(""); };
+  const sum = s.stateSummary();
+  const snaps = s.snapshots();
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const download = () => {
+    const blob = new Blob([JSON.stringify(s.exportState(), null, 1)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `stackback-roadmap-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+  const upload = (f: File) => {
+    const r = new FileReader();
+    r.onload = () => {
+      const ok = s.importState(String(r.result));
+      alert(ok ? "Backup restored." : "That file could not be read as a StackBack backup. Nothing was changed.");
+    };
+    r.readAsText(f);
+  };
+
   const seen: Record<string, 1> = {};
   const people: string[] = [];
   TEAM_ORDER.forEach((t) => (s.data.roster[t] || []).forEach((n) => { if (!seen[n]) { seen[n] = 1; people.push(n); } }));
@@ -63,6 +85,38 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
             placeholder="http://localhost:4340/Design/Wireframes/StackBack_WIP_Prototype.html" defaultValue={s.adminUrl}
             onBlur={(e) => s.setAdminUrl(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} />
+        </div>
+        <div className="settings-section">
+          <div className="ss-head">Backup &amp; restore</div>
+          <div className="ss-desc">
+            Until the shared backend is on, this browser holds the only copy of your edits.
+            Nothing syncs between browsers or devices. Take a backup before anything risky.
+          </div>
+          <div className="bk-now">
+            Currently holding <b>{sum.tasks}</b> tasks ({sum.done} done), <b>{sum.features}</b> features,
+            <b> {sum.pilots}</b> pilot stores.
+          </div>
+          <div className="bk-actions">
+            <button type="button" className="btn" onClick={download}>Download backup</button>
+            <button type="button" className="btn ghost" onClick={() => fileRef.current?.click()}>Restore from file</button>
+            <input ref={fileRef} type="file" accept="application/json" style={{ display: "none" }}
+              onChange={(e) => { const f = e.target.files?.[0]; if (f && confirm("Restore this backup? It replaces everything currently in this browser.")) upload(f); e.target.value = ""; }} />
+          </div>
+          {snaps.length > 0 && (
+            <div className="bk-snaps">
+              <div className="bk-snaps-h">Automatic snapshots on this browser</div>
+              {snaps.map((sn) => (
+                <div className="bk-snap" key={sn.at}>
+                  <span>{new Date(sn.at).toLocaleString()}</span>
+                  <em>{sn.reason}</em>
+                  <button type="button" className="btn ghost sm"
+                    onClick={() => { if (confirm(`Restore the snapshot from ${new Date(sn.at).toLocaleString()}? It replaces everything currently in this browser.`)) alert(s.restoreSnapshot(sn.at) ? "Snapshot restored." : "That snapshot could not be read."); }}>
+                    Restore
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <div className="settings-section">
           <div className="ss-head">Storage</div>
