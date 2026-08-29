@@ -32,6 +32,11 @@ const DEFAULT_UIUX_URL = "https://stackback-admin-ui-iota.vercel.app/";
 const DEFAULT_ADMIN_URL = "http://localhost:4340/Design/Wireframes/StackBack_WIP_Prototype.html";
 /** The activity log lives in the shared blob, so it has to stay bounded. */
 const ACTIVITY_CAP = 300;
+/** Rolling local snapshots. Until the shared backend is on, a browser's localStorage is the
+ *  only copy of anyone's edits, and a cleared profile or a mis-clicked reset takes it with
+ *  no way back. Snapshots are written before anything destructive and on a slow timer. */
+const SNAP_KEY = "stackback_snapshots_v1";
+const SNAP_MAX = 5;
 
 interface Data {
   roadmaps: Roadmap[];
@@ -198,6 +203,7 @@ class Store {
     }
 
     this.seedModulesOnce();
+    this.snapshot("session start");
     this.rebuildHelpers();
     this.applyTheme();
     this.notify();
@@ -251,6 +257,67 @@ class Store {
   private commit() {
     this.persist();
     this.notify();
+  }
+
+  /* ---- local snapshots ---- */
+  /** Keeps the last few whole-state copies under their own key, so a reset, a bad import or
+   *  a re-seed is recoverable. Silent by design: it must never interrupt an edit. */
+  snapshot(reason: string) {
+    if (typeof window === "undefined") return;
+    try {
+      const list = this.snapshots();
+      list.unshift({ at: new Date().toISOString(), reason, state: JSON.stringify(this.exportState()) });
+      localStorage.setItem(SNAP_KEY, JSON.stringify(list.slice(0, SNAP_MAX)));
+    } catch { /* quota or private mode: a missing snapshot must not block the edit */ }
+  }
+  snapshots(): { at: string; reason: string; state: string }[] {
+    try { return JSON.parse(localStorage.getItem(SNAP_KEY) || "[]"); } catch { return []; }
+  }
+  restoreSnapshot(at: string): boolean {
+    const hit = this.snapshots().find((x) => x.at === at);
+    if (!hit) return false;
+    this.snapshot("before restoring a snapshot");
+    return this.importState(hit.state, true);
+  }
+
+  /* ---- backup ---- */
+  exportState() {
+    return {
+      kind: "stackback-roadmap-backup", version: 1, at: new Date().toISOString(),
+      activeId: this.data.activeId, roadmaps: this.data.roadmaps, roster: this.data.roster,
+      activity: this.data.activity, features: this.data.features, pilots: this.data.pilots,
+      seeded: this.data.seeded, adminUrl: this.data.adminUrl, uiuxUrl: this.data.uiuxUrl,
+    };
+  }
+  /** Replaces everything. Validates first: a malformed file must fail loudly rather than
+   *  half-apply and leave the board in a state nobody can explain. */
+  importState(json: string, skipSnapshot = false): boolean {
+    let p: Record<string, unknown>;
+    try { p = JSON.parse(json); } catch { return false; }
+    const roadmaps = p.roadmaps as Roadmap[] | undefined;
+    if (!Array.isArray(roadmaps) || !roadmaps.length || !roadmaps[0] || !Array.isArray(roadmaps[0].tasks)) return false;
+    if (!skipSnapshot) this.snapshot("before importing a backup");
+    roadmaps.forEach((r) => (r.tasks = (r.tasks || []).map(stampIds)));
+    this.data.roadmaps = roadmaps;
+    this.data.activeId = (p.activeId as string) || roadmaps[0].id;
+    if (p.roster && (p.roster as Roster).Engineering) this.data.roster = p.roster as Roster;
+    this.data.activity = Array.isArray(p.activity) ? (p.activity as Activity[]) : [];
+    this.data.features = Array.isArray(p.features) ? (p.features as Feature[]) : [];
+    this.data.pilots = Array.isArray(p.pilots) ? (p.pilots as PilotStore[]) : [];
+    this.data.seeded = (p.seeded as { features?: boolean; pilots?: boolean }) || {};
+    if (p.adminUrl) this.data.adminUrl = p.adminUrl as string;
+    if (p.uiuxUrl) this.data.uiuxUrl = p.uiuxUrl as string;
+    this.resetUiScopes();
+    this.rebuildHelpers();
+    this.commit();
+    return true;
+  }
+  /** Counts for the Settings readout, so "is my data here" is answerable without a console. */
+  stateSummary() {
+    const count = (ns: Node[]): number => ns.reduce((a, n) => a + 1 + count(n.children || []), 0);
+    const done = (ns: Node[]): number => ns.reduce((a, n) => a + (n.status === "done" ? 1 : 0) + done(n.children || []), 0);
+    const t = this.tasks;
+    return { tasks: count(t), done: done(t), features: this.features.length, pilots: this.pilots.length };
   }
   dispose() {
     if (this.unsubRemote) { this.unsubRemote(); this.unsubRemote = null; }
@@ -838,6 +905,7 @@ class Store {
   }
   deleteRoadmap(id: string) {
     if (this.data.roadmaps.length <= 1) return;
+    this.snapshot("before deleting a roadmap");
     const r = this.data.roadmaps.find((x) => x.id === id);
     if (r) this.log("roadmap", r.name, "deleted");
     this.data.roadmaps = this.data.roadmaps.filter((x) => x.id !== id);
@@ -845,6 +913,7 @@ class Store {
     this.commit();
   }
   resetActive() {
+    this.snapshot("before resetting the roadmap");
     const r = this.activeRoadmap();
     if (r.id === SHEET_ROADMAP_ID) { r.tasks = seed().map(stampIds); r.seedVersion = SEED_VERSION; }
     else r.tasks = [];
