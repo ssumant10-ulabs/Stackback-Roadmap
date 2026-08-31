@@ -9,6 +9,7 @@ import { IcTrash } from "./icons";
 export function SettingsModal({ onClose }: { onClose: () => void }) {
   const s = useStore();
   const [newName, setNewName] = useState("");
+  const [restore, setRestore] = useState("");
   const add = () => { if (s.addRoadmap(newName)) setNewName(""); };
   const sum = s.stateSummary();
   const snaps = s.snapshots();
@@ -154,6 +155,28 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                 ? "Edits save to the shared backend and appear in everyone else's browser without a reload."
                 : "Edits are saved in this browser only, so each teammate sees their own copy. Set the Firebase env vars to switch the whole team onto one shared roadmap behind a login. See FIREBASE.md."}
             </p>
+            {firebaseEnabled && (
+              <>
+                <p className="ss-desc">
+                  {s.migrated === "promoted"
+                    ? "This browser's saved board was carried up and is now the shared copy."
+                    : s.migrated === "seeded"
+                      ? "Nothing had been saved yet, so the shared copy started from the default roadmap."
+                      : "A shared copy already existed, so this browser is showing that one."}
+                </p>
+                <button
+                  className="btn"
+                  onClick={async () => {
+                    if (!confirm("Replace the shared board with the copy saved in this browser? Everyone will see this browser's version instead. Use this only if the wrong browser connected first.")) return;
+                    const r = await s.restoreLocal();
+                    setRestore(r.ok ? `Restored ${r.tasks} tasks from this browser.` : "This browser has no saved copy to restore.");
+                  }}
+                >
+                  Restore this browser's copy
+                </button>
+                {restore && <p className="ss-desc">{restore}</p>}
+              </>
+            )}
           </div>
         </div>
         <div className="modal-actions"><button className="btn primary" onClick={onClose}>Done</button></div>
