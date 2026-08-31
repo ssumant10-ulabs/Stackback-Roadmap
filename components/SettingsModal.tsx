@@ -105,7 +105,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
           <div className="ss-head">Backup &amp; restore</div>
           <div className="ss-desc">
             Until the shared backend is on, this browser holds the only copy of your edits.
-            Nothing syncs between browsers or devices. Take a backup before anything risky.
+            Nothing syncs between browsers or devices.
           </div>
           <div className="bk-now">
             Currently holding <b>{sum.tasks}</b> tasks ({sum.done} done), <b>{sum.features}</b> features,
@@ -119,7 +119,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
           </div>
           {snaps.length > 0 && (
             <div className="bk-snaps">
-              <div className="bk-snaps-h">Automatic snapshots on this browser</div>
+              <div className="bk-snaps-h">Recovery points, taken before resets and imports</div>
               {snaps.map((sn) => (
                 <div className="bk-snap" key={sn.at}>
                   <span>{new Date(sn.at).toLocaleString()}</span>

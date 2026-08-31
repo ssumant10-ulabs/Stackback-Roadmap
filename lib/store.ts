@@ -37,11 +37,13 @@ const DEFAULT_UIUX_URL = "https://stackback-admin-ui-iota.vercel.app/";
 const DEFAULT_ADMIN_URL = "/merchant/StackBack_WIP_Prototype.html";
 /** The activity log lives in the shared blob, so it has to stay bounded. */
 const ACTIVITY_CAP = 300;
-/** Rolling local snapshots. Until the shared backend is on, a browser's localStorage is the
- *  only copy of anyone's edits, and a cleared profile or a mis-clicked reset takes it with
- *  no way back. Snapshots are written before anything destructive and on a slow timer. */
+/** Rolling local snapshots, taken only before something destructive: resetting or deleting
+ *  a roadmap, or importing over the top. They were also taken on every page load, which
+ *  cost 5.7x the live state in duplicate copies and filled the list with identical entries
+ *  from mere reloads. Loading a page is not a risk worth spending quota on; Download backup
+ *  covers the deliberate case. */
 const SNAP_KEY = "stackback_snapshots_v1";
-const SNAP_MAX = 5;
+const SNAP_MAX = 3;
 
 interface Data {
   roadmaps: Roadmap[];
@@ -215,7 +217,6 @@ class Store {
     }
 
     this.seedModulesOnce();
-    this.snapshot("session start");
     this.rebuildHelpers();
     this.applyTheme();
     this.notify();
@@ -326,7 +327,10 @@ class Store {
     if (typeof window === "undefined") return;
     try {
       const list = this.snapshots();
-      list.unshift({ at: new Date().toISOString(), reason, state: JSON.stringify(this.exportState()) });
+      const state = JSON.stringify(this.exportState());
+      // Nothing changed since the last one: a second identical copy buys nothing.
+      if (list[0] && list[0].state === state) return;
+      list.unshift({ at: new Date().toISOString(), reason, state });
       localStorage.setItem(SNAP_KEY, JSON.stringify(list.slice(0, SNAP_MAX)));
     } catch { /* quota or private mode: a missing snapshot must not block the edit */ }
   }
