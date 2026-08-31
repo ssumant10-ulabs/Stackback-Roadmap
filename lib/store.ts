@@ -671,6 +671,23 @@ class Store {
     this.commit();
     return f.id;
   }
+  /** A merchant ask we have decided to build becomes planned work: it leaves the merchant
+   *  block for Upcoming, keeping the store attached so you can still see who asked and tell
+   *  them when it ships. It stays visible in Requests behind the "moved to features" filter
+   *  rather than disappearing on whoever logged it. */
+  moveRequestToFeatures(id: string): boolean {
+    const f = this.features.find((x) => x.id === id);
+    if (!f || f.band !== "merchant") return false;
+    f.band = "upcoming";
+    f.updatedAt = new Date().toISOString();
+    this.log("status", f.title, `moved to features${f.storeName ? ` (asked for by ${f.storeName})` : ""}`, undefined);
+    this.commit();
+    return true;
+  }
+  /** Requests that were promoted: no longer merchant-band, but still carry the store. */
+  get promotedRequests(): Feature[] {
+    return this.features.filter((f) => f.band !== "merchant" && !!f.storeId);
+  }
   setRequestStore(id: string, storeId: string | null) {
     const f = this.features.find((x) => x.id === id);
     if (!f) return;
@@ -827,6 +844,25 @@ class Store {
     if (f) this.log("delete", f.title, "feature", undefined);
     this.data.features = this.features.filter((x) => x.id !== id);
     this.commit();
+  }
+  /** Promote a feature straight onto the roadmap: creates the milestone in the chosen
+   *  horizon, carries the feature's objective across as its first subtask when there is
+   *  one, and links the two so the feature's status starts following the board. */
+  moveFeatureToBoard(id: string, priority: number): boolean {
+    const f = this.features.find((x) => x.id === id);
+    if (!f || this.featureTask(f)) return false;
+    const kids = f.objective ? [stampIds({ id: "", title: f.objective.slice(0, 160), status: "planned" as Status, assignees: [], children: [] })] : [];
+    const task: Node = stampIds({
+      id: "", title: f.title, status: "planned", assignees: [], children: kids, priority,
+    });
+    if (f.band === "merchant") task.note = `Asked for by ${f.storeName || f.requestedBy || "a merchant"}`;
+    this.tasks.push(task);
+    f.taskId = task.id;
+    f.taskTitle = task.title;
+    f.updatedAt = new Date().toISOString();
+    this.log("add", task.title, `moved to ${waveWord(priority)} from features`, task.id);
+    this.commit();
+    return true;
   }
   relinkAllFeatures(): number {
     const n = autoLink(this.features, this.tasks);

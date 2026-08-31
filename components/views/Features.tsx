@@ -4,6 +4,7 @@ import { useStore } from "@/lib/store";
 import { FEATURE_SEED_SOURCE } from "@/lib/featureSeed";
 import type { Feature, FeatureBand } from "@/lib/types";
 import { IcLink, IcPlus, IcTrash } from "../icons";
+import { STATES, stateOf, waveWord } from "@/lib/derive";
 import { useAppUi } from "../appui";
 
 const BANDS: { id: FeatureBand; label: string; blurb: string }[] = [
@@ -40,7 +41,13 @@ function Row({ f }: { f: Feature }) {
       <div className="ft-main" onClick={() => setOpen(!open)}>
         <span className="ft-ref">{f.ref || "—"}</span>
         <span className="ft-title">{f.title}</span>
-        {f.priority && <span className="chip-sm">{f.priority}</span>}
+        {/* The sheet's PMFv1 / Phase tags described a release plan nobody tracks any more.
+            The board's own horizon and team are the tags actually being followed. */}
+        {task && <span className={`ft-wave w-${stateOf(task)}`}>{stateOf(task) === "done" ? "Done" : waveWord(task.priority)}</span>}
+        {task && s.helpers.teamSet(task).map((tm) => (
+          <span key={tm} className={`ft-team av-${s.helpers.teamVar(tm)}`}>{tm === "Engineering" ? "Eng" : tm === "Design" ? "Dsg" : tm}</span>
+        ))}
+        {f.kind === "bug" && <span className="ft-bug">Bug</span>}
         <span className={`ft-status t-${STATUS_TONE[status] || "neu"}`}>
           {status}
           {board && <em title="Status comes from the linked roadmap task" className="ft-sync">synced</em>}
@@ -72,6 +79,18 @@ function Row({ f }: { f: Feature }) {
             {f.team && <span>Team <b>{f.team}</b></span>}
           </div>
           <div className="ft-actions">
+            {!task && (
+              <label>
+                Move onto the board
+                <span className="ft-move">
+                  {STATES.filter((w) => w.p).map((w) => (
+                    <button type="button" key={w.k}
+                      onClick={() => s.moveFeatureToBoard(f.id, w.p as number)}
+                      title={`Create this as a ${w.word} milestone and link it`}>{w.word}</button>
+                  ))}
+                </span>
+              </label>
+            )}
             <label>
               Link to a roadmap task
               <select value={f.taskId || ""} onChange={(e) => s.linkFeature(f.id, e.target.value || null)}>
@@ -110,6 +129,7 @@ export function Features() {
   const [q, setQ] = useState("");
   const [fStatus, setFStatus] = useState("");
   const [fLink, setFLink] = useState("");
+  const [fBand, setFBand] = useState("");
 
   const match = (f: Feature) => {
     if (fStatus) {
@@ -119,13 +139,14 @@ export function Features() {
     if (fLink === "linked" && !s.featureTask(f)) return false;
     if (fLink === "unlinked" && s.featureTask(f)) return false;
     if (fLink === "drift" && !s.featureDrifted(f)) return false;
+    if (fBand && f.band !== fBand) return false;
     const t = q.trim().toLowerCase();
     if (!t) return true;
     return [f.ref, f.title, f.objective, f.nextSteps, f.requestedBy]
       .some((v) => (v || "").toLowerCase().includes(t));
   };
   const filtered = all.filter(match);
-  const anyFilter = !!(q || fStatus || fLink);
+  const anyFilter = !!(q || fStatus || fLink || fBand);
 
   const stats = useMemo(() => {
     const linked = all.filter((f) => s.featureTask(f)).length;
@@ -138,14 +159,10 @@ export function Features() {
   return (
     <>
       <div className="view-toolbar">
-        <button className="btn ghost sm" title="Attach any feature whose title now matches a roadmap task"
-          onClick={() => { const n = s.relinkAllFeatures(); alert(n ? `Linked ${n} more feature${n === 1 ? "" : "s"} to the board.` : "Nothing new to link."); }}>
-          Re-link
-        </button>
         <div className="vt-note">
-          The pilot sheet&apos;s feature list, tracked here instead of read-only. A feature linked to a
-          roadmap task takes its status from the board, so this cannot quietly fall behind what
-          was actually shipped. Add new ones per block; they auto-link when the title matches a task.
+          The pilot sheet&apos;s feature list and every merchant request, tracked here rather than read-only.
+          A feature on the board takes its status, horizon and team from the board, so this cannot fall
+          behind what actually shipped. Open a row to move one onto the board or attach it to an existing task.
         </div>
       </div>
 
@@ -155,6 +172,10 @@ export function Features() {
           <option value="">All statuses</option>
           {STATUS_BUCKETS.map((b) => <option key={b.id} value={b.id}>{b.label}</option>)}
         </select>
+        <select value={fBand} onChange={(e) => setFBand(e.target.value)}>
+          <option value="">All three blocks</option>
+          {BANDS.map((b) => <option key={b.id} value={b.id}>{b.label}</option>)}
+        </select>
         <select value={fLink} onChange={(e) => setFLink(e.target.value)}>
           <option value="">On and off the board</option>
           <option value="linked">On the board</option>
@@ -162,7 +183,7 @@ export function Features() {
           <option value="drift">Sheet vs board drift</option>
         </select>
         {anyFilter && (
-          <button type="button" className="btn ghost" onClick={() => { setQ(""); setFStatus(""); setFLink(""); }}>
+          <button type="button" className="btn ghost" onClick={() => { setQ(""); setFStatus(""); setFLink(""); setFBand(""); }}>
             Clear · {filtered.length} of {all.length}
           </button>
         )}
@@ -180,7 +201,7 @@ export function Features() {
         <div className="ft-none">
           <b>No features match those filters.</b>
           <p>Clear them to see all {all.length} again.</p>
-          <button type="button" className="btn ghost" onClick={() => { setQ(""); setFStatus(""); setFLink(""); }}>Clear filters</button>
+          <button type="button" className="btn ghost" onClick={() => { setQ(""); setFStatus(""); setFLink(""); setFBand(""); }}>Clear filters</button>
         </div>
       )}
 

@@ -64,13 +64,13 @@ function Shots({ f }: { f: Feature }) {
   );
 }
 
-function Row({ f }: { f: Feature }) {
+function Row({ f, promoted }: { f: Feature; promoted?: boolean }) {
   const s = useStore();
   const own = f.sheetStatus || "Not started";
   const board = s.featureBoardStatus(f);
   const task = s.featureTask(f);
   return (
-    <tr className={f.kind === "bug" ? "rq-bug" : undefined}>
+    <tr className={`${f.kind === "bug" ? "rq-bug" : ""}${promoted ? " rq-promoted" : ""}`.trim() || undefined}>
       <td>
         <select className="pl-sel" value={f.kind || "feature"}
           onChange={(e) => s.setRequestKind(f.id, e.target.value as "feature" | "bug")}>
@@ -120,7 +120,15 @@ function Row({ f }: { f: Feature }) {
           onBlur={(e) => s.setFeatureField(f.id, "objective", e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} />
       </td>
-      <td className="row-del">
+      <td className="rq-actions">
+        {promoted ? (
+          <span className="rq-moved" title="Moved to the roadmap features list">In features</span>
+        ) : (
+          <button type="button" className="btn ghost sm" title="We have decided to build this: move it into the roadmap's feature list, keeping the store attached"
+            onClick={() => { if (confirm(`Move "${f.title}" into the roadmap features?\n\nIt leaves this list as a merchant ask and becomes planned work. ${f.storeName || f.requestedBy || "The store"} stays attached so you can still see who asked.`)) s.moveRequestToFeatures(f.id); }}>
+            To features
+          </button>
+        )}
         <button type="button" className="icon-btn danger" aria-label="Remove request"
           onClick={() => { if (confirm(`Remove "${f.title}"?`)) s.delFeature(f.id); }}><IcTrash /></button>
       </td>
@@ -135,11 +143,13 @@ export function PilotsRequests() {
   const [store, setStore] = useState("");
   const [kind, setKind] = useState("");
   const [urg, setUrg] = useState("");
+  const [showMoved, setShowMoved] = useState(false);
   const [nt, setNt] = useState({ store: "", title: "", kind: "feature" as "feature" | "bug", urgency: "Medium" });
 
   const rows = useMemo(() => {
     const t = q.trim().toLowerCase();
-    return s.requests.filter((f) => {
+    const base = showMoved ? [...s.requests, ...s.promotedRequests] : s.requests;
+    return base.filter((f) => {
       if (store && f.storeId !== store) return false;
       if (kind && (f.kind || "feature") !== kind) return false;
       if (urg && (f.urgency || "") !== urg) return false;
@@ -147,7 +157,7 @@ export function PilotsRequests() {
       return [f.title, f.objective, f.storeName, f.requestedBy].some((v) => (v || "").toLowerCase().includes(t));
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [s.requests, q, store, kind, urg, version]);
+  }, [s.requests, q, store, kind, urg, showMoved, version]);
 
   const stats = useMemo(() => ({
     total: s.requests.length,
@@ -191,6 +201,10 @@ export function PilotsRequests() {
           <option value="">All priorities</option>
           {URGENCY.map((u) => <option key={u} value={u}>{u}</option>)}
         </select>
+        <label className="rq-toggle">
+          <input type="checkbox" checked={showMoved} onChange={(e) => setShowMoved(e.target.checked)} />
+          Include moved to features
+        </label>
       </div>
 
       <div className="rq-add">
@@ -214,10 +228,10 @@ export function PilotsRequests() {
       <div className="pl-wrap">
         <table className="pl-table log">
           <thead>
-            <tr><th>Type</th><th>Request</th><th>Store</th><th>Priority</th><th>Status</th><th>On the roadmap</th><th>Screenshots</th><th className="wide">Detail</th><th /></tr>
+            <tr><th>Type</th><th>Request</th><th>Store</th><th>Priority</th><th>Status</th><th>On the roadmap</th><th>Screenshots</th><th className="wide">Detail</th><th>Actions</th></tr>
           </thead>
           <tbody>
-            {rows.map((f) => <Row key={f.id} f={f} />)}
+            {rows.map((f) => <Row key={f.id} f={f} promoted={f.band !== "merchant"} />)}
             {!rows.length && <tr><td colSpan={9} className="pl-empty">Nothing logged yet. Add the first one above.</td></tr>}
           </tbody>
         </table>
