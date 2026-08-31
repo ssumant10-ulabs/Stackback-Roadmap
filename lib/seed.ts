@@ -2,7 +2,7 @@ import type { Assignee, Node, Status } from "./types";
 import { uid } from "./id";
 
 /** Bumped whenever the seed data below is regenerated from the roadmap sheet.
- *  A bump invalidates saved browser/Supabase state so everyone picks up the new tree. */
+ *  A bump invalidates saved browser and Firestore state so everyone picks up the new tree. */
 export const SEED_VERSION = 3;
 
 /** Source of truth: the `Roadmap` tab of StackBack_Roadmap_Tasks_Updated.xlsx

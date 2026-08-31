@@ -1,0 +1,19 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // The lock, not the door. The sign-in screen only decides what renders; this decides
+    // what can be read, and it is the only thing standing between the pilot data and anyone
+    // who knows the project id.
+    function allowed() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.matches('.*@ulabsglobal[.]com');
+    }
+    match /app/{docId} {
+      allow read, write: if allowed();
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,99 +1,120 @@
 import type { Activity, Feature, PilotStore, Roadmap, Roster } from "./types";
-import { supabase, supabaseEnabled } from "./supabase";
+import { fbDb, firebaseEnabled } from "./firebase";
+import {
+  doc, getDoc, onSnapshot, setDoc, type Unsubscribe,
+} from "firebase/firestore";
 
-/** The whole app state is stored as a single JSONB row (id = 1) in `app_state`.
- *  This mirrors the localStorage blob 1:1, so it's a drop-in shared backend.
- *  Normalizing into per-node rows (for granular realtime) is a later optimization. */
+/** Shared state lives in Firestore under `app/{roadmap|features|pilots}`.
+ *
+ *  Three documents rather than one, because Firestore caps a document at 1 MB and a single
+ *  blob would eventually hit it as the activity log and the two lists grow. Splitting also
+ *  means a pilot edit does not rewrite the whole roadmap on every keystroke.
+ *
+ *  Screenshots do NOT live here: they go to Firebase Storage and only their URL is stored. */
 export interface RemoteState {
   roadmaps: Roadmap[];
   activeId: string;
   roster: Roster;
   activity: Activity[];
-  adminUrl?: string;
-  uiuxUrl?: string;
   features: Feature[];
   pilots: PilotStore[];
   seeded?: { features?: boolean; pilots?: boolean; dates?: boolean };
   pilotCategories?: string[];
+  adminUrl?: string;
+  uiuxUrl?: string;
 }
 
-/** Identifies this browser tab for the lifetime of the page. Written alongside every
- *  save so the realtime listener can ignore the echo of our own write, which would
- *  otherwise clobber whatever the user typed in the 400ms since. */
+/** Identifies this tab for the lifetime of the page. Written with every save so the live
+ *  listener can ignore the echo of our own write, which would otherwise clobber whatever was
+ *  typed in the moment since. */
 export const CLIENT_ID = "c_" + Math.random().toString(36).slice(2, 10);
 
-export { supabaseEnabled };
+export { firebaseEnabled };
 
-export async function loadRemote(): Promise<RemoteState | null> {
-  if (!supabase) return null;
-  const { data, error } = await supabase
-    .from("app_state").select("roadmaps, active_id, roster, activity, admin_url, uiux_url, features, pilots, seeded, pilot_categories").eq("id", 1).maybeSingle();
-  if (error) { console.warn("Supabase load failed:", error.message); return null; }
-  if (!data || !Array.isArray(data.roadmaps) || !data.roadmaps.length) return null;
+const COL = "app";
+const DOCS = { roadmap: "roadmap", features: "features", pilots: "pilots" } as const;
+
+type Bag = Record<string, unknown>;
+const ref = (name: string) => { const db = fbDb(); return db ? doc(db, COL, name) : null; };
+
+/** Split the client's single state object across the three documents. */
+function split(s: RemoteState): Record<string, Bag> {
   return {
-    roadmaps: data.roadmaps as Roadmap[],
-    activeId: data.active_id as string,
-    roster: data.roster as Roster,
-    activity: (data.activity as Activity[]) || [],
-    adminUrl: (data.admin_url as string) || undefined,
-    uiuxUrl: (data.uiux_url as string) || undefined,
-    features: (data.features as Feature[]) || [],
-    pilots: (data.pilots as PilotStore[]) || [],
-    seeded: (data.seeded as { features?: boolean; pilots?: boolean; dates?: boolean }) || {},
-    pilotCategories: (data.pilot_categories as string[]) || [],
+    [DOCS.roadmap]: {
+      roadmaps: s.roadmaps, activeId: s.activeId, roster: s.roster, activity: s.activity,
+      adminUrl: s.adminUrl ?? null, uiuxUrl: s.uiuxUrl ?? null, updatedBy: CLIENT_ID,
+    },
+    [DOCS.features]: { features: s.features, seeded: s.seeded ?? {}, updatedBy: CLIENT_ID },
+    [DOCS.pilots]: { pilots: s.pilots, pilotCategories: s.pilotCategories ?? [], updatedBy: CLIENT_ID },
   };
 }
 
-export async function saveRemote(state: RemoteState): Promise<void> {
-  if (!supabase) return;
-  const { error } = await supabase.from("app_state").upsert({
-    id: 1,
-    roadmaps: state.roadmaps,
-    active_id: state.activeId,
-    roster: state.roster,
-    activity: state.activity,
-    admin_url: state.adminUrl,
-    uiux_url: state.uiuxUrl,
-    features: state.features,
-    pilots: state.pilots,
-    seeded: state.seeded || {},
-    pilot_categories: state.pilotCategories || [],
-    updated_at: new Date().toISOString(),
-    updated_by: CLIENT_ID,
-  });
-  if (error) console.warn("Supabase save failed:", error.message);
+function merge(r: Bag, f: Bag, p: Bag): RemoteState | null {
+  const roadmaps = (r.roadmaps as Roadmap[]) || [];
+  if (!Array.isArray(roadmaps) || !roadmaps.length) return null;
+  return {
+    roadmaps,
+    activeId: (r.activeId as string) || roadmaps[0].id,
+    roster: r.roster as Roster,
+    activity: (r.activity as Activity[]) || [],
+    adminUrl: (r.adminUrl as string) || undefined,
+    uiuxUrl: (r.uiuxUrl as string) || undefined,
+    features: (f.features as Feature[]) || [],
+    pilots: (p.pilots as PilotStore[]) || [],
+    seeded: (f.seeded as RemoteState["seeded"]) || {},
+    pilotCategories: (p.pilotCategories as string[]) || [],
+  };
 }
 
-/** Live updates. Needs `app_state` added to the `supabase_realtime` publication
- *  (Dashboard, Database, Replication). Without that this is simply never called and the
- *  app behaves as it did before: shared on load, not live. Returns an unsubscribe fn. */
+export async function loadRemote(): Promise<RemoteState | null> {
+  if (!firebaseEnabled) return null;
+  try {
+    const [r, f, p] = await Promise.all(
+      [DOCS.roadmap, DOCS.features, DOCS.pilots].map(async (n) => {
+        const d = ref(n);
+        if (!d) return {};
+        const snap = await getDoc(d);
+        return snap.exists() ? (snap.data() as Bag) : {};
+      }),
+    );
+    return merge(r, f, p);
+  } catch (e) {
+    console.warn("Firestore load failed:", (e as Error).message);
+    return null;
+  }
+}
+
+export async function saveRemote(state: RemoteState): Promise<void> {
+  if (!firebaseEnabled) return;
+  const parts = split(state);
+  try {
+    await Promise.all(Object.entries(parts).map(([name, body]) => {
+      const d = ref(name);
+      return d ? setDoc(d, body) : Promise.resolve();
+    }));
+  } catch (e) {
+    console.warn("Firestore save failed:", (e as Error).message);
+  }
+}
+
+/** Live updates. Fires when any of the three documents changes elsewhere; our own writes are
+ *  filtered by client id so adopting a remote change never echoes back into a save loop. */
 export function subscribeRemote(onChange: (s: RemoteState) => void): (() => void) | null {
-  const sb = supabase;
-  if (!sb) return null;
-  const ch = sb
-    .channel("app_state_live")
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "app_state", filter: "id=eq.1" },
-      (payload) => {
-        const row = payload.new as Record<string, unknown> | null;
-        if (!row) return;
-        if (row.updated_by === CLIENT_ID) return; // our own write coming back
-        if (!Array.isArray(row.roadmaps) || !row.roadmaps.length) return;
-        onChange({
-          roadmaps: row.roadmaps as Roadmap[],
-          activeId: row.active_id as string,
-          roster: row.roster as Roster,
-          activity: (row.activity as Activity[]) || [],
-          adminUrl: (row.admin_url as string) || undefined,
-          uiuxUrl: (row.uiux_url as string) || undefined,
-          features: (row.features as Feature[]) || [],
-          pilots: (row.pilots as PilotStore[]) || [],
-          seeded: (row.seeded as { features?: boolean; pilots?: boolean; dates?: boolean }) || {},
-          pilotCategories: (row.pilot_categories as string[]) || [],
-        });
-      },
-    )
-    .subscribe();
-  return () => { sb.removeChannel(ch); };
+  if (!firebaseEnabled) return null;
+  const latest: Record<string, Bag> = {};
+  const unsubs: Unsubscribe[] = [];
+
+  for (const name of [DOCS.roadmap, DOCS.features, DOCS.pilots]) {
+    const d = ref(name);
+    if (!d) continue;
+    unsubs.push(onSnapshot(d, (snap) => {
+      const data = snap.exists() ? (snap.data() as Bag) : {};
+      latest[name] = data;
+      if (data.updatedBy === CLIENT_ID) return;       // our own write coming back
+      if (snap.metadata.hasPendingWrites) return;     // not yet acknowledged by the server
+      const merged = merge(latest[DOCS.roadmap] || {}, latest[DOCS.features] || {}, latest[DOCS.pilots] || {});
+      if (merged) onChange(merged);
+    }, (e) => console.warn("Firestore listen failed:", e.message)));
+  }
+  return () => unsubs.forEach((u) => u());
 }

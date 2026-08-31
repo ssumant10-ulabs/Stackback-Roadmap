@@ -14,12 +14,12 @@ import { pilotSeed } from "./pilotSeed";
 import { autoLink, boardStatusOf, isDrifted, matchTask } from "./featureLink";
 import { SHOT_MAX_PER_REQUEST, SHOT_TOTAL_BUDGET, fmtBytes } from "./shots";
 import { parseLoose } from "./pilotDates";
-import { CLIENT_ID, loadRemote, saveRemote, subscribeRemote, supabaseEnabled } from "./remote";
+import { CLIENT_ID, firebaseEnabled, loadRemote, saveRemote, subscribeRemote } from "./remote";
 
 const ROADMAPS_KEY = "stackback_roadmaps_v3";
 const ROSTER_KEY = "stackback_roster_v1";
 const THEME_KEY = "stackback_theme";
-/** Per-person, never shared: with Supabase on, everyone must keep their own identity. */
+/** Per-person, never shared: on a shared backend, everyone must keep their own identity. */
 const ME_KEY = "stackback_me_v1";
 /** Colour ramp, per browser like the theme. */
 const PALETTE_KEY = "stackback_palette_v1";
@@ -123,6 +123,10 @@ class Store {
   private listeners = new Set<() => void>();
   private version = 0;
   hydrated = false;
+  /** How this browser met the shared backend, for the banner that reports the switchover.
+   *  "promoted" means it carried the local board up; "seeded" means it found nothing to
+   *  carry and the defaults were written; "adopted" means the shared copy already existed. */
+  migrated: "promoted" | "seeded" | "adopted" | null = null;
 
   subscribe = (l: () => void) => {
     this.listeners.add(l);
@@ -148,7 +152,7 @@ class Store {
     try { this.me = localStorage.getItem(ME_KEY) || ""; } catch {}
     try { this.ui.palette = localStorage.getItem(PALETTE_KEY) || "lime"; } catch {}
 
-    if (supabaseEnabled) {
+    if (firebaseEnabled) {
       // Shared backend. Falls back to the seeded default on any error.
       try {
         const r = await loadRemote();
@@ -166,9 +170,14 @@ class Store {
           this.data.seeded = r.seeded || {};
           this.data.pilotCategories = r.pilotCategories || [];
           if (stale) await saveRemote(this.remoteState());
+          this.migrated = "adopted";
         } else {
-          // First run: seed the remote with the default StackBack roadmap.
+          /* Nothing shared yet. This is the one moment the local board can be promoted, so
+             adopt it before writing: seeding the default here would silently discard whatever
+             this browser has been the only copy of. */
+          const local = this.adoptLocal();
           await saveRemote(this.remoteState());
+          this.migrated = local.found ? "promoted" : "seeded";
         }
         // Live updates from other browsers. Our own echo is filtered by client id.
         this.unsubRemote = subscribeRemote((incoming) => {
@@ -187,33 +196,11 @@ class Store {
           this.notify(); // no persist: adopting someone else's write must not echo back
         });
       } catch (e) {
-        console.warn("Supabase hydrate failed, using defaults:", e);
+        console.warn("Firestore hydrate failed, using defaults:", e);
       }
     } else {
-      try {
-        const raw = localStorage.getItem(ROADMAPS_KEY);
-        if (raw) {
-          const p = JSON.parse(raw);
-          if (p && p.roadmaps && p.roadmaps.length) {
-            p.roadmaps.forEach((r: Roadmap) => (r.tasks = (r.tasks || []).map(stampIds)));
-            const stale = reseedIfStale(p.roadmaps);
-            this.data.roadmaps = p.roadmaps;
-            this.data.activeId = p.activeId || p.roadmaps[0].id;
-            this.data.activity = Array.isArray(p.activity) ? p.activity : [];
-            this.data.adminUrl = p.adminUrl || DEFAULT_ADMIN_URL;
-            this.data.uiuxUrl = p.uiuxUrl || DEFAULT_UIUX_URL;
-            this.data.features = Array.isArray(p.features) ? p.features : [];
-            this.data.pilots = Array.isArray(p.pilots) ? p.pilots : [];
-            this.data.seeded = p.seeded || {};
-            this.data.pilotCategories = p.pilotCategories || [];
-            if (stale) this.persist();
-          }
-        }
-      } catch {}
-      try {
-        const r = JSON.parse(localStorage.getItem(ROSTER_KEY) || "null");
-        if (r && r.Engineering && r.Design && r.PM) this.data.roster = r;
-      } catch {}
+      const local = this.adoptLocal();
+      if (local.stale) this.persist();
     }
 
     this.seedModulesOnce();
@@ -221,6 +208,40 @@ class Store {
     this.applyTheme();
     this.notify();
   }
+  /** Read this browser's saved board into state. Used both offline, where localStorage is
+   *  the store, and once on the way to Firestore, where it is the migration: the local copy
+   *  is the only record of everything logged before the shared backend existed.
+   *
+   *  Reads only. The local copy is deliberately left in place as a fallback. */
+  private adoptLocal(): { found: boolean; stale: boolean } {
+    let found = false, stale = false;
+    try {
+      const raw = localStorage.getItem(ROADMAPS_KEY);
+      if (raw) {
+        const p = JSON.parse(raw);
+        if (p && p.roadmaps && p.roadmaps.length) {
+          p.roadmaps.forEach((r: Roadmap) => (r.tasks = (r.tasks || []).map(stampIds)));
+          stale = reseedIfStale(p.roadmaps);
+          this.data.roadmaps = p.roadmaps;
+          this.data.activeId = p.activeId || p.roadmaps[0].id;
+          this.data.activity = Array.isArray(p.activity) ? p.activity : [];
+          this.data.adminUrl = p.adminUrl || DEFAULT_ADMIN_URL;
+          this.data.uiuxUrl = p.uiuxUrl || DEFAULT_UIUX_URL;
+          this.data.features = Array.isArray(p.features) ? p.features : [];
+          this.data.pilots = Array.isArray(p.pilots) ? p.pilots : [];
+          this.data.seeded = p.seeded || {};
+          this.data.pilotCategories = p.pilotCategories || [];
+          found = true;
+        }
+      }
+    } catch {}
+    try {
+      const r = JSON.parse(localStorage.getItem(ROSTER_KEY) || "null");
+      if (r && r.Engineering && r.Design && r.PM) this.data.roster = r;
+    } catch {}
+    return { found, stale };
+  }
+
   /** First run only: load the pilot sheet's feature and store lists, and auto-link each
    *  feature to the roadmap task that delivers it where the titles clearly agree. */
   private seedModulesOnce() {
@@ -274,6 +295,25 @@ class Store {
     this.commit();
     return true;
   }
+  /** Push this browser's saved copy up as the shared one, replacing what is there.
+   *
+   *  Needed because the automatic promotion only fires when Firestore is empty. If a browser
+   *  with nothing in it connects first, it writes the defaults and every other browser then
+   *  adopts them. Nothing is lost when that happens, because the local copy is only ever
+   *  read, so this puts it back. Destructive to the shared copy by design: it is the
+   *  recovery, and it says so before it runs. */
+  async restoreLocal(): Promise<{ ok: boolean; tasks: number }> {
+    if (!firebaseEnabled) return { ok: false, tasks: 0 };
+    const local = this.adoptLocal();
+    if (!local.found) return { ok: false, tasks: 0 };
+    const tasks = this.data.roadmaps.reduce((n, r) => n + (r.tasks || []).length, 0);
+    await saveRemote(this.remoteState());
+    this.rebuildHelpers();
+    this.log("roadmap", "Board restored", `this browser's copy is now the shared one, ${tasks} tasks`);
+    this.notify();
+    return { ok: true, tasks };
+  }
+
   private remoteState() {
     return {
       roadmaps: this.data.roadmaps,
@@ -289,7 +329,7 @@ class Store {
     };
   }
   private persist() {
-    if (supabaseEnabled) {
+    if (firebaseEnabled) {
       if (this.saveTimer) clearTimeout(this.saveTimer);
       this.saveTimer = setTimeout(() => { saveRemote(this.remoteState()); }, 400);
       return;
@@ -312,7 +352,7 @@ class Store {
   /** Writes and tells you whether it worked. Everything that can legitimately overflow the
    *  quota (screenshots) goes through this so it can undo itself instead of failing quietly. */
   private persistStrict(): boolean {
-    if (supabaseEnabled) { this.persist(); return true; }
+    if (firebaseEnabled) { this.persist(); return true; }
     try { this.writeLocal(); return true; } catch { return false; }
   }
   private commit() {

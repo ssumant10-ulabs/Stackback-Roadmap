@@ -1,11 +1,14 @@
 /** Screenshots live as downscaled data URLs inside the shared state, because there is no
- *  file storage until Supabase is on. That makes size the whole problem: localStorage gives
+ *  file storage until Firebase Storage is on. That makes size the whole problem: localStorage gives
  *  roughly 5 MB per origin for everything, and the rest of the app already needs some of it.
  *
  *  So: hard-downscale on the way in, cap the count per request, and refuse a write that
  *  would push the total past budget. A refused upload with a clear message beats a silent
  *  quota failure, which is how you lose a whole board. */
 
+/** With Firebase Storage on, images leave the state document entirely and only their URL is
+ *  kept, so the byte budget below stops applying. Downscaling still happens: a 3 MB phone
+ *  screenshot helps nobody, and smaller images make the table quick to open. */
 export const SHOT_MAX_EDGE = 1100;
 export const SHOT_QUALITY = 0.62;
 export const SHOT_MAX_PER_REQUEST = 4;
@@ -42,4 +45,31 @@ export function downscale(file: File): Promise<{ src: string; bytes: number }> {
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("That file could not be opened as an image.")); };
     img.src = url;
   });
+}
+
+
+/** Firebase Storage needs the Blaze plan, so a Spark project has Firestore and auth but no
+ *  file storage. That combination is the dangerous one: falling back to a data URL would
+ *  embed a 200 KB image in a Firestore document that is capped at 1 MB, so a few uploads
+ *  would break the document rather than merely being unavailable. Uploads are therefore
+ *  refused when the shared backend is on without Storage, and the link route covers it. */
+export async function uploadShot(file: File, featureId: string): Promise<{ src: string; bytes: number; stored: "remote" | "local" }> {
+  const { fbStorage, firebaseEnabled, storageConfigured } = await import("./firebase");
+  const storage = firebaseEnabled && storageConfigured() ? fbStorage() : null;
+
+  if (firebaseEnabled && !storageConfigured()) {
+    throw new Error(
+      "Uploading from this machine needs Firebase Storage, which requires the Blaze plan. " +
+      "Use the link button instead and paste a hosted image URL.",
+    );
+  }
+
+  const { src, bytes } = await downscale(file);
+  if (!storage) return { src, bytes, stored: "local" };   // no Firebase at all: local budget
+
+  const { ref, uploadString, getDownloadURL } = await import("firebase/storage");
+  const id = `${featureId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const r = ref(storage, `shots/${id}.jpg`);
+  await uploadString(r, src, "data_url");
+  return { src: await getDownloadURL(r), bytes: 0, stored: "remote" };
 }
