@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Payment Reminders (Polaris web components v2)</title>
+<script src="https://cdn.shopify.com/shopifycloud/polaris.js"></script>
+<style>
+  :root{
+    --p-ink:#303030; --p-muted:#616161; --p-faint:#8a8a8a;
+    --p-line:#e3e3e3; --p-line2:#ebebeb; --p-surface:#fff;
+    --p-primary:#303030; --p-success:#29845a; --p-success-bg:#cdfee1;
+    --p-link:#005bd3; --p-attn-bg:#ffefcf; --p-attn:#8a6116;
+  }
+  body{margin:0;background:#f1f1f1;font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--p-ink)}
+
+  /* Shopify admin shell */
+  .admin{display:flex;min-height:100vh}
+  .navL{flex:none;width:232px;background:#ebebeb;border-right:1px solid var(--p-line);
+    padding:10px 8px;display:flex;flex-direction:column;gap:1px;position:sticky;top:0;align-self:flex-start;height:100vh;overflow:auto}
+  .navItem{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;color:var(--p-ink);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
+  .navItem:hover{background:#dedede}
+  .navItem .ico{width:18px;height:18px;flex:none;color:#4a4a4a}
+  .navItem .ct{margin-left:auto;font-size:12px;color:var(--p-muted);background:#e0e0e0;border-radius:8px;padding:0 7px;line-height:18px}
+  .navSec{color:var(--p-muted);font-size:13px;font-weight:500;display:flex;align-items:center;height:30px;padding:0 8px;margin-top:6px}
+  .navSec .chev{margin-left:auto;color:var(--p-faint)}
+  .navApp{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;font-weight:600;background:#fff;box-shadow:0 1px 0 rgba(0,0,0,.04);margin-top:2px}
+  .navApp .logo{width:20px;height:20px;border-radius:5px;background:var(--p-primary);display:grid;place-items:center;color:#fff;font-size:11px;flex:none}
+  .navApp .dot{margin-left:auto;width:6px;height:6px;border-radius:50%;background:#8a8a8a}
+  .navSub{display:flex;align-items:center;height:30px;padding:0 8px 0 34px;border-radius:8px;color:var(--p-muted);font-size:13px;cursor:pointer;text-decoration:none}
+  .navSub:hover{background:#dedede;color:var(--p-ink)}
+  .navSub.sel{color:var(--p-ink);font-weight:500}
+  .navGap{flex:1}
+  .appmain{flex:1;min-width:0;display:flex;flex-direction:column}
+  .appbar{height:52px;background:#fff;border-bottom:1px solid var(--p-line);display:flex;align-items:center;gap:10px;padding:0 18px}
+  .appbar .logo{width:24px;height:24px;border-radius:6px;background:var(--p-primary);display:grid;place-items:center;color:#fff;font-size:12px}
+  .appbar .name{font-weight:650;font-size:14px}
+  .appbar .more{margin-left:auto;color:var(--p-muted);font-size:20px;cursor:pointer;letter-spacing:1px}
+
+  .savebar{position:sticky;top:0;z-index:60;min-height:52px;background:#1a1a1a;color:#fff;display:flex;align-items:center;gap:12px;padding:8px 16px}
+  .savebar .sbtxt{font-weight:600;font-size:13px}
+  .savebar .sbacts{margin-left:auto;display:flex;gap:8px}
+  .savebar button{font:inherit;font-size:13px;font-weight:600;border-radius:8px;padding:6px 13px;cursor:pointer}
+  .savebar .discard{background:transparent;border:1px solid #4a4a4a;color:#fff}
+  .savebar .discard:hover{background:#2a2a2a}
+  .savebar .save{background:#fff;border:1px solid #fff;color:#1a1a1a}
+
+  /* full-width two-column layout (reduces the base-width side margins) */
+  .pcols{display:flex;gap:16px;align-items:flex-start}
+  .maincol{flex:1;min-width:0}
+  .sidecol{flex:none;width:326px}
+
+  /* card wrapper (used for every step + sidebar block; matches Polaris section chrome) */
+  .card{background:#fff;border:1px solid var(--p-line);border-radius:12px;box-shadow:0 1px 0 rgba(0,0,0,.04);margin-bottom:14px;overflow:hidden}
+  .cardpad{padding:16px 18px}
+
+  /* collapsible step */
+  .step .stephdr{display:flex;gap:12px;align-items:flex-start;padding:15px 18px;cursor:pointer;user-select:none}
+  .step .num{flex:none;width:26px;height:26px;border-radius:50%;background:var(--p-primary);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:600}
+  .step.done .num{background:var(--p-success)}
+  .step .sttl{flex:1;min-width:0}
+  .step h2{margin:0;font-size:15px;font-weight:650}
+  .step .stephdr p{margin:2px 0 0;color:var(--p-muted);font-size:12.5px}
+  .step .stepchev{color:var(--p-faint);font-size:18px;transition:transform .15s;align-self:center}
+  .step.open .stepchev{transform:rotate(90deg)}
+  .stepbody{padding:16px 18px 18px;border-top:1px solid var(--p-line2)}
+  .stepbody.collapsed{display:none}
+  .step .collsum{margin:2px 0 0;color:var(--p-muted);font-size:12.5px}
+  .opt{font-size:10px;font-weight:600;color:var(--p-faint);border:1px solid var(--p-line);border-radius:5px;padding:1px 6px;text-transform:uppercase;letter-spacing:.03em;margin-left:8px;vertical-align:middle}
+
+  /* locked segmented control */
+  .seg{display:inline-flex;border:1px solid var(--p-line);border-radius:8px;overflow:hidden;background:#fff}
+  .seg button{border:0;background:#fff;padding:6px 12px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--p-muted)}
+  .seg button.on{background:var(--p-primary);color:#fff}
+
+  /* payment chips */
+  .chkchip{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border:1px solid var(--p-line);border-radius:20px;font-size:12.5px;font-weight:600;color:var(--p-muted);cursor:pointer;background:#fff}
+  .chkchip::before{content:"";width:14px;height:14px;border-radius:50%;border:1.5px solid var(--p-faint);flex:none}
+  .chkchip.on{border-color:var(--p-success);color:#0f5132;background:var(--p-success-bg)}
+  .chkchip.on::before{content:"\2713";border:0;color:#0f5132;font-size:11px;line-height:14px;text-align:center}
+
+  .disc{display:inline-flex;align-items:center;gap:7px;cursor:pointer;color:var(--p-link);font-weight:600;font-size:12.5px;background:none;border:0;padding:4px 0}
+  .disc .chev{transition:transform .15s}
+  .disc.open .chev{transform:rotate(90deg)}
+
+  .prow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--p-line2)}
+  .prow .x{margin-left:auto;color:var(--p-muted);font-size:12px;cursor:pointer;background:none;border:0}
+  .rowline{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .field{border:1px solid var(--p-line);border-radius:8px;padding:6px 10px;background:#fff;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--p-muted)}
+  .divv{width:1px;height:22px;background:var(--p-line)}
+  .help{font-size:12px;color:var(--p-muted)}
+  .calc{border:1px solid var(--p-line);background:#f7f7f7;border-radius:9px;padding:11px 13px;font-size:12.5px;color:var(--p-muted)}
+  .calc b{color:var(--p-ink)}
+
+  .optlist{margin-bottom:10px}
+  .optcard{border:1px solid var(--p-line);border-radius:10px;margin-bottom:10px;background:#fff}
+  .optcard.dragging{opacity:.45}
+  .optcard.dragover{border-color:var(--p-primary);box-shadow:inset 0 0 0 1px var(--p-primary)}
+  .optsum{display:flex;align-items:center;gap:10px;padding:11px 14px}
+  .draghandle{cursor:grab;color:var(--p-faint);font-size:15px;padding:0 2px;flex:none;line-height:1}
+  .optsum .title{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;min-width:0}
+  .optsum .chips{display:flex;gap:6px;flex-wrap:nowrap;margin-left:6px;flex:none}
+  .optsum .chips .pill,.optsum .chips .tagchip{white-space:nowrap}
+  .optsum .act{flex:none}
+  .optsum .act{margin-left:auto;display:flex;gap:6px}
+  .pill{border:1px solid var(--p-line);border-radius:20px;padding:2px 10px;font-size:12px;color:var(--p-muted);background:#fafafa}
+  .tagchip{display:inline-flex;align-items:center;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600;color:#fff}
+  .opteditor{border-top:1px solid var(--p-line2);padding:15px;background:#fbfbfb}
+  .q{font-weight:600;margin:0 0 8px;font-size:13.5px}
+  .qgroup{margin-bottom:16px}
+  .btnsm{border:1px solid var(--p-line);background:#fff;border-radius:8px;padding:4px 10px;font:inherit;font-size:12px;font-weight:600;color:var(--p-ink);cursor:pointer}
+  .btnsm.ico-x{padding:4px 8px;color:var(--p-muted)}
+  .btnghost{border:1px dashed var(--p-line);background:#fff;border-radius:8px;padding:6px 12px;font:inherit;font-size:12.5px;font-weight:500;color:var(--p-muted);cursor:pointer}
+
+  /* plan summary step checklist */
+  .sumrow{display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--p-line2)}
+  .sumrow:last-child{border-bottom:0}
+  /* plain status lights, not checkboxes: a solid dot, no glyph, so it never reads as checkable */
+  /* status lights: identical solid dots, only the colour differs (green = done, grey = optional-not-set) */
+  .sicon{display:inline-block;box-sizing:border-box;width:10px;height:10px;min-width:10px;border-radius:50%;flex:none;margin-top:6px;background:#c7c7c7}
+  .sicon.ok{background:var(--p-success)}
+  .sicon.opt{background:#c7c7c7}
+  .sicon.req{background:var(--p-attn)}
+  .sname{font-weight:600;font-size:12.5px;display:flex;align-items:center;gap:6px}
+  .sname .optm{font-weight:600;color:var(--p-faint);font-size:10px;border:1px solid var(--p-line);border-radius:5px;padding:0 5px;text-transform:uppercase;letter-spacing:.03em}
+  .sval{color:var(--p-muted);font-size:12px}
+  .req-star{color:#e51c00;font-weight:700}
+
+  /* sidebar detector rows */
+  .drow{padding:11px 0;border-bottom:1px solid var(--p-line2)}
+  .drow:last-child{border-bottom:0}
+  .drow .dtop{display:flex;align-items:center;gap:8px}
+  .drow .dname{font-weight:650;font-size:13px}
+  .drow .dact{margin-left:auto}
+  .lnk{background:none;border:0;color:var(--p-link);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:3px}
+  .statusdot{width:8px;height:8px;border-radius:50%;flex:none}
+  .badge2{display:inline-flex;align-items:center;gap:5px;border-radius:8px;padding:1px 8px;font-size:11.5px;font-weight:600}
+  .badge2.ok{background:var(--p-success-bg);color:#0f5132}
+  .badge2.attn{background:var(--p-attn-bg);color:var(--p-attn)}
+  .badge2.info{background:#d6ecff;color:#00527c}
+  .badge2.sub{background:#ededed;color:#5c5c5c}
+
+  /* storefront widget preview */
+  .mqgrid{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+  .mqleft{flex:1;min-width:220px}
+  .mqright{flex:none;width:280px}
+  .wprev{border:1px solid var(--p-line);border-radius:12px;overflow:hidden;transition:opacity .2s,filter .2s}
+  .wprev.off{opacity:.5;filter:grayscale(.4)}
+  .wbar{background:#16233f;color:#fff;display:flex;align-items:center;justify-content:center;gap:7px;padding:10px 12px;font-size:12px}
+  .wbar .msgwrap{position:relative;height:16px;min-width:150px;max-width:210px;overflow:hidden;text-align:center}
+  .wbar .msg{position:absolute;left:0;right:0;top:0;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:0;transition:opacity .5s}
+  .wbar .msg.show{opacity:1}
+  .wbar .arrow{color:#aeb9cf;letter-spacing:-2px}
+  .wbody{background:#F4F0E8;padding:14px}
+  .wbody .prow2{display:flex;align-items:center;gap:9px;border:0;padding:0}
+  .wbody .wradio{width:16px;height:16px;border-radius:50%;border:2px solid #16233f;position:relative;flex:none}
+  .wbody .wradio::after{content:"";position:absolute;inset:3px;border-radius:50%;background:#16233f}
+  .wbody .wtitle{font-weight:700;color:#2B2B2B;font-size:14px}
+  .wbody .wpill{margin-left:auto;background:#E3A23E;color:#5A3A0E;font-weight:700;font-size:11px;border-radius:20px;padding:3px 11px}
+  .wbody .wsel{margin-top:13px;color:#9A9486;font-size:10px;font-weight:700;letter-spacing:.06em}
+  .hide{display:none !important}
+</style>
+<!-- bare mode: when embedded in the WIP prototype shell, hide this file's own admin chrome
+so the shell is not drawn twice. Standalone viewing is unaffected. -->
+<script>if(/bare/.test(location.search+location.hash))document.documentElement.classList.add("bare");</script>
+<style>html.bare .navL,html.bare .appbar,html.bare .savebar{display:none!important}html.bare .admin{min-height:0}html.bare,html.bare body{background:#f1f1f1}</style>
+</head>
+<body>
+<div class="admin">
+
+  <aside class="navL">
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8.5 10 3l7 5.5V16a1 1 0 0 1-1 1h-3v-5H7v5H4a1 1 0 0 1-1-1z"/></svg>Home</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="13" rx="2"/><path d="M7 8h6M7 11h6"/></svg>Orders<span class="ct">127</span></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h12v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M7 6V5a3 3 0 0 1 6 0v1"/></svg>Products</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="7" r="3"/><path d="M4 16c0-3 2.7-5 6-5s6 2 6 5"/></svg>Customers</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 15V9m4 6V5m4 10v-4m4 4V7"/></svg>Growth</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="3"/><path d="M12 12l4 4M13.5 6.5 16 4"/></svg>Discounts</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="12" rx="2"/><path d="M7 8h6M7 11h4"/></svg>Content</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="6"/><path d="M4 10h12M10 4c2 2 2 10 0 12M10 4c-2 2-2 10 0 12"/></svg>Markets</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 16h12M6 16V9m4 7V5m4 11v-4"/></svg>Analytics</div>
+    <div class="navSec">Sales channels<span class="chev">&#8250;</span></div>
+    <div class="navSec">Apps<span class="chev">&#8250;</span></div>
+    <!-- v2: nav brought onto the LOCKED IA. v1 still carried the pre-IA labels (Manage Purchase
+         Options, Purchase Contracts, One-Time Orders), which are exactly the names IA-01 renamed or
+         absorbed: Plans, Subscriptions, and One-Time Orders merged into Orders. Leaving them would
+         teach two vocabularies for the same screens. Twelve items, Billing below Settings. -->
+    <div class="navApp"><span class="logo">&#9670;</span>StackBack Subscrip&hellip;<span class="dot"></span></div>
+    <div class="navSub">Plans</div>
+    <div class="navSub">Subscriptions</div>
+    <a class="navSub" href="Orders_Polaris_v5.html">Orders</a>
+    <div class="navSub sel">Payment reminders</div>
+    <a class="navSub" href="Inventory_Polaris_v4.html">Inventory</a>
+    <div class="navSub">Customers</div>
+    <div class="navSub">Widget</div>
+    <div class="navSub">Portal</div>
+    <div class="navSub">Landing pages</div>
+    <div class="navSub">Analytics</div>
+    <div class="navSub">Settings</div>
+    <div class="navSub">Billing</div>
+    <div class="navGap"></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m7-7h-2M5 10H3m12.5-5-1.5 1.5M6 14l-1.5 1.5m11 0L14 14M6 6 4.5 4.5"/></svg>Settings</div>
+  </aside>
+
+  <div class="appmain">
+    <div class="appbar"><span class="logo">&#9670;</span><span class="name">StackBack Subscriptions &amp; More</span><span class="more">&ctdot;</span></div>
+
+    <style>
+      .lwrap{padding:0 0 26px}
+      .tabs{display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin:0 0 4px}
+      .tabs button{appearance:none;border:1px solid transparent;background:transparent;font:inherit;font-size:13px;font-weight:600;color:var(--p-muted);height:32px;padding:0 12px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+      .tabs button.on{background:#fff;color:var(--p-ink);border-color:var(--p-line);box-shadow:0 1px 0 rgba(0,0,0,.04)}
+      .tabs button .n{font-size:11px;font-weight:700;opacity:.7}
+      .tabhint{font-size:12px;color:var(--p-faint);margin:0 0 14px}
+      .subtabs{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+      .subtabs button{appearance:none;height:28px;padding:0 11px;border-radius:99px;border:1px solid var(--p-line);background:#fff;font:inherit;font-size:12.5px;font-weight:600;color:var(--p-muted);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+      .subtabs button.on{background:var(--p-ink);color:#fff;border-color:var(--p-ink)}
+      .subtabs button .n{font-size:11px;font-weight:700;opacity:.75}
+      /* v2 arrived-from-Inventory chip, matching the Orders screen's applied-filter affordance */
+      .chiprow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+      .skuchip{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--p-line);
+        border-radius:99px;padding:3px 6px 3px 12px;font-size:12px;color:var(--p-ink);font-weight:600}
+      .skuchip .x{border:0;background:#ededed;color:var(--p-muted);border-radius:50%;width:18px;height:18px;
+        cursor:pointer;font:inherit;font-size:12px;line-height:1;display:grid;place-items:center;padding:0}
+      .skuchip .x:hover{background:#e0e0e0;color:var(--p-ink)}
+      .chipnote{font-size:12px;color:var(--p-faint)}
+      /* the line items on a reminder row: the reason a row matched a SKU has to be visible */
+      .items{font-size:11.5px;color:var(--p-muted);margin-top:2px}
+      .items .sk{font-family:ui-monospace,Menlo,monospace}
+      .items .hit{color:var(--p-ink);font-weight:700}
+
+      .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+      .bar .lbl{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--p-faint);margin-right:2px}
+      .fchip{height:28px;padding:0 11px;border-radius:99px;border:1px solid var(--p-line);background:#fff;font:inherit;font-size:12.5px;font-weight:600;color:var(--p-muted);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+      .fchip.on{background:var(--p-ink);color:#fff;border-color:var(--p-ink)}
+      .fchip .n{font-size:11px;font-weight:700;opacity:.75}
+      .lcard{background:#fff;border:1px solid var(--p-line);border-radius:12px;overflow:hidden}
+      .lhd{padding:12px 14px;border-bottom:1px solid var(--p-line2);font-weight:650;font-size:13px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+      .lhd .hint{margin-left:auto;font-weight:500;font-size:12px;color:var(--p-faint)}
+      .orow{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--p-line2);flex-wrap:wrap}
+      .orow:last-child{border-bottom:0}
+      .orow .grow{flex:1 1 260px;min-width:220px}
+      .orow .t{font-weight:600;font-size:12.5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+      .orow .s{color:var(--p-muted);font-size:12px;margin-top:2px;line-height:1.5}
+      .code{font:700 12px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+      .sdot{width:8px;height:8px;border-radius:50%;flex:none}
+      .sdot.ok{background:#29845a}.sdot.warn{background:#c8952a}.sdot.crit{background:#8e1f0b}.sdot.off{background:#b5b5b5}
+      .ch{font-size:11px;font-weight:650;border-radius:6px;padding:2px 7px;white-space:nowrap}
+      .ch.ok{background:#cdfee1;color:#29845a}.ch.warn{background:#ffefcf;color:#8a6116}
+      .ch.crit{background:#fedad1;color:#8e1f0b}.ch.neu{background:#f1f1f1;color:var(--p-muted)}
+      .amt{font-size:13px;font-weight:700;color:var(--p-ink);white-space:nowrap}
+      /* reminder progress: sent out of the store's real dunning cap, never a bare count */
+      .seq{display:flex;align-items:center;gap:7px;flex:none}
+      .seq .pips{display:flex;gap:3px}
+      .seq .pip{width:7px;height:7px;border-radius:50%;background:#e0e0e0}
+      .seq .pip.on{background:#c8952a}
+      .seq .pip.last{background:#8e1f0b}
+      .seq .txt{font-size:11.5px;font-weight:650;color:var(--p-muted);white-space:nowrap}
+      .acts{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:none}
+      .acts .r{display:flex;align-items:center;gap:6px}
+      .b{height:30px;padding:0 12px;border-radius:8px;border:1px solid var(--p-line);background:#fff;font:inherit;font-size:12.5px;font-weight:600;color:var(--p-ink);cursor:pointer}
+      .b.pri{background:var(--p-ink);color:#fff;border-color:var(--p-ink)}
+      .b.kb{width:30px;padding:0;letter-spacing:1px}
+      .wstrip{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:0 0 14px;align-items:stretch}
+      .wtile{background:#fff;border:1px solid var(--p-line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:3px}
+      .wtile .k{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--p-faint)}
+      .wtile .v{font-size:21px;font-weight:650;letter-spacing:-.3px}
+      .wtile .d{font-size:12px;color:var(--p-muted);margin-top:auto}
+      .note{background:#eaf4ff;border:1px solid #b9dcf5;color:#00527c;border-radius:10px;padding:11px 13px;font-size:12.5px;margin:14px 0 0}
+      /* renamed from .warn: it collided with the .sdot warn STATUS MODIFIER, and since .sdot.warn only
+         overrides background, every mid-stage dot inherited this box's padding 11/13 and 10px radius
+         and painted as a 36x32 amber blob instead of an 8px dot. Inherited from v1, which still has it. */
+      .notewarn{background:#ffefcf;border:1px solid #f0d9a8;color:#8a6116;border-radius:10px;padding:11px 13px;font-size:12.5px;margin:14px 0 0}
+      .note b,.warn b{font-weight:650}
+      .hide{display:none !important}
+    </style>
+
+    <s-page heading="Payment Reminders" inline-size="large">
+      <s-button slot="secondary-actions">Export</s-button>
+      <s-button slot="primary-action" variant="primary">Send selected</s-button>
+
+      <div class="lwrap">
+
+        <!-- Primary job is the live reminder queue. Paused is deliberately secondary. -->
+        <div class="tabs" id="tabs">
+          <button data-tab="ongoing" class="on">Ongoing reminders <span class="n"></span></button>
+          <button data-tab="paused">Paused <span class="n"></span></button>
+        </div>
+        <p class="tabhint" id="tabhint">Subscriptions still live, with an invoice outstanding and a reminder sequence running. This is the queue to work.</p>
+
+        <!-- v2: arrived-from-Inventory chip. Rendered only when a #sku= filter is present, and
+             clearable, so the screen never shows a subset without saying why. -->
+        <div class="chiprow hide" id="skuRow"></div>
+
+        <!-- ===== ONGOING ===== -->
+        <div id="paneOngoing">
+          <div class="wstrip">
+            <div class="wtile"><div class="k">Awaiting payment</div><div class="v">23</div><div class="d">all still active subscriptions</div></div>
+            <div class="wtile"><div class="k">Outstanding</div><div class="v">48,200</div><div class="d">across 23 invoices</div></div>
+            <div class="wtile"><div class="k">On final reminder</div><div class="v">4</div><div class="d">pause automatically if unpaid</div></div>
+            <div class="wtile"><div class="k">Recovered, 30d</div><div class="v">61%</div><div class="d">paid after at least one reminder</div></div>
+          </div>
+
+          <div class="bar">
+            <span class="lbl">Stage</span>
+            <button class="fchip on" data-f="all">All unpaid <span class="n">23</span></button>
+            <button class="fchip" data-f="first">First reminder <span class="n">9</span></button>
+            <button class="fchip" data-f="mid">Chasing <span class="n">10</span></button>
+            <button class="fchip" data-f="final">Final reminder <span class="n">4</span></button>
+          </div>
+
+          <div class="lcard">
+            <div class="lhd">Ongoing reminders <span class="hint">Sorted by urgency, closest to auto-pause first</span></div>
+            <div id="rowsOngoing"></div>
+          </div>
+
+          <div class="note">
+            <b>The count is a fraction, never a bare number.</b> The denominator is your store's own Retry failed payments setting in Settings, Payments, currently 4. When the sequence runs out the subscription auto-pauses and the customer moves to the Paused tab under Paused for non-payment. They do not stay in this queue.
+          </div>
+        </div>
+
+        <!-- ===== PAUSED ===== -->
+        <div id="panePaused" class="hide">
+          <div class="subtabs" id="subtabs">
+            <button data-sub="nonpay" class="on">Paused for non-payment <span class="n"></span></button>
+            <button data-sub="customer">Paused by customer <span class="n"></span></button>
+          </div>
+
+          <div class="lcard">
+            <div class="lhd" id="pausedHd">Paused for non-payment <span class="hint">Reminder sequence ran out and the subscription stopped</span></div>
+            <div id="rowsPaused"></div>
+          </div>
+
+          <div class="notewarn" id="pausedNote">
+            <b>These are the churn risk, and most of them do not know they stopped.</b> The subscription paused itself when the reminder sequence ran out, so the customer took no action and got no decision point. That makes this a call, not another email, which is why they are separated from the customers who paused on purpose.
+          </div>
+        </div>
+
+      </div>
+    </s-page>
+  </div>
+</div>
+
+<script>
+  var $ = function(id){ return document.getElementById(id); };
+  var CAP = 4;   /* from Settings, Payments, Retry failed payments */
+
+  /* v2: arrive-with-a-filter, and a DATA-MODEL ADDITION that is the real finding here.
+     Inventory links in as PaymentReminders_Polaris_v2.html#sku=CPC-500 when someone clicks the
+     NOT-PAID-YET count on a forecast row. v1 could not honour that, because its rows carried only
+     cust, sb, pc, sent, amt, due and stage: no products and no SKUs at all. So the reminder queue
+     has to know its LINE ITEMS for this link to exist, which is a dev implication beyond the
+     wireframe: an unpaid delivery's contents are not currently on this screen's model.
+     `items` is [product name, SKU, qty], matching the shape Orders already uses. */
+  var ONGOING = [
+    {cust:'Sneha Kulkarni', sb:'SB-8794', pc:'PC-1021', sent:4, amt:'2,250', due:'overdue 9 days',  stage:'final',
+      items:[['Cold Pressed Coffee 500g','CPC-500',2],['Herbal Tea Sampler','HTS-01',1]]},
+    {cust:'Deepak Rao',     sb:'SB-8799', pc:'PC-1025', sent:4, amt:'1,180', due:'overdue 7 days',  stage:'final',
+      items:[['Collagen Peptides 500g','COL-500',1]]},
+    {cust:'Kabir Shah',     sb:'SB-8801', pc:'PC-1028', sent:2, amt:'1,499', due:'overdue 4 days',  stage:'mid',
+      items:[['Cold Pressed Coffee 500g','CPC-500',1],['Ashwagandha Gummies 60ct','ASH-060',2]]},
+    {cust:'Nisha Verma',    sb:'SB-8806', pc:'PC-1031', sent:2, amt:'899',   due:'overdue 3 days',  stage:'mid',
+      items:[['Wellness Powder 250g','WLP-250',1]]},
+    {cust:'Vikram Patel',   sb:'SB-8788', pc:'PC-1014', sent:1, amt:'899',   due:'overdue 1 day',   stage:'first',
+      items:[['Herbal Tea Sampler','HTS-01',3]]},
+    {cust:'Ritu Malhotra',  sb:'SB-8812', pc:'PC-1036', sent:1, amt:'2,100', due:'due today',       stage:'first',
+      items:[['Cold Pressed Coffee 500g','CPC-500',1],['Magnesium Glycinate 90ct','MAG-090',1]]}
+  ];
+
+  /* Read from the hash, not the query string: a static server's clean-URL rewrite drops the query
+     when it strips ".html", which is why the whole convention is a #hash here and on Orders. */
+  function readSkuHash(){
+    var m = /[#&]sku=([^&]+)/.exec(location.hash);
+    if (!m) return null;
+    try { return decodeURIComponent(m[1]); } catch(e){ return m[1]; }
+  }
+  var skuFilter = readSkuHash();
+  /* Same reason as Orders: the hash is read once at load, but arriving from Inventory while this
+     screen is already open only changes the hash, so without this the second click does nothing. */
+  window.addEventListener('hashchange', function(){
+    var next = readSkuHash();
+    if(next === skuFilter) return;
+    skuFilter = next;
+    render();
+  });
+  function skuOK(r){
+    if (!skuFilter) return true;
+    /* a delivery matches if ANY line carries the SKU, since one unpaid delivery can hold several */
+    return (r.items||[]).some(function(l){ return l[1]===skuFilter; });
+  }
+  function skuName(){
+    for (var i=0;i<ONGOING.length;i++){
+      var hit=(ONGOING[i].items||[]).filter(function(l){ return l[1]===skuFilter; })[0];
+      if (hit) return hit[0];
+    }
+    return skuFilter;
+  }
+
+  var PAUSED_NONPAY = [
+    {cust:'Farah Sheikh',  pc:'PC-1009', amt:'1,499', when:'paused 12 days ago', plan:'Monthly Essentials'},
+    {cust:'Amit Joshi',    pc:'PC-1012', amt:'2,250', when:'paused 8 days ago',  plan:'Quarterly Wellness Box'},
+    {cust:'Leena George',  pc:'PC-1017', amt:'899',   when:'paused 5 days ago',  plan:'Coffee Club'}
+  ];
+
+  var PAUSED_CUSTOMER = [
+    {cust:'Ananya Rao',    pc:'PC-1032', resume:'resumes 1 Sep',  plan:'Monthly Essentials', reason:'Travelling'},
+    {cust:'Sameer Khan',   pc:'PC-1040', resume:'resumes 15 Aug', plan:'Coffee Club',        reason:'Too much stock'},
+    {cust:'Divya Menon',   pc:'PC-1043', resume:'no date set',    plan:'Build Your Box',     reason:'Not given'}
+  ];
+
+  function pips(sent){
+    var out='';
+    for(var i=1;i<=CAP;i++){
+      var cls = i<=sent ? (i===CAP?'pip on last':'pip on') : 'pip';
+      out += '<span class="'+cls+'"></span>';
+    }
+    return '<span class="seq"><span class="pips">'+out+'</span><span class="txt">'+sent+' of '+CAP+' sent</span></span>';
+  }
+
+  function ongoingRow(r){
+    var atCap = r.sent>=CAP;
+    var dot = atCap?'crit':(r.sent>1?'warn':'ok');
+    return '<div class="orow">'
+      + '<span class="sdot '+dot+'"></span>'
+      + '<div class="grow"><div class="t">'+r.cust
+        + (atCap?'<span class="ch crit">Pauses next</span>':'')+'</div>'
+        + '<div class="s"><span class="code" style="font-weight:600">'+r.sb+'</span> &middot; <span class="code" style="font-weight:600">'+r.pc+'</span> &middot; '+r.due+'</div>'
+        /* v2: the line items are shown, and the matched SKU is emphasised. Without this a filtered
+           list gives no evidence of WHY each row survived the filter, which is how a wrong filter
+           goes unnoticed. */
+        + '<div class="items">'+(r.items||[]).map(function(l){
+            var on = skuFilter && l[1]===skuFilter;
+            return '<span class="'+(on?'hit':'')+'">'+l[0]+' <span class="sk">'+l[1]+'</span> &times;'+l[2]+'</span>';
+          }).join(' &middot; ')+'</div></div>'
+      + pips(r.sent)
+      + '<span class="amt">'+r.amt+'</span>'
+      + '<div class="acts"><div class="r"><button class="b">View order</button></div>'
+      + '<div class="r"><button class="b pri">'+(atCap?'Call customer':'Send reminder')+'</button><button class="b kb">&#8943;</button></div></div>'
+      + '</div>';
+  }
+
+  function nonpayRow(r){
+    return '<div class="orow">'
+      + '<span class="sdot crit"></span>'
+      + '<div class="grow"><div class="t">'+r.cust+'<span class="ch crit">Stopped, unaware</span></div>'
+        + '<div class="s"><span class="code" style="font-weight:600">'+r.pc+'</span> &middot; '+r.plan+' &middot; '+r.when+' after '+CAP+' of '+CAP+' reminders</div></div>'
+      + '<span class="amt">'+r.amt+'</span>'
+      + '<div class="acts"><div class="r"><button class="b">View contract</button></div>'
+      + '<div class="r"><button class="b pri">Call customer</button><button class="b kb">&#8943;</button></div></div>'
+      + '</div>';
+  }
+
+  function custRow(r){
+    return '<div class="orow">'
+      + '<span class="sdot off"></span>'
+      + '<div class="grow"><div class="t">'+r.cust+'<span class="ch neu">'+r.reason+'</span></div>'
+        + '<div class="s"><span class="code" style="font-weight:600">'+r.pc+'</span> &middot; '+r.plan+' &middot; '+r.resume+'</div></div>'
+      + '<div class="acts"><div class="r"><button class="b">View contract</button><button class="b kb">&#8943;</button></div></div>'
+      + '</div>';
+  }
+
+  var stage='all', sub='nonpay';
+
+  /* Every count and tile on this screen derives from THIS set, so a SKU filter narrows the
+     numbers along with the rows. A tab claiming 23 above a list of 3 is the defect this rule
+     exists to prevent. */
+  function baseOngoing(){ return ONGOING.filter(skuOK); }
+
+  function renderSkuChip(){
+    var row = $('skuRow');
+    if(!skuFilter){ row.classList.add('hide'); row.innerHTML=''; return; }
+    row.classList.remove('hide');
+    row.innerHTML = '<span class="skuchip">From Inventory, SKU: '+skuFilter+' ('+skuName()+')'
+      + '<button class="x" id="skuX" aria-label="Clear the SKU filter and show every unpaid reminder">&#10005;</button></span>'
+      /* stated, not hidden: the Paused tab cannot be scoped by SKU because paused rows carry no
+         line items in the model, so pretending the filter applied there would be a lie */
+      + '<span class="chipnote">Applies to the reminder queue. The Paused tab is not scoped by SKU.</span>';
+    $('skuX').onclick = function(){
+      skuFilter = null;
+      if(window.history && history.replaceState) history.replaceState(null,'',location.pathname);
+      render();
+    };
+  }
+
+  function render(){
+    renderSkuChip();
+    var rows = baseOngoing().filter(function(r){ return stage==='all' || r.stage===stage; });
+    $('rowsOngoing').innerHTML = rows.length? rows.map(ongoingRow).join('')
+      : '<div class="orow" style="justify-content:center;color:var(--p-faint);padding:20px">'
+        + (skuFilter ? 'No unpaid reminder contains '+skuFilter+'.' : 'Nobody at this stage.')+'</div>';
+
+    if(sub==='nonpay'){
+      $('rowsPaused').innerHTML = PAUSED_NONPAY.map(nonpayRow).join('');
+      $('pausedHd').innerHTML = 'Paused for non-payment <span class="hint">Reminder sequence ran out and the subscription stopped</span>';
+      $('pausedNote').classList.remove('hide');
+    } else {
+      $('rowsPaused').innerHTML = PAUSED_CUSTOMER.map(custRow).join('');
+      $('pausedHd').innerHTML = 'Paused by customer <span class="hint">They chose this, so no action is needed unless the resume date has passed</span>';
+      $('pausedNote').classList.add('hide');
+    }
+    counts();
+  }
+
+  /* Counts derive from the data, never typed, so a tab can never claim a number the list
+     does not contain. Same rule as the tracker and the Orders screen. */
+  function counts(){
+    var set=function(sel,n){ var e=document.querySelector(sel); if(e) e.textContent=n; };
+    var B=baseOngoing();
+    set('#tabs button[data-tab="ongoing"] .n', B.length);
+    set('#tabs button[data-tab="paused"] .n',  PAUSED_NONPAY.length + PAUSED_CUSTOMER.length);
+    set('#subtabs button[data-sub="nonpay"] .n',   PAUSED_NONPAY.length);
+    set('#subtabs button[data-sub="customer"] .n', PAUSED_CUSTOMER.length);
+    set('.fchip[data-f="all"] .n',   B.length);
+    set('.fchip[data-f="first"] .n', B.filter(function(r){return r.stage==='first';}).length);
+    set('.fchip[data-f="mid"] .n',   B.filter(function(r){return r.stage==='mid';}).length);
+    set('.fchip[data-f="final"] .n', B.filter(function(r){return r.stage==='final';}).length);
+    /* the four glance tiles are derived too */
+    var out=0; B.forEach(function(r){ out += parseFloat(r.amt.replace(/,/g,'')); });
+    var tiles=document.querySelectorAll('.wtile .v');
+    if(tiles.length===4){
+      tiles[0].textContent = B.length;
+      tiles[1].textContent = out.toLocaleString('en-IN');
+      tiles[2].textContent = B.filter(function(r){return r.sent>=CAP;}).length;
+      /* captions derive too, so no tile can describe a set it is not counting */
+      tiles[1].nextElementSibling.textContent = 'across '+B.length+' invoice'+(B.length===1?'':'s');
+      tiles[0].nextElementSibling.textContent = skuFilter
+        ? 'active subscriptions containing '+skuFilter
+        : 'all still active subscriptions';
+    }
+  }
+
+  $('tabs').addEventListener('click', function(e){
+    var b=e.target.closest('button[data-tab]'); if(!b) return;
+    $('tabs').querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x===b); });
+    var on = b.dataset.tab==='ongoing';
+    $('paneOngoing').classList.toggle('hide', !on);
+    $('panePaused').classList.toggle('hide', on);
+    $('tabhint').textContent = on
+      ? 'Subscriptions still live, with an invoice outstanding and a reminder sequence running. This is the queue to work.'
+      : 'Secondary priority. Subscriptions that have already stopped, split by whether the customer chose it or the reminder sequence ran out.';
+    render();
+  });
+
+  $('subtabs').addEventListener('click', function(e){
+    var b=e.target.closest('button[data-sub]'); if(!b) return;
+    sub=b.dataset.sub;
+    $('subtabs').querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x===b); });
+    render();
+  });
+
+  document.querySelectorAll('.fchip[data-f]').forEach(function(b){
+    b.addEventListener('click', function(){
+      stage=b.dataset.f;
+      document.querySelectorAll('.fchip[data-f]').forEach(function(x){ x.classList.toggle('on', x===b); });
+      render();
+    });
+  });
+
+  render();
+</script>
+</body>
+</html>

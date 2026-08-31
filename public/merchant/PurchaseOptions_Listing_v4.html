@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Purchase Options — Listing (v4, type-aware)</title>
+<style>
+  :root{
+    --p-bg:#f1f1f1; --p-surface:#ffffff; --p-nav:#ebebeb;
+    --ink:#303030; --muted:#616161; --faint:#8a8a8a;
+    --line:#e3e3e3; --line2:#ebebeb;
+    --primary:#303030; --primary-h:#1a1a1a;
+    --link:#005bd3; --success:#29845a; --success-bg:#cdfee1;
+    --critical:#e51c00;
+    --infoInk:#00527c; --infoBg:#e0f0ff;
+    --amberInk:#8a6116; --amberBg:#ffefcf;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--p-bg);color:var(--ink);
+    font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+
+  .admin{display:flex;min-height:100vh}
+
+  .navL{flex:none;width:232px;background:var(--p-nav);border-right:1px solid var(--line);
+    padding:10px 8px;display:flex;flex-direction:column;gap:1px;position:sticky;top:0;align-self:flex-start;height:100vh;overflow:auto}
+  .navItem{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;
+    color:var(--ink);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
+  .navItem:hover{background:#dedede}
+  .navItem .ico{width:18px;height:18px;flex:none;color:#4a4a4a}
+  .navItem .ct{margin-left:auto;font-size:12px;color:var(--muted);background:#e0e0e0;border-radius:8px;padding:0 7px;line-height:18px}
+  .navSec{color:var(--muted);font-size:13px;font-weight:500;display:flex;align-items:center;height:30px;padding:0 8px;margin-top:6px}
+  .navSec .chev{margin-left:auto;color:var(--faint)}
+  .navSub{display:flex;align-items:center;height:30px;padding:0 8px 0 34px;border-radius:8px;color:var(--muted);font-size:13px;cursor:pointer}
+  .navSub:hover{background:#dedede;color:var(--ink)}
+  .navSub.sel{color:var(--ink);font-weight:600;background:var(--p-surface);box-shadow:0 1px 0 rgba(0,0,0,.04)}
+  .navApp{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;font-weight:600;background:var(--p-surface);box-shadow:0 1px 0 rgba(0,0,0,.04);margin-top:2px}
+  .navApp .logo{width:20px;height:20px;border-radius:5px;background:var(--primary);display:grid;place-items:center;color:#fff;font-size:11px;flex:none}
+  .navApp .dot{margin-left:auto;width:6px;height:6px;border-radius:50%;background:#8a8a8a}
+  .navGap{flex:1}
+
+  .appmain{flex:1;min-width:0;display:flex;flex-direction:column}
+  .appbar{height:52px;background:var(--p-surface);border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:10px;padding:0 18px}
+  .appbar .logo{width:24px;height:24px;border-radius:6px;background:var(--primary);display:grid;place-items:center;color:#fff;font-size:12px}
+  .appbar .name{font-weight:650;font-size:14px}
+  .appbar .more{margin-left:auto;color:var(--muted);font-size:20px;cursor:pointer;letter-spacing:1px}
+
+  /* widened: was capped at 1000px, leaving a dead gap on wide admin viewports.
+     Polaris resource-index pages run close to full frame width; no persistent
+     right rail belongs here (that pattern is for record/editor pages, see note). */
+  .pagehdr{display:flex;align-items:center;gap:14px;padding:18px 24px 4px;max-width:1240px}
+  .pagehdr .back{width:28px;height:28px;border:1px solid var(--line);border-radius:8px;background:#fff;display:grid;place-items:center;color:var(--muted);cursor:pointer}
+  .pagehdr h1{font-size:19px;margin:0;font-weight:650}
+  .pagehdr .acts{margin-left:auto;display:flex;gap:8px}
+
+  .wrap{padding:6px 24px 90px;max-width:1240px}
+
+  .btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 13px;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;box-shadow:0 1px 0 rgba(0,0,0,.04);display:inline-flex;align-items:center;gap:6px}
+  .btn:hover{background:#fafafa}
+  .btn.primary{background:var(--primary);color:#fff;border-color:var(--primary);box-shadow:0 1px 0 rgba(0,0,0,.12)}
+  .btn.primary:hover{background:var(--primary-h)}
+  .btn.sm{padding:4px 10px;font-size:12px}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+
+  /* type row (now first) */
+  .typerow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-height:38px}
+  .typehint{color:var(--faint);font-size:12px}
+  .pseg{display:inline-flex;background:#f1f1f1;border:1px solid var(--line);border-radius:9px;padding:3px}
+  .pseg button{border:0;background:transparent;color:var(--muted);font-size:13px;font-weight:600;padding:6px 13px;border-radius:7px;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+  .pseg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.1)}
+  .pseg button:disabled{opacity:.5;cursor:not-allowed}
+  .pseg .c{font-size:11px;font-weight:700;color:var(--faint)}
+  .pseg button.on .c{color:var(--muted)}
+  .pseg.sm button{padding:5px 11px;font-size:12px}
+  .typedd{position:relative}
+  .typedd .ddbtn{border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 14px;font-size:13.5px;font-weight:650;display:inline-flex;align-items:center;gap:10px;cursor:pointer;box-shadow:0 1px 0 rgba(0,0,0,.04)}
+  .typedd .ddbtn .c{background:#eef0f2;color:var(--muted);border-radius:20px;font-size:11px;padding:1px 8px;font-weight:700}
+  .typedd .menu{position:absolute;top:calc(100% + 6px);left:0;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.16);padding:6px;min-width:270px;z-index:20}
+  .typedd .menu .mi{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 11px;border-radius:8px;cursor:pointer;font-weight:600}
+  .typedd .menu .mi:hover{background:#f6f6f7}
+  .typedd .menu .mi.on{background:#f1f1f1}
+  .typedd .menu .mi.soon{color:var(--faint);cursor:not-allowed}
+  .typedd .menu .mi.soon:hover{background:transparent}
+  .typedd .menu .mi .c{background:#e7e9eb;color:var(--muted);border-radius:20px;font-size:11px;padding:1px 8px;font-weight:700}
+  .typedd .menu .mi.soon .c{background:transparent;border:1px dashed var(--line);color:var(--faint)}
+
+  /* stats: slim trailing meta line under the type row, recomputed per type */
+  .statline{color:var(--muted);font-size:12.5px;margin:8px 0 14px;display:flex;align-items:center;flex-wrap:wrap}
+  .statline b{color:var(--ink);font-weight:650}
+  .statline .dot{width:3px;height:3px;border-radius:50%;background:#c4c4c4;margin:0 10px;display:inline-block}
+  .statline .warn{color:var(--amberInk);font-weight:600}
+
+  .card{background:var(--p-surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 1px 0 rgba(0,0,0,.04);overflow:hidden}
+  .toolbar{display:flex;align-items:center;gap:10px;padding:12px 14px;flex-wrap:wrap}
+  .search{flex:1 1 240px;min-width:190px;position:relative}
+  .search input{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 12px 8px 32px;font-size:13px;background:#fff;color:var(--ink)}
+  .search input:focus{outline:2px solid #cfe0ff;border-color:#7aa6f0}
+  .search svg{position:absolute;left:10px;top:9px;color:var(--faint)}
+  .lens{margin-left:auto}
+  .select{border:1px solid var(--line);border-radius:8px;padding:8px 28px 8px 11px;font-size:12.5px;
+    background:#fff url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23616161' stroke-width='1.6'><path d='M2 4l4 4 4-4'/></svg>") no-repeat right 10px center;
+    -webkit-appearance:none;appearance:none;color:var(--ink);font-weight:600;cursor:pointer}
+
+  table{width:100%;border-collapse:collapse}
+  thead th{text-align:left;font-size:11px;font-weight:650;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;padding:11px 14px;border-top:1px solid var(--line);background:#fafafa}
+  tbody td{padding:12px 14px;border-top:1px solid var(--line);vertical-align:middle}
+  tbody tr:hover{background:#fafafa}
+  .pname{font-weight:600;color:var(--link);cursor:pointer}.pname:hover{text-decoration:underline}
+  .badge{display:inline-flex;align-items:center;gap:5px;border-radius:8px;padding:2px 9px;font-size:12px;font-weight:600}
+  .b-active{background:var(--success-bg);color:#0f5132}
+  .b-inactive{background:#e3e3e3;color:#4a4a4a}
+  .b-info{background:var(--infoBg);color:var(--infoInk)}
+  .b-dot{width:6px;height:6px;border-radius:50%}
+  .b-active .b-dot{background:var(--success)}.b-inactive .b-dot{background:var(--faint)}
+
+  /* product identity: square placeholder thumb (Polaris "no image" treatment) + visible names, not initials-only */
+  .pile{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .thumbs{display:flex;align-items:center}
+  .thumb{width:30px;height:30px;border-radius:6px;border:1px solid var(--line);background:#f6f6f7;margin-left:-8px;
+    display:flex;align-items:center;justify-content:center;color:#b7bcc2;box-shadow:0 0 0 2px #fff}
+  .thumb:first-child{margin-left:0}
+  .thumb.more{background:#eef0f2;color:var(--muted);font-size:10px;font-weight:700}
+  .pile-names{color:var(--ink);font-size:12.5px}
+  .pile-names .rest{color:var(--muted);font-weight:600}
+
+  .rowact{display:flex;align-items:center;gap:6px;justify-content:flex-end}
+  .kebab{border:1px solid var(--line);background:#fff;border-radius:7px;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);box-shadow:0 1px 0 rgba(0,0,0,.04)}
+  .kebab:hover{background:#fafafa}
+  .warnflag{color:var(--amberInk);display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:#f6f6f7;border:1px solid var(--line);border-radius:7px;padding:4px 9px;font-size:12px;font-weight:600;color:var(--ink);margin:2px 4px 2px 0;cursor:pointer;text-decoration:none}
+  .chip:hover{background:#fff;border-color:#c9c9c9}.chip .mini{width:5px;height:5px;border-radius:50%}
+  .exp{cursor:pointer;color:var(--muted);display:inline-flex;align-items:center;gap:6px;font-weight:600}
+  .subrow td{background:#fafbfb;padding:0 14px 12px 52px;border-top:0}.subrow .inner{padding-top:2px}
+  .kv{color:var(--muted);font-size:11.5px;margin-bottom:6px}
+  .tfoot{padding:11px 14px;color:var(--faint);font-size:12px;text-align:center;border-top:1px solid var(--line)}
+  .hide{display:none !important}
+
+  .pagenote{max-width:1240px;color:var(--faint);font-size:11.5px;margin-top:16px;line-height:1.6}
+  .pagenote b{color:var(--muted)}
+
+  .preview{position:fixed;top:12px;right:14px;z-index:60;background:#111;color:#fff;border-radius:10px;padding:6px;display:flex;gap:4px;align-items:center;box-shadow:0 6px 24px rgba(0,0,0,.28)}
+  .preview .lbl{color:#8b8b8b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:0 6px}
+  .preview button{background:transparent;color:#cfcfcf;border:0;padding:6px 10px;border-radius:7px;font-size:11.5px;font-weight:600;cursor:pointer;white-space:nowrap}
+  .preview button.on{background:#fff;color:#111}
+</style>
+</head>
+<body>
+
+<div class="preview">
+  <span class="lbl">Preview scaling</span>
+  <button id="pv2" class="on" onclick="setTypes(2)">2 types → segmented</button>
+  <button id="pv6" onclick="setTypes(6)">6 types → dropdown</button>
+</div>
+
+<div class="admin">
+  <aside class="navL">
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8.5 10 3l7 5.5V16a1 1 0 0 1-1 1h-3v-5H7v5H4a1 1 0 0 1-1-1z"/></svg>Home</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="13" rx="2"/><path d="M7 8h6M7 11h6"/></svg>Orders<span class="ct">127</span></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h12v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M7 6V5a3 3 0 0 1 6 0v1"/></svg>Products</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="7" r="3"/><path d="M4 16c0-3 2.7-5 6-5s6 2 6 5"/></svg>Customers</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 15V9m4 6V5m4 10v-4m4 4V7"/></svg>Growth</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="3"/><path d="M12 12l4 4M13.5 6.5 16 4"/></svg>Discounts</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="12" rx="2"/><path d="M7 8h6M7 11h4"/></svg>Content</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="6"/><path d="M4 10h12M10 4c2 2 2 10 0 12M10 4c-2 2-2 10 0 12"/></svg>Markets</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 16h12M6 16V9m4 7V5m4 11v-4"/></svg>Analytics</div>
+
+    <div class="navSec">Sales channels<span class="chev">›</span></div>
+    <div class="navSec">Apps<span class="chev">›</span></div>
+
+    <div class="navApp"><span class="logo">◆</span>StackBack Subscrip…<span class="dot"></span></div>
+    <div class="navSub sel">Manage Purchase Options</div>
+    <div class="navSub">Purchase Contracts</div>
+    <div class="navSub">One-Time Orders</div>
+    <div class="navSub">Orders</div>
+    <div class="navSub">Payment Reminders</div>
+    <div class="navSub">Customers</div>
+    <div class="navSub">View more</div>
+
+    <div class="navGap"></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m7-7h-2M5 10H3m12.5-5-1.5 1.5M6 14l-1.5 1.5m11 0L14 14M6 6 4.5 4.5"/></svg>Settings</div>
+  </aside>
+
+  <div class="appmain">
+    <div class="appbar">
+      <span class="logo">◆</span><span class="name">StackBack Subscriptions &amp; More</span>
+      <span class="more">⋯</span>
+    </div>
+
+    <div class="pagehdr">
+      <div class="back">‹</div>
+      <div><h1>Purchase Options</h1></div>
+      <div class="acts"><span class="btn primary" id="createBtn">+ Create Plan</span></div>
+    </div>
+
+    <div class="wrap">
+      <!-- type selector now FIRST: the decision that scopes everything below it -->
+      <div class="typerow" id="typerow"></div>
+      <!-- stats: slim, recomputed per active type -->
+      <div class="statline" id="statline"></div>
+
+      <div class="card">
+        <div class="toolbar">
+          <div class="search">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg>
+            <input id="searchInput" placeholder="Search plans">
+          </div>
+          <div class="pseg sm" id="statusfilter"></div>
+          <div class="lens pseg sm" id="lensToggle">
+            <button class="on" onclick="setLens('plan')">By Plan</button>
+            <button onclick="setLens('product')" id="byProductBtn">By Product</button>
+          </div>
+          <select class="select"><option>Newest</option><option>Oldest</option><option>Name A–Z</option><option>Name Z–A</option></select>
+        </div>
+        <div id="plan"></div>
+        <div id="product" class="hide"></div>
+      </div>
+
+      <p class="pagenote">
+        <b>Why no Shipping column or right sidebar:</b> checked the real editor code (<code>PlanShippingSection.js</code>) —
+        delivery profile is assigned per product <i>inside</i> a plan, a plan can span several profiles, so there's no
+        single value to show per row. Verified the listing component itself never references shipping. A persistent
+        right rail is a record/editor pattern (used correctly on the Create Plan/Bundle screens); a resource list
+        doesn't carry one, so the reclaimed width goes to the table instead.<br>
+        <b>Known data gap:</b> Bundles currently only carry a product <i>count</i> in this list (no itemized array like
+        Plans have), so bundle rows show a count and the By Product lens is disabled for Bundles until that's added.
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---- mock data ---------------------------------------------------------
+// Plan products normalized to {name[, price, weight]}. The mushroom set is the
+// real reference data shared for the redesign; others are illustrative.
+var PLANS = [
+  {id:'p1', title:'Coffee Ritual Plan', active:true, synced:true, products:[
+    {name:'Cold Brew Concentrate'},{name:'House Espresso'},{name:'Single Origin Ethiopia'},{name:'Decaf Blend'},
+    {name:'Coffee Filters'},{name:'Oat Milk'},{name:'Ceramic Mug'},{name:'Grinder Beans'},{name:'Travel Tumbler'}]},
+  {id:'p2', title:'Farm Fresh A2 Milk Plan', active:true, synced:true, products:[
+    {name:'A2 Milk 1L'},{name:'A2 Milk 500ml'},{name:'A2 Ghee'}]},
+  {id:'p3', title:'Performance Protein Plan', active:true, synced:true, products:[
+    {name:'Whey Isolate'},{name:'Casein'},{name:'Plant Protein'},{name:'Creatine'},{name:'Shaker'},{name:'BCAA'},
+    {name:'Pre-Workout'},{name:'Protein Bars'},{name:'Electrolytes'},{name:'Glutamine'},{name:'Multivitamin'},{name:'Collagen'}]},
+  {id:'p4', title:'Daily Dairy', active:true, synced:true, products:[
+    {name:'A2 Milk 1L'},{name:'Paneer'},{name:'Curd 400g'}]},
+  {id:'p5', title:'Coffee Subscription', active:false, synced:false, products:[
+    {name:'Cold Brew Concentrate'},{name:'House Espresso'},{name:'Single Origin Ethiopia'},{name:'Decaf Blend'},
+    {name:'Coffee Filters'},{name:'Oat Milk'},{name:'Ceramic Mug'},{name:'Grinder Beans'},{name:'Travel Tumbler'}]},
+  {id:'p6', title:'Fresh Mushroom Basket', active:true, synced:true, products:[
+    {name:'Button Mushroom (Fresh)', weight:'200g', price:'INR 57.00'},
+    {name:'Cremini Mushroom (Fresh)', weight:'200gm', price:'INR 149.00'},
+    {name:'Enoki Mushroom (Fresh) Imported', weight:'100g', price:'INR 199.00'},
+    {name:'King Oyster Mushroom (Fresh) Imported', weight:'125gm', price:'INR 299.00'},
+    {name:'Milky Mushroom (Fresh)', weight:'200gm', price:'INR 149.00'},
+    {name:'Oyster Mushroom (Fresh)', weight:'200gm', price:'INR 57.00'},
+    {name:'Portobello Mushroom (Fresh)', weight:'250gm', price:'INR 349.00'},
+    {name:'Shiitake Mushroom (Fresh)', weight:'200g', price:'INR 399.00'},
+    {name:'Shimeji Brown Mushroom (Fresh) Imported', weight:'125g', price:'INR 199.00'}]}
+];
+
+// Bundles: today's real loader only exposes a count, never an itemized array
+// (confirmed in PurchaseOptionsPage.js — bundle rows read productsCount, not
+// products[]). So bundle rows below are illustrative names + counts only.
+var BUNDLES = [
+  {id:'b1', title:'Breakfast Bundle', active:true, synced:true, bundle_type:'fixed', productsCount:4},
+  {id:'b2', title:'Build Your Own Snack Box', active:true, synced:true, bundle_type:'mix_and_match', productsCount:6},
+  {id:'b3', title:'Wellness Trio', active:true, synced:false, bundle_type:'tiered', productsCount:3},
+  {id:'b4', title:'Festive Hamper', active:false, synced:true, bundle_type:'fixed', productsCount:5}
+];
+var BUNDLE_TYPE_LABEL={fixed:'Fixed Bundle', mix_and_match:'Mix & Match', tiered:'Tiered'};
+
+var TYPES_FEW=[
+  {label:'Product Subscriptions', kind:'plan', createLabel:'+ Create Plan'},
+  {label:'Bundle Subscriptions', kind:'bundle', createLabel:'+ Create Bundle'}
+];
+var TYPES_MANY=TYPES_FEW.concat([
+  {label:'Prepaid Packs', kind:'future', createLabel:'+ Create Pack', soon:true},
+  {label:'Trials', kind:'future', createLabel:'+ Create Trial', soon:true},
+  {label:'Gift Subscriptions', kind:'future', createLabel:'+ Create Gift Sub', soon:true},
+  {label:'Memberships', kind:'future', createLabel:'+ Create Membership', soon:true}
+]);
+var SEG_MAX=4, activeType=0, CURTYPES=TYPES_FEW, activeLens='plan', activeStatus=0;
+
+// ---- helpers ------------------------------------------------------------
+function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+function statusBadge(a){return a?'<span class="badge b-active"><span class="b-dot"></span>Active</span>':'<span class="badge b-inactive"><span class="b-dot"></span>Inactive</span>';}
+function thumbIcon(){return '<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="14" height="12" rx="2"/><circle cx="7.5" cy="8.5" r="1.4"/><path d="M4 14l4-4 3 3 2-2 3 3"/></svg>';}
+
+// square placeholder thumbs + VISIBLE product names (not just a count)
+function pile(products){
+  var shown=products.slice(0,3), extra=products.length-shown.length;
+  var thumbs='<div class="thumbs">';
+  shown.forEach(function(){thumbs+='<span class="thumb">'+thumbIcon()+'</span>';});
+  if(extra>0) thumbs+='<span class="thumb more">+'+extra+'</span>';
+  thumbs+='</div>';
+  var names=shown.map(function(p){return esc(p.name);}).join(', ');
+  var namesHtml='<span class="pile-names">'+names+(extra>0?' <span class="rest">+'+extra+' more</span>':'')+'</span>';
+  return '<div class="pile">'+thumbs+namesHtml+'</div>';
+}
+function actions(synced){
+  var flag=synced?'':'<span class="warnflag" title="Not synced to theme">⚠ not synced</span>';
+  return '<div class="rowact">'+flag+'<button class="btn sm">Edit</button><button class="kebab" title="More">⋯</button></div>';
+}
+
+function filteredPlans(){
+  var q=(document.getElementById('searchInput').value||'').toLowerCase();
+  var list=PLANS.filter(function(p){return !p._deleted;});
+  if(activeStatus===1) list=list.filter(function(p){return p.active;});
+  if(activeStatus===2) list=list.filter(function(p){return !p.active;});
+  if(q) list=list.filter(function(p){return p.title.toLowerCase().indexOf(q)>-1;});
+  return list;
+}
+function planTable(){
+  var list=filteredPlans();
+  var rows=list.map(function(p){return '<tr><td><span class="pname">'+esc(p.title)+'</span></td><td>'+statusBadge(p.active)+'</td><td>'+pile(p.products)+'</td><td>'+actions(p.synced)+'</td></tr>';}).join('');
+  return '<table><thead><tr><th style="width:26%">Plan</th><th style="width:12%">Status</th><th style="width:42%">Products</th><th style="width:20%;text-align:right">Actions</th></tr></thead><tbody>'+rows+'</tbody></table><div class="tfoot">Showing '+list.length+' of '+PLANS.length+' plans</div>';
+}
+function bundleTable(){
+  var list=BUNDLES.filter(function(b){
+    if(activeStatus===1) return b.active;
+    if(activeStatus===2) return !b.active;
+    return true;
+  });
+  var rows=list.map(function(b){
+    return '<tr><td><span class="pname">'+esc(b.title)+'</span></td><td>'+statusBadge(b.active)+'</td>'
+      +'<td><span class="badge b-inactive">'+BUNDLE_TYPE_LABEL[b.bundle_type]+'</span></td>'
+      +'<td>'+b.productsCount+' products <span style="color:var(--faint);font-size:11px">(count only — see note below)</span></td>'
+      +'<td>'+actions(b.synced)+'</td></tr>';
+  }).join('');
+  return '<table><thead><tr><th style="width:24%">Bundle</th><th style="width:12%">Status</th><th style="width:16%">Type</th><th style="width:28%">Products</th><th style="width:20%;text-align:right">Actions</th></tr></thead><tbody>'+rows+'</tbody></table><div class="tfoot">Showing '+list.length+' of '+BUNDLES.length+' bundles</div>';
+}
+
+function productIndex(){
+  var idx={};
+  PLANS.forEach(function(p){p.products.forEach(function(prod){if(!idx[prod.name])idx[prod.name]={name:prod.name,plans:[]};idx[prod.name].plans.push(p);});});
+  return Object.keys(idx).map(function(k){return idx[k]}).sort(function(a,b){return b.plans.length-a.plans.length||a.name.localeCompare(b.name)});
+}
+function productTable(){
+  var items=productIndex();
+  var rows=items.map(function(it,i){
+    var multi=it.plans.length>1, rid='pr-'+i;
+    var chips=it.plans.map(function(p){return '<a class="chip" href="#"><span class="mini" style="background:'+(p.active?'var(--success)':'var(--faint)')+'"></span>'+esc(p.title)+'</a>';}).join('');
+    var main='<tr><td><span class="exp" onclick="toggle(\''+rid+'\')"><span class="thumb" style="margin-left:0">'+thumbIcon()+'</span> <b style="color:var(--ink)">'+esc(it.name)+'</b></span></td>'
+      +'<td>'+(multi?'<span class="badge b-info">in '+it.plans.length+' plans</span>':'<span class="badge b-inactive">in 1 plan</span>')+'</td>'
+      +'<td>'+chips+'</td><td><div class="rowact"><span class="exp" onclick="toggle(\''+rid+'\')">View plans ▾</span></div></td></tr>';
+    var sub='<tr class="subrow hide" id="'+rid+'"><td colspan="4"><div class="inner"><div class="kv">Plans containing “'+esc(it.name)+'” — open a plan to edit it</div>'
+      +it.plans.map(function(p){return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-top:1px solid var(--line2)"><span class="pname">'+esc(p.title)+'</span><span style="display:flex;gap:10px;align-items:center">'+statusBadge(p.active)+'<button class="btn sm">Edit plan</button></span></div>';}).join('')
+      +'</div></td></tr>';
+    return main+sub;
+  }).join('');
+  return '<table><thead><tr><th style="width:28%">Product</th><th style="width:16%">Appears in</th><th style="width:40%">Plans</th><th style="width:16%;text-align:right"></th></tr></thead><tbody>'+rows+'</tbody></table><div class="tfoot">'+items.length+' distinct products across plans · expand a product to jump to its plans</div>';
+}
+function toggle(id){var el=document.getElementById(id);if(el)el.classList.toggle('hide');}
+
+// ---- type-aware stats + create button -----------------------------------
+function currentType(){return CURTYPES[activeType]||CURTYPES[0];}
+function statsFor(type){
+  if(type.kind==='plan'){
+    var total=PLANS.length, active=PLANS.filter(function(p){return p.active;}).length;
+    var unique=productIndex().length, notSynced=PLANS.filter(function(p){return !p.synced;}).length;
+    return {total:total, active:active, productLabel:unique+' unique products', notSynced:notSynced};
+  }
+  if(type.kind==='bundle'){
+    var totalB=BUNDLES.length, activeB=BUNDLES.filter(function(b){return b.active;}).length;
+    var sumProducts=BUNDLES.reduce(function(a,b){return a+b.productsCount;},0);
+    var notSyncedB=BUNDLES.filter(function(b){return !b.synced;}).length;
+    return {total:totalB, active:activeB, productLabel:sumProducts+' products across bundles', notSynced:notSyncedB};
+  }
+  return {total:0, active:0, productLabel:'no data yet', notSynced:0};
+}
+function renderStatline(){
+  var type=currentType(), s=statsFor(type);
+  if(type.kind==='future'){
+    document.getElementById('statline').innerHTML='<span>This purchase-option type isn\'t built yet — nothing to show.</span>';
+    return;
+  }
+  var html='<span><b>'+s.active+'</b> of <b>'+s.total+'</b> active</span><span class="dot"></span><span><b>'+s.productLabel.split(' ')[0]+'</b> '+s.productLabel.split(' ').slice(1).join(' ')+'</span>';
+  if(s.notSynced>0) html+='<span class="dot"></span><span class="warn">⚠ '+s.notSynced+' not synced to theme</span>';
+  document.getElementById('statline').innerHTML=html;
+}
+function renderCreateButton(){
+  var type=currentType();
+  var btn=document.getElementById('createBtn');
+  btn.textContent=type.createLabel;
+  if(type.kind==='future'){btn.setAttribute('disabled','');btn.title='Coming soon';}
+  else{btn.removeAttribute('disabled');btn.title='';}
+}
+function renderStatusFilter(){
+  var type=currentType();
+  var box=document.getElementById('statusfilter');
+  if(type.kind==='future'){box.innerHTML='';return;}
+  var total, active;
+  if(type.kind==='plan'){total=PLANS.length;active=PLANS.filter(function(p){return p.active;}).length;}
+  else{total=BUNDLES.length;active=BUNDLES.filter(function(b){return b.active;}).length;}
+  var inactive=total-active;
+  box.innerHTML=['All '+total,'Active '+active,'Inactive '+inactive].map(function(label,i){
+    var parts=label.split(' '); var n=parts.pop(); var text=parts.join(' ');
+    return '<button class="'+(i===activeStatus?'on':'')+'" onclick="pickStatus('+i+')">'+text+' <span class="c">'+n+'</span></button>';
+  }).join('');
+}
+function pickStatus(i){activeStatus=i;renderStatusFilter();renderTable();}
+
+function renderTable(){
+  var type=currentType();
+  var byProductBtn=document.getElementById('byProductBtn');
+  if(type.kind==='bundle'){
+    byProductBtn.setAttribute('disabled','');
+    byProductBtn.title='Needs per-bundle product data (not yet in the listing loader) — see note below';
+    if(activeLens==='product') setLens('plan');
+  }else{
+    byProductBtn.removeAttribute('disabled');
+    byProductBtn.title='';
+  }
+  if(type.kind==='future'){
+    document.getElementById('plan').innerHTML='<div style="padding:40px;text-align:center;color:var(--faint)">No screen built for this purchase-option type yet.</div>';
+    document.getElementById('product').innerHTML='';
+    return;
+  }
+  document.getElementById('plan').innerHTML = type.kind==='bundle' ? bundleTable() : planTable();
+  document.getElementById('product').innerHTML = type.kind==='plan' ? productTable() : '';
+}
+
+// ---- type selector (segmented <=4 types, dropdown beyond) ----------------
+function renderTypes(types){
+  var row=document.getElementById('typerow');
+  if(types.length<=SEG_MAX){
+    row.innerHTML='<div class="pseg">'+types.map(function(t,i){return '<button class="'+(i===activeType?'on':'')+'" onclick="pickType('+i+')">'+t.label+' <span class="c">'+(t.kind==='plan'?PLANS.length:t.kind==='bundle'?BUNDLES.length:0)+'</span></button>';}).join('')+'</div><span class="typehint">More purchase-option types can be added here</span>';
+  }else{
+    var cur=types[activeType]||types[0];
+    var curCount=cur.kind==='plan'?PLANS.length:cur.kind==='bundle'?BUNDLES.length:0;
+    row.innerHTML='<div class="typedd"><button class="ddbtn" onclick="toggleMenu(event)">'+cur.label+' <span class="c">'+curCount+'</span> <span style="color:var(--faint)">▾</span></button><div class="menu hide" id="typemenu">'
+      +types.map(function(t,i){
+        var count=t.kind==='plan'?PLANS.length:t.kind==='bundle'?BUNDLES.length:0;
+        var cls=(i===activeType?'on':'')+(t.soon?' soon':'');
+        var clickAttr=t.soon?'':'onclick="pickType('+i+');closeMenu()"';
+        return '<div class="mi '+cls+'" '+clickAttr+'>'+t.label+'<span class="c">'+(t.soon?'soon':count)+'</span></div>';
+      }).join('')
+      +'</div></div><span class="typehint">'+types.length+' purchase-option types — selector switched to a dropdown automatically</span>';
+  }
+}
+function toggleMenu(e){e.stopPropagation();var m=document.getElementById('typemenu');if(m)m.classList.toggle('hide');}
+function closeMenu(){var m=document.getElementById('typemenu');if(m)m.classList.add('hide');}
+document.addEventListener('click',closeMenu);
+
+function pickType(i){
+  activeType=i; activeStatus=0;
+  renderTypes(CURTYPES); renderStatline(); renderCreateButton(); renderStatusFilter(); renderTable();
+}
+function setTypes(n){
+  CURTYPES=(n===2?TYPES_FEW:TYPES_MANY); activeType=0; activeStatus=0;
+  renderTypes(CURTYPES); renderStatline(); renderCreateButton(); renderStatusFilter(); renderTable();
+  document.getElementById('pv2').classList.toggle('on',n===2);
+  document.getElementById('pv6').classList.toggle('on',n===6);
+}
+function setLens(lens){
+  if(currentType().kind==='bundle') lens='plan'; // no product-level data for bundles yet
+  activeLens=lens;
+  document.getElementById('plan').classList.toggle('hide',lens!=='plan');
+  document.getElementById('product').classList.toggle('hide',lens!=='product');
+  document.querySelectorAll('#lensToggle button').forEach(function(b){b.classList.toggle('on',b.textContent.trim()===(lens==='plan'?'By Plan':'By Product'));});
+}
+document.getElementById('searchInput').addEventListener('input', renderTable);
+
+// ---- init ----------------------------------------------------------------
+renderTypes(CURTYPES); renderStatline(); renderCreateButton(); renderStatusFilter(); renderTable();
+</script>
+</body>
+</html>

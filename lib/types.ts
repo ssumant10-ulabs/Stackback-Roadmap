@@ -74,6 +74,15 @@ export interface Activity {
  *  the two are shown side by side so drift between them is visible rather than silent. */
 export type FeatureBand = "upcoming" | "merchant" | "partner";
 
+export interface Shot {
+  id: string;
+  name: string;
+  /** Downscaled JPEG data URL. */
+  src: string;
+  at: string;
+  bytes: number;
+}
+
 export interface Feature {
   id: string;
   /** Sheet id, INT-01 / MR-04 / PT-02. Blank for the unnumbered rows and for new ones. */
@@ -100,6 +109,9 @@ export interface Feature {
   /** A merchant raises both. Bugs are the gap the pilot sheet never covered: it counts
    *  open bugs per store but never says what they are. */
   kind?: "feature" | "bug";
+  /** Screenshots. Downscaled to a data URL because there is no file storage yet; they move
+   *  to Supabase Storage the moment it is on. See SHOT_* limits in lib/shots.ts. */
+  shots?: Shot[];
   updatedAt: string;
 }
 

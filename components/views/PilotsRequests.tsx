@@ -1,19 +1,73 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import type { Feature } from "@/lib/types";
 import { IcPlus, IcTrash } from "../icons";
+import { SHOT_MAX_PER_REQUEST, SHOT_TOTAL_BUDGET, downscale, fmtBytes } from "@/lib/shots";
 
 /** What merchants have asked for, logged against the store that asked. These are the same
  *  records as the Features module's merchant block: CS logs it here, PM sees it there,
  *  with one list underneath so the two can never disagree. */
 
 const URGENCY = ["High", "Medium", "Low"];
+/** CS tracks three states. Anything richer belongs on the board, which this row also shows. */
+const STATUS = ["Not started", "In progress", "Done"];
+const S_TONE: Record<string, string> = { "Not started": "dash", "In progress": "warn", Done: "ok" };
 const U_TONE: Record<string, string> = { High: "crit", Medium: "warn", Low: "neu" };
+
+function Shots({ f }: { f: Feature }) {
+  const s = useStore();
+  const ref = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const shots = f.shots || [];
+
+  const pick = async (files: FileList | null) => {
+    if (!files || !files.length) return;
+    setBusy(true);
+    for (const file of Array.from(files)) {
+      try {
+        const { src, bytes } = await downscale(file);
+        const r = s.addShot(f.id, file.name, src, bytes);
+        if (!r.ok) { alert(r.error); break; }
+      } catch (e) { alert((e as Error).message); break; }
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div className="sh-cell">
+      {shots.map((sh) => (
+        <span className="sh-thumb" key={sh.id}>
+          <img src={sh.src} alt={sh.name}
+            title={`${sh.name} · ${sh.bytes ? fmtBytes(sh.bytes) : "linked, costs no storage"}`}
+            onClick={() => { const w = window.open(); if (w) w.document.write(`<title>${sh.name}</title><img src="${sh.src}" style="max-width:100%">`); }} />
+          <button type="button" aria-label={`Remove ${sh.name}`}
+            onClick={() => { if (confirm(`Remove ${sh.name}?`)) s.delShot(f.id, sh.id); }}>×</button>
+        </span>
+      ))}
+      {shots.length < SHOT_MAX_PER_REQUEST && (
+        <>
+          <button type="button" className="sh-add" disabled={busy} title="Upload a screenshot from this machine"
+            onClick={() => ref.current?.click()}>{busy ? "…" : "+"}</button>
+          <button type="button" className="sh-add link" title="Paste a link to a hosted image"
+            onClick={() => {
+              const u = window.prompt("Paste the image link (Drive, Imgur, S3, anywhere public):");
+              if (!u) return;
+              const r = s.addShotLink(f.id, u);
+              if (!r.ok) alert(r.error);
+            }}>🔗</button>
+        </>
+      )}
+      <input ref={ref} type="file" accept="image/*" multiple style={{ display: "none" }}
+        onChange={(e) => { pick(e.target.files); e.target.value = ""; }} />
+    </div>
+  );
+}
 
 function Row({ f }: { f: Feature }) {
   const s = useStore();
-  const status = s.featureStatus(f);
+  const own = f.sheetStatus || "Not started";
+  const board = s.featureBoardStatus(f);
   const task = s.featureTask(f);
   return (
     <tr className={f.kind === "bug" ? "rq-bug" : undefined}>
@@ -46,8 +100,21 @@ function Row({ f }: { f: Feature }) {
           {f.urgency && <span className={`rq-dot t-${U_TONE[f.urgency] || "neu"}`} />}
         </div>
       </td>
-      <td><span className="rq-status">{status}</span></td>
-      <td>{task ? <span className="rq-task" title={task.title}>{task.title}</span> : <span className="rq-none">Not on the board</span>}</td>
+      <td>
+        <div className="pl-selwrap">
+          <select className="pl-sel" value={STATUS.includes(own) ? own : "Not started"}
+            onChange={(e) => s.setRequestStatus(f.id, e.target.value)}>
+            {STATUS.map((x) => <option key={x} value={x}>{x}</option>)}
+          </select>
+          <span className={`rq-dot t-${S_TONE[own] || "dash"}`} />
+        </div>
+      </td>
+      <td>
+        {task
+          ? <span className="rq-task" title={`${task.title} · board says ${board}`}>{task.title}<em>{board}</em></span>
+          : <span className="rq-none">Not on the board</span>}
+      </td>
+      <td><Shots f={f} /></td>
       <td className="wide">
         <input className="pl-in long" defaultValue={f.objective || ""} placeholder="What exactly did they ask for?"
           onBlur={(e) => s.setFeatureField(f.id, "objective", e.target.value)}
@@ -87,6 +154,7 @@ export function PilotsRequests() {
     bugs: s.requests.filter((f) => f.kind === "bug").length,
     high: s.requests.filter((f) => f.urgency === "High").length,
     onBoard: s.requests.filter((f) => s.featureTask(f)).length,
+    done: s.requests.filter((f) => (f.sheetStatus || "") === "Done").length,
     unattached: s.requests.filter((f) => !f.storeId).length,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [s.requests, version]);
@@ -103,6 +171,7 @@ export function PilotsRequests() {
         <span><b>{rows.length}</b>{rows.length !== stats.total && <em> of {stats.total}</em>} requests</span>
         <span className="warn"><b>{stats.bugs}</b> bugs</span>
         <span className="warn"><b>{stats.high}</b> high priority</span>
+        <span className="ok"><b>{stats.done}</b> done</span>
         <span className="info"><b>{stats.onBoard}</b> on the roadmap</span>
         <span className={stats.unattached ? "warn" : "dim"}><b>{stats.unattached}</b> no store attached</span>
       </div>
@@ -145,15 +214,22 @@ export function PilotsRequests() {
       <div className="pl-wrap">
         <table className="pl-table log">
           <thead>
-            <tr><th>Type</th><th>Request</th><th>Store</th><th>Priority</th><th>Status</th><th>On the roadmap</th><th className="wide">Detail</th><th /></tr>
+            <tr><th>Type</th><th>Request</th><th>Store</th><th>Priority</th><th>Status</th><th>On the roadmap</th><th>Screenshots</th><th className="wide">Detail</th><th /></tr>
           </thead>
           <tbody>
             {rows.map((f) => <Row key={f.id} f={f} />)}
-            {!rows.length && <tr><td colSpan={8} className="pl-empty">Nothing logged yet. Add the first one above.</td></tr>}
+            {!rows.length && <tr><td colSpan={9} className="pl-empty">Nothing logged yet. Add the first one above.</td></tr>}
           </tbody>
         </table>
       </div>
-      <p className="pl-src">These are the same records as the Features module&apos;s merchant block, so PM sees anything you log here. Status follows the roadmap once a request is picked up.</p>
+      <p className="pl-src">
+        Same records as the Features module&apos;s merchant block, so PM sees anything you log here.
+        <b> Status</b> is yours; the roadmap column shows how far delivery has actually got.
+        <b> Images</b>: upload with <b>+</b> (downscaled and stored in this browser, up to
+        {" "}{fmtBytes(SHOT_TOTAL_BUDGET)} across everything, {fmtBytes(s.shotBytesUsed())} used) or paste a
+        link with the chain icon, which costs no storage at all and is the better option for anything
+        you already host. {SHOT_MAX_PER_REQUEST} images per request either way.
+      </p>
     </>
   );
 }

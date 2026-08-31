@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Create subscription plan (Polaris web components v2)</title>
+<script src="https://cdn.shopify.com/shopifycloud/polaris.js"></script>
+<style>
+  :root{
+    --p-ink:#303030; --p-muted:#616161; --p-faint:#8a8a8a;
+    --p-line:#e3e3e3; --p-line2:#ebebeb; --p-surface:#fff;
+    --p-primary:#303030; --p-success:#29845a; --p-success-bg:#cdfee1;
+    --p-link:#005bd3; --p-attn-bg:#ffefcf; --p-attn:#8a6116;
+  }
+  body{margin:0;background:#f1f1f1;font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--p-ink)}
+
+  /* Shopify admin shell */
+  .admin{display:flex;min-height:100vh}
+  .navL{flex:none;width:232px;background:#ebebeb;border-right:1px solid var(--p-line);
+    padding:10px 8px;display:flex;flex-direction:column;gap:1px;position:sticky;top:0;align-self:flex-start;height:100vh;overflow:auto}
+  .navItem{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;color:var(--p-ink);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
+  .navItem:hover{background:#dedede}
+  .navItem .ico{width:18px;height:18px;flex:none;color:#4a4a4a}
+  .navItem .ct{margin-left:auto;font-size:12px;color:var(--p-muted);background:#e0e0e0;border-radius:8px;padding:0 7px;line-height:18px}
+  .navSec{color:var(--p-muted);font-size:13px;font-weight:500;display:flex;align-items:center;height:30px;padding:0 8px;margin-top:6px}
+  .navSec .chev{margin-left:auto;color:var(--p-faint)}
+  .navApp{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;font-weight:600;background:#fff;box-shadow:0 1px 0 rgba(0,0,0,.04);margin-top:2px}
+  .navApp .logo{width:20px;height:20px;border-radius:5px;background:var(--p-primary);display:grid;place-items:center;color:#fff;font-size:11px;flex:none}
+  .navApp .dot{margin-left:auto;width:6px;height:6px;border-radius:50%;background:#8a8a8a}
+  .navSub{display:flex;align-items:center;height:30px;padding:0 8px 0 34px;border-radius:8px;color:var(--p-muted);font-size:13px;cursor:pointer}
+  .navSub:hover{background:#dedede;color:var(--p-ink)}
+  .navSub.sel{color:var(--p-ink);font-weight:500}
+  .navGap{flex:1}
+  .appmain{flex:1;min-width:0;display:flex;flex-direction:column}
+  .appbar{height:52px;background:#fff;border-bottom:1px solid var(--p-line);display:flex;align-items:center;gap:10px;padding:0 18px}
+  .appbar .logo{width:24px;height:24px;border-radius:6px;background:var(--p-primary);display:grid;place-items:center;color:#fff;font-size:12px}
+  .appbar .name{font-weight:650;font-size:14px}
+  .appbar .more{margin-left:auto;color:var(--p-muted);font-size:20px;cursor:pointer;letter-spacing:1px}
+
+  .savebar{position:sticky;top:0;z-index:60;min-height:52px;background:#1a1a1a;color:#fff;display:flex;align-items:center;gap:12px;padding:8px 16px}
+  .savebar .sbtxt{font-weight:600;font-size:13px}
+  .savebar .sbacts{margin-left:auto;display:flex;gap:8px}
+  .savebar button{font:inherit;font-size:13px;font-weight:600;border-radius:8px;padding:6px 13px;cursor:pointer}
+  .savebar .discard{background:transparent;border:1px solid #4a4a4a;color:#fff}
+  .savebar .discard:hover{background:#2a2a2a}
+  .savebar .save{background:#fff;border:1px solid #fff;color:#1a1a1a}
+
+  /* full-width two-column layout (reduces the base-width side margins) */
+  .pcols{display:flex;gap:16px;align-items:flex-start}
+  .maincol{flex:1;min-width:0}
+  .sidecol{flex:none;width:326px}
+
+  /* card wrapper (used for every step + sidebar block; matches Polaris section chrome) */
+  .card{background:#fff;border:1px solid var(--p-line);border-radius:12px;box-shadow:0 1px 0 rgba(0,0,0,.04);margin-bottom:14px;overflow:hidden}
+  .cardpad{padding:16px 18px}
+
+  /* collapsible step */
+  .step .stephdr{display:flex;gap:12px;align-items:flex-start;padding:15px 18px;cursor:pointer;user-select:none}
+  .step .num{flex:none;width:26px;height:26px;border-radius:50%;background:var(--p-primary);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:600}
+  .step.done .num{background:var(--p-success)}
+  .step .sttl{flex:1;min-width:0}
+  .step h2{margin:0;font-size:15px;font-weight:650}
+  .step .stephdr p{margin:2px 0 0;color:var(--p-muted);font-size:12.5px}
+  .step .stepchev{color:var(--p-faint);font-size:18px;transition:transform .15s;align-self:center}
+  .step.open .stepchev{transform:rotate(90deg)}
+  .stepbody{padding:16px 18px 18px;border-top:1px solid var(--p-line2)}
+  .stepbody.collapsed{display:none}
+  .step .collsum{margin:2px 0 0;color:var(--p-muted);font-size:12.5px}
+  .opt{font-size:10px;font-weight:600;color:var(--p-faint);border:1px solid var(--p-line);border-radius:5px;padding:1px 6px;text-transform:uppercase;letter-spacing:.03em;margin-left:8px;vertical-align:middle}
+
+  /* locked segmented control */
+  .seg{display:inline-flex;border:1px solid var(--p-line);border-radius:8px;overflow:hidden;background:#fff}
+  .seg button{border:0;background:#fff;padding:6px 12px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--p-muted)}
+  .seg button.on{background:var(--p-primary);color:#fff}
+
+  /* payment chips */
+  .chkchip{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border:1px solid var(--p-line);border-radius:20px;font-size:12.5px;font-weight:600;color:var(--p-muted);cursor:pointer;background:#fff}
+  .chkchip::before{content:"";width:14px;height:14px;border-radius:50%;border:1.5px solid var(--p-faint);flex:none}
+  .chkchip.on{border-color:var(--p-success);color:#0f5132;background:var(--p-success-bg)}
+  .chkchip.on::before{content:"\2713";border:0;color:#0f5132;font-size:11px;line-height:14px;text-align:center}
+
+  .disc{display:inline-flex;align-items:center;gap:7px;cursor:pointer;color:var(--p-link);font-weight:600;font-size:12.5px;background:none;border:0;padding:4px 0}
+  .disc .chev{transition:transform .15s}
+  .disc.open .chev{transform:rotate(90deg)}
+
+  .prow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--p-line2)}
+  .prow .x{margin-left:auto;color:var(--p-muted);font-size:12px;cursor:pointer;background:none;border:0}
+  .rowline{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .field{border:1px solid var(--p-line);border-radius:8px;padding:6px 10px;background:#fff;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--p-muted)}
+  .divv{width:1px;height:22px;background:var(--p-line)}
+  .help{font-size:12px;color:var(--p-muted)}
+  .calc{border:1px solid var(--p-line);background:#f7f7f7;border-radius:9px;padding:11px 13px;font-size:12.5px;color:var(--p-muted)}
+  .calc b{color:var(--p-ink)}
+
+  .optlist{margin-bottom:10px}
+  .optcard{border:1px solid var(--p-line);border-radius:10px;margin-bottom:10px;background:#fff}
+  .optcard.dragging{opacity:.45}
+  .optcard.dragover{border-color:var(--p-primary);box-shadow:inset 0 0 0 1px var(--p-primary)}
+  .optsum{display:flex;align-items:center;gap:10px;padding:11px 14px}
+  .draghandle{cursor:grab;color:var(--p-faint);font-size:15px;padding:0 2px;flex:none;line-height:1}
+  .optsum .title{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;min-width:0}
+  .optsum .chips{display:flex;gap:6px;flex-wrap:nowrap;margin-left:6px;flex:none}
+  .optsum .chips .pill,.optsum .chips .tagchip{white-space:nowrap}
+  .optsum .act{flex:none}
+  .optsum .act{margin-left:auto;display:flex;gap:6px}
+  .pill{border:1px solid var(--p-line);border-radius:20px;padding:2px 10px;font-size:12px;color:var(--p-muted);background:#fafafa}
+  .tagchip{display:inline-flex;align-items:center;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600;color:#fff}
+  .opteditor{border-top:1px solid var(--p-line2);padding:15px;background:#fbfbfb}
+  .q{font-weight:600;margin:0 0 8px;font-size:13.5px}
+  .qgroup{margin-bottom:16px}
+  .btnsm{border:1px solid var(--p-line);background:#fff;border-radius:8px;padding:4px 10px;font:inherit;font-size:12px;font-weight:600;color:var(--p-ink);cursor:pointer}
+  .btnsm.ico-x{padding:4px 8px;color:var(--p-muted)}
+  .btnghost{border:1px dashed var(--p-line);background:#fff;border-radius:8px;padding:6px 12px;font:inherit;font-size:12.5px;font-weight:500;color:var(--p-muted);cursor:pointer}
+
+  /* plan summary step checklist */
+  .sumrow{display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--p-line2)}
+  .sumrow:last-child{border-bottom:0}
+  /* plain status lights, not checkboxes: a solid dot, no glyph, so it never reads as checkable */
+  /* status lights: identical solid dots, only the colour differs (green = done, grey = optional-not-set) */
+  .sicon{display:inline-block;box-sizing:border-box;width:10px;height:10px;min-width:10px;border-radius:50%;flex:none;margin-top:6px;background:#c7c7c7}
+  .sicon.ok{background:var(--p-success)}
+  .sicon.opt{background:#c7c7c7}
+  .sicon.req{background:var(--p-attn)}
+  .sname{font-weight:600;font-size:12.5px;display:flex;align-items:center;gap:6px}
+  .sname .optm{font-weight:600;color:var(--p-faint);font-size:10px;border:1px solid var(--p-line);border-radius:5px;padding:0 5px;text-transform:uppercase;letter-spacing:.03em}
+  .sval{color:var(--p-muted);font-size:12px}
+  .req-star{color:#e51c00;font-weight:700}
+
+  /* sidebar detector rows */
+  .drow{padding:11px 0;border-bottom:1px solid var(--p-line2)}
+  .drow:last-child{border-bottom:0}
+  .drow .dtop{display:flex;align-items:center;gap:8px}
+  .drow .dname{font-weight:650;font-size:13px}
+  .drow .dact{margin-left:auto}
+  .lnk{background:none;border:0;color:var(--p-link);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:3px}
+  .statusdot{width:8px;height:8px;border-radius:50%;flex:none}
+  .badge2{display:inline-flex;align-items:center;gap:5px;border-radius:8px;padding:1px 8px;font-size:11.5px;font-weight:600}
+  .badge2.ok{background:var(--p-success-bg);color:#0f5132}
+  .badge2.attn{background:var(--p-attn-bg);color:var(--p-attn)}
+  .badge2.info{background:#d6ecff;color:#00527c}
+  .badge2.sub{background:#ededed;color:#5c5c5c}
+
+  /* storefront widget preview */
+  .mqgrid{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+  .mqleft{flex:1;min-width:220px}
+  .mqright{flex:none;width:280px}
+  .wprev{border:1px solid var(--p-line);border-radius:12px;overflow:hidden;transition:opacity .2s,filter .2s}
+  .wprev.off{opacity:.5;filter:grayscale(.4)}
+  .wbar{background:#16233f;color:#fff;display:flex;align-items:center;justify-content:center;gap:7px;padding:10px 12px;font-size:12px}
+  .wbar .msgwrap{position:relative;height:16px;min-width:150px;max-width:210px;overflow:hidden;text-align:center}
+  .wbar .msg{position:absolute;left:0;right:0;top:0;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:0;transition:opacity .5s}
+  .wbar .msg.show{opacity:1}
+  .wbar .arrow{color:#aeb9cf;letter-spacing:-2px}
+  .wbody{background:#F4F0E8;padding:14px}
+  .wbody .prow2{display:flex;align-items:center;gap:9px;border:0;padding:0}
+  .wbody .wradio{width:16px;height:16px;border-radius:50%;border:2px solid #16233f;position:relative;flex:none}
+  .wbody .wradio::after{content:"";position:absolute;inset:3px;border-radius:50%;background:#16233f}
+  .wbody .wtitle{font-weight:700;color:#2B2B2B;font-size:14px}
+  .wbody .wpill{margin-left:auto;background:#E3A23E;color:#5A3A0E;font-weight:700;font-size:11px;border-radius:20px;padding:3px 11px}
+  .wbody .wsel{margin-top:13px;color:#9A9486;font-size:10px;font-weight:700;letter-spacing:.06em}
+  .hide{display:none !important}
+</style>
+<!-- bare mode: when embedded in the WIP prototype shell, hide this file's own admin chrome
+so the shell is not drawn twice. Standalone viewing is unaffected. -->
+<script>if(/bare/.test(location.search+location.hash))document.documentElement.classList.add("bare");</script>
+<style>html.bare .navL,html.bare .appbar,html.bare .savebar{display:none!important}html.bare .admin{min-height:0}html.bare,html.bare body{background:#f1f1f1}</style>
+</head>
+<body>
+<div class="admin">
+
+  <aside class="navL">
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8.5 10 3l7 5.5V16a1 1 0 0 1-1 1h-3v-5H7v5H4a1 1 0 0 1-1-1z"/></svg>Home</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="13" rx="2"/><path d="M7 8h6M7 11h6"/></svg>Orders<span class="ct">127</span></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h12v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M7 6V5a3 3 0 0 1 6 0v1"/></svg>Products</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="7" r="3"/><path d="M4 16c0-3 2.7-5 6-5s6 2 6 5"/></svg>Customers</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 15V9m4 6V5m4 10v-4m4 4V7"/></svg>Growth</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="3"/><path d="M12 12l4 4M13.5 6.5 16 4"/></svg>Discounts</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="12" rx="2"/><path d="M7 8h6M7 11h4"/></svg>Content</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="6"/><path d="M4 10h12M10 4c2 2 2 10 0 12M10 4c-2 2-2 10 0 12"/></svg>Markets</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 16h12M6 16V9m4 7V5m4 11v-4"/></svg>Analytics</div>
+    <div class="navSec">Sales channels<span class="chev">&#8250;</span></div>
+    <div class="navSec">Apps<span class="chev">&#8250;</span></div>
+    <div class="navApp"><span class="logo">&#9670;</span>StackBack Subscrip&hellip;<span class="dot"></span></div>
+    <div class="navSub sel">Manage Purchase Options</div>
+    <div class="navSub">Purchase Contracts</div>
+    <div class="navSub">One-Time Orders</div>
+    <div class="navSub">Orders</div>
+    <div class="navSub">Payment Reminders</div>
+    <div class="navSub">Customers</div>
+    <div class="navSub">View more</div>
+    <div class="navGap"></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m7-7h-2M5 10H3m12.5-5-1.5 1.5M6 14l-1.5 1.5m11 0L14 14M6 6 4.5 4.5"/></svg>Settings</div>
+  </aside>
+
+  <div class="appmain">
+    <div class="savebar">
+      <span class="sbtxt">Unsaved changes</span>
+      <span class="sbacts"><button class="discard">Discard</button><button class="save">Save</button></span>
+    </div>
+    <div class="appbar"><span class="logo">&#9670;</span><span class="name">StackBack Subscriptions &amp; More</span><span class="more">&ctdot;</span></div>
+
+    <s-page heading="Create subscription plan" inline-size="large">
+      <s-link slot="breadcrumb-actions" href="#">Manage Purchase Options</s-link>
+      <s-button slot="secondary-actions">Save as draft</s-button>
+      <s-button slot="primary-action" variant="primary">Publish</s-button>
+
+      <div class="pcols">
+        <!-- ================= MAIN COLUMN ================= -->
+        <div class="maincol">
+
+          <!-- Plan name (always visible identity) -->
+          <div class="card"><div class="cardpad">
+            <s-text-field label="Plan name" required value="Fresh Juice Subscription" details="Customers see this on the widget and at checkout."></s-text-field>
+          </div></div>
+
+          <!-- STEP 1 -->
+          <div class="card step open" data-step>
+            <div class="stephdr">
+              <div class="num">1</div>
+              <div class="sttl"><h2>What are you selling? <span class="req-star">*</span></h2><p class="collsum">Products &amp; Variants &middot; 1 product, 2 variants</p></div>
+              <span class="stepchev">&#8250;</span>
+            </div>
+            <div class="stepbody">
+              <div class="rowline" style="margin-bottom:12px">
+                <span class="help" style="font-weight:600;text-transform:uppercase;letter-spacing:.04em">Apply to</span>
+                <span class="seg" id="applyseg">
+                  <button data-lvl="pv" class="on">Products &amp; Variants</button>
+                  <button data-lvl="collection">Collections</button>
+                </span>
+              </div>
+              <div id="lvl-pv">
+                <div class="prow"><s-thumbnail size="small"></s-thumbnail><span>Organic Cold-Pressed Juice &middot; 500ml</span><button class="x">Remove &#10005;</button></div>
+                <div class="prow"><s-thumbnail size="small"></s-thumbnail><span>Organic Cold-Pressed Juice &middot; 1L</span><button class="x">Remove &#10005;</button></div>
+                <div class="rowline" style="padding-top:9px"><button class="btnghost">&#65291; Select products / variants</button><span class="field">1 product &middot; 2 variants &middot; up to 120</span></div>
+              </div>
+              <div id="lvl-collection" class="hide">
+                <div class="prow"><s-thumbnail size="small"></s-thumbnail><span>Collection: Cold-Pressed Range <span class="field">&middot; 14 products</span></span><button class="x">Remove &#10005;</button></div>
+                <div class="rowline" style="padding-top:9px"><button class="btnghost">&#65291; Select collections</button><span class="field">products auto-sync as it changes</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 2 -->
+          <div class="card step" data-step>
+            <div class="stephdr">
+              <div class="num">2</div>
+              <div class="sttl"><h2>How can customers buy it? <span class="req-star">*</span></h2><p class="collsum">2 buying options &middot; drag to reorder</p></div>
+              <span class="stepchev">&#8250;</span>
+            </div>
+            <div class="stepbody collapsed">
+              <div class="optlist" id="optlist">
+
+                <div class="optcard" data-opt>
+                  <div class="optsum">
+                    <span class="draghandle" title="Drag to reorder">&#8942;&#8942;</span>
+                    <span class="title">Every 2 weeks &middot; 5 deliveries</span>
+                    <span class="chips"></span>
+                    <span class="act"><button class="btnsm t-edit">Edit</button><button class="btnsm">Duplicate</button><button class="btnsm ico-x" title="Remove">&#10005;</button></span>
+                  </div>
+                  <div class="opteditor hide">
+                    <div class="qgroup">
+                      <p class="q">Payment &amp; pricing</p>
+                      <div class="rowline"><span class="chkchip on pay-prepaid">Prepaid</span><span class="chkchip pay-payg">Pay per delivery</span></div>
+                      <div class="methodGroup hide" style="margin-top:10px"><p class="help">Billed pay-as-you-go: the customer gets an invoice and email reminder to pay as each delivery ships.</p></div>
+                    </div>
+                    <div class="qgroup">
+                      <p class="q">Schedule</p>
+                      <div class="rowline">
+                        <span class="seg durSeg">
+                          <button data-dur="fixed" class="on">Fixed length</button>
+                          <button data-dur="choice">Customer decides</button>
+                          <button data-dur="none" class="hide">No end date</button>
+                        </span>
+                        <span class="sched-fixed">for <span class="field">5</span> deliveries</span>
+                        <span class="sched-choice hide help">Customer chooses how many deliveries in the widget.</span>
+                        <span class="sched-none hide help">Runs continuously until the customer cancels. Available with pay-per-delivery only.</span>
+                      </div>
+                      <div class="rowline" style="margin-top:8px">
+                        <span>Deliver every</span><span class="field">2</span><span class="field">weeks &#9662;</span>
+                        <span class="divv"></span>
+                        <span>Discount</span>
+                        <span class="field" style="padding:0"><select class="discType" style="border:0;background:none;font:inherit;color:inherit;padding:6px 10px;cursor:pointer;font-family:ui-monospace,Menlo,monospace"><option value="pct">Percentage (%)</option><option value="amt">Amount off</option></select></span>
+                        <span class="field hide discPrefix">INR</span>
+                        <span class="field discVal">10</span>
+                        <span class="discSuffix">%</span>
+                      </div>
+                    </div>
+                    <div class="qgroup" style="margin-bottom:12px">
+                      <button class="disc extrasToggle"><span class="chev">&#8250;</span>More options <span class="help" style="font-weight:400">(free gifts, badge)</span></button>
+                      <div class="extrasBody hide" style="margin-top:12px">
+                        <p class="q">Badge <span class="help" style="font-weight:400">(optional)</span></p>
+                        <div class="rowline"><span class="field">Best Value &#9662;</span><span class="tagchip" style="background:#2f7d5b">Best Value</span></div>
+                        <p class="q" style="margin-top:14px">Free gifts <span class="help" style="font-weight:400">(optional)</span></p>
+                        <div class="freelist"></div>
+                        <div class="rowline" style="margin-top:2px"><button class="btnghost addfree">&#65291; Add a gift</button><span class="help">Give a free item on a chosen delivery, e.g. a gift on delivery #3.</span></div>
+                      </div>
+                    </div>
+                    <div class="calc deliveryPreview"></div>
+                    <div class="rowline" style="margin-top:14px"><s-button variant="primary">Save option</s-button><s-button>Cancel</s-button></div>
+                  </div>
+                </div>
+
+                <div class="optcard" data-opt>
+                  <div class="optsum">
+                    <span class="draghandle" title="Drag to reorder">&#8942;&#8942;</span>
+                    <span class="title">Every month &middot; 6 deliveries</span>
+                    <span class="chips hide"></span>
+                    <span class="act"><button class="btnsm t-edit">Collapse</button><button class="btnsm">Duplicate</button><button class="btnsm ico-x" title="Remove">&#10005;</button></span>
+                  </div>
+                  <div class="opteditor">
+                    <div class="qgroup">
+                      <p class="q">Payment &amp; pricing</p>
+                      <div class="rowline"><span class="chkchip on pay-prepaid">Prepaid</span><span class="chkchip pay-payg">Pay per delivery</span></div>
+                      <div class="methodGroup hide" style="margin-top:10px"><p class="help">Billed pay-as-you-go: the customer gets an invoice and email reminder to pay as each delivery ships.</p></div>
+                    </div>
+                    <div class="qgroup">
+                      <p class="q">Schedule</p>
+                      <div class="rowline">
+                        <span class="seg durSeg">
+                          <button data-dur="fixed" class="on">Fixed length</button>
+                          <button data-dur="choice">Customer decides</button>
+                          <button data-dur="none" class="hide">No end date</button>
+                        </span>
+                        <span class="sched-fixed">for <span class="field">6</span> deliveries</span>
+                        <span class="sched-choice hide help">Customer chooses how many deliveries in the widget.</span>
+                        <span class="sched-none hide help">Runs continuously until the customer cancels. Available with pay-per-delivery only.</span>
+                      </div>
+                      <div class="rowline" style="margin-top:8px">
+                        <span>Deliver every</span><span class="field">1</span><span class="field">month &#9662;</span>
+                        <span class="divv"></span>
+                        <span>Discount</span>
+                        <span class="field" style="padding:0"><select class="discType" style="border:0;background:none;font:inherit;color:inherit;padding:6px 10px;cursor:pointer;font-family:ui-monospace,Menlo,monospace"><option value="pct">Percentage (%)</option><option value="amt">Amount off</option></select></span>
+                        <span class="field hide discPrefix">INR</span>
+                        <span class="field discVal">15</span>
+                        <span class="discSuffix">%</span>
+                      </div>
+                    </div>
+                    <div class="qgroup" style="margin-bottom:12px">
+                      <button class="disc extrasToggle"><span class="chev">&#8250;</span>More options <span class="help" style="font-weight:400">(free gifts, badge)</span></button>
+                      <div class="extrasBody hide" style="margin-top:12px">
+                        <p class="q">Badge <span class="help" style="font-weight:400">(optional)</span></p>
+                        <div class="rowline"><span class="field">Most Popular &#9662;</span><span class="tagchip" style="background:#6B5BD6">Most Popular</span></div>
+                        <p class="q" style="margin-top:14px">Free gifts <span class="help" style="font-weight:400">(optional)</span></p>
+                        <div class="freelist"></div>
+                        <div class="rowline" style="margin-top:2px"><button class="btnghost addfree">&#65291; Add a gift</button><span class="help">Give a free item on a chosen delivery, e.g. a gift on delivery #3.</span></div>
+                      </div>
+                    </div>
+                    <div class="calc deliveryPreview"></div>
+                    <div class="rowline" style="margin-top:14px"><s-button variant="primary">Save option</s-button><s-button>Cancel</s-button></div>
+                  </div>
+                </div>
+
+              </div>
+              <button class="btnghost" style="margin-top:2px">&#65291; Add another buying option</button>
+            </div>
+          </div>
+
+          <!-- STEP 3 -->
+          <div class="card step" data-step>
+            <div class="stephdr">
+              <div class="num">3</div>
+              <div class="sttl"><h2>Shipping override <span class="opt">Optional</span></h2><p class="collsum">Off, uses your shop shipping</p></div>
+              <span class="stepchev">&#8250;</span>
+            </div>
+            <div class="stepbody collapsed">
+              <div class="rowline" style="justify-content:space-between">
+                <div><b>Override shipping for this plan</b><div class="help">By default this plan uses the shop-wide shipping from Settings, Shipping Zones.</div></div>
+                <s-switch id="shipOvSw"></s-switch>
+              </div>
+              <div id="shipOvCfg" class="hide" style="margin-top:14px">
+                <div class="rowline" style="margin-bottom:12px"><span>Shipping charge per delivery</span><span class="field">INR</span><input class="field" id="shipOvPrice" value="0" style="width:110px" /></div>
+                <p class="help" id="shipOvHint" style="margin:0 0 12px">Set to 0 for free shipping. Any amount above 0 is charged per delivery.</p>
+                <div style="display:flex;gap:12px;margin-bottom:12px">
+                  <div style="flex:1;min-width:0"><s-text-field label="Minimum subscription value" placeholder="Optional"></s-text-field></div>
+                  <div style="flex:1;min-width:0"><s-text-field label="Maximum subscription value" placeholder="Optional"></s-text-field></div>
+                </div>
+                <p class="q" style="margin-bottom:6px">ZIP patterns</p>
+                <span class="seg" id="shipZipMode" style="margin-bottom:12px">
+                  <button data-zip="exact" class="on">Exact</button>
+                  <button data-zip="pattern">Pattern</button>
+                  <button data-zip="range">Range</button>
+                </span>
+                <s-text-field label="ZIPs" placeholder="e.g. 400001, 400002, 400003"></s-text-field>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 4 -->
+          <div class="card step" data-step>
+            <div class="stephdr">
+              <div class="num">4</div>
+              <div class="sttl"><h2>Enhancements <span class="opt">Optional</span></h2><p class="collsum">Widget marquee off</p></div>
+              <span class="stepchev">&#8250;</span>
+            </div>
+            <div class="stepbody collapsed">
+              <div class="mqgrid">
+                <div class="mqleft">
+                  <div class="rowline" style="justify-content:space-between">
+                    <div><b>Widget marquee</b><div class="help">A scrolling strip of promo messages on the widget. Up to 3 messages take turns.</div></div>
+                    <s-switch id="mqsw"></s-switch>
+                  </div>
+                  <div id="mqfields" class="hide" style="margin-top:14px">
+                    <s-stack direction="block" gap="base">
+                      <s-text-field label="Message 1 (optional)" class="mqmsg" value="Limited-time deal: UPTO 35% OFF"></s-text-field>
+                      <div class="msgrow2 hide"><s-text-field label="Message 2" class="mqmsg"></s-text-field></div>
+                      <div class="msgrow2 hide"><s-text-field label="Message 3" class="mqmsg"></s-text-field></div>
+                      <div><button class="btnghost" id="addmsg">&#65291; Add another message</button></div>
+                    </s-stack>
+                  </div>
+                </div>
+                <div class="mqright">
+                  <div class="help" style="font-weight:600;margin-bottom:6px">Preview on your widget</div>
+                  <div class="wprev off">
+                    <div class="wbar"><span class="msgwrap" id="wmsgwrap"></span><span class="arrow">&#8250;&#8250;&#8250;</span></div>
+                    <div class="wbody">
+                      <div class="prow2"><span class="wradio"></span><span class="wtitle">Subscribe &amp; Save</span><span class="wpill">UPTO 35% OFF</span></div>
+                      <div class="wsel">SELECT SUBSCRIPTION PLAN</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ================= SIDE COLUMN ================= -->
+        <div class="sidecol">
+
+          <!-- Plan summary (moved to top) + status -->
+          <div class="card"><div class="cardpad">
+            <div class="rowline" style="justify-content:space-between;margin-bottom:10px">
+              <b style="font-size:13.5px">Plan summary</b>
+              <span class="badge2 info">Not live yet</span>
+            </div>
+            <div class="sumsteps">
+              <div class="sumrow"><span class="sicon ok"></span><div><div class="sname">Plan name <span class="req-star">*</span></div><div class="sval">What customers see on the widget and at checkout.</div></div></div>
+              <div class="sumrow"><span class="sicon ok"></span><div><div class="sname">Products <span class="req-star">*</span></div><div class="sval">The products this plan applies to.</div></div></div>
+              <div class="sumrow"><span class="sicon ok"></span><div><div class="sname">Buying options <span class="req-star">*</span></div><div class="sval">How customers subscribe: frequency, payment, discount.</div></div></div>
+              <div class="sumrow" id="sumShip"><span class="sicon opt"></span><div><div class="sname">Shipping override</div><div class="sval">Off, uses shop shipping</div></div></div>
+              <div class="sumrow" id="sumEnh"><span class="sicon opt"></span><div><div class="sname">Enhancements</div><div class="sval">Widget marquee off</div></div></div>
+            </div>
+          </div></div>
+
+          <!-- Merged: Checkout + Widget + Landing, each auto-checked with a redirect -->
+          <div class="card"><div class="cardpad">
+            <div class="rowline" style="justify-content:space-between;margin-bottom:4px">
+              <b style="font-size:13.5px">Set up to sell</b>
+              <button class="lnk" id="recheck">Re-check</button>
+            </div>
+            <div class="help" style="margin-bottom:6px">We check these automatically. Set up anything that isn't ready.</div>
+
+            <div class="drow">
+              <div class="dtop">
+                <span class="dname">Checkout</span>
+                <span class="dact"><span class="badge2 ok" id="coBadge">Shopify checkout</span></span>
+              </div>
+              <div class="help" id="coHelp" style="margin-top:4px">Detected on your store (best-effort). <button class="lnk" id="coChange">Using a custom checkout? Set it up &#8594;</button></div>
+            </div>
+
+            <div class="drow">
+              <div class="dtop">
+                <span class="dname">Widget</span>
+                <span class="dact"><span class="badge2 attn">Not on these products</span></span>
+              </div>
+              <div class="help" style="margin-top:4px">No StackBack widget found on the selected products. <button class="lnk">Add in Widgets &#8594;</button></div>
+            </div>
+
+            <div class="drow">
+              <div class="dtop">
+                <span class="dname">Landing page</span>
+                <span class="dact"><span class="badge2 sub">Not created</span></span>
+              </div>
+              <div class="help" style="margin-top:4px">A shareable page for just this plan. <button class="lnk">Create in Portal &#8594;</button></div>
+            </div>
+          </div></div>
+
+        </div>
+      </div>
+    </s-page>
+
+  </div>
+</div>
+
+<script>
+  (function(){
+    var $ = function(id){ return document.getElementById(id); };
+
+    // ---------- accordion steps (only one open at a time) ----------
+    var steps=[].slice.call(document.querySelectorAll('.step[data-step]'));
+    function openStep(idx){
+      steps.forEach(function(s,i){
+        var on=(i===idx);
+        s.classList.toggle('open', on);
+        s.querySelector('.stepbody').classList.toggle('collapsed', !on);
+      });
+    }
+    steps.forEach(function(s,i){
+      s.querySelector('.stephdr').addEventListener('click', function(e){
+        if(e.target.closest('button,select,input,.seg,a')) return; // don't toggle when using controls
+        openStep(i); // one step always open
+      });
+    });
+    openStep(0);
+
+    // ---------- apply-to ----------
+    var aseg=$('applyseg');
+    aseg.addEventListener('click', function(e){
+      var lvl=e.target.dataset.lvl; if(!lvl) return;
+      $('lvl-pv').classList.toggle('hide', lvl!=='pv');
+      $('lvl-collection').classList.toggle('hide', lvl!=='collection');
+      aseg.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.dataset.lvl===lvl); });
+    });
+
+    // ---------- per-card buying-option editor (scoped) ----------
+    var PAYG_LABEL='by invoice and email reminder (pay-as-you-go)';
+    function initEditor(card){
+      var q=function(s){ return card.querySelector(s); };
+      var durSeg=q('.durSeg'), payPre=q('.pay-prepaid'), payGo=q('.pay-payg'),
+          methodGroup=q('.methodGroup'), durNoneBtn=durSeg.querySelector('[data-dur="none"]'),
+          deliveryPreview=q('.deliveryPreview'),
+          schedFixed=q('.sched-fixed'), schedChoice=q('.sched-choice'), schedNone=q('.sched-none');
+      function setDuration(mode){
+        durSeg.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.dataset.dur===mode); });
+        schedFixed.classList.toggle('hide', mode!=='fixed');
+        schedChoice.classList.toggle('hide', mode!=='choice');
+        schedNone.classList.toggle('hide', mode!=='none');
+      }
+      function renderDeliveryPreview(){
+        var prepaid=payPre.classList.contains('on'), perDeliveryChip=payGo.classList.contains('on'),
+            onBtn=durSeg.querySelector('button.on'), mode=onBtn?onBtn.dataset.dur:'fixed', ml=PAYG_LABEL;
+        var count = mode==='fixed' ? 'for the set number of deliveries' : mode==='choice' ? 'for the number of deliveries the customer picks' : 'with no end date';
+        var body;
+        if(prepaid && perDeliveryChip) body='the customer chooses how to pay: prepay '+count+'; or pay per delivery, charged '+ml;
+        else if(prepaid) body='the customer prepays '+count+', then the plan ends';
+        else if(perDeliveryChip) body='the plan runs '+count+'; each delivery is charged '+ml;
+        else body='no payment option is selected yet';
+        deliveryPreview.innerHTML='<b>When delivery happens:</b> '+body+'.';
+      }
+      function syncPay(){
+        var prepaid=payPre.classList.contains('on'), perDelivery=payGo.classList.contains('on');
+        methodGroup.classList.toggle('hide', !perDelivery);
+        var noEndOk = perDelivery && !prepaid;
+        durNoneBtn.classList.toggle('hide', !noEndOk);
+        if(!noEndOk && durNoneBtn.classList.contains('on')) setDuration('fixed');
+        renderDeliveryPreview();
+      }
+      durSeg.addEventListener('click', function(e){ if(!e.target.dataset.dur) return; setDuration(e.target.dataset.dur); renderDeliveryPreview(); });
+      payPre.addEventListener('click', function(){ payPre.classList.toggle('on'); if(!payPre.classList.contains('on') && payGo.classList.contains('on')) setDuration('none'); syncPay(); });
+      payGo.addEventListener('click', function(){ payGo.classList.toggle('on'); if(payGo.classList.contains('on') && !payPre.classList.contains('on')) setDuration('none'); syncPay(); });
+
+      var discType=q('.discType'), discPrefix=q('.discPrefix'), discSuffix=q('.discSuffix'), discVal=q('.discVal'), baseVal=discVal.textContent;
+      function renderDisc(){ var amt=discType.value==='amt'; discPrefix.classList.toggle('hide', !amt); discSuffix.classList.toggle('hide', amt); discVal.textContent = amt ? '100' : baseVal; }
+      discType.addEventListener('change', renderDisc);
+
+      var extrasToggle=q('.extrasToggle'), extrasBody=q('.extrasBody');
+      extrasToggle.addEventListener('click', function(){ var open=extrasBody.classList.toggle('hide')===false; extrasToggle.classList.toggle('open', open); });
+
+      var freelist=q('.freelist'), addfree=q('.addfree');
+      addfree.addEventListener('click', function(){
+        var d=document.createElement('div'); d.className='rowline'; d.style.padding='9px 0';
+        d.innerHTML='<span>Delivery #</span><span class="field">3</span><s-thumbnail size="small"></s-thumbnail>'+
+          '<input class="field" style="width:220px" placeholder="e.g. Free travel-size sample" /><button class="x" style="margin-left:auto">Remove</button>';
+        d.querySelector('.x').addEventListener('click', function(){ d.remove(); });
+        freelist.appendChild(d);
+      });
+
+      syncPay(); renderDisc();
+    }
+
+    // ---------- collapsed summary chips = purchase type + discount only ----------
+    function summarize(card){
+      var pre=card.querySelector('.pay-prepaid').classList.contains('on');
+      var payg=card.querySelector('.pay-payg').classList.contains('on');
+      var ptype = pre&&payg ? 'Both' : pre ? 'Prepaid' : payg ? 'Pay per delivery' : '';
+      var dt=card.querySelector('.discType').value, dv=card.querySelector('.discVal').textContent;
+      var disc = dt==='amt' ? ('INR '+dv+' off') : (dv+'% off');
+      var chips=card.querySelector('.chips'); chips.innerHTML='';
+      if(ptype){ var a=document.createElement('span'); a.className='pill'; a.textContent=ptype; chips.appendChild(a); }
+      var b=document.createElement('span'); b.className='pill'; b.textContent=disc; chips.appendChild(b);
+    }
+
+    // ---------- unified Edit / Collapse toggle + init each option editor ----------
+    [].slice.call(document.querySelectorAll('.optcard[data-opt]')).forEach(function(card){
+      initEditor(card);
+      var ed=card.querySelector('.opteditor'), btn=card.querySelector('.t-edit'), chips=card.querySelector('.chips');
+      function setOpen(open){ if(!open) summarize(card); ed.classList.toggle('hide', !open); btn.textContent = open ? 'Collapse' : 'Edit'; if(chips) chips.classList.toggle('hide', open); }
+      btn.addEventListener('click', function(){ setOpen(ed.classList.contains('hide')); });
+      if(ed.classList.contains('hide')) summarize(card);
+    });
+
+    // ---------- drag to reorder plans ----------
+    var optlist=$('optlist'), dragEl=null;
+    function bindDrag(card){
+      var h=card.querySelector('.draghandle'); if(!h) return;
+      h.addEventListener('mousedown', function(){ card.setAttribute('draggable','true'); });
+      h.addEventListener('mouseup', function(){ card.removeAttribute('draggable'); });
+      card.addEventListener('dragstart', function(){ dragEl=card; setTimeout(function(){ card.classList.add('dragging'); },0); });
+      card.addEventListener('dragend', function(){ card.classList.remove('dragging'); card.removeAttribute('draggable'); dragEl=null; });
+    }
+    optlist.querySelectorAll('.optcard').forEach(bindDrag);
+    optlist.addEventListener('dragover', function(e){
+      e.preventDefault(); if(!dragEl) return;
+      var els=[].slice.call(optlist.querySelectorAll('.optcard:not(.dragging)'));
+      var after=els.find(function(c){ var r=c.getBoundingClientRect(); return e.clientY < r.top + r.height/2; });
+      if(after) optlist.insertBefore(dragEl, after); else optlist.appendChild(dragEl);
+    });
+
+    // ---------- shipping override ----------
+    var shipOvSw=$('shipOvSw'), shipOvCfg=$('shipOvCfg'), shipOvPrice=$('shipOvPrice'), shipOvHint=$('shipOvHint'),
+        stepEls=[].slice.call(document.querySelectorAll('.step[data-step]'));
+    function setSumRow(row, filled, valText){
+      if(!row) return;
+      var icon=row.querySelector('.sicon'); icon.className='sicon '+(filled?'ok':'opt');
+      row.querySelector('.sval').textContent = valText;
+    }
+    function renderShipHint(){ var v=parseFloat(shipOvPrice.value); if(isNaN(v)||v<0) v=0; shipOvHint.textContent = v===0 ? 'Free shipping for this plan.' : 'Charged INR '+v+' per delivery.'; }
+    function updateShipSummary(){
+      var on=shipOvSw.checked, v=parseFloat(shipOvPrice.value); if(isNaN(v)||v<0) v=0;
+      var txt = !on ? 'Off, uses shop shipping' : (v===0 ? 'Override on, free shipping' : 'Override on, INR '+v+' per delivery');
+      setSumRow($('sumShip'), on, txt);
+      stepEls[2].querySelector('.collsum').textContent = txt;
+    }
+    shipOvSw.addEventListener('change', function(){ shipOvCfg.classList.toggle('hide', !shipOvSw.checked); renderShipHint(); updateShipSummary(); });
+    shipOvPrice.addEventListener('input', function(){ renderShipHint(); updateShipSummary(); });
+    renderShipHint(); updateShipSummary();
+    var shipZipMode=$('shipZipMode');
+    shipZipMode.addEventListener('click', function(e){ var z=e.target.dataset.zip; if(!z) return; shipZipMode.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.dataset.zip===z); }); });
+
+    // ---------- marquee ----------
+    var mqsw=$('mqsw'), wprev=document.querySelector('.wprev'), msgwrap=$('wmsgwrap'), mqfields=$('mqfields'), addmsg=$('addmsg');
+    var rotTimer=null, rotIdx=0;
+    function collectMsgs(){
+      var vals=[]; var first=mqfields.querySelector('s-text-field.mqmsg'); if(first && first.value) vals.push(first.value.trim());
+      mqfields.querySelectorAll('.msgrow2:not(.hide) s-text-field').forEach(function(f){ if(f.value) vals.push(f.value.trim()); });
+      return vals.filter(Boolean);
+    }
+    function buildPreview(){
+      var msgs=collectMsgs(); if(!msgs.length) msgs=['Your deal message'];
+      msgwrap.innerHTML='';
+      msgs.forEach(function(m,i){ var s=document.createElement('span'); s.className='msg'+(i===0?' show':''); s.textContent=m; msgwrap.appendChild(s); });
+      rotIdx=0; if(rotTimer){ clearInterval(rotTimer); rotTimer=null; }
+      if(msgs.length>1){ rotTimer=setInterval(function(){ var sp=msgwrap.querySelectorAll('.msg'); sp[rotIdx].classList.remove('show'); rotIdx=(rotIdx+1)%sp.length; sp[rotIdx].classList.add('show'); }, 2600); }
+    }
+    function updateEnhSummary(){
+      var on=mqsw.checked, txt = on ? 'Widget marquee on' : 'Widget marquee off';
+      setSumRow($('sumEnh'), on, txt);
+      stepEls[3].querySelector('.collsum').textContent = txt;
+    }
+    mqsw.addEventListener('change', function(){ mqfields.classList.toggle('hide', !mqsw.checked); wprev.classList.toggle('off', !mqsw.checked); updateEnhSummary(); });
+    updateEnhSummary();
+    addmsg.addEventListener('click', function(){ var next=mqfields.querySelector('.msgrow2.hide'); if(next) next.classList.remove('hide'); buildPreview(); });
+    mqfields.addEventListener('input', buildPreview); buildPreview();
+
+    // ---------- checkout auto-detect (best-effort) ----------
+    var coChange=$('coChange'), coBadge=$('coBadge'), coHelp=$('coHelp'), recheck=$('recheck');
+    coChange.addEventListener('click', function(){
+      coBadge.textContent='Custom checkout'; coBadge.className='badge2 attn';
+      coHelp.innerHTML='Set this plan up to work with your checkout app. <button class="lnk">Open Checkout Adapt &#8594;</button>';
+    });
+    recheck.addEventListener('click', function(){ recheck.textContent='Checking…'; setTimeout(function(){ recheck.textContent='Re-check'; },700); });
+  })();
+</script>
+</body>
+</html>
