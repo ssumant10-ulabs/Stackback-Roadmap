@@ -3,6 +3,7 @@ import { Fragment, useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import { PILOT_SEED_SOURCE } from "@/lib/pilotSeed";
 import { DEFAULT_ORDER, DEFAULT_VISIBLE, POCS, colByKey, toCsv, type PilotCol } from "@/lib/pilotColumns";
+import { daysSince, fmtShort, parseLoose } from "@/lib/pilotDates";
 import type { PilotStore } from "@/lib/types";
 import { IcPlus, IcTrash } from "../icons";
 
@@ -32,15 +33,47 @@ function Cell({ p, col }: { p: PilotStore; col: PilotCol }) {
       </span>
     );
   }
+  if (col.kind === "date") {
+    // Real date input, so the native picker opens and every entry lands in one format.
+    // Anything the migration could not read stays visible as text rather than vanishing.
+    const iso = /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+    const age = col.key === "lastTouch" ? daysSince(iso) : null;
+    if (!iso && value) {
+      return (
+        <span className="pl-unparsed" title="Not recognised as a date. Pick one to replace it.">
+          {value}
+          <input type="date" onChange={(e) => s.setPilotField(p.id, col.key, e.target.value)} />
+        </span>
+      );
+    }
+    return (
+      <span className="pl-datewrap">
+        <input className={`pl-in pl-date${iso ? "" : " empty"}`} type="date" value={iso || ""}
+          title={iso ? fmtShort(iso) : "Pick a date"}
+          onChange={(e) => s.setPilotField(p.id, col.key, e.target.value)} />
+        {age !== null && age > 14 && <span className="pl-stale2" title={`Last touched ${age} days ago`}>{age}d</span>}
+      </span>
+    );
+  }
   if (col.kind === "select") {
+    const isCategory = col.key === "category";
+    const base = isCategory ? s.pilotCategories : (col.options || []);
     // Free-typed values already in the data must not vanish from their own dropdown.
-    const opts = value && !col.options?.includes(value) ? [value, ...(col.options || [])] : (col.options || []);
+    const opts = value && !base.includes(value) ? [value, ...base] : base;
     return (
       <div className="pl-selwrap">
         <select className={`pl-sel${value ? "" : " empty"}`} value={value}
-          onChange={(e) => s.setPilotField(p.id, col.key, e.target.value)}>
+          onChange={(e) => {
+            if (e.target.value === "__new__") {
+              const name = window.prompt("New category name:");
+              if (name && s.addPilotCategory(name)) s.setPilotField(p.id, col.key, name.trim());
+              return;
+            }
+            s.setPilotField(p.id, col.key, e.target.value);
+          }}>
           <option value="">—</option>
           {opts.map((o) => <option key={o} value={o}>{o}</option>)}
+          {isCategory && <option value="__new__">+ New category…</option>}
         </select>
         {col.key === "activationStatus" && <span className={`pl-dot t-${TONE[value] || "dash"}`} />}
       </div>

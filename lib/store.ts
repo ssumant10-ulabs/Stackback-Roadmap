@@ -13,6 +13,7 @@ import { featureSeed } from "./featureSeed";
 import { pilotSeed } from "./pilotSeed";
 import { autoLink, boardStatusOf, isDrifted, matchTask } from "./featureLink";
 import { SHOT_MAX_PER_REQUEST, SHOT_TOTAL_BUDGET, fmtBytes } from "./shots";
+import { parseLoose } from "./pilotDates";
 import { CLIENT_ID, loadRemote, saveRemote, subscribeRemote, supabaseEnabled } from "./remote";
 
 const ROADMAPS_KEY = "stackback_roadmaps_v3";
@@ -49,7 +50,9 @@ interface Data {
    *  store list, alongside the roadmap itself. */
   features: Feature[];
   pilots: PilotStore[];
-  seeded?: { features?: boolean; pilots?: boolean };
+  seeded?: { features?: boolean; pilots?: boolean; dates?: boolean };
+  /** Categories added by the team on top of the ones the sheet arrived with. */
+  pilotCategories?: string[];
   /** Where the two admin surfaces live. Shared, so hosting them somewhere real is a
    *  one-time change for the whole team rather than a per-browser setting. */
   adminUrl?: string;
@@ -85,7 +88,7 @@ function sheetRoadmap(): Roadmap {
 function defaultData(): Data {
   return {
     roadmaps: [sheetRoadmap()], activeId: SHEET_ROADMAP_ID, roster: clone(DEFAULT_ROSTER),
-    activity: [], features: [], pilots: [], seeded: {},
+    activity: [], features: [], pilots: [], seeded: {}, pilotCategories: [],
     adminUrl: DEFAULT_ADMIN_URL, uiuxUrl: DEFAULT_UIUX_URL,
   };
 }
@@ -155,6 +158,7 @@ class Store {
           this.data.features = Array.isArray(r.features) ? r.features : [];
           this.data.pilots = Array.isArray(r.pilots) ? r.pilots : [];
           this.data.seeded = r.seeded || {};
+          this.data.pilotCategories = r.pilotCategories || [];
           if (stale) await saveRemote(this.remoteState());
         } else {
           // First run: seed the remote with the default StackBack roadmap.
@@ -172,6 +176,7 @@ class Store {
           this.data.features = Array.isArray(incoming.features) ? incoming.features : [];
           this.data.pilots = Array.isArray(incoming.pilots) ? incoming.pilots : [];
           this.data.seeded = incoming.seeded || {};
+          this.data.pilotCategories = incoming.pilotCategories || [];
           this.rebuildHelpers();
           this.notify(); // no persist: adopting someone else's write must not echo back
         });
@@ -194,6 +199,7 @@ class Store {
             this.data.features = Array.isArray(p.features) ? p.features : [];
             this.data.pilots = Array.isArray(p.pilots) ? p.pilots : [];
             this.data.seeded = p.seeded || {};
+            this.data.pilotCategories = p.pilotCategories || [];
             if (stale) this.persist();
           }
         }
@@ -227,6 +233,41 @@ class Store {
     }
     if (changed) this.persist();
     this.linkRequestStoresOnce();
+    this.migrateDatesOnce();
+  }
+  /** The date columns were free text. Convert what is already stored to ISO so they can
+   *  become real date fields. Anything unrecognised is left exactly as typed rather than
+   *  guessed at, and the migration runs once. */
+  private migrateDatesOnce() {
+    const sd = (this.data.seeded = this.data.seeded || {});
+    if (sd.dates) return;
+    let n = 0;
+    const FIELDS: (keyof PilotStore)[] = ["groupCreated", "pilotStart", "pilotEnd", "lastTouch"];
+    this.pilots.forEach((p) => {
+      FIELDS.forEach((f) => {
+        const raw = p[f] as string | null | undefined;
+        const iso = parseLoose(raw);
+        if (iso && iso !== raw) { (p as unknown as Record<string, string>)[f as string] = iso; n++; }
+      });
+    });
+    sd.dates = true;
+    this.persist();
+    if (n) this.log("roadmap", "Pilot dates", `${n} converted to real dates`);
+  }
+  /** Categories are a list the team extends, not a fixed vocabulary. */
+  get pilotCategories(): string[] {
+    const set = new Set<string>(this.data.pilotCategories || []);
+    this.pilots.forEach((p) => { if (p.category) set.add(p.category); });
+    return [...set].sort();
+  }
+  addPilotCategory(name: string): boolean {
+    name = (name || "").trim();
+    if (!name) return false;
+    const list = (this.data.pilotCategories = this.data.pilotCategories || []);
+    if (list.some((x) => x.toLowerCase() === name.toLowerCase())) return false;
+    list.push(name);
+    this.commit();
+    return true;
   }
   private remoteState() {
     return {
@@ -239,6 +280,7 @@ class Store {
       features: this.data.features,
       pilots: this.data.pilots,
       seeded: this.data.seeded,
+      pilotCategories: this.data.pilotCategories,
     };
   }
   private persist() {
@@ -257,6 +299,7 @@ class Store {
         activeId: this.data.activeId, roadmaps: this.data.roadmaps, activity: this.data.activity,
         adminUrl: this.data.adminUrl, uiuxUrl: this.data.uiuxUrl,
         features: this.data.features, pilots: this.data.pilots, seeded: this.data.seeded,
+        pilotCategories: this.data.pilotCategories,
       }));
       localStorage.setItem(ROSTER_KEY, JSON.stringify(this.data.roster));
     }

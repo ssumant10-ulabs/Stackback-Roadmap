@@ -13,7 +13,8 @@ export interface RemoteState {
   uiuxUrl?: string;
   features: Feature[];
   pilots: PilotStore[];
-  seeded?: { features?: boolean; pilots?: boolean };
+  seeded?: { features?: boolean; pilots?: boolean; dates?: boolean };
+  pilotCategories?: string[];
 }
 
 /** Identifies this browser tab for the lifetime of the page. Written alongside every
@@ -26,7 +27,7 @@ export { supabaseEnabled };
 export async function loadRemote(): Promise<RemoteState | null> {
   if (!supabase) return null;
   const { data, error } = await supabase
-    .from("app_state").select("roadmaps, active_id, roster, activity, admin_url, uiux_url, features, pilots, seeded").eq("id", 1).maybeSingle();
+    .from("app_state").select("roadmaps, active_id, roster, activity, admin_url, uiux_url, features, pilots, seeded, pilot_categories").eq("id", 1).maybeSingle();
   if (error) { console.warn("Supabase load failed:", error.message); return null; }
   if (!data || !Array.isArray(data.roadmaps) || !data.roadmaps.length) return null;
   return {
@@ -38,7 +39,8 @@ export async function loadRemote(): Promise<RemoteState | null> {
     uiuxUrl: (data.uiux_url as string) || undefined,
     features: (data.features as Feature[]) || [],
     pilots: (data.pilots as PilotStore[]) || [],
-    seeded: (data.seeded as { features?: boolean; pilots?: boolean }) || {},
+    seeded: (data.seeded as { features?: boolean; pilots?: boolean; dates?: boolean }) || {},
+    pilotCategories: (data.pilot_categories as string[]) || [],
   };
 }
 
@@ -55,6 +57,7 @@ export async function saveRemote(state: RemoteState): Promise<void> {
     features: state.features,
     pilots: state.pilots,
     seeded: state.seeded || {},
+    pilot_categories: state.pilotCategories || [],
     updated_at: new Date().toISOString(),
     updated_by: CLIENT_ID,
   });
@@ -86,7 +89,8 @@ export function subscribeRemote(onChange: (s: RemoteState) => void): (() => void
           uiuxUrl: (row.uiux_url as string) || undefined,
           features: (row.features as Feature[]) || [],
           pilots: (row.pilots as PilotStore[]) || [],
-          seeded: (row.seeded as { features?: boolean; pilots?: boolean }) || {},
+          seeded: (row.seeded as { features?: boolean; pilots?: boolean; dates?: boolean }) || {},
+          pilotCategories: (row.pilot_categories as string[]) || [],
         });
       },
     )
