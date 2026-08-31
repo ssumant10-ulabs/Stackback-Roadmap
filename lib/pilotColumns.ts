@@ -1,6 +1,6 @@
 import type { PilotStore } from "./types";
 
-export type ColKind = "text" | "select" | "long" | "readonly";
+export type ColKind = "text" | "select" | "long" | "readonly" | "date";
 
 export interface PilotCol {
   key: keyof PilotStore;
@@ -27,11 +27,11 @@ export const PILOT_COLUMNS: PilotCol[] = [
   { key: "name", label: "Store", kind: "readonly", width: 170 },
   { key: "activationStatus", label: "Status", kind: "select", options: ["Activated", "Active", "Inactive"], width: 128 },
   { key: "poc", label: "POC", kind: "select", options: POCS, width: 112 },
-  { key: "category", label: "Category", kind: "select", options: CATEGORIES, width: 190 },
+  { key: "category", label: "Category", kind: "select", options: CATEGORIES, width: 200 },
   { key: "paymentType", label: "Payment", kind: "select", options: ["Prepaid", "PAYG", "Both"], width: 116 },
-  { key: "groupCreated", label: "Group created", kind: "text", width: 124 },
-  { key: "pilotStart", label: "Pilot start", kind: "text", width: 112 },
-  { key: "lastTouch", label: "Last touch", kind: "text", width: 112 },
+  { key: "groupCreated", label: "Group created", kind: "date", width: 132 },
+  { key: "pilotStart", label: "Pilot start", kind: "date", width: 132 },
+  { key: "lastTouch", label: "Last touch", kind: "date", width: 140 },
   { key: "activationNotes", label: "Comments", kind: "long", width: 300 },
   { key: "bundles", label: "Bundles", kind: "select", options: ["Yes", "No"], width: 96, hidden: true },
   { key: "discountMargin", label: "Discount margin", kind: "text", width: 150, hidden: true },
