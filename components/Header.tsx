@@ -20,10 +20,10 @@ export function Header() {
 
   return (
     <div className="topbar-main">
-      <div className="brandmark">
+      <a className="brandmark" href="/" title="Back to the roadmap">
         <Logo />
         <h1>{name} Roadmap</h1>
-      </div>
+      </a>
       <div className="top-actions">
         <button className={`btn ghost${s.ui.view === "features" ? " on" : ""}`} title="The pilot sheet's feature list"
           onClick={() => s.setView(s.ui.view === "features" ? "timeline" : "features")}>

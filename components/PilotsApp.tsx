@@ -34,10 +34,10 @@ export default function PilotsApp() {
       <div className="app">
         <div className="topbar">
           <div className="topbar-main">
-            <div className="brandmark">
+            <a className="brandmark" href="/" title="Back to the roadmap">
               <Logo />
               <h1>Pilot stores</h1>
-            </div>
+            </a>
             <div className="top-actions">
               <a className="btn ghost" href="/" title="Back to the roadmap"><IcRoadmap /><span>Roadmap</span></a>
               <span className="icon-group">
