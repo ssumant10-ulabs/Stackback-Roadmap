@@ -726,6 +726,23 @@ class Store {
     this.commit();
     return f.id;
   }
+  /** A merchant ask we have decided to build becomes planned work: it leaves the merchant
+   *  block for Upcoming, keeping the store attached so you can still see who asked and tell
+   *  them when it ships. It stays reachable in Requests behind the "moved to features"
+   *  toggle rather than vanishing on whoever logged it. */
+  moveRequestToFeatures(id: string): boolean {
+    const f = this.features.find((x) => x.id === id);
+    if (!f || f.band !== "merchant") return false;
+    f.band = "upcoming";
+    f.updatedAt = new Date().toISOString();
+    this.log("status", f.title, `moved to features${f.storeName ? ` (asked for by ${f.storeName})` : ""}`, undefined);
+    this.commit();
+    return true;
+  }
+  /** Requests that were promoted: no longer merchant-band, but still carrying their store. */
+  get promotedRequests(): Feature[] {
+    return this.features.filter((f) => f.band !== "merchant" && !!f.storeId);
+  }
   setRequestStore(id: string, storeId: string | null) {
     const f = this.features.find((x) => x.id === id);
     if (!f) return;
