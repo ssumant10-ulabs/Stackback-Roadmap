@@ -1141,6 +1141,18 @@
   .rq-task em{display:block;font-style:normal;font-size:9.5px;font-weight:800;text-transform:uppercase;
     letter-spacing:.04em;color:var(--ink-3);}
 
+  /* Date cells use the plain native input. An earlier attempt overlaid a short "19 May"
+     form on a transparented input; the two drew on top of each other, and the nicety was
+     not worth the trick. The readable form lives in the tooltip instead. */
+  .pl-datewrap{display:flex;align-items:center;gap:6px;min-width:0;}
+  .pl-date{width:126px;min-width:126px;font-variant-numeric:tabular-nums;}
+  .pl-date::-webkit-calendar-picker-indicator{opacity:.5;cursor:pointer;}
+  .pl-date:hover::-webkit-calendar-picker-indicator{opacity:1;}
+  .pl-date.empty{color:var(--ink-3);}
+  .pl-stale2{font-size:10px;font-weight:800;color:var(--status-late);border:1px solid var(--status-late);
+    border-radius:999px;padding:0 5px;flex:none;}
+  .pl-unparsed{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--status-late);}
+  .pl-unparsed input{width:22px;border:0;background:transparent;}
 
   /* ---------- features: board vocabulary ---------- */
   .ft-wave{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;border-radius:999px;

@@ -19,6 +19,7 @@ create table if not exists app_state (
   features   jsonb not null default '[]'::jsonb,
   pilots     jsonb not null default '[]'::jsonb,
   seeded     jsonb not null default '{}'::jsonb,
+  pilot_categories jsonb not null default '[]'::jsonb,
   constraint app_state_singleton check (id = 1)
 );
 
@@ -30,6 +31,7 @@ alter table app_state add column if not exists uiux_url   text;
 alter table app_state add column if not exists features   jsonb not null default '[]'::jsonb;
 alter table app_state add column if not exists pilots     jsonb not null default '[]'::jsonb;
 alter table app_state add column if not exists seeded     jsonb not null default '{}'::jsonb;
+alter table app_state add column if not exists pilot_categories jsonb not null default '[]'::jsonb;
 
 -- Seed the singleton row.
 insert into app_state (id, roadmaps) values (1, '[]'::jsonb)

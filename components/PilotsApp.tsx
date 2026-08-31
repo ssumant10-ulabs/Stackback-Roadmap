@@ -6,6 +6,7 @@ import { PilotsLog } from "./views/PilotsLog";
 import { PilotsStats } from "./views/PilotsStats";
 import { PilotsRequests } from "./views/PilotsRequests";
 import { ActivityDrawer } from "./ActivityDrawer";
+import { SettingsModal } from "./SettingsModal";
 import { AppUiContext, type AppUi } from "./appui";
 
 /** The pilots module. Its own route so CS and growth can live here without the roadmap's
@@ -14,13 +15,16 @@ export default function PilotsApp() {
   const s = useStore();
   const [mounted, setMounted] = useState(false);
   const [tab, setTab] = useState<"log" | "requests" | "stats">("log");
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => { let alive = true; s.hydrate().then(() => { if (alive) setMounted(true); }); return () => { alive = false; }; }, [s]);
 
   // Nothing here opens a card popover, but the drawer and modals expect the context.
   const ui: AppUi = {
-    openAssignee: () => {}, openDates: () => {}, openFilter: () => {},
-    openAddTask: () => {}, openSettings: () => {}, jumpToCard: () => {},
+    openAssignee: () => {}, openDates: () => {}, openFilter: () => {}, openAddTask: () => {},
+    openSettings: () => setSettingsOpen(true),
+    // Cards live on the roadmap, so a jump leaves this module for that board.
+    jumpToCard: (id) => { window.location.href = `/?view=board#${id}`; },
   };
 
   if (!mounted) return null;
@@ -39,7 +43,7 @@ export default function PilotsApp() {
               <span className="icon-group">
                 <button className="ibtn" data-tip="Activity" aria-label="Activity" onClick={() => s.setActivityOpen(true)}><IcActivity /></button>
                 <button className="ibtn" data-tip="Theme" aria-label="Theme" onClick={() => s.cycleTheme()}><ThemeIcon theme={s.ui.theme} /></button>
-                <button className="ibtn" data-tip="Settings" aria-label="Settings" onClick={() => {}}><IcSettings /></button>
+                <button className="ibtn" data-tip="Settings" aria-label="Settings" onClick={() => setSettingsOpen(true)}><IcSettings /></button>
               </span>
             </div>
           </div>
@@ -62,6 +66,7 @@ export default function PilotsApp() {
         </main>
       </div>
       {s.ui.activityOpen && <ActivityDrawer onClose={() => s.setActivityOpen(false)} />}
+      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
     </AppUiContext.Provider>
   );
 }

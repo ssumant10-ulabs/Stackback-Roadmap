@@ -254,6 +254,52 @@
     .setWrap{flex-direction:column}
     .setRail{width:100%;border-right:0;border-bottom:1px solid var(--p-line2)}
   }
+
+  /* ---------- phones ----------
+     Tables are the whole problem here: their cell content will not compress below about
+     540px, so on a 375px screen they push the page sideways. Each one becomes its own
+     scroll box instead, which keeps the page itself fixed and lets the table pan. */
+  @media (max-width:720px){
+    .spec{padding:0 13px 44px}
+    .specbar{padding:11px 13px;gap:10px;align-items:flex-start}
+    .specbar h1{font-size:13.5px}
+    .specbar .sub{font-size:11px;line-height:1.5}
+
+    .topTabs{width:100%;order:9;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}
+    .topTabs::-webkit-scrollbar{display:none}
+    .topTabs button{flex:none;font-size:12px;padding:7px 12px}
+    .howBtn{margin-left:auto;flex:none}
+
+    .rollup{gap:8px 12px;font-size:11.5px;padding-top:9px}
+
+    table.cmp{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}
+    table.cmp th,table.cmp td{white-space:normal;min-width:120px}
+    table.cmp td.n{min-width:28px}
+
+    .matrix-wrap,.pl-wrap{overflow-x:auto}
+    .legend{flex-direction:column;gap:12px;padding:12px 13px}
+    .legend .g{min-width:0}
+    .siteMap{grid-template-columns:1fr}
+    .howCard{padding:20px 17px 24px;max-height:88vh}
+    .howCard h3{font-size:16px}
+    .specH{font-size:16.5px;margin:30px 0 6px}
+    .specP{font-size:13px}
+
+    /* The mock admin chrome is a desktop screenshot by nature: let it pan rather than
+       squeeze it into something that misrepresents the real screen. */
+    .admin{min-height:0}
+    .appmain{overflow-x:auto}
+    .card,.cardHd{min-width:0}
+    .cardHd{flex-wrap:wrap;gap:6px}
+    .mbChips{margin-left:0;width:100%}
+    .g-undated-list{gap:6px}
+    .row{flex-wrap:wrap}
+  }
+  @media (max-width:420px){
+    .spec{padding:0 10px 40px}
+    .topTabs button{font-size:11.5px;padding:6px 10px}
+    .rollup{font-size:11px}
+  }
 </style>
 </head>
 <body>
@@ -263,16 +309,11 @@
     <h1>StackBack merchant admin</h1>
     <div class="sub">Spec IA-02 v2 &nbsp;&middot;&nbsp; the WIP prototype is the front door, this is everything behind it &nbsp;&middot;&nbsp; data revised 2026-08-04 (Inventory v4, Orders v5, Payment Reminders v2) &nbsp;&middot;&nbsp; built on the locked version A architecture (IA-01, D2026-0727) &nbsp;&middot;&nbsp; Polaris-native palette</div>
   </div>
-  <div class="seg" id="fSeg">
-    <button data-f="live" class="on">Closed &amp; WIP</button>
-    <button data-f="all">Everything</button>
-    <button data-f="queue">Backlog &amp; future</button>
-  </div>
-  <button class="howBtn" id="howBtn" title="How to read this tracker">How to read</button>
   <div class="topTabs" id="topTabs">
     <button class="on" data-tab="tabScreens">Work in progress</button>
-    <button data-tab="tabApproved">Site map</button>
+    <button data-tab="tabApproved">Approved</button>
     <button data-tab="tabBacklog">Backlog &amp; docs <span class="n" id="tabBkN"></span></button>
+    <button class="howBtn" id="howBtn" title="How to read this tracker">How to read</button>
   </div>
   <div class="rollup" id="rollup"></div>
 </div>
@@ -1458,7 +1499,11 @@ function srcTotals(){
 }
 
 /* ============================ render ============================ */
-let f='live', sel='orders';
+/* The route filter used to be a second row of controls saying the same thing as the
+   tabs. The tab is the filter now: this pane is the live work, and everything queued
+   lives on Backlog & docs. */
+const f='live';
+let sel='orders';
 
 function shopifyChrome(){
   const items=[['Home','home'],['Orders','orders'],['Products','plans'],['Customers','cust'],['Marketing','chart'],['Discounts','pay'],['Content','land'],['Analytics','chart']];
@@ -1704,7 +1749,6 @@ function buildTabs(){
       b.classList.add('on');
       Object.keys(panes).forEach(k=>{ panes[k].style.display = (k===b.dataset.tab)?'':'none'; });
       /* The route filter only means anything on the tracker pane. */
-      document.getElementById('fSeg').style.visibility = b.dataset.tab==='tabScreens'?'':'hidden';
       window.scrollTo({top:0});
     };
   });
@@ -1736,7 +1780,7 @@ function renderApproved(){
   const totalAll=rows.reduce((a,r)=>a+r.all,0);
 
   host.innerHTML=
-    '<h2 class="specH">Site map</h2>'+
+    '<h2 class="specH">Approved state</h2>'+
     '<p class="specP">Every module in the locked architecture with its shipped routes, '+totalOk+' of '+totalAll+' across '+rows.length+' modules. '+
     'Generated from the same route data as the tracker, so it cannot drift from it. '+
     'The approved screens themselves live in the <a href="'+APPROVED_SRC+'" style="font-weight:650">WIP prototype</a>, which is the front door to all of this.</p>'+
@@ -1785,15 +1829,6 @@ function renderModuleBacklog(){
 }
 
 function renderAll(){ renderNav(); renderPage(); renderRollup(); }
-
-document.querySelectorAll('#fSeg button').forEach(b=>{
-  b.onclick=()=>{
-    document.querySelectorAll('#fSeg button').forEach(x=>x.classList.remove('on'));
-    b.classList.add('on');
-    f=b.dataset.f;
-    renderAll();
-  };
-});
 document.getElementById('bellBtn').onclick=()=>{ sel='notif'; renderAll(); };
 
 /* keep the prose count honest: computed, never typed */
