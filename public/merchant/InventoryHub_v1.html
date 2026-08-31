@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Inventory — Hub (v1)</title>
+<style>
+  :root{
+    --p-bg:#f1f1f1; --p-surface:#ffffff; --p-nav:#ebebeb;
+    --ink:#303030; --muted:#616161; --faint:#8a8a8a;
+    --line:#e3e3e3; --line2:#ebebeb;
+    --primary:#303030; --primary-h:#1a1a1a;
+    --link:#005bd3; --success:#29845a; --success-bg:#cdfee1;
+    --critical:#e51c00; --critical-bg:#fbeae9;
+    --infoInk:#00527c; --infoBg:#e0f0ff;
+    --amberInk:#8a6116; --amberBg:#ffefcf;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--p-bg);color:var(--ink);
+    font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .admin{display:flex;min-height:100vh}
+
+  /* left nav */
+  .navL{flex:none;width:232px;background:var(--p-nav);border-right:1px solid var(--line);
+    padding:10px 8px;display:flex;flex-direction:column;gap:1px;position:sticky;top:0;align-self:flex-start;height:100vh;overflow:auto}
+  .navItem{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;
+    color:var(--ink);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
+  .navItem:hover{background:#dedede}
+  .navItem .ico{width:18px;height:18px;flex:none;color:#4a4a4a}
+  .navItem .ct{margin-left:auto;font-size:12px;color:var(--muted);background:#e0e0e0;border-radius:8px;padding:0 7px;line-height:18px}
+  .navSec{color:var(--muted);font-size:13px;font-weight:500;display:flex;align-items:center;height:30px;padding:0 8px;margin-top:6px}
+  .navSec .chev{margin-left:auto;color:var(--faint)}
+  .navSub{display:flex;align-items:center;height:30px;padding:0 8px 0 34px;border-radius:8px;color:var(--muted);font-size:13px;cursor:pointer}
+  .navSub:hover{background:#dedede;color:var(--ink)}
+  .navSub.sel{color:var(--ink);font-weight:600;background:var(--p-surface);box-shadow:0 1px 0 rgba(0,0,0,.04)}
+  .navSub .ct{margin-left:auto;font-size:11px;font-weight:700;color:#fff;background:var(--critical);border-radius:20px;padding:0 6px;line-height:16px}
+  .navApp{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;font-weight:600;background:var(--p-surface);box-shadow:0 1px 0 rgba(0,0,0,.04);margin-top:2px}
+  .navApp .logo{width:20px;height:20px;border-radius:5px;background:var(--primary);display:grid;place-items:center;color:#fff;font-size:11px;flex:none}
+  .navApp .dot{margin-left:auto;width:6px;height:6px;border-radius:50%;background:#8a8a8a}
+  .navGap{flex:1}
+
+  .appmain{flex:1;min-width:0;display:flex;flex-direction:column}
+  .appbar{height:52px;background:var(--p-surface);border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:10px;padding:0 18px}
+  .appbar .logo{width:24px;height:24px;border-radius:6px;background:var(--primary);display:grid;place-items:center;color:#fff;font-size:12px}
+  .appbar .name{font-weight:650;font-size:14px}
+  .appbar .more{margin-left:auto;color:var(--muted);font-size:20px;cursor:pointer;letter-spacing:1px}
+
+  .pagehdr{display:flex;align-items:center;gap:14px;padding:18px 24px 4px;max-width:1180px}
+  .pagehdr h1{font-size:19px;margin:0;font-weight:650}
+  .pagehdr .sub{font-size:12.5px;color:var(--muted);margin-top:2px}
+  .pagehdr .acts{margin-left:auto;display:flex;gap:8px}
+
+  .wrap{padding:10px 24px 90px;max-width:1180px}
+
+  .btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 13px;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;box-shadow:0 1px 0 rgba(0,0,0,.04);display:inline-flex;align-items:center;gap:6px}
+  .btn:hover{background:#fafafa}
+  .btn.primary{background:var(--primary);color:#fff;border-color:var(--primary);box-shadow:0 1px 0 rgba(0,0,0,.12)}
+  .btn.primary:hover{background:var(--primary-h)}
+  .btn.sm{padding:4px 10px;font-size:12px}
+  .btn.amber{border-color:#e2c67a;background:var(--amberBg);color:var(--amberInk)}
+  .btn.amber:hover{background:#ffe8bd}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+
+  /* tabs */
+  .tabs{display:inline-flex;background:#e7eaee;padding:4px;border-radius:10px;gap:3px;margin-bottom:16px}
+  .tabs button{border:0;background:transparent;color:#43474d;font-size:13.5px;font-weight:600;padding:8px 16px;border-radius:7px;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+  .tabs button:hover:not(.on){background:rgba(0,0,0,.06)}
+  .tabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.18)}
+  .tabs .c{background:var(--critical);color:#fff;border-radius:20px;padding:1px 7px;font-size:11px;font-weight:700}
+  .tabs button.on .c{background:var(--critical)}
+
+  /* segmented (date window / filter) */
+  .pseg{display:inline-flex;background:#f1f1f1;border:1px solid var(--line);border-radius:9px;padding:3px}
+  .pseg button{border:0;background:transparent;color:var(--muted);font-size:12.5px;font-weight:600;padding:6px 12px;border-radius:7px;cursor:pointer;white-space:nowrap}
+  .pseg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.1)}
+
+  .statline{color:var(--muted);font-size:12.5px;display:flex;align-items:center;flex-wrap:wrap;margin:2px 0 14px}
+  .statline b{color:var(--ink);font-weight:650}
+  .statline .dot{width:3px;height:3px;border-radius:50%;background:#c4c4c4;margin:0 10px;display:inline-block}
+  .statline .warn{color:var(--amberInk);font-weight:650}
+  .statline .bad{color:var(--critical);font-weight:650}
+
+  .toprow{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+
+  /* callout banners */
+  .callout{display:flex;gap:11px;align-items:flex-start;border-radius:11px;padding:12px 14px;margin-bottom:16px;font-size:13px;line-height:1.5}
+  .callout .ci{width:20px;height:20px;flex:none;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:12px;margin-top:1px}
+  .callout .cx{margin-left:auto;display:flex;gap:8px;align-items:center;flex:none}
+  .callout.amber{background:var(--amberBg);border:1px solid #f0dca6;color:#5c4410}
+  .callout.amber .ci{background:#e6b53f;color:#5c4410}
+  .callout.info{background:var(--infoBg);border:1px solid #bfe0ff;color:#1c4a63}
+  .callout.info .ci{background:#4aa3d6;color:#fff}
+  .callout b{font-weight:700}
+
+  .card{background:var(--p-surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 1px 0 rgba(0,0,0,.04);overflow:hidden}
+  .cardhd{padding:14px 16px 4px}
+  .cardhd h3{margin:0;font-size:14.5px;font-weight:650}
+  .cardhd .d{font-size:12.5px;color:var(--muted);margin-top:3px}
+  .toolbar{display:flex;align-items:center;gap:10px;padding:12px 14px;flex-wrap:wrap}
+  .search{flex:1 1 220px;min-width:180px;position:relative}
+  .search input{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 12px 8px 32px;font-size:13px;background:#fff;color:var(--ink)}
+  .search input:focus{outline:2px solid #cfe0ff;border-color:#7aa6f0}
+  .search svg{position:absolute;left:10px;top:9px;color:var(--faint)}
+
+  table{width:100%;border-collapse:collapse}
+  thead th{text-align:left;font-size:11px;font-weight:650;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;padding:11px 14px;border-top:1px solid var(--line);background:#fafafa}
+  thead th.num{text-align:right}
+  tbody td{padding:13px 14px;border-top:1px solid var(--line);vertical-align:middle}
+  tbody td.num{text-align:right;font-variant-numeric:tabular-nums}
+  tbody tr:hover{background:#fafafa}
+  .pname{font-weight:600;color:var(--ink)}
+  .sku{color:var(--faint);font-size:12px;margin-top:2px}
+  .cust{font-weight:600;color:var(--link);cursor:pointer}.cust:hover{text-decoration:underline}
+  .sub2{color:var(--muted);font-size:12px;margin-top:2px}
+
+  /* status dot: plain colour, NO glyph */
+  .stat{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:12.5px;white-space:nowrap}
+  .stat .d{width:9px;height:9px;border-radius:50%;flex:none}
+  .stat.hold .d{background:#e6a417}
+  .stat.hold{color:var(--amberInk)}
+  .stat.stuck .d{background:var(--critical)}
+  .stat.stuck{color:#b42318}
+  .stat.covered .d{background:var(--success)}
+  .stat.covered{color:#0f5132}
+  .stat.tight .d{background:#e6a417}
+  .stat.tight{color:var(--amberInk)}
+
+  .short{font-weight:700;color:var(--critical);font-variant-numeric:tabular-nums}
+  .ok{font-weight:600;color:var(--success);font-variant-numeric:tabular-nums}
+  .held{display:inline-flex;flex-direction:column}
+  .held .n{font-weight:700}
+  .held .n.bad{color:var(--critical)}
+  .held .n.warn{color:var(--amberInk)}
+
+  .rowact{display:flex;align-items:center;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+  .kebabwrap{position:relative;display:inline-block}
+  .kebab{border:1px solid var(--line);background:#fff;border-radius:7px;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);box-shadow:0 1px 0 rgba(0,0,0,.04)}
+  .kebab:hover{background:#fafafa}
+  .dropmenu{position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.16);padding:6px;min-width:190px;z-index:30}
+  .dropmenu .mi{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:8px;cursor:pointer;font-weight:600}
+  .dropmenu .mi:hover{background:#f6f6f7}
+  .dropmenu .mi.critical{color:var(--critical)}
+  .dropmenu .sep{height:1px;background:var(--line2);margin:5px 2px}
+
+  .tfoot{padding:11px 14px;color:var(--faint);font-size:12px;text-align:center;border-top:1px solid var(--line)}
+  .empty{padding:56px 24px 60px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px}
+  .empty .ei{width:40px;height:40px;border-radius:12px;background:#eef7f0;display:grid;place-items:center;color:var(--success)}
+  .emptytitle{font-size:15px;font-weight:700;margin-top:4px}
+  .emptysub{font-size:13px;color:var(--muted);max-width:420px;line-height:1.55}
+
+  /* settings */
+  .setgrid{display:flex;flex-direction:column;gap:16px}
+  .optcard{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--line);border-radius:11px;padding:13px 14px;cursor:pointer;background:#fff}
+  .optcard:hover{background:#fcfcfc}
+  .optcard.on{border-color:#8aa9e6;background:#f5f8ff;box-shadow:0 0 0 1px #8aa9e6}
+  .optcard .rd{width:18px;height:18px;border-radius:50%;border:2px solid #bcbcbc;flex:none;margin-top:1px;display:grid;place-items:center}
+  .optcard.on .rd{border-color:#2b62d6}
+  .optcard.on .rd::after{content:"";width:9px;height:9px;border-radius:50%;background:#2b62d6}
+  .optcard .ot{font-weight:650;font-size:13.5px}
+  .optcard .od{color:var(--muted);font-size:12.5px;margin-top:3px;line-height:1.5}
+  .optcard .rec{font-size:10.5px;font-weight:700;color:#0f5132;background:var(--success-bg);border-radius:6px;padding:1px 7px;margin-left:8px;text-transform:uppercase;letter-spacing:.03em}
+
+  .frow{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 0;border-top:1px solid var(--line2)}
+  .frow:first-child{border-top:0}
+  .frow .fl{font-weight:600;font-size:13.5px}
+  .frow .fd{color:var(--muted);font-size:12.5px;margin-top:2px;max-width:560px;line-height:1.5}
+  .num-in{width:58px;border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:13px;text-align:center;font-weight:650}
+  .inline{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;color:var(--ink);font-weight:600}
+
+  /* toggle */
+  .tog{width:38px;height:22px;border-radius:20px;background:#c4c9ce;position:relative;cursor:pointer;flex:none;transition:background .15s}
+  .tog::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:left .15s}
+  .tog.on{background:#2b7a4b}
+  .tog.on::after{left:18px}
+
+  /* recovery ladder */
+  .ladder{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap;margin-top:6px}
+  .step{flex:1 1 150px;min-width:140px;border:1px solid var(--line);border-radius:10px;padding:11px 12px;background:#fafafa;position:relative}
+  .step .sn{font-size:10.5px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.04em}
+  .step .st{font-weight:650;font-size:13px;margin-top:4px}
+  .step .sd{color:var(--muted);font-size:12px;margin-top:3px;line-height:1.45}
+  .step .arr{position:absolute;right:-11px;top:50%;transform:translateY(-50%);color:#c4c4c4;font-size:16px;z-index:2}
+  .step:last-child .arr{display:none}
+
+  .pagenote{max-width:1180px;color:var(--faint);font-size:11.5px;margin-top:20px;line-height:1.7}
+  .pagenote b{color:var(--muted)}
+  .pagenote code{background:#ececec;border-radius:4px;padding:0 4px;color:#5a5a5a}
+
+  /* modal */
+  .modalov{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:80}
+  .modal{background:#fff;border-radius:12px;width:min(500px,92vw);max-height:84vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .modalhd{display:flex;align-items:flex-start;justify-content:space-between;padding:16px 18px 12px;border-bottom:1px solid var(--line2)}
+  .modalhd h3{margin:0;font-size:15px}
+  .modalhd .sub{font-size:12px;color:var(--muted);margin-top:3px}
+  .modalhd .xclose{cursor:pointer;color:var(--muted);font-size:20px;border:0;background:none;line-height:1}
+  .modalbody{padding:14px 18px 18px;overflow:auto}
+  .choice{display:flex;gap:11px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:9px}
+  .choice .ci2{width:26px;height:26px;border-radius:8px;flex:none;display:grid;place-items:center;font-size:14px}
+  .choice .ct2{font-weight:650;font-size:13px}
+  .choice .cd2{color:var(--muted);font-size:12px;margin-top:2px;line-height:1.45}
+  .waitc{background:#eef4ff;color:#1b46a8}
+  .swapc{background:#eaf7ee;color:#0f5132}
+  .creditc{background:#f3eefe;color:#5a34b0}
+  .previewnote{font-size:11.5px;color:var(--faint);margin-top:6px;text-align:center}
+
+  /* demo pill */
+  .demo{position:fixed;top:12px;right:14px;z-index:60;background:#111;color:#fff;border-radius:10px;padding:6px;display:flex;gap:4px;align-items:center;box-shadow:0 6px 24px rgba(0,0,0,.28)}
+  .demo .lbl{color:#8b8b8b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:0 6px}
+  .demo button{background:transparent;color:#cfcfcf;border:0;padding:6px 10px;border-radius:7px;font-size:11.5px;font-weight:600;cursor:pointer;white-space:nowrap}
+  .demo button.on{background:#2f2f2f;color:#fff}
+
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:11px 18px;border-radius:9px;font-size:13px;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:120;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
+  .hide{display:none !important}
+</style>
+</head>
+<body>
+
+<div class="demo">
+  <span class="lbl">Demo</span>
+  <button id="dPop" class="on" onclick="setData('populated')">With data</button>
+  <button id="dEmpty" onclick="setData('empty')">All healthy</button>
+</div>
+
+<div class="admin">
+  <!-- ===== left nav (real StackBack admin shell) ===== -->
+  <aside class="navL">
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8.5 10 3l7 5.5V16a1 1 0 0 1-1 1h-3v-5H7v5H4a1 1 0 0 1-1-1z"/></svg>Home</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="13" rx="2"/><path d="M7 8h6M7 11h6"/></svg>Orders<span class="ct">127</span></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h12v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M7 6V5a3 3 0 0 1 6 0v1"/></svg>Products</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="7" r="3"/><path d="M4 16c0-3 2.7-5 6-5s6 2 6 5"/></svg>Customers</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 15V9m4 6V5m4 10v-4m4 4V7"/></svg>Growth</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="3"/><path d="M12 12l4 4M13.5 6.5 16 4"/></svg>Discounts</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="12" rx="2"/><path d="M7 8h6M7 11h4"/></svg>Content</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="6"/><path d="M4 10h12M10 4c2 2 2 10 0 12M10 4c-2 2-2 10 0 12"/></svg>Markets</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 16h12M6 16V9m4 7V5m4 11v-4"/></svg>Analytics</div>
+
+    <div class="navSec">Sales channels<span class="chev">›</span></div>
+    <div class="navSec">Apps<span class="chev">›</span></div>
+
+    <div class="navApp"><span class="logo">◆</span>StackBack Subscrip…<span class="dot"></span></div>
+    <div class="navSub">Manage Purchase Options</div>
+    <div class="navSub">Purchase Contracts</div>
+    <div class="navSub">One-Time Orders</div>
+    <div class="navSub">Orders</div>
+    <div class="navSub">Payment Reminders</div>
+    <div class="navSub sel">Inventory<span class="ct" id="navHoldCt">2</span></div>
+    <div class="navSub">Customers</div>
+    <div class="navSub">View more</div>
+
+    <div class="navGap"></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m7-7h-2M5 10H3m12.5-5-1.5 1.5M6 14l-1.5 1.5m11 0L14 14M6 6 4.5 4.5"/></svg>Settings</div>
+  </aside>
+
+  <!-- ===== main ===== -->
+  <div class="appmain">
+    <div class="appbar">
+      <span class="logo">◆</span><span class="name">StackBack Subscriptions &amp; More</span>
+      <span class="more">⋯</span>
+    </div>
+
+    <div class="pagehdr">
+      <div>
+        <h1>Inventory</h1>
+        <div class="sub">Plan ahead, catch shortfalls, and recover held deliveries, all in one place.</div>
+      </div>
+      <div class="acts">
+        <span class="btn">Help guide</span>
+      </div>
+    </div>
+
+    <div class="wrap">
+      <div class="tabs">
+        <button id="tFore" class="on" onclick="setTab('fore')">Forecast</button>
+        <button id="tHold" onclick="setTab('hold')">Holds <span class="c" id="holdTabCt">2</span></button>
+        <button id="tSet" onclick="setTab('set')">Settings</button>
+      </div>
+
+      <!-- ============ FORECAST ============ -->
+      <section id="paneFore">
+        <div class="toprow">
+          <div class="pseg">
+            <button class="on" onclick="setWindow(this,7)">Next 7 days</button>
+            <button onclick="setWindow(this,14)">Next 14 days</button>
+            <button onclick="setWindow(this,30)">Next 30 days</button>
+          </div>
+        </div>
+
+        <div id="foreShortfall">
+          <div class="statline">
+            <span class="bad">2 products short</span><span class="dot"></span>
+            <span><b>128</b> deliveries due</span><span class="dot"></span>
+            <span><b>40</b> units short in total</span>
+          </div>
+          <div class="callout amber">
+            <span class="ci">!</span>
+            <div>You will be short on <b>2 products</b> for deliveries in the next 7 days. Restock before their delivery dates to avoid holds. Deliveries that cannot be fulfilled move to <b>Holds</b> automatically.</div>
+          </div>
+        </div>
+
+        <div id="foreHealthy" class="hide">
+          <div class="statline">
+            <span class="stat covered"><span class="d"></span>All covered</span><span class="dot"></span>
+            <span><b>128</b> deliveries due</span><span class="dot"></span>
+            <span>enough stock on hand for every one</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="toolbar">
+            <div class="search">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg>
+              <input placeholder="Search products or SKUs">
+            </div>
+            <span class="btn sm">Sort: Shortfall first</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Product</th><th>Variant / SKU</th>
+                <th class="num">Deliveries due</th><th class="num">Qty needed</th><th class="num">On hand</th><th class="num">Cover</th><th style="width:190px"></th>
+              </tr>
+            </thead>
+            <tbody id="foreBody"></tbody>
+          </table>
+          <div class="tfoot">Showing products with subscription deliveries due in the selected window.</div>
+        </div>
+      </section>
+
+      <!-- ============ HOLDS ============ -->
+      <section id="paneHold" class="hide">
+        <div class="toprow">
+          <div class="pseg" id="holdFilter">
+            <button class="on" onclick="setHoldFilter(this,'all')">All</button>
+            <button onclick="setHoldFilter(this,'wait')">Waiting on stock</button>
+            <button onclick="setHoldFilter(this,'stuck')">Stuck past 7 days</button>
+          </div>
+        </div>
+
+        <div id="holdStats" class="statline">
+          <span class="bad">2 deliveries on hold</span><span class="dot"></span>
+          <span class="warn">1 stuck past 7 days</span><span class="dot"></span>
+          <span>oldest held <b>9 days</b></span>
+        </div>
+
+        <div class="card" id="holdCard">
+          <table>
+            <thead>
+              <tr>
+                <th>Customer</th><th>Delivery</th><th>Held since</th><th>Status</th><th style="width:240px"></th>
+              </tr>
+            </thead>
+            <tbody id="holdBody"></tbody>
+          </table>
+          <div class="tfoot">Deliveries auto-release the moment stock returns. Prepaid schedules roll forward by the delay.</div>
+        </div>
+
+        <div class="card hide" id="holdEmpty">
+          <div class="empty">
+            <div class="ei"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg></div>
+            <div class="emptytitle">No deliveries on hold</div>
+            <div class="emptysub">Every upcoming delivery has stock. If an item runs short at delivery time, the affected deliveries appear here and auto-release when you restock.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ SETTINGS ============ -->
+      <section id="paneSet" class="hide">
+        <div class="setgrid">
+          <div class="card">
+            <div class="cardhd">
+              <h3>Out-of-stock handling</h3>
+              <div class="d">What StackBack does when a subscription delivery is due and an item does not have enough stock.</div>
+            </div>
+            <div style="padding:6px 16px 16px">
+              <div class="optcard on" onclick="pickPolicy(this)">
+                <div class="rd"></div>
+                <div>
+                  <div class="ot">Hold until back in stock <span class="rec">Default</span></div>
+                  <div class="od">Do not create the order. The delivery waits, and ships the moment you restock. Never oversells. Best for physical D2C stock.</div>
+                </div>
+              </div>
+              <div class="optcard" onclick="pickPolicy(this)" style="margin-top:10px">
+                <div class="rd"></div>
+                <div>
+                  <div class="ot">Ship what is available</div>
+                  <div class="od">For multi-item deliveries and bundles: ship the in-stock lines now, hold only the short lines. </div>
+                </div>
+              </div>
+              <div class="optcard" onclick="pickPolicy(this)" style="margin-top:10px">
+                <div class="rd"></div>
+                <div>
+                  <div class="ot">Ship anyway</div>
+                  <div class="od">Create the order regardless of stock (oversell) and let fulfilment sort it. For backorder or make-to-order merchants.</div>
+                </div>
+              </div>
+
+              <div class="callout info" style="margin:16px 0 0">
+                <span class="ci">i</span>
+                <div><b>Prepaid deliveries roll the schedule forward.</b> Because the customer already paid, a held prepaid delivery ships when stock returns and every later delivery shifts out by the same gap, so they still receive every delivery they paid for.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="cardhd"><h3>When a hold gets stuck</h3></div>
+            <div style="padding:4px 16px 16px">
+              <div class="frow">
+                <div>
+                  <div class="fl">Escalate a hold after</div>
+                  <div class="fd">If a delivery is still waiting on stock after this many days, StackBack raises an action-required alert so you can decide how to resolve it.</div>
+                </div>
+                <div class="inline"><input class="num-in" value="7"> days</div>
+              </div>
+              <div class="frow">
+                <div>
+                  <div class="fl">On escalation, let me offer the customer their options</div>
+                  <div class="fd">One click on the alert sends the customer a choice: keep waiting, swap to an in-stock item, or take store credit. StackBack executes whatever they pick. You stay in control of when it fires.</div>
+                </div>
+                <div class="tog on" onclick="this.classList.toggle('on')"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="cardhd"><h3>Customer notifications and portal</h3></div>
+            <div style="padding:4px 16px 16px">
+              <div class="frow">
+                <div><div class="fl">Tell customers when a delivery is delayed</div><div class="fd">Sent over Email and WhatsApp when a delivery goes on hold.</div></div>
+                <div class="tog on" onclick="this.classList.toggle('on')"></div>
+              </div>
+              <div class="frow">
+                <div><div class="fl">Tell customers when the delayed delivery ships</div><div class="fd">Sent on auto-release, noting how many days the plan shifted.</div></div>
+                <div class="tog on" onclick="this.classList.toggle('on')"></div>
+              </div>
+              <div class="frow">
+                <div><div class="fl">Show out-of-stock items in the customer portal</div><div class="fd">Out-of-stock products appear when a customer edits their subscription, tagged "Back in stock soon" and not selectable, so they cannot swap into a guaranteed hold.</div></div>
+                <div class="tog on" onclick="this.classList.toggle('on')"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="cardhd"><h3>How recovery works</h3><div class="d">The path every held delivery follows.</div></div>
+            <div style="padding:6px 16px 18px">
+              <div class="ladder">
+                <div class="step"><div class="sn">1 · Auto</div><div class="st">Restock detected</div><div class="sd">Stock returns, StackBack re-checks held deliveries for that item.</div><span class="arr">→</span></div>
+                <div class="step"><div class="sn">2 · Auto</div><div class="st">Auto-release</div><div class="sd">Order is created, schedule rolls forward, customer is notified.</div><span class="arr">→</span></div>
+                <div class="step"><div class="sn">3 · If stuck</div><div class="st">Escalate</div><div class="sd">Past the timeout, the alert becomes action-required.</div><span class="arr">→</span></div>
+                <div class="step"><div class="sn">4 · Merchant</div><div class="st">Offer options</div><div class="sd">One click sends the customer wait / swap / credit.</div><span class="arr">→</span></div>
+                <div class="step"><div class="sn">5 · Customer</div><div class="st">They choose</div><div class="sd">StackBack executes: roll forward, swap, or credit.</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <p class="pagenote">
+        <b>v1 scope (this screen):</b> the unified <b>Inventory hub</b> (Forecast + Holds + Settings) chosen over scattering surfaces across Settings / Subscriptions / Dashboard. Policy default = <b>Hold until back in stock</b>; prepaid held deliveries <b>roll the schedule forward</b>; stuck holds are <b>merchant-gated</b> (one-click "Offer customer options"). Status uses a plain colour dot, no glyph (house rule).<br>
+        <b>Routes into this page:</b> left-nav Inventory (lands on Forecast) · Dashboard "Upcoming 7d" card → Forecast · Notifications: shortfall → Forecast, on hold → Holds, stuck &gt;7d → that row in Holds with "Offer customer options" primed · Subscription detail (held delivery) → Holds · main Settings module keeps a shortcut to Inventory &gt; Settings (configured only here).<br>
+        <b>DEV must confirm before build:</b> (1) the delivery job checks Shopify variant inventory at run time; (2) an <code>inventory_levels/update</code> webhook can trigger the held-delivery re-check, with an hourly BullMQ backstop; (3) "roll schedule forward" on a prepaid contract is a supported schedule mutation; (4) store-credit issuance path exists for the "credit" choice. Alerts reuse the Notifications centre; job tracking reuses the Jobs Dashboard.<br>
+        <b>Mocked data:</b> forecast and hold rows are illustrative.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Offer customer options modal -->
+<div id="modalOverlay" class="modalov hide" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modalhd">
+      <div><h3>Offer customer their options</h3><div class="sub" id="modalSub">Aarav Shah · Everpure 1L · held 9 days</div></div>
+      <button class="xclose" onclick="closeModal()">×</button>
+    </div>
+    <div class="modalbody">
+      <div style="font-size:12.5px;color:var(--muted);margin-bottom:12px">This is what the customer will receive over Email and WhatsApp. They pick one and StackBack does the rest.</div>
+      <div class="choice"><div class="ci2 waitc">⏳</div><div><div class="ct2">Keep waiting</div><div class="cd2">Stay on hold. Ships automatically when back in stock; plan rolls forward.</div></div></div>
+      <div class="choice"><div class="ci2 swapc">⇄</div><div><div class="ct2">Swap to an in-stock item</div><div class="cd2">Reuses the edit-delivery swap flow. Only in-stock products are selectable.</div></div></div>
+      <div class="choice"><div class="ci2 creditc">₹</div><div><div class="ct2">Take store credit</div><div class="cd2">This delivery is dropped and credited. They can extend the plan or spend it.</div></div></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+        <button class="btn" onclick="closeModal()">Cancel</button>
+        <button class="btn primary" onclick="closeModal();toast('Options sent to Aarav Shah')">Send options</button>
+      </div>
+      <div class="previewnote">Preview, this is a merchant action. The customer decides.</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ---- mock data ----
+var FORE = [
+  {p:'Everpure 1L', variant:'1 litre', sku:'EVP-1L', due:38, need:38, hand:12},
+  {p:'A2 Milk 500ml', variant:'500 ml', sku:'A2-500', due:54, need:54, hand:40},
+  {p:'House Espresso', variant:'1 kg', sku:'ESP-1K', due:30, need:30, hand:33},
+  {p:'Cold Brew Concentrate', variant:'250 ml', sku:'CB-250', due:22, need:22, hand:60},
+  {p:'A2 Ghee 500g', variant:'500 g', sku:'A2-GHEE', due:15, need:15, hand:90}
+];
+var HOLDS = [
+  {c:'Aarav Shah', item:'Everpure 1L', plan:'Hydration Plan · delivery 3 of 6', days:9, kind:'stuck'},
+  {c:'Meera Iyer', item:'A2 Milk 500ml', plan:'Daily Dairy · delivery 2 of 12', days:2, kind:'wait'}
+];
+
+function esc(s){return String(s).replace(/[&<>"]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];});}
+
+function renderFore(){
+  var rows = FORE.slice().sort(function(a,b){return (a.hand-a.need)-(b.hand-b.need);});
+  document.getElementById('foreBody').innerHTML = rows.map(function(r){
+    var cover = r.hand - r.need;
+    var cell, act;
+    if(cover < 0){ cell='<span class="short">'+cover+'</span>'; act='<div class="rowact"><button class="btn sm amber" onclick="toast(\'Opening restock for '+esc(r.p)+'\')">Restock</button><button class="btn sm" onclick="setTab(\'hold\')">View deliveries</button></div>'; }
+    else if(cover <= 3){ cell='<span class="stat tight"><span class="d"></span>+'+cover+'</span>'; act='<div class="rowact"><span style="color:var(--faint);font-size:12px">running tight</span></div>'; }
+    else { cell='<span class="ok">+'+cover+'</span>'; act='<div class="rowact"><span class="stat covered"><span class="d"></span>Covered</span></div>'; }
+    return '<tr>'+
+      '<td><div class="pname">'+esc(r.p)+'</div></td>'+
+      '<td><div>'+esc(r.variant)+'</div><div class="sku">'+esc(r.sku)+'</div></td>'+
+      '<td class="num">'+r.due+'</td><td class="num">'+r.need+'</td><td class="num">'+r.hand+'</td>'+
+      '<td class="num">'+cell+'</td><td>'+act+'</td></tr>';
+  }).join('');
+}
+
+function renderHolds(filter){
+  filter = filter||'all';
+  var rows = HOLDS.filter(function(h){ return filter==='all' || (filter==='stuck'&&h.kind==='stuck') || (filter==='wait'); });
+  var body = document.getElementById('holdBody');
+  body.innerHTML = rows.map(function(h){
+    var statCls = h.kind==='stuck' ? 'stuck' : 'hold';
+    var statTxt = h.kind==='stuck' ? 'Stuck ('+h.days+'d)' : 'On hold';
+    var daysCls = h.kind==='stuck' ? 'bad' : 'warn';
+    var act = h.kind==='stuck'
+      ? '<div class="rowact"><button class="btn sm primary" onclick="openOffer(\''+esc(h.c)+'\',\''+esc(h.item)+'\','+h.days+')">Offer customer options</button>'+kebab(h.c)+'</div>'
+      : '<div class="rowact"><button class="btn sm" onclick="toast(\'Released now\')">Release now</button>'+kebab(h.c)+'</div>';
+    return '<tr>'+
+      '<td><div class="cust">'+esc(h.c)+'</div></td>'+
+      '<td><div class="pname">'+esc(h.item)+'</div><div class="sub2">'+esc(h.plan)+'</div></td>'+
+      '<td><div class="held"><span class="n '+daysCls+'">'+h.days+' days</span><span class="sub2">waiting on stock</span></div></td>'+
+      '<td><span class="stat '+statCls+'"><span class="d"></span>'+statTxt+'</span></td>'+
+      '<td>'+act+'</td></tr>';
+  }).join('');
+}
+function kebab(id){
+  return '<div class="kebabwrap"><button class="kebab" onclick="tglMenu(this,event)">⋯</button>'+
+    '<div class="dropmenu hide">'+
+    '<div class="mi" onclick="toast(\'Released now\');closeMenus()">Release now (ship anyway)</div>'+
+    '<div class="mi" onclick="toast(\'Delivery skipped\');closeMenus()">Skip this delivery</div>'+
+    '<div class="mi critical" onclick="toast(\'Converted to store credit\');closeMenus()">Convert to store credit</div>'+
+    '</div></div>';
+}
+
+// ---- tabs ----
+function setTab(t){
+  var map={fore:'paneFore',hold:'paneHold',set:'paneSet'};
+  var btn={fore:'tFore',hold:'tHold',set:'tSet'};
+  for(var k in map){ document.getElementById(map[k]).classList.add('hide'); document.getElementById(btn[k]).classList.remove('on'); }
+  document.getElementById(map[t]).classList.remove('hide');
+  document.getElementById(btn[t]).classList.add('on');
+  window.scrollTo(0,0);
+}
+function setWindow(el,n){ [].forEach.call(el.parentNode.children,function(b){b.classList.remove('on');}); el.classList.add('on'); toast('Window: next '+n+' days'); }
+function setHoldFilter(el,f){ [].forEach.call(el.parentNode.children,function(b){b.classList.remove('on');}); el.classList.add('on'); renderHolds(f); }
+function pickPolicy(el){ [].forEach.call(el.parentNode.querySelectorAll('.optcard'),function(c){c.classList.remove('on');}); el.classList.add('on'); }
+
+function setData(mode){
+  document.getElementById('dPop').classList.toggle('on', mode==='populated');
+  document.getElementById('dEmpty').classList.toggle('on', mode==='empty');
+  var empty = mode==='empty';
+  document.getElementById('foreShortfall').classList.toggle('hide', empty);
+  document.getElementById('foreHealthy').classList.toggle('hide', !empty);
+  document.getElementById('holdCard').classList.toggle('hide', empty);
+  document.getElementById('holdStats').classList.toggle('hide', empty);
+  document.getElementById('holdEmpty').classList.toggle('hide', !empty);
+  var ct = empty ? '0' : '2';
+  document.getElementById('holdTabCt').textContent = ct;
+  document.getElementById('navHoldCt').textContent = ct;
+  document.getElementById('holdTabCt').style.display = empty?'none':'';
+  document.getElementById('navHoldCt').style.display = empty?'none':'';
+  if(empty){
+    FORE.forEach(function(r){ if(r.hand<r.need) r.hand=r.need+20; });
+  } else {
+    FORE[0].hand=12; FORE[1].hand=40;
+  }
+  renderFore();
+}
+
+// ---- modal / menus / toast ----
+function openOffer(c,item,days){
+  document.getElementById('modalSub').textContent = c+' · '+item+' · held '+days+' days';
+  document.getElementById('modalOverlay').classList.remove('hide');
+}
+function closeModal(){ document.getElementById('modalOverlay').classList.add('hide'); }
+function tglMenu(btn,e){ e.stopPropagation(); closeMenus(); btn.nextElementSibling.classList.toggle('hide'); }
+function closeMenus(){ [].forEach.call(document.querySelectorAll('.dropmenu'),function(m){m.classList.add('hide');}); }
+document.addEventListener('click',closeMenus);
+var tId;
+function toast(msg){ var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(tId); tId=setTimeout(function(){t.classList.remove('show');},1800); }
+
+// init
+renderFore(); renderHolds('all');
+</script>
+</body>
+</html>

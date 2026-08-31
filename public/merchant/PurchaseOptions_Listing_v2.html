@@ -1,0 +1,235 @@
+<meta charset="utf-8">
+<title>Manage Purchase Options — Listing Redesign v2 (Hybrid)</title>
+<style>
+  :root{
+    --bg:#f1f1f1; --card:#ffffff; --ink:#202223; --sub:#6d7175; --muted:#8c9196;
+    --border:#e1e3e5; --border2:#d2d5d8; --field:#ffffff;
+    --primary:#303030; --primaryInk:#ffffff;
+    --green:#008060; --greenBg:#e3f1df; --greenInk:#0c5132;
+    --red:#8e1f0b; --redBg:#fce9e6; --redInk:#8e1f0b;
+    --amber:#8a6116; --amberBg:#ffefcf;
+    --info:#1e5aa8; --infoBg:#ebf3ff;
+    --radius:12px; --radius-sm:8px; --stack:14px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:13px;line-height:1.45;-webkit-font-smoothing:antialiased}
+
+  /* preview chrome (not part of the design) */
+  .preview{position:fixed;top:14px;right:16px;z-index:50;background:#111;color:#fff;border-radius:10px;
+    padding:6px;display:flex;gap:4px;align-items:center;box-shadow:0 6px 24px rgba(0,0,0,.28)}
+  .preview .lbl{color:#8b8b8b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:0 6px}
+  .preview button{background:transparent;color:#cfcfcf;border:0;padding:7px 11px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+  .preview button.on{background:#fff;color:#111}
+
+  .frame{max-width:1120px;margin:0 auto;padding:28px 24px 80px}
+  .topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+  .back{color:var(--sub);font-size:12px;margin-bottom:6px;display:inline-flex;align-items:center;gap:5px;text-decoration:none}
+  h1{font-size:20px;font-weight:650;margin:0;letter-spacing:-.01em}
+  .summary{display:flex;align-items:center;margin-top:9px;color:var(--sub);font-size:12.5px;flex-wrap:wrap}
+  .summary b{color:var(--ink);font-weight:650}
+  .summary .dot{width:3px;height:3px;border-radius:50%;background:var(--border2);margin:0 10px;display:inline-block}
+  .summary .warn{color:var(--amber);font-weight:600}
+
+  .btn{border:1px solid var(--border2);background:#fff;color:var(--ink);border-radius:8px;padding:8px 13px;
+    font-size:12.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+  .btn.primary{background:var(--primary);color:var(--primaryInk);border-color:var(--primary)}
+  .btn:hover{border-color:#b5b9bd}.btn.primary:hover{background:#1a1a1a}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 1px 0 rgba(0,0,0,.02)}
+
+  /* type selector row */
+  .typerow{display:flex;align-items:center;gap:12px;margin-bottom:var(--stack);flex-wrap:wrap;min-height:38px}
+  .seg{display:inline-flex;background:#f1f2f3;border:1px solid var(--border);border-radius:8px;padding:4px}
+  .seg button{border:0;background:transparent;color:var(--sub);font-size:12.5px;font-weight:600;padding:7px 13px;border-radius:6px;cursor:pointer;white-space:nowrap}
+  .seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+  .seg .count{color:var(--muted);font-weight:600;margin-left:6px;font-size:11px}
+  .seg button.on .count{color:var(--sub)}
+  .typedd{position:relative}
+  .typedd .ddbtn{border:1px solid var(--border2);background:#fff;border-radius:9px;padding:9px 14px;font-size:13px;font-weight:650;
+    display:inline-flex;align-items:center;gap:10px;cursor:pointer}
+  .typedd .ddbtn .c{background:#eef0f2;color:var(--sub);border-radius:20px;font-size:11px;padding:1px 8px;font-weight:700}
+  .typedd .menu{position:absolute;top:calc(100% + 6px);left:0;background:#fff;border:1px solid var(--border);border-radius:10px;
+    box-shadow:0 8px 28px rgba(0,0,0,.14);padding:6px;min-width:260px;z-index:20}
+  .typedd .menu .mi{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 11px;border-radius:8px;cursor:pointer;font-weight:600}
+  .typedd .menu .mi:hover{background:#f6f6f7}
+  .typedd .menu .mi.on{background:#f1f2f3}
+  .typedd .menu .mi .c{background:#e7e9eb;color:var(--sub);border-radius:20px;font-size:11px;padding:1px 8px;font-weight:700}
+  .typedd .menu .mi.soon{color:var(--muted)} .typedd .menu .mi.soon .c{background:transparent;border:1px dashed var(--border2);color:var(--muted)}
+  .typehint{color:var(--muted);font-size:11.5px}
+
+  .toolbar{display:flex;align-items:center;gap:10px;padding:12px 14px;flex-wrap:wrap}
+  .search{flex:1 1 260px;min-width:200px;position:relative}
+  .search input{width:100%;border:1px solid var(--border2);border-radius:8px;padding:8px 12px 8px 32px;font-size:13px;background:var(--field);color:var(--ink)}
+  .search input:focus{outline:2px solid #cfe0ff;border-color:#7aa6f0}
+  .search svg{position:absolute;left:10px;top:9px;color:var(--muted)}
+  .seg.sm button{padding:6px 12px;font-size:12px}
+  .lens{margin-left:auto}
+  .select{border:1px solid var(--border2);border-radius:8px;padding:8px 28px 8px 11px;font-size:12.5px;
+    background:var(--field) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%236d7175' stroke-width='1.6'><path d='M2 4l4 4 4-4'/></svg>") no-repeat right 10px center;
+    -webkit-appearance:none;appearance:none;color:var(--ink);font-weight:600;cursor:pointer}
+
+  table{width:100%;border-collapse:collapse}
+  thead th{text-align:left;font-size:11px;font-weight:650;color:var(--sub);text-transform:uppercase;letter-spacing:.03em;padding:11px 14px;border-top:1px solid var(--border);background:#fafbfb}
+  tbody td{padding:12px 14px;border-top:1px solid var(--border);vertical-align:middle}
+  tbody tr:hover{background:#fafbfb}
+  .pname{font-weight:600;color:#1f5199;cursor:pointer}.pname:hover{text-decoration:underline}
+  .badge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:20px;line-height:1.3}
+  .b-active{background:var(--greenBg);color:var(--greenInk)}
+  .b-inactive{background:#f1f2f3;color:var(--sub)}
+  .b-dot{width:6px;height:6px;border-radius:50%}.b-active .b-dot{background:var(--green)}.b-inactive .b-dot{background:var(--muted)}
+  .pile{display:flex;align-items:center}
+  .pile .av{width:26px;height:26px;border-radius:6px;border:1.5px solid #fff;margin-left:-6px;background:#e7e9eb;color:#5a5f63;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 1px var(--border)}
+  .pile .av:first-child{margin-left:0}
+  .pile .more{width:26px;height:26px;border-radius:6px;border:1.5px solid #fff;margin-left:-6px;background:#eef0f2;color:var(--sub);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 1px var(--border)}
+  .pile-names{color:var(--sub);font-size:12px;margin-left:10px}
+  .rowact{display:flex;align-items:center;gap:6px;justify-content:flex-end}
+  .kebab{border:1px solid var(--border2);background:#fff;border-radius:7px;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--sub)}
+  .kebab:hover{border-color:#b5b9bd}
+  .warnflag{color:var(--amber);display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:#f4f5f6;border:1px solid var(--border);border-radius:7px;padding:4px 9px;font-size:12px;font-weight:600;color:var(--ink);margin:2px 4px 2px 0;cursor:pointer;text-decoration:none}
+  .chip:hover{border-color:#b5b9bd}.chip .mini{width:5px;height:5px;border-radius:50%}
+  .exp{cursor:pointer;color:var(--sub);display:inline-flex;align-items:center;gap:6px}
+  .subrow td{background:#fbfcfd;padding:0 14px 12px 52px;border-top:0}.subrow .inner{padding-top:2px}
+  .kv{color:var(--sub);font-size:11.5px;margin-bottom:6px}
+  .tfoot{padding:11px 14px;color:var(--muted);font-size:12px;text-align:center;border-top:1px solid var(--border)}
+  .hide{display:none !important}
+  .note{max-width:1120px;margin:14px auto 0;color:var(--muted);font-size:11.5px;padding:0 24px}
+</style>
+
+<div class="preview">
+  <span class="lbl">Preview scaling</span>
+  <button id="pv2" class="on" onclick="setTypes(2)">2 types → segmented</button>
+  <button id="pv6" onclick="setTypes(6)">6 types → dropdown</button>
+</div>
+
+<div class="frame">
+  <div class="topbar">
+    <div>
+      <a class="back" href="#">‹ Dashboard</a>
+      <h1>Purchase Options</h1>
+      <div class="summary">
+        <span><b>5</b> plans</span><span class="dot"></span>
+        <span><b>4</b> active</span><span class="dot"></span>
+        <span><b>36</b> products across plans</span><span class="dot"></span>
+        <span class="warn">1 not synced to theme</span>
+      </div>
+    </div>
+    <button class="btn primary">+ Create Plan</button>
+  </div>
+
+  <!-- hybrid type selector: segmented when <=4 types, dropdown when >4 -->
+  <div class="typerow" id="typerow"></div>
+
+  <div class="card">
+    <div class="toolbar">
+      <div class="search">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg>
+        <input placeholder="Search plans">
+      </div>
+      <div class="seg sm">
+        <button class="on">All <span class="count">5</span></button>
+        <button>Active <span class="count">4</span></button>
+        <button>Inactive <span class="count">1</span></button>
+        <button>Deleted <span class="count">0</span></button>
+      </div>
+      <div class="lens seg sm">
+        <button class="on" onclick="setLens('plan')">By Plan</button>
+        <button onclick="setLens('product')">By Product</button>
+      </div>
+      <select class="select"><option>Newest</option><option>Oldest</option><option>Name A–Z</option><option>Name Z–A</option></select>
+    </div>
+    <div id="plan"></div>
+    <div id="product" class="hide"></div>
+  </div>
+</div>
+
+<div class="note">
+  Wireframe v2 (hybrid, production-clean) · Polaris-neutral palette. Type selector is count-aware: it renders as a
+  segmented control up to 4 purchase-option types and switches to a dropdown beyond that — one mechanic, no redesign as
+  types grow. Product facepile uses product titles; thumbnails need <code>featuredImage.url</code> in the list loader.
+</div>
+
+<script>
+var PLANS = [
+  {id:'p1', title:'Coffee Ritual Plan', active:true, synced:true, products:['Cold Brew Concentrate','House Espresso','Single Origin Ethiopia','Decaf Blend','Coffee Filters','Oat Milk','Ceramic Mug','Grinder Beans','Travel Tumbler']},
+  {id:'p2', title:'Farm Fresh A2 Milk Plan', active:true, synced:true, products:['A2 Milk 1L','A2 Milk 500ml','A2 Ghee']},
+  {id:'p3', title:'Performance Protein Plan', active:true, synced:true, products:['Whey Isolate','Casein','Plant Protein','Creatine','Shaker','BCAA','Pre-Workout','Protein Bars','Electrolytes','Glutamine','Multivitamin','Collagen']},
+  {id:'p4', title:'Daily Dairy', active:true, synced:true, products:['A2 Milk 1L','Paneer','Curd 400g']},
+  {id:'p5', title:'Coffee Subscription', active:false, synced:false, products:['Cold Brew Concentrate','House Espresso','Single Origin Ethiopia','Decaf Blend','Coffee Filters','Oat Milk','Ceramic Mug','Grinder Beans','Travel Tumbler']}
+];
+var TYPES_FEW = [{label:'Product Subscriptions',count:5},{label:'Bundle Subscriptions',count:8}];
+var TYPES_MANY = [{label:'Product Subscriptions',count:5},{label:'Bundle Subscriptions',count:8},{label:'Prepaid Packs',count:3},{label:'Trials',count:2},{label:'Gift Subscriptions',count:1},{label:'Memberships',count:4}];
+var SEG_MAX = 4;
+var activeType = 0;
+
+function initials(n){return n.split(' ').slice(0,2).map(function(w){return w[0]}).join('').toUpperCase();}
+var HUES=['#dfe3e8','#e6dfee','#dfeee4','#eee8df','#dfe9ee','#eedfe0'];
+function hue(n){var s=0;for(var i=0;i<n.length;i++)s+=n.charCodeAt(i);return HUES[s%HUES.length];}
+function statusBadge(a){return a?'<span class="badge b-active"><span class="b-dot"></span>Active</span>':'<span class="badge b-inactive"><span class="b-dot"></span>Inactive</span>';}
+function pile(products){
+  var shown=products.slice(0,4), extra=products.length-shown.length, html='<div class="pile">';
+  shown.forEach(function(p){html+='<span class="av" style="background-color:'+hue(p)+'" title="'+p+'">'+initials(p)+'</span>';});
+  if(extra>0) html+='<span class="more">+'+extra+'</span>';
+  return html+'<span class="pile-names">'+products.length+' products</span></div>';
+}
+function actions(synced){
+  var flag=synced?'':'<span class="warnflag" title="Not synced to theme">⚠ not synced</span>';
+  return '<div class="rowact">'+flag+'<button class="btn">Edit</button><button class="kebab" title="More">⋯</button></div>';
+}
+function planTable(){
+  var rows=PLANS.map(function(p){return '<tr><td><span class="pname">'+p.title+'</span></td><td>'+statusBadge(p.active)+'</td><td>'+pile(p.products)+'</td><td>'+actions(p.synced)+'</td></tr>';}).join('');
+  return '<table><thead><tr><th style="width:30%">Plan</th><th style="width:14%">Status</th><th style="width:34%">Products</th><th style="width:22%;text-align:right">Actions</th></tr></thead><tbody>'+rows+'</tbody></table><div class="tfoot">Showing 5 of 5 plans</div>';
+}
+function productIndex(){
+  var idx={};
+  PLANS.forEach(function(p){p.products.forEach(function(prod){if(!idx[prod])idx[prod]={name:prod,plans:[]};idx[prod].plans.push(p);});});
+  return Object.keys(idx).map(function(k){return idx[k]}).sort(function(a,b){return b.plans.length-a.plans.length||a.name.localeCompare(b.name)});
+}
+function productTable(){
+  var items=productIndex();
+  var rows=items.map(function(it,i){
+    var multi=it.plans.length>1, rid='pr-'+i;
+    var chips=it.plans.map(function(p){return '<a class="chip" href="#"><span class="mini" style="background:'+(p.active?'var(--green)':'var(--muted)')+'"></span>'+p.title+'</a>';}).join('');
+    var main='<tr><td><span class="exp" onclick="toggle(\''+rid+'\')"><span class="av" style="background-color:'+hue(it.name)+';width:26px;height:26px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#5a5f63">'+initials(it.name)+'</span><b>'+it.name+'</b></span></td>'
+      +'<td>'+(multi?'<span class="badge" style="background:var(--infoBg);color:var(--info)">in '+it.plans.length+' plans</span>':'<span class="badge b-inactive">in 1 plan</span>')+'</td>'
+      +'<td>'+chips+'</td><td><div class="rowact"><span class="exp" onclick="toggle(\''+rid+'\')">View plans ▾</span></div></td></tr>';
+    var sub='<tr class="subrow hide" id="'+rid+'"><td colspan="4"><div class="inner"><div class="kv">Plans containing “'+it.name+'” — click to open the plan editor</div>'
+      +it.plans.map(function(p){return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-top:1px solid var(--border)"><span class="pname">'+p.title+'</span><span style="display:flex;gap:10px;align-items:center">'+statusBadge(p.active)+'<button class="btn">Edit plan</button></span></div>';}).join('')
+      +'</div></td></tr>';
+    return main+sub;
+  }).join('');
+  return '<table><thead><tr><th style="width:30%">Product</th><th style="width:16%">Appears in</th><th style="width:38%">Plans</th><th style="width:16%;text-align:right"></th></tr></thead><tbody>'+rows+'</tbody></table><div class="tfoot">'+items.length+' distinct products · expand a product to jump to its plans</div>';
+}
+function toggle(id){var el=document.getElementById(id);if(el)el.classList.toggle('hide');}
+
+// hybrid type selector
+function renderTypes(types){
+  var row=document.getElementById('typerow');
+  if(types.length<=SEG_MAX){
+    var seg='<div class="seg">'+types.map(function(t,i){return '<button class="'+(i===activeType?'on':'')+'" onclick="pickType('+i+')">'+t.label+' <span class="count">'+t.count+'</span></button>';}).join('')+'</div>';
+    row.innerHTML=seg+'<span class="typehint">More purchase-option types can be added here</span>';
+  }else{
+    var cur=types[activeType]||types[0];
+    var menu=types.map(function(t,i){return '<div class="mi '+(i===activeType?'on':'')+'" onclick="pickType('+i+');closeMenu()">'+t.label+'<span class="c">'+t.count+'</span></div>';}).join('');
+    row.innerHTML='<div class="typedd"><button class="ddbtn" onclick="toggleMenu(event)">'+cur.label+' <span class="c">'+cur.count+'</span> <span style="color:var(--muted)">▾</span></button><div class="menu hide" id="typemenu">'+menu+'</div></div>'
+      +'<span class="typehint">'+types.length+' purchase-option types — selector switched to a dropdown automatically</span>';
+  }
+}
+function toggleMenu(e){e.stopPropagation();var m=document.getElementById('typemenu');if(m)m.classList.toggle('hide');}
+function closeMenu(){var m=document.getElementById('typemenu');if(m)m.classList.add('hide');}
+document.addEventListener('click',closeMenu);
+var CURTYPES=TYPES_FEW;
+function pickType(i){activeType=i;renderTypes(CURTYPES);}
+function setTypes(n){CURTYPES=(n===2?TYPES_FEW:TYPES_MANY);activeType=0;renderTypes(CURTYPES);
+  document.getElementById('pv2').classList.toggle('on',n===2);
+  document.getElementById('pv6').classList.toggle('on',n===6);}
+function setLens(lens){
+  document.getElementById('plan').classList.toggle('hide',lens!=='plan');
+  document.getElementById('product').classList.toggle('hide',lens!=='product');
+  document.querySelectorAll('.lens button').forEach(function(b){b.classList.toggle('on',b.textContent.trim()===(lens==='plan'?'By Plan':'By Product'));});
+}
+document.getElementById('plan').innerHTML=planTable();
+document.getElementById('product').innerHTML=productTable();
+renderTypes(CURTYPES);
+</script>

@@ -1,0 +1,750 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Purchase Options — Listing (v12)</title>
+<style>
+  :root{
+    --p-bg:#f1f1f1; --p-surface:#ffffff; --p-nav:#ebebeb;
+    --ink:#303030; --muted:#616161; --faint:#8a8a8a;
+    --line:#e3e3e3; --line2:#ebebeb;
+    --primary:#303030; --primary-h:#1a1a1a;
+    --link:#005bd3; --success:#29845a; --success-bg:#cdfee1;
+    --critical:#e51c00; --critical-bg:#fbeae9;
+    --infoInk:#00527c; --infoBg:#e0f0ff;
+    --amberInk:#8a6116; --amberBg:#ffefcf;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--p-bg);color:var(--ink);
+    font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+
+  .admin{display:flex;min-height:100vh}
+
+  .navL{flex:none;width:232px;background:var(--p-nav);border-right:1px solid var(--line);
+    padding:10px 8px;display:flex;flex-direction:column;gap:1px;position:sticky;top:0;align-self:flex-start;height:100vh;overflow:auto}
+  .navItem{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;
+    color:var(--ink);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
+  .navItem:hover{background:#dedede}
+  .navItem .ico{width:18px;height:18px;flex:none;color:#4a4a4a}
+  .navItem .ct{margin-left:auto;font-size:12px;color:var(--muted);background:#e0e0e0;border-radius:8px;padding:0 7px;line-height:18px}
+  .navSec{color:var(--muted);font-size:13px;font-weight:500;display:flex;align-items:center;height:30px;padding:0 8px;margin-top:6px}
+  .navSec .chev{margin-left:auto;color:var(--faint)}
+  .navSub{display:flex;align-items:center;height:30px;padding:0 8px 0 34px;border-radius:8px;color:var(--muted);font-size:13px;cursor:pointer}
+  .navSub:hover{background:#dedede;color:var(--ink)}
+  .navSub.sel{color:var(--ink);font-weight:600;background:var(--p-surface);box-shadow:0 1px 0 rgba(0,0,0,.04)}
+  .navApp{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;font-weight:600;background:var(--p-surface);box-shadow:0 1px 0 rgba(0,0,0,.04);margin-top:2px}
+  .navApp .logo{width:20px;height:20px;border-radius:5px;background:var(--primary);display:grid;place-items:center;color:#fff;font-size:11px;flex:none}
+  .navApp .dot{margin-left:auto;width:6px;height:6px;border-radius:50%;background:#8a8a8a}
+  .navGap{flex:1}
+
+  .appmain{flex:1;min-width:0;display:flex;flex-direction:column}
+  .appbar{height:52px;background:var(--p-surface);border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:10px;padding:0 18px}
+  .appbar .logo{width:24px;height:24px;border-radius:6px;background:var(--primary);display:grid;place-items:center;color:#fff;font-size:12px}
+  .appbar .name{font-weight:650;font-size:14px}
+  .appbar .more{margin-left:auto;color:var(--muted);font-size:20px;cursor:pointer;letter-spacing:1px}
+
+  .pagehdr{display:flex;align-items:center;gap:14px;padding:18px 24px 4px;max-width:1280px}
+  .pagehdr .back{width:28px;height:28px;border:1px solid var(--line);border-radius:8px;background:#fff;display:grid;place-items:center;color:var(--muted);cursor:pointer}
+  .pagehdr h1{font-size:19px;margin:0;font-weight:650}
+  .pagehdr .acts{margin-left:auto;display:flex;gap:8px}
+
+  .wrap{padding:6px 24px 90px;max-width:1280px}
+
+  .btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 13px;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;box-shadow:0 1px 0 rgba(0,0,0,.04);display:inline-flex;align-items:center;gap:6px}
+  .btn:hover{background:#fafafa}
+  .btn.primary{background:var(--primary);color:#fff;border-color:var(--primary);box-shadow:0 1px 0 rgba(0,0,0,.12)}
+  .btn.primary:hover{background:var(--primary-h)}
+  .btn.sm{padding:4px 10px;font-size:12px}
+  .btn.amber{border-color:#e2c67a;background:var(--amberBg);color:var(--amberInk)}
+  .btn.amber:hover{background:#ffe8bd}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+
+  /* type row: segmented control + stats live on the SAME row now */
+  .typerow{display:flex;align-items:center;gap:14px;flex-wrap:wrap;min-height:38px;margin-bottom:14px}
+  .typehint{color:var(--faint);font-size:12px}
+  .pseg{display:inline-flex;background:#f1f1f1;border:1px solid var(--line);border-radius:9px;padding:3px}
+  .pseg button{border:0;background:transparent;color:var(--muted);font-size:13px;font-weight:600;padding:6px 13px;border-radius:7px;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+  .pseg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.1)}
+  .pseg button:disabled{opacity:.5;cursor:not-allowed}
+  .pseg .c{font-size:11px;font-weight:700;color:var(--faint)}
+  .pseg button.on .c{color:var(--muted)}
+  .pseg.sm button{padding:5px 11px;font-size:12px}
+  /* prominent 2-tab type selector (clearer than the status segments) */
+  .typeseg{background:#e7eaee;padding:4px;border-radius:10px;gap:3px}
+  .typeseg button{padding:8px 16px;font-size:13.5px;color:#43474d}
+  .typeseg button:hover:not(.on):not(:disabled){background:rgba(0,0,0,.06)}
+  .typeseg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.18)}
+  .typeseg .c{background:rgba(0,0,0,.06);border-radius:20px;padding:1px 7px}
+  .typeseg button.on .c{background:#eef1f4}
+  .optlink{border:0;background:none;color:var(--link);font-weight:600;font-size:12.5px;cursor:pointer;padding:0}
+  .optlink:hover{text-decoration:underline}
+  .typedd{position:relative}
+  .typedd .ddbtn{border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 14px;font-size:13.5px;font-weight:650;display:inline-flex;align-items:center;gap:10px;cursor:pointer;box-shadow:0 1px 0 rgba(0,0,0,.04)}
+  .typedd .ddbtn .c{background:#eef0f2;color:var(--muted);border-radius:20px;font-size:11px;padding:1px 8px;font-weight:700}
+  .dropmenu{position:absolute;top:calc(100% + 6px);left:0;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.16);padding:6px;min-width:210px;z-index:30}
+  .dropmenu.wide{min-width:270px}
+  .dropmenu .mi{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 11px;border-radius:8px;cursor:pointer;font-weight:600}
+  .dropmenu .mi:hover{background:#f6f6f7}
+  .dropmenu .mi.on{background:#f1f1f1}
+  .dropmenu .mi.soon{color:var(--faint);cursor:not-allowed}
+  .dropmenu .mi.soon:hover{background:transparent}
+  .dropmenu .mi.critical{color:var(--critical)}
+  .dropmenu .mi .c{background:#e7e9eb;color:var(--muted);border-radius:20px;font-size:11px;padding:1px 8px;font-weight:700}
+  .dropmenu .mi.soon .c{background:transparent;border:1px dashed var(--line);color:var(--faint)}
+  .dropmenu .sep{height:1px;background:var(--line2);margin:5px 2px}
+
+  /* stats: inline beside the type selector, recomputed per type */
+  .statline{color:var(--muted);font-size:12.5px;display:flex;align-items:center;flex-wrap:wrap}
+  .statline b{color:var(--ink);font-weight:650}
+  .statline .dot{width:3px;height:3px;border-radius:50%;background:#c4c4c4;margin:0 10px;display:inline-block}
+  .statline .warn{color:var(--amberInk);font-weight:600}
+  .statsep{width:1px;align-self:stretch;background:var(--line);margin:2px 2px}
+
+  .card{background:var(--p-surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 1px 0 rgba(0,0,0,.04);overflow:visible}
+  .toolbar{display:flex;align-items:center;gap:10px;padding:12px 14px;flex-wrap:wrap}
+  .search{flex:1 1 240px;min-width:190px;position:relative}
+  .search input{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 12px 8px 32px;font-size:13px;background:#fff;color:var(--ink)}
+  .search input:focus{outline:2px solid #cfe0ff;border-color:#7aa6f0}
+  .search svg{position:absolute;left:10px;top:9px;color:var(--faint)}
+  .lens{margin-left:auto}
+  .select{border:1px solid var(--line);border-radius:8px;padding:8px 28px 8px 11px;font-size:12.5px;
+    background:#fff url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23616161' stroke-width='1.6'><path d='M2 4l4 4 4-4'/></svg>") no-repeat right 10px center;
+    -webkit-appearance:none;appearance:none;color:var(--ink);font-weight:600;cursor:pointer}
+
+  table{width:100%;border-collapse:collapse}
+  thead th{text-align:left;font-size:11px;font-weight:650;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;padding:11px 14px;border-top:1px solid var(--line);background:#fafafa}
+  tbody td{padding:12px 14px;border-top:1px solid var(--line);vertical-align:top}
+  tbody tr:hover{background:#fafafa}
+  .pname{font-weight:600;color:var(--link);cursor:pointer}.pname:hover{text-decoration:underline}
+  .badge{display:inline-flex;align-items:center;gap:5px;border-radius:8px;padding:2px 9px;font-size:12px;font-weight:600;white-space:nowrap}
+  .tagchip{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:#e7f6ec;color:#0f5132;white-space:nowrap}
+  .b-active{background:var(--success-bg);color:#0f5132}
+  .b-inactive{background:#e3e3e3;color:#4a4a4a}
+  .b-draft{background:#fdf0d5;color:#8a6116}
+  .b-draft .b-dot{background:#c9911f}
+  .b-info{background:var(--infoBg);color:var(--infoInk)}
+  .b-dot{width:6px;height:6px;border-radius:50%}
+  .b-active .b-dot{background:var(--success)}.b-inactive .b-dot{background:var(--faint)}
+  .shiptag{color:var(--muted);font-size:12.5px;white-space:nowrap}
+  .paytags{display:inline-flex;flex-direction:column;gap:5px;align-items:flex-start}
+  .paytag{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap;border:1px solid var(--line)}
+  .paytag.prepaid{background:#eef4ff;border-color:#cddcff;color:#1b46a8}
+  .paytag.payg{background:#f3eefe;border-color:#ddd0f7;color:#5a34b0}
+  .paytag.onetime{background:#f2f4f6;border-color:#dfe3e8;color:#42474d}
+  .empty{padding:56px 24px 60px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:9px}
+  .emptytitle{font-size:15px;font-weight:700;color:var(--ink);margin-top:4px}
+  .emptysub{font-size:13px;color:var(--muted);max-width:440px;line-height:1.55}
+  .empty .btn{margin-top:8px}
+  .emptyctas{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:8px}
+  .emptyor{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--faint);margin-top:16px}
+  /* product thumbnail stack (single line) */
+  .chipwrap{display:flex;flex-direction:column;gap:5px;align-items:flex-start}
+  .thumbline{display:inline-flex;align-items:center;border:0;background:none;cursor:pointer;padding:0;white-space:nowrap}
+  .thumbline .tchip{width:26px;height:26px;border-radius:7px;background:#f1f1f1;display:inline-flex;align-items:center;justify-content:center;color:#9a9a9a;margin-left:-6px;position:relative;box-shadow:0 0 0 1px var(--line),0 0 0 3px #fff}
+  .thumbline .tchip:first-child{margin-left:0}
+  .thumbline .tmore{margin-left:8px;font-size:12px;font-weight:700;color:var(--muted)}
+  .thumbline .tcount{margin-left:10px;font-size:12.5px;color:var(--link);font-weight:600}
+  .thumbline:hover .tcount{text-decoration:underline}
+  .tchip.oos .oosdot{position:absolute;top:-3px;right:-3px;width:9px;height:9px;border-radius:50%;background:#e5484d;border:2px solid #fff}
+  /* product modal */
+  .modalov{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:80}
+  .modal{background:#fff;border-radius:12px;width:min(520px,92vw);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .modalhd{display:flex;align-items:flex-start;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--line2)}
+  .modalhd h3{margin:0;font-size:15px;color:var(--ink)}
+  .modalhd .sub{font-size:12px;color:var(--muted);margin-top:2px}
+  .modalhd .xclose{cursor:pointer;color:var(--muted);font-size:20px;border:0;background:none;line-height:1}
+  .modalbody{padding:4px 18px 16px;overflow:auto}
+  .prodrow{display:flex;align-items:center;gap:11px;padding:10px 0;border-bottom:1px solid var(--line2)}
+  .prodrow .thumb{width:34px;height:34px;border-radius:8px;background:#f1f1f1;display:flex;align-items:center;justify-content:center;color:#9a9a9a;flex:none}
+  .prodrow .pn{font-weight:600;font-size:13px;color:var(--ink)}
+  .prodrow .pmeta{color:var(--muted);font-size:12px}
+  .prodrow .oostag{margin-left:auto;color:#b42318;font-size:11px;font-weight:700}
+  .optrow{padding:12px 0;border-bottom:1px solid var(--line2)}
+  .optmain{display:flex;align-items:baseline;gap:10px}
+  .optmain .optn{font-size:11px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.03em}
+  .optmain .optsched{font-size:13.5px;font-weight:600;color:var(--ink)}
+  .optmeta{display:flex;align-items:center;gap:8px;margin-top:7px;flex-wrap:wrap}
+  .optmeta .optdisc{font-size:12px;color:var(--muted)}
+
+  /* product chips: icon PAIRED with its own name, no separate name list */
+  .chiprow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;max-width:420px}
+  .pchip{display:inline-flex;align-items:center;gap:6px;background:#f6f6f7;border:1px solid var(--line);border-radius:16px;padding:3px 10px 3px 3px;font-size:12px;font-weight:600;color:var(--ink)}
+  .pchip .ic{width:20px;height:20px;border-radius:50%;background:#e9eaec;color:#b7bcc2;display:flex;align-items:center;justify-content:center;flex:none;position:relative}
+  .pchip.oos{background:var(--critical-bg);border-color:#f2c9c4}
+  .pchip.oos .ic{background:#f6d9d5;color:var(--critical)}
+  .pchip .oosdot{position:absolute;top:-2px;right:-2px;width:7px;height:7px;border-radius:50%;background:var(--critical);border:1.5px solid #fff}
+  .morechip{border:1px dashed var(--line);background:transparent;color:var(--muted);border-radius:16px;padding:4px 11px;font-size:12px;font-weight:600;cursor:pointer}
+  .morechip:hover{background:#f6f6f7;color:var(--ink)}
+  .stockflag{color:var(--critical);font-size:11.5px;font-weight:600;margin-top:6px;display:flex;align-items:center;gap:4px}
+
+  .rowact{display:flex;align-items:center;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+  .kebabwrap{position:relative;display:inline-block}
+  .kebab{border:1px solid var(--line);background:#fff;border-radius:7px;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);box-shadow:0 1px 0 rgba(0,0,0,.04)}
+  .kebab:hover{background:#fafafa}
+  .kebabwrap .dropmenu{left:auto;right:0;min-width:150px}
+
+  .exp{cursor:pointer;color:var(--muted);display:inline-flex;align-items:center;gap:6px;font-weight:600}
+  .subrow td{background:#fafbfb;padding:0 14px 12px 52px;border-top:0}.subrow .inner{padding-top:2px}
+  .kv{color:var(--muted);font-size:11.5px;margin-bottom:6px}
+  .tfoot{padding:11px 14px;color:var(--faint);font-size:12px;text-align:center;border-top:1px solid var(--line)}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:#f6f6f7;border:1px solid var(--line);border-radius:7px;padding:4px 9px;font-size:12px;font-weight:600;color:var(--ink);margin:2px 4px 2px 0;cursor:pointer;text-decoration:none}
+  .chip:hover{background:#fff;border-color:#c9c9c9}.chip .mini{width:5px;height:5px;border-radius:50%}
+  .hide{display:none !important}
+
+  .pagenote{max-width:1280px;color:var(--faint);font-size:11.5px;margin-top:16px;line-height:1.7}
+  .pagenote b{color:var(--muted)}
+
+  .preview{position:fixed;top:12px;right:14px;z-index:60;background:#111;color:#fff;border-radius:10px;padding:6px;display:flex;gap:4px;align-items:center;box-shadow:0 6px 24px rgba(0,0,0,.28)}
+  .preview .lbl{color:#8b8b8b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:0 6px}
+  .preview button{background:transparent;color:#cfcfcf;border:0;padding:6px 10px;border-radius:7px;font-size:11.5px;font-weight:600;cursor:pointer;white-space:nowrap}
+  .preview button.on{background:#fff;color:#111}
+</style>
+<!-- bare mode: when embedded in the WIP prototype shell, hide this file's own admin chrome
+so the shell is not drawn twice. Standalone viewing is unaffected. -->
+<script>if(/bare/.test(location.search+location.hash))document.documentElement.classList.add("bare");</script>
+<style>html.bare .navL,html.bare .appbar,html.bare .savebar{display:none!important}html.bare .admin{min-height:0}html.bare,html.bare body{background:#f1f1f1}</style>
+</head>
+<body>
+
+<div class="preview">
+  <span class="lbl">Preview scaling</span>
+  <button id="pv2" class="on" onclick="setTypes(2)">2 types → segmented</button>
+  <button id="pv6" onclick="setTypes(6)">6 types → dropdown</button>
+  <span style="width:1px;height:18px;background:#3a3a3a;margin:0 2px"></span>
+  <button id="pvEmpty" onclick="toggleEmpty()">Empty state</button>
+</div>
+
+<div class="admin">
+  <aside class="navL">
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8.5 10 3l7 5.5V16a1 1 0 0 1-1 1h-3v-5H7v5H4a1 1 0 0 1-1-1z"/></svg>Home</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="13" rx="2"/><path d="M7 8h6M7 11h6"/></svg>Orders<span class="ct">127</span></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h12v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M7 6V5a3 3 0 0 1 6 0v1"/></svg>Products</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="7" r="3"/><path d="M4 16c0-3 2.7-5 6-5s6 2 6 5"/></svg>Customers</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 15V9m4 6V5m4 10v-4m4 4V7"/></svg>Growth</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="3"/><path d="M12 12l4 4M13.5 6.5 16 4"/></svg>Discounts</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="12" rx="2"/><path d="M7 8h6M7 11h4"/></svg>Content</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="6"/><path d="M4 10h12M10 4c2 2 2 10 0 12M10 4c-2 2-2 10 0 12"/></svg>Markets</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 16h12M6 16V9m4 7V5m4 11v-4"/></svg>Analytics</div>
+
+    <div class="navSec">Sales channels<span class="chev">›</span></div>
+    <div class="navSec">Apps<span class="chev">›</span></div>
+
+    <div class="navApp"><span class="logo">◆</span>StackBack Subscrip…<span class="dot"></span></div>
+    <div class="navSub sel">Manage Purchase Options</div>
+    <div class="navSub">Purchase Contracts</div>
+    <div class="navSub">One-Time Orders</div>
+    <div class="navSub">Orders</div>
+    <div class="navSub">Payment Reminders</div>
+    <div class="navSub">Customers</div>
+    <div class="navSub">View more</div>
+
+    <div class="navGap"></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m7-7h-2M5 10H3m12.5-5-1.5 1.5M6 14l-1.5 1.5m11 0L14 14M6 6 4.5 4.5"/></svg>Settings</div>
+  </aside>
+
+  <div class="appmain">
+    <div class="appbar">
+      <span class="logo">◆</span><span class="name">StackBack Subscriptions &amp; More</span>
+      <span class="more">⋯</span>
+    </div>
+
+    <div class="pagehdr">
+      <div><h1>Purchase Options</h1></div>
+      <div class="acts">
+        <div class="kebabwrap" id="pageMenuWrap">
+          <button class="btn" title="More actions" onclick="openMenu('pageMenu', event)">⋯</button>
+          <div class="dropmenu wide hide" id="pageMenu">
+            <div class="mi" onclick="mockAction('Export plans','');closeAllMenus()">Export plans</div>
+            <div class="sep"></div>
+            <div class="mi" onclick="mockAction('Re-sync all','');closeAllMenus()">Re-sync all to storefront</div>
+          </div>
+        </div>
+        <span class="btn primary" id="createBtn">+ Create Plan</span>
+      </div>
+    </div>
+
+    <div class="wrap">
+      <!-- type selector + its scoped stats, same row -->
+      <div class="typerow" id="typerow"></div>
+
+      <div class="card">
+        <div class="toolbar">
+          <div class="search">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg>
+            <input id="searchInput" placeholder="Search plans">
+          </div>
+          <div class="pseg sm" id="statusfilter"></div>
+          <div class="lens pseg sm" id="lensToggle">
+            <button class="on" onclick="setLens('plan')">By Plan</button>
+            <button onclick="setLens('product')" id="byProductBtn">By Product</button>
+          </div>
+          <select class="select"><option>Newest</option><option>Oldest</option><option>Name A–Z</option><option>Name Z–A</option></select>
+        </div>
+        <div id="plan"></div>
+        <div id="product" class="hide"></div>
+      </div>
+
+      <p class="pagenote">
+        <b>v12 change:</b> bundle empty-state presets now use the same "Start with…" construction as the plan presets (Start with a fixed bundle / Build Your Box / Mix &amp; Match) for label hygiene.<br>
+        <b>v11 changes:</b> the options column is renamed <b>Buying options</b> (plan + bundle + By-Product action + popup title). Added a <b>Draft</b> status with a <b>Publish</b> action (inline button on draft rows + in the ⋯ menu) and a <b>Draft</b> filter segment, reflecting the create screen's Save-as-draft. Removed the page-header <b>back button</b>. The <b>bundle empty state</b> offers bundle-type quick starts (Fixed / Build Your Box / Mix &amp; Match), mirroring the plan monthly/weekly presets.<br>
+        <b>v10 changes:</b> the <b>By Product</b> view carries the plan-options popup too (a "View options" action in each expanded row, plus clicking a plan chip). Bundles can now be <b>one-time only</b> (a grey "One-time" payment capsule; their options popup shows a one-time purchase, no subscription schedule). <b>By Product now works for Bundles</b> (which bundles a product appears in). Empty state offers quick-start presets: <b>Start with a monthly plan / weekly plan</b> alongside Create plan.<br>
+        <b>v9 changes:</b> added a <b>Plan options</b> column (a "N options" link that opens a popup listing each buying option:
+        schedule, payment, discount, badge); the same options popup is reachable from the <b>By Product</b> view (click a plan chip).
+        Product stack now shows <b>3 thumbnails then +N</b>. <b>Payment capsules stack vertically</b> when a plan offers more than one.
+        The <b>Product Subscriptions / Bundles</b> selector is restyled as a clearer 2-tab control. <b>Activity log removed for now.</b><br>
+        <b>Earlier (v8):</b> products render as a single-line thumbnail stack + "N products" link opening a modal listing every product;
+        shipping shows only the direct per-plan override price (Free / INR X), dash on app default; product chips shown on bundles too.
+        (v7): removed per-plan sync UI; Payment column; Duplicate in the row ⋯ menu; empty state; page-level ⋯ (Export plans + listing-level
+        Re-sync all) in the 2-type layout.<br>
+        <b>Shipping (D2026-0721-03):</b> the override can also carry min/max value + ZIP conditions inside the editor; only the
+        headline rate shows here. DEV MUST CONFIRM the backend can drive a flat per-plan override before build (shipped model is per-named-rate).<br>
+        <b>Payment caveat:</b> Auto-Debit + the prepaid-to-PAYG hybrid are parked in the Future version, so they are not shown here yet.<br>
+        <b>Bundle type labels:</b> <code>BundleForm.js</code> confirms <code>mix_and_match</code> = <b>Build Your Box</b>; the live
+        listing code still maps a stale <code>tiered</code> bundle_type, flagged for a dev check.<br>
+        <b>Bundle products data gap (DEV):</b> the bundle product chips, modal, and By-Product view here are mocked. The current
+        listing loader returns a product <i>count</i> only for bundles, so dev must extend it to return the product array
+        (name + thumbnail + availability) for these to work on the real screen.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div id="modalOverlay" class="modalov hide" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modalhd">
+      <div><h3 id="modalTitle"></h3><div class="sub" id="modalSub"></div></div>
+      <button class="xclose" onclick="closeModal()">×</button>
+    </div>
+    <div class="modalbody" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+// ---- mock data ---------------------------------------------------------
+// shipping model (matches create-plan v1): 'default' = shop-wide default (no override);
+// 'free' = override at 0; a number = override at that INR rate per delivery.
+// payment model (matches create-plan v1): 'prepaid' and/or 'payg' (Pay per delivery).
+var PLANS = [
+  {id:'p1', title:'Coffee Ritual Plan', active:true, shipping:99, payment:['prepaid','payg'], products:[
+    {name:'Cold Brew Concentrate'},{name:'House Espresso'},{name:'Single Origin Ethiopia'},{name:'Decaf Blend', outOfStock:true},
+    {name:'Coffee Filters'},{name:'Oat Milk'},{name:'Ceramic Mug'},{name:'Grinder Beans'},{name:'Travel Tumbler'}]},
+  {id:'p2', title:'Farm Fresh A2 Milk Plan', active:true, shipping:'free', payment:['prepaid'], products:[
+    {name:'A2 Milk 1L'},{name:'A2 Milk 500ml'},{name:'A2 Ghee'}]},
+  {id:'p3', title:'Performance Protein Plan', active:true, shipping:'default', payment:['payg'], products:[
+    {name:'Whey Isolate'},{name:'Casein'},{name:'Plant Protein'},{name:'Creatine'},{name:'Shaker'},{name:'BCAA'},
+    {name:'Pre-Workout'},{name:'Protein Bars'},{name:'Electrolytes'},{name:'Glutamine'},{name:'Multivitamin'},{name:'Collagen'}]},
+  {id:'p4', title:'Daily Dairy', active:true, shipping:'free', payment:['prepaid','payg'], products:[
+    {name:'A2 Milk 1L'},{name:'Paneer'},{name:'Curd 400g'}]},
+  {id:'p5', title:'Coffee Subscription', active:false, shipping:99, payment:['prepaid'], products:[
+    {name:'Cold Brew Concentrate'},{name:'House Espresso'},{name:'Single Origin Ethiopia'},{name:'Decaf Blend'},
+    {name:'Coffee Filters'},{name:'Oat Milk'},{name:'Ceramic Mug'},{name:'Grinder Beans'},{name:'Travel Tumbler'}]},
+  {id:'p6', title:'Fresh Mushroom Basket', active:false, draft:true, shipping:'default', payment:['payg'], products:[
+    {name:'Button Mushroom (Fresh)', weight:'200g', price:'INR 57.00'},
+    {name:'Cremini Mushroom (Fresh)', weight:'200gm', price:'INR 149.00'},
+    {name:'Enoki Mushroom (Fresh) Imported', weight:'100g', price:'INR 199.00'},
+    {name:'King Oyster Mushroom (Fresh) Imported', weight:'125gm', price:'INR 299.00'},
+    {name:'Milky Mushroom (Fresh)', weight:'200gm', price:'INR 149.00'},
+    {name:'Oyster Mushroom (Fresh)', weight:'200gm', price:'INR 57.00'},
+    {name:'Portobello Mushroom (Fresh)', weight:'250gm', price:'INR 349.00'},
+    {name:'Shiitake Mushroom (Fresh)', weight:'200g', price:'INR 399.00', outOfStock:true},
+    {name:'Shimeji Brown Mushroom (Fresh) Imported', weight:'125g', price:'INR 199.00'}]}
+];
+
+// Bundles: listing loader only exposes a count, never an itemized array.
+var BUNDLES = [
+  {id:'b1', title:'Breakfast Bundle', active:true, bundle_type:'fixed', shipping:'free', payment:['onetime'], products:[
+    {name:'Granola 500g'},{name:'Almond Milk 1L'},{name:'Raw Honey Jar'},{name:'Chia Seeds 250g'}]},
+  {id:'b2', title:'Build Your Own Snack Box', active:true, bundle_type:'mix_and_match', shipping:'default', payment:['prepaid','payg'], products:[
+    {name:'Trail Mix'},{name:'Dark Chocolate 70%'},{name:'Roasted Almonds'},{name:'Protein Bar'},{name:'Dried Mango', outOfStock:true},{name:'Popcorn'}]},
+  {id:'b3', title:'Wellness Trio', active:true, bundle_type:'mix_and_match', shipping:99, payment:['payg'], products:[
+    {name:'Multivitamin'},{name:'Omega-3 Fish Oil'},{name:'Probiotic 30ct'}]},
+  {id:'b4', title:'Festive Hamper', active:false, draft:true, bundle_type:'fixed', shipping:'default', payment:['onetime'], products:[
+    {name:'Cookies Tin'},{name:'Assorted Dry Fruits'},{name:'Scented Candle'},{name:'Tea Sampler'},{name:'Chocolate Box'}]}
+];
+// Plan options = the buying options created in the plan/bundle editor (schedule + payment + discount + badge).
+var OPTIONS={
+  p1:[{sched:'Every 2 weeks · 5 deliveries', payment:['prepaid'], discount:'10% off', badge:'Best Value'},
+      {sched:'Every month · 6 deliveries', payment:['prepaid','payg'], discount:'15% off'}],
+  p2:[{sched:'Every 2 weeks · until cancelled', payment:['prepaid'], discount:'8% off'}],
+  p3:[{sched:'Every month · no end date', payment:['payg'], discount:'12% off'},
+      {sched:'Every 2 months · no end date', payment:['payg'], discount:'10% off'}],
+  p4:[{sched:'Weekly · customer chooses length', payment:['prepaid','payg'], discount:'5% off'}],
+  p5:[{sched:'Every 2 weeks · 5 deliveries', payment:['prepaid'], discount:'10% off'}],
+  p6:[{sched:'Weekly · no end date', payment:['payg'], discount:'No discount'},
+      {sched:'Every 2 weeks · no end date', payment:['payg'], discount:'No discount'},
+      {sched:'Monthly · no end date', payment:['payg'], discount:'No discount'}],
+  b1:[{sched:'One-time purchase', payment:['onetime'], discount:'Bundle price'}],
+  b2:[{sched:'Every 2 weeks · customer chooses length', payment:['prepaid','payg'], discount:'12% off'}],
+  b3:[{sched:'Monthly · no end date', payment:['payg'], discount:'8% off'}],
+  b4:[{sched:'One-time purchase', payment:['onetime'], discount:'Bundle price'}]
+};
+function optionsFor(id){return OPTIONS[id]||[];}
+// Corrected: mix_and_match = "Build Your Box" (BYOB), per BundleForm.js + modules.md.
+// "tiered" dropped as a peer type per correction — it reads as a stale label on the
+// live listing's own be() mapping now, not a current bundle_type.
+var BUNDLE_TYPE_LABEL={fixed:'Fixed Bundle', mix_and_match:'Build Your Box'};
+
+var TYPES_FEW=[
+  {label:'Product Subscriptions', kind:'plan', createLabel:'+ Create Plan'},
+  {label:'Bundles', kind:'bundle', createLabel:'+ Create Bundle'}
+];
+var TYPES_MANY=TYPES_FEW.concat([
+  {label:'Prepaid Packs', kind:'future', createLabel:'+ Create Pack', soon:true},
+  {label:'Trials', kind:'future', createLabel:'+ Create Trial', soon:true},
+  {label:'Gift Subscriptions', kind:'future', createLabel:'+ Create Gift Sub', soon:true},
+  {label:'Memberships', kind:'future', createLabel:'+ Create Membership', soon:true}
+]);
+var SEG_MAX=4, activeType=0, CURTYPES=TYPES_FEW, activeLens='plan', activeStatus=0, FORCE_EMPTY=false;
+var openMenuId=null;
+
+// ---- helpers ------------------------------------------------------------
+function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+function statusBadge(a, draft){
+  if(draft) return '<span class="badge b-draft"><span class="b-dot"></span>Draft</span>';
+  return a?'<span class="badge b-active"><span class="b-dot"></span>Active</span>':'<span class="badge b-inactive"><span class="b-dot"></span>Inactive</span>';
+}
+function shipTag(s){
+  if(s==='default') return '<span class="shiptag" style="color:var(--faint)">—</span>';
+  var label = s==='free' ? 'Free' : 'INR '+s;
+  return '<span class="shiptag">'+label+'</span>';
+}
+var PAY_LABEL={prepaid:'Prepaid', payg:'Pay per delivery', onetime:'One-time'};
+function payTags(arr){
+  if(!arr||!arr.length) return '<span class="shiptag">—</span>';
+  return '<span class="paytags">'+arr.map(function(k){return '<span class="paytag '+k+'">'+PAY_LABEL[k]+'</span>';}).join('')+'</span>';
+}
+function personIcon(){return '<svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="14" height="12" rx="2"/><circle cx="7.5" cy="8.5" r="1.3"/><path d="M4 14l4-4 3 3 2-2 3 3"/></svg>';}
+
+// each product chip pairs its OWN icon with its OWN name — fixes the
+// "which name is for which thumbnail" ambiguity from the pile version.
+// single named chip (used by the By-Product view)
+function productChip(p){
+  return '<span class="pchip"><span class="ic">'+personIcon()+'</span>'+esc(p.name)+'</span>';
+}
+// products render as a single-line stack of thumbnails + count; click opens the full list (Polaris-style modal)
+var PROD_BY_ROW={};
+function chipRow(products, rowId, title){
+  PROD_BY_ROW[rowId]={title:title||'', products:products};
+  var max=3, shown=products.slice(0,max), extra=products.length-shown.length;
+  var thumbs=shown.map(function(p){
+    return '<span class="tchip'+(p.outOfStock?' oos':'')+'" title="'+esc(p.name)+(p.outOfStock?' — out of stock':'')+'">'+personIcon()+(p.outOfStock?'<span class="oosdot"></span>':'')+'</span>';
+  }).join('');
+  var more = extra>0 ? '<span class="tmore">+'+extra+'</span>' : '';
+  var html='<div class="chipwrap"><button class="thumbline" onclick="openProdModal(\''+rowId+'\',event)" title="View all products">'
+    +thumbs+more+'<span class="tcount">'+products.length+' products</span></button>';
+  var oosCount=products.filter(function(p){return p.outOfStock;}).length;
+  if(oosCount>0) html+='<div class="stockflag">⚠ '+oosCount+' out of stock</div>';
+  html+='</div>';
+  return html;
+}
+function openModal(title, sub, bodyHtml){
+  document.getElementById('modalTitle').textContent=title;
+  document.getElementById('modalSub').textContent=sub||'';
+  document.getElementById('modalBody').innerHTML=bodyHtml;
+  document.getElementById('modalOverlay').classList.remove('hide');
+}
+function closeModal(){document.getElementById('modalOverlay').classList.add('hide');}
+function openProdModal(rowId, evt){
+  if(evt) evt.stopPropagation();
+  var d=PROD_BY_ROW[rowId]; if(!d) return;
+  var body=d.products.map(function(p){
+    return '<div class="prodrow'+(p.outOfStock?' oos':'')+'"><span class="thumb">'+personIcon()+'</span>'
+      +'<span class="pn">'+esc(p.name)+'</span>'
+      +(p.weight?'<span class="pmeta">'+esc(p.weight)+'</span>':'')
+      +(p.price?'<span class="pmeta">'+esc(p.price)+'</span>':'')
+      +(p.outOfStock?'<span class="oostag">Out of stock</span>':'')+'</div>';
+  }).join('');
+  openModal('Products in '+d.title, d.products.length+' products', body);
+}
+// options popup (schedule + payment + discount + badge per buying option)
+function nameById(id){
+  var all=PLANS.concat(BUNDLES);
+  for(var i=0;i<all.length;i++){ if(all[i].id===id) return all[i].title; }
+  return 'Plan';
+}
+function openOptModal(id, evt){
+  if(evt) evt.stopPropagation();
+  var opts=optionsFor(id); if(!opts.length) return;
+  var body=opts.map(function(o,i){
+    return '<div class="optrow"><div class="optmain"><span class="optn">Option '+(i+1)+'</span>'
+      +'<span class="optsched">'+esc(o.sched)+'</span></div>'
+      +'<div class="optmeta">'+payTags(o.payment)+'<span class="optdisc">'+esc(o.discount||'')+'</span>'
+      +(o.badge?'<span class="tagchip">'+esc(o.badge)+'</span>':'')+'</div></div>';
+  }).join('');
+  openModal(nameById(id)+' — buying options', opts.length+' option'+(opts.length>1?'s':''), body);
+}
+
+// ---- generic dropdown/menu manager (type selector + per-row kebab) -------
+function openMenu(id, evt){
+  if(evt) evt.stopPropagation();
+  if(openMenuId && openMenuId!==id){var prev=document.getElementById(openMenuId); if(prev) prev.classList.add('hide');}
+  var m=document.getElementById(id);
+  if(!m) return;
+  var willShow=m.classList.contains('hide');
+  m.classList.toggle('hide');
+  openMenuId = willShow ? id : null;
+}
+function closeAllMenus(){
+  if(openMenuId){var m=document.getElementById(openMenuId); if(m) m.classList.add('hide');}
+  openMenuId=null;
+}
+document.addEventListener('click', closeAllMenus);
+
+function rowMenu(item, kind){
+  var primary = item.draft ? 'Publish' : (item.active ? 'Pause' : (kind==='bundle' ? 'Activate' : 'Resume'));
+  var mid='kebab-'+item.id;
+  return '<div class="kebabwrap">'
+    +'<button class="kebab" title="More" onclick="openMenu(\''+mid+'\', event)">⋯</button>'
+    +'<div class="dropmenu hide" id="'+mid+'">'
+      +'<div class="mi" onclick="mockAction(\''+primary+'\',\''+esc(item.title)+'\');closeAllMenus()">'+primary+'</div>'
+      +'<div class="mi" onclick="mockAction(\'Duplicate\',\''+esc(item.title)+'\');closeAllMenus()">Duplicate</div>'
+      +'<div class="sep"></div>'
+      +'<div class="mi critical" onclick="mockAction(\'Delete\',\''+esc(item.title)+'\');closeAllMenus()">Delete</div>'
+    +'</div></div>';
+}
+function mockAction(action, title){ /* wireframe stub — real app shows the existing confirm modal here */ }
+
+function actions(item, kind){
+  var pub = item.draft ? '<button class="btn sm primary" onclick="mockAction(\'Publish\',\''+esc(item.title)+'\')">Publish</button>' : '';
+  return '<div class="rowact">'+pub+'<button class="btn sm">Edit</button>'+rowMenu(item, kind)+'</div>';
+}
+
+function emptyArt(){
+  return '<svg width="150" height="104" viewBox="0 0 150 104" fill="none" xmlns="http://www.w3.org/2000/svg">'
+    +'<rect x="20" y="14" width="82" height="72" rx="6" fill="#fff" stroke="#d9d9d9"/>'
+    +'<rect x="30" y="26" width="40" height="6" rx="3" fill="#cfe3ff"/>'
+    +'<rect x="30" y="40" width="28" height="8" rx="3" fill="#ededed"/>'
+    +'<rect x="64" y="40" width="28" height="8" rx="3" fill="#ededed"/>'
+    +'<circle cx="33" cy="60" r="3" fill="#2a6df0"/><rect x="40" y="57" width="24" height="5" rx="2.5" fill="#ededed"/>'
+    +'<circle cx="33" cy="72" r="3" fill="#d9d9d9"/><rect x="40" y="69" width="20" height="5" rx="2.5" fill="#ededed"/>'
+    +'<rect x="64" y="66" width="30" height="10" rx="4" fill="#e7e7e7"/>'
+    +'<circle cx="122" cy="44" r="12" fill="#f0ece7"/><path d="M114 74c0-5 3.6-8 8-8s8 3 8 8" stroke="#b9b0a6" stroke-width="2" fill="none"/>'
+    +'<rect x="112" y="60" width="8" height="4" rx="2" fill="#2a6df0"/>'
+    +'</svg>';
+}
+function emptyState(kind, reason){
+  var noun = kind==='bundle' ? 'bundle' : 'plan';
+  var createLabel = kind==='bundle' ? '+ Create Bundle' : '+ Create Plan';
+  if(reason==='nomatch'){
+    return '<div class="empty"><div class="emptytitle">No '+noun+'s match</div>'
+      +'<div class="emptysub">Nothing matches your current search or filter. Try different terms or clear them.</div>'
+      +'<button class="btn" onclick="clearFilters()">Clear search &amp; filters</button></div>';
+  }
+  /* Bundle quick-starts must use the SAME five format names as Step 1 of the create-bundle
+     screen (BundleSetup_Polaris_v2). Synced 2026-07-29: the old three presets said
+     "a fixed bundle / Build Your Box / Mix & Match", none of which matched the create screen
+     after the formats were reworked, so a merchant picked a name here and met a different
+     one on the next page. Five is too many for one row, so the primary sits alone and the
+     formats sit under a label. */
+  var BTYPES = [
+    ['Fixed box',             'Same set for every customer'],
+    ['Build-your-own box',    'They pick from a list'],
+    ['Pick-from-each box',    'They pick from each category'],
+    ['Buy X Get Y',           'Some products free'],
+    ['Buy more, save more box','Discount grows with quantity']
+  ];
+  var ctas = kind==='bundle'
+    ? '<div class="emptyctas"><button class="btn primary" onclick="mockAction(\'Create bundle\',\'\')">+ Create bundle</button></div>'
+      +'<div class="emptyor">Or start with a format</div>'
+      +'<div class="emptyctas">'
+      + BTYPES.map(function(t){
+          return '<button class="btn" title="'+t[1]+'" onclick="mockAction(\''+t[0].replace(/'/g,"\\'")+'\',\'\')">'+t[0]+'</button>';
+        }).join('')
+      +'</div>'
+    : '<div class="emptyctas"><button class="btn primary" onclick="mockAction(\'Create plan\',\'\')">+ Create plan</button></div>'
+      +'<div class="emptyor">Or start with a preset</div>'
+      +'<div class="emptyctas"><button class="btn" onclick="mockAction(\'Monthly plan\',\'\')">Monthly plan</button>'
+      +'<button class="btn" onclick="mockAction(\'Weekly plan\',\'\')">Weekly plan</button></div>';
+  var sub = kind==='bundle'
+    ? 'A bundle groups products into one purchase. Pick a bundle type to start, then set it up as one-time or subscription. You can also create bundles from a product page.'
+    : 'A plan defines what customers can subscribe to, how often it ships, and how they pay. Start from a quick preset or build your own. You can also create plans from a product page.';
+  return '<div class="empty">'+emptyArt()
+    +'<div class="emptytitle">Create your first '+noun+' to get started</div>'
+    +'<div class="emptysub">'+sub+'</div>'
+    +ctas+'</div>';
+}
+function clearFilters(){document.getElementById('searchInput').value='';activeStatus=0;renderStatusFilter();renderTable();}
+function toggleEmpty(){FORCE_EMPTY=!FORCE_EMPTY;document.getElementById('pvEmpty').classList.toggle('on',FORCE_EMPTY);renderTable();}
+function filteredPlans(){
+  var q=(document.getElementById('searchInput').value||'').toLowerCase();
+  var list=PLANS.filter(function(p){return !p._deleted;});
+  if(activeStatus===1) list=list.filter(function(p){return p.active && !p.draft;});
+  if(activeStatus===2) list=list.filter(function(p){return !p.active && !p.draft;});
+  if(activeStatus===3) list=list.filter(function(p){return p.draft;});
+  if(q) list=list.filter(function(p){return p.title.toLowerCase().indexOf(q)>-1;});
+  return list;
+}
+function planTable(){
+  if(FORCE_EMPTY || PLANS.filter(function(p){return !p._deleted;}).length===0) return emptyState('plan','none');
+  var list=filteredPlans();
+  if(list.length===0) return emptyState('plan','nomatch');
+  var rows=list.map(function(p){
+    return '<tr><td><span class="pname">'+esc(p.title)+'</span></td><td>'+statusBadge(p.active,p.draft)+'</td>'
+      +'<td>'+payTags(p.payment)+'</td>'
+      +'<td>'+shipTag(p.shipping)+'</td>'
+      +'<td><button class="optlink" onclick="openOptModal(\''+p.id+'\',event)">'+optionsFor(p.id).length+' option'+(optionsFor(p.id).length>1?'s':'')+'</button></td>'
+      +'<td>'+chipRow(p.products,p.id,p.title)+'</td><td>'+actions(p,'plan')+'</td></tr>';
+  }).join('');
+  return '<table><thead><tr><th style="width:16%">Plan</th><th style="width:8%">Status</th><th style="width:13%">Payment</th><th style="width:8%">Shipping</th><th style="width:15%">Buying options</th><th style="width:22%">Products</th><th style="width:18%;text-align:right">Actions</th></tr></thead><tbody>'+rows+'</tbody></table><div class="tfoot">Showing '+list.length+' of '+PLANS.length+' plans</div>';
+}
+function bundleTable(){
+  if(FORCE_EMPTY || BUNDLES.length===0) return emptyState('bundle','none');
+  var list=BUNDLES.filter(function(b){
+    if(activeStatus===1) return b.active && !b.draft;
+    if(activeStatus===2) return !b.active && !b.draft;
+    if(activeStatus===3) return b.draft;
+    return true;
+  });
+  if(list.length===0) return emptyState('bundle','nomatch');
+  var rows=list.map(function(b){
+    return '<tr><td><span class="pname">'+esc(b.title)+'</span></td><td>'+statusBadge(b.active,b.draft)+'</td>'
+      +'<td><span class="badge b-inactive">'+BUNDLE_TYPE_LABEL[b.bundle_type]+'</span></td>'
+      +'<td>'+payTags(b.payment)+'</td>'
+      +'<td>'+shipTag(b.shipping)+'</td>'
+      +'<td><button class="optlink" onclick="openOptModal(\''+b.id+'\',event)">'+optionsFor(b.id).length+' option'+(optionsFor(b.id).length>1?'s':'')+'</button></td>'
+      +'<td>'+chipRow(b.products,b.id,b.title)+'</td>'
+      +'<td>'+actions(b,'bundle')+'</td></tr>';
+  }).join('');
+  return '<table><thead><tr><th style="width:14%">Bundle</th><th style="width:7%">Status</th><th style="width:10%">Type</th><th style="width:12%">Payment</th><th style="width:8%">Shipping</th><th style="width:14%">Buying options</th><th style="width:17%">Products</th><th style="width:18%;text-align:right">Actions</th></tr></thead><tbody>'+rows+'</tbody></table><div class="tfoot">Showing '+list.length+' of '+BUNDLES.length+' bundles</div>';
+}
+
+function currentItems(){ return currentType().kind==='bundle' ? BUNDLES : PLANS; }
+function productIndex(items){
+  items=items||currentItems();
+  var idx={};
+  items.forEach(function(p){(p.products||[]).forEach(function(prod){if(!idx[prod.name])idx[prod.name]={name:prod.name,owners:[]};idx[prod.name].owners.push(p);});});
+  return Object.keys(idx).map(function(k){return idx[k]}).sort(function(a,b){return b.owners.length-a.owners.length||a.name.localeCompare(b.name)});
+}
+function productTable(){
+  var kind=currentType().kind, noun=kind==='bundle'?'bundle':'plan';
+  var items=productIndex();
+  var rows=items.map(function(it,i){
+    var multi=it.owners.length>1, rid='pr-'+i;
+    var chips=it.owners.map(function(p){return '<a class="chip" href="#" title="View '+noun+' options" onclick="openOptModal(\''+p.id+'\',event);return false;"><span class="mini" style="background:'+(p.active?'var(--success)':'var(--faint)')+'"></span>'+esc(p.title)+'</a>';}).join('');
+    var main='<tr><td>'+productChip({name:it.name})+'</td>'
+      +'<td>'+(multi?'<span class="badge b-info">in '+it.owners.length+' '+noun+'s</span>':'<span class="badge b-inactive">in 1 '+noun+'</span>')+'</td>'
+      +'<td>'+chips+'</td><td><div class="rowact"><span class="exp" onclick="toggle(\''+rid+'\')">View '+noun+'s ▾</span></div></td></tr>';
+    var sub='<tr class="subrow hide" id="'+rid+'"><td colspan="4"><div class="inner"><div class="kv">'+capFirst(noun)+'s containing “'+esc(it.name)+'”</div>'
+      +it.owners.map(function(p){return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-top:1px solid var(--line2)"><span class="pname">'+esc(p.title)+'</span><span style="display:flex;gap:10px;align-items:center">'+statusBadge(p.active,p.draft)+'<button class="btn sm" onclick="openOptModal(\''+p.id+'\',event)">View buying options</button><button class="btn sm">Edit '+noun+'</button></span></div>';}).join('')
+      +'</div></td></tr>';
+    return main+sub;
+  }).join('');
+  return '<table><thead><tr><th style="width:26%">Product</th><th style="width:16%">Appears in</th><th style="width:42%">'+capFirst(noun)+'s</th><th style="width:16%;text-align:right"></th></tr></thead><tbody>'+rows+'</tbody></table><div class="tfoot">'+items.length+' distinct products across '+noun+'s · expand a product to jump to its '+noun+'s</div>';
+}
+function capFirst(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+function toggle(id){var el=document.getElementById(id);if(el)el.classList.toggle('hide');}
+
+// ---- type-aware stats + create button -----------------------------------
+function currentType(){return CURTYPES[activeType]||CURTYPES[0];}
+function statsFor(type){
+  if(type.kind==='plan'){
+    var total=PLANS.length, active=PLANS.filter(function(p){return p.active;}).length;
+    var unique=productIndex().length;
+    return {total:total, active:active, productLabel:unique+' unique products'};
+  }
+  if(type.kind==='bundle'){
+    var totalB=BUNDLES.length, activeB=BUNDLES.filter(function(b){return b.active;}).length;
+    var sumProducts=BUNDLES.reduce(function(a,b){return a+b.products.length;},0);
+    return {total:totalB, active:activeB, productLabel:sumProducts+' products across bundles'};
+  }
+  return {total:0, active:0, productLabel:'no data yet'};
+}
+function statlineHtml(){
+  var type=currentType(), s=statsFor(type);
+  if(type.kind==='future') return '<span>Not built yet — nothing to show.</span>';
+  var html='<span><b>'+s.active+'</b> of <b>'+s.total+'</b> active</span><span class="dot"></span><span><b>'+s.productLabel.split(' ')[0]+'</b> '+s.productLabel.split(' ').slice(1).join(' ')+'</span>';
+  return html;
+}
+function renderCreateButton(){
+  var type=currentType();
+  var btn=document.getElementById('createBtn');
+  btn.textContent=type.createLabel;
+  if(type.kind==='future'){btn.setAttribute('disabled','');btn.title='Coming soon';}
+  else{btn.removeAttribute('disabled');btn.title='';}
+  renderPageActions();
+}
+// page-level ⋯ (Export plans / Re-sync all) — shown only in the 2-type segmented layout
+function renderPageActions(){
+  var wrap=document.getElementById('pageMenuWrap');
+  if(!wrap) return;
+  wrap.style.display = (CURTYPES.length<=SEG_MAX) ? '' : 'none';
+}
+function renderStatusFilter(){
+  var type=currentType();
+  var box=document.getElementById('statusfilter');
+  if(type.kind==='future'){box.innerHTML='';return;}
+  var items=currentItems();
+  var total=items.length;
+  var active=items.filter(function(p){return p.active && !p.draft;}).length;
+  var draft=items.filter(function(p){return p.draft;}).length;
+  var inactive=items.filter(function(p){return !p.active && !p.draft;}).length;
+  box.innerHTML=['All '+total,'Active '+active,'Inactive '+inactive,'Draft '+draft].map(function(label,i){
+    var parts=label.split(' '); var n=parts.pop(); var text=parts.join(' ');
+    return '<button class="'+(i===activeStatus?'on':'')+'" onclick="pickStatus('+i+')">'+text+' <span class="c">'+n+'</span></button>';
+  }).join('');
+}
+function pickStatus(i){activeStatus=i;renderStatusFilter();renderTable();}
+
+function renderTable(){
+  var type=currentType();
+  var byProductBtn=document.getElementById('byProductBtn');
+  if(type.kind==='future'){
+    byProductBtn.setAttribute('disabled','');
+    document.getElementById('plan').innerHTML='<div style="padding:40px;text-align:center;color:var(--faint)">No screen built for this purchase-option type yet.</div>';
+    document.getElementById('product').innerHTML='';
+    return;
+  }
+  byProductBtn.removeAttribute('disabled');
+  byProductBtn.title='';
+  document.getElementById('plan').innerHTML = type.kind==='bundle' ? bundleTable() : planTable();
+  document.getElementById('product').innerHTML = productTable();
+}
+
+// ---- type selector (segmented <=4 types, dropdown beyond), stats inline --
+function renderTypes(types){
+  var row=document.getElementById('typerow');
+  var statHtml='<span class="statline" id="statline">'+statlineHtml()+'</span>';
+  if(types.length<=SEG_MAX){
+    row.innerHTML='<div class="pseg typeseg">'+types.map(function(t,i){return '<button class="'+(i===activeType?'on':'')+'" onclick="pickType('+i+')">'+t.label+' <span class="c">'+(t.kind==='plan'?PLANS.length:t.kind==='bundle'?BUNDLES.length:0)+'</span></button>';}).join('')+'</div>'
+      +'<span class="statsep"></span>'+statHtml
+      +'<span class="typehint">More purchase-option types can be added here</span>';
+  }else{
+    var cur=types[activeType]||types[0];
+    var curCount=cur.kind==='plan'?PLANS.length:cur.kind==='bundle'?BUNDLES.length:0;
+    row.innerHTML='<div class="typedd"><button class="ddbtn" onclick="openMenu(\'typemenu\', event)">'+cur.label+' <span class="c">'+curCount+'</span> <span style="color:var(--faint)">▾</span></button><div class="dropmenu wide hide" id="typemenu">'
+      +types.map(function(t,i){
+        var count=t.kind==='plan'?PLANS.length:t.kind==='bundle'?BUNDLES.length:0;
+        var cls=(i===activeType?'on':'')+(t.soon?' soon':'');
+        var clickAttr=t.soon?'':'onclick="pickType('+i+');closeAllMenus()"';
+        return '<div class="mi '+cls+'" '+clickAttr+'>'+t.label+'<span class="c">'+(t.soon?'soon':count)+'</span></div>';
+      }).join('')
+      +'</div></div><span class="statsep"></span>'+statHtml
+      +'<span class="typehint">'+types.length+' types — switched to a dropdown automatically</span>';
+  }
+}
+
+function pickType(i){
+  activeType=i; activeStatus=0;
+  renderTypes(CURTYPES); renderCreateButton(); renderStatusFilter(); renderTable();
+}
+function setTypes(n){
+  CURTYPES=(n===2?TYPES_FEW:TYPES_MANY); activeType=0; activeStatus=0;
+  renderTypes(CURTYPES); renderCreateButton(); renderStatusFilter(); renderTable();
+  document.getElementById('pv2').classList.toggle('on',n===2);
+  document.getElementById('pv6').classList.toggle('on',n===6);
+}
+function setLens(lens){
+  activeLens=lens;
+  document.getElementById('plan').classList.toggle('hide',lens!=='plan');
+  document.getElementById('product').classList.toggle('hide',lens!=='product');
+  document.querySelectorAll('#lensToggle button').forEach(function(b){b.classList.toggle('on',b.textContent.trim()===(lens==='plan'?'By Plan':'By Product'));});
+}
+document.getElementById('searchInput').addEventListener('input', renderTable);
+
+// ---- init ----------------------------------------------------------------
+renderTypes(CURTYPES); renderCreateButton(); renderStatusFilter(); renderTable();
+</script>
+</body>
+</html>

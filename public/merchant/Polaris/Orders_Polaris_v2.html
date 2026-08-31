@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Orders (Polaris web components v2)</title>
+<script src="https://cdn.shopify.com/shopifycloud/polaris.js"></script>
+<style>
+  :root{
+    --p-ink:#303030; --p-muted:#616161; --p-faint:#8a8a8a;
+    --p-line:#e3e3e3; --p-line2:#ebebeb; --p-surface:#fff;
+    --p-primary:#303030; --p-success:#29845a; --p-success-bg:#cdfee1;
+    --p-link:#005bd3; --p-attn-bg:#ffefcf; --p-attn:#8a6116;
+  }
+  body{margin:0;background:#f1f1f1;font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--p-ink)}
+
+  /* Shopify admin shell */
+  .admin{display:flex;min-height:100vh}
+  .navL{flex:none;width:232px;background:#ebebeb;border-right:1px solid var(--p-line);
+    padding:10px 8px;display:flex;flex-direction:column;gap:1px;position:sticky;top:0;align-self:flex-start;height:100vh;overflow:auto}
+  .navItem{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;color:var(--p-ink);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
+  .navItem:hover{background:#dedede}
+  .navItem .ico{width:18px;height:18px;flex:none;color:#4a4a4a}
+  .navItem .ct{margin-left:auto;font-size:12px;color:var(--p-muted);background:#e0e0e0;border-radius:8px;padding:0 7px;line-height:18px}
+  .navSec{color:var(--p-muted);font-size:13px;font-weight:500;display:flex;align-items:center;height:30px;padding:0 8px;margin-top:6px}
+  .navSec .chev{margin-left:auto;color:var(--p-faint)}
+  .navApp{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;font-weight:600;background:#fff;box-shadow:0 1px 0 rgba(0,0,0,.04);margin-top:2px}
+  .navApp .logo{width:20px;height:20px;border-radius:5px;background:var(--p-primary);display:grid;place-items:center;color:#fff;font-size:11px;flex:none}
+  .navApp .dot{margin-left:auto;width:6px;height:6px;border-radius:50%;background:#8a8a8a}
+  .navSub{display:flex;align-items:center;height:30px;padding:0 8px 0 34px;border-radius:8px;color:var(--p-muted);font-size:13px;cursor:pointer}
+  .navSub:hover{background:#dedede;color:var(--p-ink)}
+  .navSub.sel{color:var(--p-ink);font-weight:500}
+  .navGap{flex:1}
+  .appmain{flex:1;min-width:0;display:flex;flex-direction:column}
+  .appbar{height:52px;background:#fff;border-bottom:1px solid var(--p-line);display:flex;align-items:center;gap:10px;padding:0 18px}
+  .appbar .logo{width:24px;height:24px;border-radius:6px;background:var(--p-primary);display:grid;place-items:center;color:#fff;font-size:12px}
+  .appbar .name{font-weight:650;font-size:14px}
+  .appbar .more{margin-left:auto;color:var(--p-muted);font-size:20px;cursor:pointer;letter-spacing:1px}
+
+  .savebar{position:sticky;top:0;z-index:60;min-height:52px;background:#1a1a1a;color:#fff;display:flex;align-items:center;gap:12px;padding:8px 16px}
+  .savebar .sbtxt{font-weight:600;font-size:13px}
+  .savebar .sbacts{margin-left:auto;display:flex;gap:8px}
+  .savebar button{font:inherit;font-size:13px;font-weight:600;border-radius:8px;padding:6px 13px;cursor:pointer}
+  .savebar .discard{background:transparent;border:1px solid #4a4a4a;color:#fff}
+  .savebar .discard:hover{background:#2a2a2a}
+  .savebar .save{background:#fff;border:1px solid #fff;color:#1a1a1a}
+
+  /* full-width two-column layout (reduces the base-width side margins) */
+  .pcols{display:flex;gap:16px;align-items:flex-start}
+  .maincol{flex:1;min-width:0}
+  .sidecol{flex:none;width:326px}
+
+  /* card wrapper (used for every step + sidebar block; matches Polaris section chrome) */
+  .card{background:#fff;border:1px solid var(--p-line);border-radius:12px;box-shadow:0 1px 0 rgba(0,0,0,.04);margin-bottom:14px;overflow:hidden}
+  .cardpad{padding:16px 18px}
+
+  /* collapsible step */
+  .step .stephdr{display:flex;gap:12px;align-items:flex-start;padding:15px 18px;cursor:pointer;user-select:none}
+  .step .num{flex:none;width:26px;height:26px;border-radius:50%;background:var(--p-primary);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:600}
+  .step.done .num{background:var(--p-success)}
+  .step .sttl{flex:1;min-width:0}
+  .step h2{margin:0;font-size:15px;font-weight:650}
+  .step .stephdr p{margin:2px 0 0;color:var(--p-muted);font-size:12.5px}
+  .step .stepchev{color:var(--p-faint);font-size:18px;transition:transform .15s;align-self:center}
+  .step.open .stepchev{transform:rotate(90deg)}
+  .stepbody{padding:16px 18px 18px;border-top:1px solid var(--p-line2)}
+  .stepbody.collapsed{display:none}
+  .step .collsum{margin:2px 0 0;color:var(--p-muted);font-size:12.5px}
+  .opt{font-size:10px;font-weight:600;color:var(--p-faint);border:1px solid var(--p-line);border-radius:5px;padding:1px 6px;text-transform:uppercase;letter-spacing:.03em;margin-left:8px;vertical-align:middle}
+
+  /* locked segmented control */
+  .seg{display:inline-flex;border:1px solid var(--p-line);border-radius:8px;overflow:hidden;background:#fff}
+  .seg button{border:0;background:#fff;padding:6px 12px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--p-muted)}
+  .seg button.on{background:var(--p-primary);color:#fff}
+
+  /* payment chips */
+  .chkchip{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border:1px solid var(--p-line);border-radius:20px;font-size:12.5px;font-weight:600;color:var(--p-muted);cursor:pointer;background:#fff}
+  .chkchip::before{content:"";width:14px;height:14px;border-radius:50%;border:1.5px solid var(--p-faint);flex:none}
+  .chkchip.on{border-color:var(--p-success);color:#0f5132;background:var(--p-success-bg)}
+  .chkchip.on::before{content:"\2713";border:0;color:#0f5132;font-size:11px;line-height:14px;text-align:center}
+
+  .disc{display:inline-flex;align-items:center;gap:7px;cursor:pointer;color:var(--p-link);font-weight:600;font-size:12.5px;background:none;border:0;padding:4px 0}
+  .disc .chev{transition:transform .15s}
+  .disc.open .chev{transform:rotate(90deg)}
+
+  .prow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--p-line2)}
+  .prow .x{margin-left:auto;color:var(--p-muted);font-size:12px;cursor:pointer;background:none;border:0}
+  .rowline{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .field{border:1px solid var(--p-line);border-radius:8px;padding:6px 10px;background:#fff;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--p-muted)}
+  .divv{width:1px;height:22px;background:var(--p-line)}
+  .help{font-size:12px;color:var(--p-muted)}
+  .calc{border:1px solid var(--p-line);background:#f7f7f7;border-radius:9px;padding:11px 13px;font-size:12.5px;color:var(--p-muted)}
+  .calc b{color:var(--p-ink)}
+
+  .optlist{margin-bottom:10px}
+  .optcard{border:1px solid var(--p-line);border-radius:10px;margin-bottom:10px;background:#fff}
+  .optcard.dragging{opacity:.45}
+  .optcard.dragover{border-color:var(--p-primary);box-shadow:inset 0 0 0 1px var(--p-primary)}
+  .optsum{display:flex;align-items:center;gap:10px;padding:11px 14px}
+  .draghandle{cursor:grab;color:var(--p-faint);font-size:15px;padding:0 2px;flex:none;line-height:1}
+  .optsum .title{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;min-width:0}
+  .optsum .chips{display:flex;gap:6px;flex-wrap:nowrap;margin-left:6px;flex:none}
+  .optsum .chips .pill,.optsum .chips .tagchip{white-space:nowrap}
+  .optsum .act{flex:none}
+  .optsum .act{margin-left:auto;display:flex;gap:6px}
+  .pill{border:1px solid var(--p-line);border-radius:20px;padding:2px 10px;font-size:12px;color:var(--p-muted);background:#fafafa}
+  .tagchip{display:inline-flex;align-items:center;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600;color:#fff}
+  .opteditor{border-top:1px solid var(--p-line2);padding:15px;background:#fbfbfb}
+  .q{font-weight:600;margin:0 0 8px;font-size:13.5px}
+  .qgroup{margin-bottom:16px}
+  .btnsm{border:1px solid var(--p-line);background:#fff;border-radius:8px;padding:4px 10px;font:inherit;font-size:12px;font-weight:600;color:var(--p-ink);cursor:pointer}
+  .btnsm.ico-x{padding:4px 8px;color:var(--p-muted)}
+  .btnghost{border:1px dashed var(--p-line);background:#fff;border-radius:8px;padding:6px 12px;font:inherit;font-size:12.5px;font-weight:500;color:var(--p-muted);cursor:pointer}
+
+  /* plan summary step checklist */
+  .sumrow{display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--p-line2)}
+  .sumrow:last-child{border-bottom:0}
+  /* plain status lights, not checkboxes: a solid dot, no glyph, so it never reads as checkable */
+  /* status lights: identical solid dots, only the colour differs (green = done, grey = optional-not-set) */
+  .sicon{display:inline-block;box-sizing:border-box;width:10px;height:10px;min-width:10px;border-radius:50%;flex:none;margin-top:6px;background:#c7c7c7}
+  .sicon.ok{background:var(--p-success)}
+  .sicon.opt{background:#c7c7c7}
+  .sicon.req{background:var(--p-attn)}
+  .sname{font-weight:600;font-size:12.5px;display:flex;align-items:center;gap:6px}
+  .sname .optm{font-weight:600;color:var(--p-faint);font-size:10px;border:1px solid var(--p-line);border-radius:5px;padding:0 5px;text-transform:uppercase;letter-spacing:.03em}
+  .sval{color:var(--p-muted);font-size:12px}
+  .req-star{color:#e51c00;font-weight:700}
+
+  /* sidebar detector rows */
+  .drow{padding:11px 0;border-bottom:1px solid var(--p-line2)}
+  .drow:last-child{border-bottom:0}
+  .drow .dtop{display:flex;align-items:center;gap:8px}
+  .drow .dname{font-weight:650;font-size:13px}
+  .drow .dact{margin-left:auto}
+  .lnk{background:none;border:0;color:var(--p-link);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:3px}
+  .statusdot{width:8px;height:8px;border-radius:50%;flex:none}
+  .badge2{display:inline-flex;align-items:center;gap:5px;border-radius:8px;padding:1px 8px;font-size:11.5px;font-weight:600}
+  .badge2.ok{background:var(--p-success-bg);color:#0f5132}
+  .badge2.attn{background:var(--p-attn-bg);color:var(--p-attn)}
+  .badge2.info{background:#d6ecff;color:#00527c}
+  .badge2.sub{background:#ededed;color:#5c5c5c}
+
+  /* storefront widget preview */
+  .mqgrid{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+  .mqleft{flex:1;min-width:220px}
+  .mqright{flex:none;width:280px}
+  .wprev{border:1px solid var(--p-line);border-radius:12px;overflow:hidden;transition:opacity .2s,filter .2s}
+  .wprev.off{opacity:.5;filter:grayscale(.4)}
+  .wbar{background:#16233f;color:#fff;display:flex;align-items:center;justify-content:center;gap:7px;padding:10px 12px;font-size:12px}
+  .wbar .msgwrap{position:relative;height:16px;min-width:150px;max-width:210px;overflow:hidden;text-align:center}
+  .wbar .msg{position:absolute;left:0;right:0;top:0;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:0;transition:opacity .5s}
+  .wbar .msg.show{opacity:1}
+  .wbar .arrow{color:#aeb9cf;letter-spacing:-2px}
+  .wbody{background:#F4F0E8;padding:14px}
+  .wbody .prow2{display:flex;align-items:center;gap:9px;border:0;padding:0}
+  .wbody .wradio{width:16px;height:16px;border-radius:50%;border:2px solid #16233f;position:relative;flex:none}
+  .wbody .wradio::after{content:"";position:absolute;inset:3px;border-radius:50%;background:#16233f}
+  .wbody .wtitle{font-weight:700;color:#2B2B2B;font-size:14px}
+  .wbody .wpill{margin-left:auto;background:#E3A23E;color:#5A3A0E;font-weight:700;font-size:11px;border-radius:20px;padding:3px 11px}
+  .wbody .wsel{margin-top:13px;color:#9A9486;font-size:10px;font-weight:700;letter-spacing:.06em}
+  .hide{display:none !important}
+</style>
+<!-- bare mode: when embedded in the WIP prototype shell, hide this file's own admin chrome
+so the shell is not drawn twice. Standalone viewing is unaffected. -->
+<script>if(/bare/.test(location.search+location.hash))document.documentElement.classList.add("bare");</script>
+<style>html.bare .navL,html.bare .appbar,html.bare .savebar{display:none!important}html.bare .admin{min-height:0}html.bare,html.bare body{background:#f1f1f1}</style>
+</head>
+<body>
+<div class="admin">
+
+  <aside class="navL">
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8.5 10 3l7 5.5V16a1 1 0 0 1-1 1h-3v-5H7v5H4a1 1 0 0 1-1-1z"/></svg>Home</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="13" rx="2"/><path d="M7 8h6M7 11h6"/></svg>Orders<span class="ct">127</span></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h12v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M7 6V5a3 3 0 0 1 6 0v1"/></svg>Products</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="7" r="3"/><path d="M4 16c0-3 2.7-5 6-5s6 2 6 5"/></svg>Customers</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 15V9m4 6V5m4 10v-4m4 4V7"/></svg>Growth</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="3"/><path d="M12 12l4 4M13.5 6.5 16 4"/></svg>Discounts</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="12" rx="2"/><path d="M7 8h6M7 11h4"/></svg>Content</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="6"/><path d="M4 10h12M10 4c2 2 2 10 0 12M10 4c-2 2-2 10 0 12"/></svg>Markets</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 16h12M6 16V9m4 7V5m4 11v-4"/></svg>Analytics</div>
+    <div class="navSec">Sales channels<span class="chev">&#8250;</span></div>
+    <div class="navSec">Apps<span class="chev">&#8250;</span></div>
+    <div class="navApp"><span class="logo">&#9670;</span>StackBack Subscrip&hellip;<span class="dot"></span></div>
+    <div class="navSub">Manage Purchase Options</div>
+    <div class="navSub">Purchase Contracts</div>
+    <div class="navSub">One-Time Orders</div>
+    <div class="navSub sel">Orders</div>
+    <div class="navSub">Payment Reminders</div>
+    <div class="navSub">Customers</div>
+    <div class="navSub">View more</div>
+    <div class="navGap"></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m7-7h-2M5 10H3m12.5-5-1.5 1.5M6 14l-1.5 1.5m11 0L14 14M6 6 4.5 4.5"/></svg>Settings</div>
+  </aside>
+
+  <div class="appmain">
+    <div class="appbar"><span class="logo">&#9670;</span><span class="name">StackBack Subscriptions &amp; More</span><span class="more">&ctdot;</span></div>
+
+    <style>
+      /* v2 keeps only list chrome that real Polaris does not provide. The table, badges,
+         thumbnails, selects, search and kebab are all genuine s-* components. */
+      .lwrap{padding:0 0 26px}
+      .tabs{display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin:0 0 12px}
+      .tabs button{appearance:none;border:1px solid transparent;background:transparent;font:inherit;font-size:13px;font-weight:600;color:var(--p-muted);height:32px;padding:0 12px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+      .tabs button.on{background:#fff;color:var(--p-ink);border-color:var(--p-line);box-shadow:0 1px 0 rgba(0,0,0,.04)}
+      .tabs button .n{font-size:11px;font-weight:700;opacity:.7}
+
+      .toolbar{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin:0 0 10px}
+      .toolbar .grow{flex:1 1 300px;min-width:240px}
+      .toolbar .fw{flex:0 0 auto;min-width:150px}
+      .chipRow{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px;min-height:0}
+      .chipf{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 6px 0 10px;border-radius:99px;border:1px solid var(--p-line);background:#fff;font-size:12px;font-weight:600;color:var(--p-muted)}
+      .chipf .x{cursor:pointer;color:var(--p-faint);font-weight:700;padding:0 3px;border-radius:50%}
+      .chipf .x:hover{background:#f1f1f1;color:var(--p-ink)}
+      .clearAll{appearance:none;border:0;background:none;font:inherit;font-size:12px;font-weight:600;color:var(--p-link);cursor:pointer;padding:0 4px}
+
+      .wstrip{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:0 0 14px;align-items:stretch}
+      .wtile{background:#fff;border:1px solid var(--p-line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:3px}
+      .wtile .k{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--p-faint)}
+      .wtile .v{font-size:21px;font-weight:650;letter-spacing:-.3px}
+      .wtile .d{font-size:12px;color:var(--p-muted);margin-top:auto}
+
+      /* cell internals */
+      .c1{font:700 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+      .c2{color:var(--p-muted);font-size:12px;margin-top:2px}
+      .cust{font-weight:600;font-size:12.5px}
+      .prods{display:flex;align-items:center;gap:6px}
+      .prods .more{font-size:12px;color:var(--p-link);font-weight:600;cursor:pointer;white-space:nowrap}
+      .stack{display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+      .rowacts{display:flex;align-items:center;gap:6px;justify-content:flex-end}
+      .b{height:28px;padding:0 11px;border-radius:8px;border:1px solid var(--p-line);background:#fff;font:inherit;font-size:12.5px;font-weight:600;color:var(--p-ink);cursor:pointer;white-space:nowrap}
+      .b.pri{background:var(--p-ink);color:#fff;border-color:var(--p-ink)}
+      .num{text-align:right;font-variant-numeric:tabular-nums}
+
+      /* expandable detail */
+      .exp{background:#fbfbfb;border-top:1px solid var(--p-line2)}
+      .expIn{padding:13px 16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}
+      .expF{font-size:12.5px}
+      .expF .k{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--p-faint);margin-bottom:3px}
+      .caret{appearance:none;border:0;background:none;cursor:pointer;color:var(--p-faint);font-size:14px;padding:0 2px;line-height:1}
+
+      .note{background:#eaf4ff;border:1px solid #b9dcf5;color:#00527c;border-radius:10px;padding:11px 13px;font-size:12.5px;margin:14px 0 0}
+      .note b{font-weight:650}
+      .emptyRow{padding:34px 16px;text-align:center;color:var(--p-faint);font-size:12.5px}
+      .hide{display:none !important}
+    </style>
+
+    <s-page heading="Orders" inline-size="large">
+      <s-button slot="secondary-actions">Export</s-button>
+      <s-button slot="primary-action" variant="primary">Sync now</s-button>
+
+      <div class="lwrap">
+
+        <!-- Two states only. StackBack's job ends when the order reaches Shopify, so
+             "placed in Shopify" IS done. Fulfilment after that belongs to Shopify. -->
+        <div class="tabs" id="tabs">
+          <button data-tab="due" class="on">To be placed <span class="n"></span></button>
+          <button data-tab="placed">Order placed <span class="n"></span></button>
+          <button data-tab="onetime">One-time <span class="n"></span></button>
+          <button data-tab="all">All orders <span class="n"></span></button>
+        </div>
+
+        <div class="toolbar">
+          <div class="grow">
+            <s-search-field id="q" label="Search orders" labelAccessibilityVisibility="exclusive"
+              placeholder="Search order, customer, contract, product or SKU"></s-search-field>
+          </div>
+          <div class="fw"><s-select id="fWin" label="Delivery window">
+            <s-option value="7" selected>Next 7 days</s-option>
+            <s-option value="14">Next 14 days</s-option>
+            <s-option value="30">Next 30 days</s-option>
+            <s-option value="all">Any date</s-option>
+          </s-select></div>
+          <div class="fw"><s-select id="fType" label="Type">
+            <s-option value="all" selected>All types</s-option>
+            <s-option value="subscription">Subscription</s-option>
+            <s-option value="bundle">Bundle</s-option>
+            <s-option value="onetime">One-time</s-option>
+          </s-select></div>
+          <div class="fw"><s-select id="fPay" label="Payment">
+            <s-option value="all" selected>All payments</s-option>
+            <s-option value="prepaid">Prepaid</s-option>
+            <s-option value="payg">Pay per delivery</s-option>
+          </s-select></div>
+          <div class="fw"><s-select id="fSort" label="Sort by">
+            <s-option value="date" selected>Delivery date</s-option>
+            <s-option value="units">Units, most first</s-option>
+            <s-option value="customer">Customer A to Z</s-option>
+          </s-select></div>
+        </div>
+
+        <div class="chipRow" id="chipRow"></div>
+
+        <div class="wstrip" id="wstrip">
+          <div class="wtile"><div class="k">Orders in view</div><div class="v" id="wOrders">0</div><div class="d" id="wOrdersD">paid only</div></div>
+          <div class="wtile"><div class="k">Units to pick</div><div class="v" id="wUnits">0</div><div class="d" id="wUnitsD">across 0 SKUs</div></div>
+          <div class="wtile"><div class="k">To be placed</div><div class="v" id="wToPlace">0</div><div class="d">pushes to Shopify 3 to 5 days out</div></div>
+          <div class="wtile"><div class="k">Order placed</div><div class="v" id="wPlaced">0</div><div class="d">done, Shopify handles fulfilment</div></div>
+        </div>
+
+        <!-- The whole table is built in JS, header included. Declaring it in static markup
+             makes s-table run its structure check while its children are still being parsed,
+             which produces spurious "missing TableHeaderRow" warnings from Polaris. Building
+             it after load means every child exists before the element upgrades. -->
+        <s-section padding="none">
+          <div id="tableHost"></div>
+          <div class="emptyRow hide" id="emptyRow">
+            No orders match this search or filter.
+            <div style="margin-top:10px"><button class="b" id="clearBtn">Clear search and filters</button></div>
+          </div>
+        </s-section>
+
+        <div class="note">
+          <b>Two things are absent by design.</b> A pay-per-delivery order whose invoice is unpaid is not here, because the warehouse only prepares what has been paid for; it sits in Payment Reminders until payment clears. A paused subscription's delivery is not here either, because pausing rolls the schedule forward, so there is nothing to pick. Both are Customer Success work.
+        </div>
+
+      </div>
+    </s-page>
+  </div>
+</div>
+
+<script>
+  var $ = function(id){ return document.getElementById(id); };
+
+  /* Status model, corrected 2026-07-29 per Sumant: once StackBack has created the order in
+     Shopify its own job is finished, so "Order placed" is the terminal state. There is no
+     separate delivered state, because delivery is Shopify's and the 3PL's business and
+     StackBack never learns about it. */
+  var ST = {
+    toplace:{ badge:'Attention', tone:'caution', label:'To be placed', act:'Place now'   },
+    placed: { badge:'Complete',  tone:'success', label:'Order placed', act:'View in Shopify' }
+  };
+
+  var ORDERS = [
+    {c:'SB-8851', cust:'Priya Menon',    pc:'PC-1041', plan:'Monthly Essentials',     opt:'Monthly, prepaid 6x', date:'29 Jul', iso:'2026-07-29', win:7,  kind:'subscription', pay:'prepaid', st:'placed',  placedOn:'26 Jul', prods:['Cold Pressed Coffee 500g','Wellness Powder 250g'], skus:['CPC-500','WLP-250'], units:3},
+    {c:'SB-8850', cust:'Rahul Iyer',     pc:'PC-1039', plan:'Quarterly Wellness Box', opt:'Quarterly, prepaid 4x', date:'29 Jul', iso:'2026-07-29', win:7,  kind:'bundle', pay:'prepaid', st:'placed', placedOn:'26 Jul', prods:['Herbal Tea Sampler','Collagen Peptides 500g','Magnesium Glycinate 90ct'], skus:['HTS-01','COL-500','MAG-090'], units:6},
+    {c:'SB-8849', cust:'Meera Nair',     pc:'PC-1035', plan:'Coffee Club',            opt:'Bi-weekly, pay per delivery', date:'30 Jul', iso:'2026-07-30', win:7, kind:'subscription', pay:'payg', st:'placed', placedOn:'27 Jul', prods:['Cold Pressed Coffee 500g'], skus:['CPC-500'], units:2},
+    {c:'SB-8848', cust:'Arjun Das',      pc:null,      plan:'Festive Trio bundle',    opt:'One-time purchase', date:'30 Jul', iso:'2026-07-30', win:7, kind:'onetime', pay:'prepaid', st:'placed', placedOn:'27 Jul', prods:['Herbal Tea Sampler','Ashwagandha Gummies 60ct','Cold Pressed Coffee 500g'], skus:['HTS-01','ASH-060','CPC-500'], units:3},
+    {c:'SB-8847', cust:'Kabir Shah',     pc:'PC-1044', plan:'Monthly Essentials',     opt:'Monthly, prepaid 6x', date:'01 Aug', iso:'2026-08-01', win:7, kind:'subscription', pay:'prepaid', st:'toplace', placedOn:null, prods:['Cold Pressed Coffee 500g','Wellness Powder 250g'], skus:['CPC-500','WLP-250'], units:3},
+    {c:'SB-8846', cust:'Sneha Kulkarni', pc:'PC-1046', plan:'Coffee Club',            opt:'Bi-weekly, pay per delivery', date:'02 Aug', iso:'2026-08-02', win:7, kind:'subscription', pay:'payg', st:'toplace', placedOn:null, prods:['Cold Pressed Coffee 500g'], skus:['CPC-500'], units:2},
+    {c:'SB-8845', cust:'Vikram Patel',   pc:'PC-1048', plan:'Quarterly Wellness Box', opt:'Quarterly, prepaid 4x', date:'03 Aug', iso:'2026-08-03', win:7, kind:'bundle', pay:'prepaid', st:'toplace', placedOn:null, prods:['Herbal Tea Sampler','Collagen Peptides 500g','Magnesium Glycinate 90ct'], skus:['HTS-01','COL-500','MAG-090'], units:6},
+    {c:'SB-8844', cust:'Anita Desai',    pc:'PC-1050', plan:'Monthly Essentials',     opt:'Monthly, prepaid 6x', date:'09 Aug', iso:'2026-08-09', win:14, kind:'subscription', pay:'prepaid', st:'toplace', placedOn:null, prods:['Cold Pressed Coffee 500g','Wellness Powder 250g'], skus:['CPC-500','WLP-250'], units:3},
+    {c:'SB-8843', cust:'Rohan Mehta',    pc:'PC-1052', plan:'Coffee Club',            opt:'Bi-weekly, pay per delivery', date:'12 Aug', iso:'2026-08-12', win:14, kind:'subscription', pay:'payg', st:'toplace', placedOn:null, prods:['Cold Pressed Coffee 500g'], skus:['CPC-500'], units:2},
+    {c:'SB-8842', cust:'Divya Menon',    pc:'PC-1055', plan:'Build Your Box',         opt:'Monthly, prepaid 3x', date:'20 Aug', iso:'2026-08-20', win:30, kind:'bundle', pay:'prepaid', st:'toplace', placedOn:null, prods:['Ashwagandha Gummies 60ct','Collagen Peptides 500g'], skus:['ASH-060','COL-500'], units:4},
+    {c:'SB-8836', cust:'Meera Nair',     pc:'PC-1035', plan:'Coffee Club',            opt:'Bi-weekly, pay per delivery', date:'24 Jul', iso:'2026-07-24', win:0, kind:'subscription', pay:'payg', st:'placed', placedOn:'21 Jul', prods:['Cold Pressed Coffee 500g'], skus:['CPC-500'], units:2},
+    {c:'SB-8835', cust:'Arjun Das',      pc:null,      plan:'Build Your Box',         opt:'One-time purchase', date:'24 Jul', iso:'2026-07-24', win:0, kind:'onetime', pay:'prepaid', st:'placed', placedOn:'21 Jul', prods:['Herbal Tea Sampler','Wellness Powder 250g'], skus:['HTS-01','WLP-250'], units:4},
+    {c:'SB-8834', cust:'Priya Menon',    pc:'PC-1041', plan:'Monthly Essentials',     opt:'Monthly, prepaid 6x', date:'22 Jul', iso:'2026-07-22', win:0, kind:'subscription', pay:'prepaid', st:'placed', placedOn:'19 Jul', prods:['Cold Pressed Coffee 500g','Wellness Powder 250g'], skus:['CPC-500','WLP-250'], units:3}
+  ];
+
+  var tab='due', q='', fWin='7', fType='all', fPay='all', fSort='date';
+  var openRows = {};
+
+  var esc = function(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+  var payLabel = function(p){ return p==='payg' ? 'Pay per delivery' : 'Prepaid'; };
+  var kindLabel = function(k){ return k==='onetime' ? 'One-time' : (k==='bundle' ? 'Bundle' : 'Subscription'); };
+
+  /* search matches everything a rep or an ops person would actually type */
+  function matchesQuery(o){
+    if(!q) return true;
+    var hay = [o.c, o.cust, o.pc||'', o.plan, o.opt, kindLabel(o.kind), payLabel(o.pay),
+               ST[o.st].label, o.date].concat(o.prods, o.skus).join(' ').toLowerCase();
+    return hay.indexOf(q) >= 0;
+  }
+
+  function visible(){
+    var rows = ORDERS.filter(function(o){
+      if(tab==='due'    && o.st!=='toplace') return false;
+      if(tab==='placed' && o.st!=='placed')  return false;
+      if(tab==='onetime'&& o.kind!=='onetime') return false;
+      /* a delivery window only means something for orders still ahead of us */
+      if(o.st==='toplace' && fWin!=='all' && o.win > parseInt(fWin,10)) return false;
+      if(fType!=='all' && o.kind!==fType) return false;
+      if(fPay!=='all'  && o.pay!==fPay)  return false;
+      return matchesQuery(o);
+    });
+    rows.sort(function(a,b){
+      if(fSort==='units')    return b.units-a.units;
+      if(fSort==='customer') return a.cust.localeCompare(b.cust);
+      return a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0;
+    });
+    return rows;
+  }
+
+  function thumbs(o){
+    var show = o.prods.slice(0,3).map(function(p){
+      return '<s-thumbnail size="small" alt="'+esc(p)+'"></s-thumbnail>';
+    }).join('');
+    var extra = o.prods.length>3 ? '<span class="more">+'+(o.prods.length-3)+'</span>' : '';
+    var label = o.prods.length===1 ? esc(o.prods[0]) : o.prods.length+' products';
+    return '<div class="prods">'+show+extra+'</div><div class="c2">'+label+'</div>';
+  }
+
+  function rowHtml(o, ix){
+    var s=ST[o.st], isOpen=!!openRows[o.c];
+    var out = '<s-table-row>'
+      + '<s-table-cell><button class="caret" data-exp="'+esc(o.c)+'" aria-label="Show details">'+(isOpen?'&#9662;':'&#9656;')+'</button></s-table-cell>'
+      + '<s-table-cell><div class="c1">'+esc(o.c)+'</div></s-table-cell>'
+      + '<s-table-cell>'+esc(o.date)+'</s-table-cell>'
+      + '<s-table-cell><div class="cust">'+esc(o.cust)+'</div>'
+        + (o.pc?'<div class="c2">'+esc(o.pc)+'</div>':'<div class="c2">no contract</div>')+'</s-table-cell>'
+      + '<s-table-cell>'+thumbs(o)+'</s-table-cell>'
+      + '<s-table-cell><span class="num">'+o.units+'</span></s-table-cell>'
+      + '<s-table-cell><div class="stack"><s-badge>'+kindLabel(o.kind)+'</s-badge>'
+        + '<span class="c2">'+payLabel(o.pay)+'</span></div></s-table-cell>'
+      + '<s-table-cell><s-badge tone="'+s.tone+'">'+s.label+'</s-badge></s-table-cell>'
+      /* Locked row rule: exactly one primary action sits beside the kebab. The kebab trigger
+         carries an accessibilityLabel because Polaris rejects an icon-only button without one. */
+      + '<s-table-cell><div class="rowacts">'
+        + '<button class="b pri" data-act="'+esc(o.c)+'">'+s.act+'</button>'
+        + '<s-menu accessibilityLabel="More actions for '+esc(o.c)+'">'
+        + '<s-button variant="tertiary" accessibilityLabel="More actions for '+esc(o.c)+'">&#8943;</s-button>'
+        + '<s-button>View contract</s-button><s-button>Reschedule delivery</s-button><s-button>Export row</s-button>'
+        + '</s-menu>'
+      + '</div></s-table-cell>'
+      + '</s-table-row>';
+    if(isOpen){
+      out += '<s-table-row><s-table-cell><div class="exp"><div class="expIn">'
+        + '<div class="expF"><div class="k">Contract</div>'+(o.pc?esc(o.pc):'One-time purchase, no contract')+'</div>'
+        + '<div class="expF"><div class="k">Plan</div>'+esc(o.plan)+'</div>'
+        + '<div class="expF"><div class="k">Buying option</div>'+esc(o.opt)+'</div>'
+        + '<div class="expF"><div class="k">Order placed in Shopify</div>'+(o.placedOn?esc(o.placedOn):'not yet, pushes 3 to 5 days before delivery')+'</div>'
+        + '<div class="expF"><div class="k">Products and SKUs</div>'
+          + o.prods.map(function(p,i){ return esc(p)+' <span class="c2">'+esc(o.skus[i]||'')+'</span>'; }).join('<br>')
+        + '</div>'
+        + '</div></div></s-table-cell></s-table-row>';
+    }
+    return out;
+  }
+
+  function chips(){
+    var c=[];
+    if(q)            c.push(['Search: '+esc(q),'q']);
+    if(fWin!=='7' )  c.push(['Window: '+(fWin==='all'?'any date':'next '+fWin+' days'),'win']);
+    if(fType!=='all')c.push(['Type: '+kindLabel(fType),'type']);
+    if(fPay!=='all') c.push(['Payment: '+payLabel(fPay),'pay']);
+    if(fSort!=='date')c.push(['Sorted by '+(fSort==='units'?'units':'customer'),'sort']);
+    $('chipRow').innerHTML = c.length
+      ? c.map(function(p){ return '<span class="chipf">'+p[0]+'<span class="x" data-clr="'+p[1]+'">&#10005;</span></span>'; }).join('')
+        + '<button class="clearAll" id="clearAll">Clear all</button>'
+      : '';
+    var xs=$('chipRow').querySelectorAll('[data-clr]');
+    for(var i=0;i<xs.length;i++){
+      xs[i].onclick=(function(k){ return function(){ clearOne(k); }; })(xs[i].getAttribute('data-clr'));
+    }
+    if($('clearAll')) $('clearAll').onclick=clearAllF;
+  }
+
+  function clearOne(k){
+    if(k==='q'){ q=''; $('q').value=''; }
+    if(k==='win'){ fWin='7'; $('fWin').value='7'; }
+    if(k==='type'){ fType='all'; $('fType').value='all'; }
+    if(k==='pay'){ fPay='all'; $('fPay').value='all'; }
+    if(k==='sort'){ fSort='date'; $('fSort').value='date'; }
+    render();
+  }
+  function clearAllF(){ q=''; $('q').value=''; fWin='7'; $('fWin').value='7'; fType='all'; $('fType').value='all';
+    fPay='all'; $('fPay').value='all'; fSort='date'; $('fSort').value='date'; render(); }
+
+  var HEADS = [
+    ['',                 ''],            /* caret */
+    ['Order',            'primary'],     /* listSlot primary: the label Polaris uses in list mode */
+    ['Delivery date',    ''],
+    ['Customer',         ''],
+    ['Products',         ''],
+    ['Units',            '', 'number'],
+    ['Type and payment', ''],
+    ['Status',           ''],
+    ['',                 '']             /* actions */
+  ];
+
+  function buildTable(rows){
+    var heads = HEADS.map(function(h){
+      var a = h[1] ? ' listSlot="'+h[1]+'"' : '';
+      if(h[2]) a += ' format="'+h[2]+'"';
+      var lbl = h[0] || '';
+      /* an empty header still needs an accessible name for the column */
+      var acc = h[0] ? '' : ' accessibilityLabel="Row controls"';
+      return '<s-table-header'+a+acc+'>'+lbl+'</s-table-header>';
+    }).join('');
+    return '<s-table variant="auto">'
+      + '<s-table-header-row slot="headings">'+heads+'</s-table-header-row>'
+      + '<s-table-body>'+rows+'</s-table-body>'
+      + '</s-table>';
+  }
+
+  function render(){
+    var v=visible();
+    $('tableHost').innerHTML = v.length ? buildTable(v.map(rowHtml).join('')) : '';
+    $('emptyRow').className = 'emptyRow' + (v.length?' hide':'');
+
+    /* every number derives from the rows actually on screen */
+    var units=0, toplace=0, placed=0, skus={};
+    v.forEach(function(o){ units+=o.units; if(o.st==='toplace')toplace++; else placed++;
+      o.skus.forEach(function(s){ skus[s]=1; }); });
+    $('wOrders').textContent=v.length;
+    $('wUnits').textContent=units;
+    $('wUnitsD').textContent='across '+Object.keys(skus).length+' SKU'+(Object.keys(skus).length===1?'':'s');
+    $('wToPlace').textContent=toplace;
+    $('wPlaced').textContent=placed;
+    $('wOrdersD').textContent = (tab==='due'&&fWin!=='all') ? 'next '+fWin+' days, paid only' : 'paid only';
+
+    counts(); chips(); wire();
+  }
+
+  function counts(){
+    var set=function(sel,n){ var e=document.querySelector(sel); if(e) e.textContent=n; };
+    var inWin=function(o){ return fWin==='all' || o.win<=parseInt(fWin,10); };
+    set('#tabs button[data-tab="due"] .n',    ORDERS.filter(function(o){return o.st==='toplace' && inWin(o);}).length);
+    set('#tabs button[data-tab="placed"] .n', ORDERS.filter(function(o){return o.st==='placed';}).length);
+    set('#tabs button[data-tab="onetime"] .n',ORDERS.filter(function(o){return o.kind==='onetime';}).length);
+    set('#tabs button[data-tab="all"] .n',    ORDERS.length);
+  }
+
+  function wire(){
+    var cs=$('tableHost').querySelectorAll('[data-exp]');
+    for(var i=0;i<cs.length;i++){
+      cs[i].onclick=(function(code){ return function(){ openRows[code]=!openRows[code]; render(); }; })(cs[i].getAttribute('data-exp'));
+    }
+  }
+
+  $('tabs').addEventListener('click', function(e){
+    var b=e.target.closest('button[data-tab]'); if(!b) return;
+    tab=b.getAttribute('data-tab');
+    var bs=$('tabs').querySelectorAll('button');
+    for(var i=0;i<bs.length;i++) bs[i].classList.toggle('on', bs[i]===b);
+    render();
+  });
+
+  $('q').addEventListener('input', function(e){ q=(e.target.value||'').toLowerCase().trim(); render(); });
+  ['fWin','fType','fPay','fSort'].forEach(function(id){
+    $(id).addEventListener('change', function(e){
+      var v=e.target.value;
+      if(id==='fWin') fWin=v; if(id==='fType') fType=v; if(id==='fPay') fPay=v; if(id==='fSort') fSort=v;
+      render();
+    });
+  });
+  $('clearBtn').onclick = clearAllF;
+
+  render();
+</script>
+</body>
+</html>

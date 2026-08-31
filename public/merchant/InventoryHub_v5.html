@@ -1,0 +1,644 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Orders &amp; Inventory — Hub (v5)</title>
+<style>
+  :root{
+    --p-bg:#f1f1f1; --p-surface:#ffffff; --p-nav:#ebebeb;
+    --ink:#303030; --muted:#616161; --faint:#8a8a8a;
+    --line:#e3e3e3; --line2:#ebebeb;
+    --primary:#303030; --primary-h:#1a1a1a;
+    --link:#005bd3; --success:#29845a; --success-bg:#cdfee1;
+    --critical:#e51c00; --critical-bg:#fbeae9;
+    --infoInk:#00527c; --infoBg:#e0f0ff;
+    --amberInk:#8a6116; --amberBg:#ffefcf;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--p-bg);color:var(--ink);font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .admin{display:flex;min-height:100vh}
+  .navL{flex:none;width:232px;background:var(--p-nav);border-right:1px solid var(--line);padding:10px 8px;display:flex;flex-direction:column;gap:1px;position:sticky;top:0;align-self:flex-start;height:100vh;overflow:auto}
+  .navItem{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;color:var(--ink);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
+  .navItem:hover{background:#dedede}
+  .navItem .ico{width:18px;height:18px;flex:none;color:#4a4a4a}
+  .navItem .ct{margin-left:auto;font-size:12px;color:var(--muted);background:#e0e0e0;border-radius:8px;padding:0 7px;line-height:18px}
+  .navSec{color:var(--muted);font-size:13px;font-weight:500;display:flex;align-items:center;height:30px;padding:0 8px;margin-top:6px}
+  .navSec .chev{margin-left:auto;color:var(--faint)}
+  .navSub{display:flex;align-items:center;height:30px;padding:0 8px 0 34px;border-radius:8px;color:var(--muted);font-size:13px;cursor:pointer}
+  .navSub:hover{background:#dedede;color:var(--ink)}
+  .navSub.sel{color:var(--ink);font-weight:600;background:var(--p-surface);box-shadow:0 1px 0 rgba(0,0,0,.04)}
+  .navSub .ct{margin-left:auto;font-size:11px;font-weight:700;color:#fff;background:var(--amberInk);border-radius:20px;padding:0 6px;line-height:16px}
+  .navApp{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;font-weight:600;background:var(--p-surface);box-shadow:0 1px 0 rgba(0,0,0,.04);margin-top:2px}
+  .navApp .logo{width:20px;height:20px;border-radius:5px;background:var(--primary);display:grid;place-items:center;color:#fff;font-size:11px;flex:none}
+  .navApp .dot{margin-left:auto;width:6px;height:6px;border-radius:50%;background:#8a8a8a}
+  .navGap{flex:1}
+
+  .appmain{flex:1;min-width:0;display:flex;flex-direction:column}
+  .appbar{height:52px;background:var(--p-surface);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;padding:0 18px}
+  .appbar .logo{width:24px;height:24px;border-radius:6px;background:var(--primary);display:grid;place-items:center;color:#fff;font-size:12px}
+  .appbar .name{font-weight:650;font-size:14px}
+  .appbar .more{margin-left:auto;color:var(--muted);font-size:20px;cursor:pointer;letter-spacing:1px}
+  .pagehdr{display:flex;align-items:center;gap:14px;padding:18px 24px 4px;max-width:1300px}
+  .pagehdr h1{font-size:19px;margin:0;font-weight:650}
+  .pagehdr .sub{font-size:12.5px;color:var(--muted);margin-top:2px}
+  .pagehdr .acts{margin-left:auto;display:flex;gap:8px}
+  .wrap{padding:10px 24px 90px;max-width:1300px}
+
+  .btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 13px;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;box-shadow:0 1px 0 rgba(0,0,0,.04);display:inline-flex;align-items:center;gap:6px}
+  .btn:hover{background:#fafafa}
+  .btn.primary{background:var(--primary);color:#fff;border-color:var(--primary);box-shadow:0 1px 0 rgba(0,0,0,.12)}
+  .btn.primary:hover{background:var(--primary-h)}
+  .btn.sm{padding:4px 10px;font-size:12px}
+  .btn.amber{border-color:#e2c67a;background:var(--amberBg);color:var(--amberInk)}
+  .btn.amber:hover{background:#ffe8bd}
+  .btn.critical{border-color:#e6b0a6;background:#fff;color:var(--critical)}
+  .btn.critical:hover{background:var(--critical-bg)}
+  .btn.sync{border-color:#bcd0f0;background:#eef4ff;color:#1b46a8}
+  .btn.sync:hover{background:#e3edff}
+  .btn .qm{width:16px;height:16px;border-radius:50%;border:1.4px solid currentColor;display:inline-grid;place-items:center;font-size:10px;font-weight:800}
+
+  .tabs{display:inline-flex;background:#e7eaee;padding:4px;border-radius:10px;gap:3px;margin-bottom:16px}
+  .tabs button{border:0;background:transparent;color:#43474d;font-size:13.5px;font-weight:600;padding:8px 16px;border-radius:7px;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+  .tabs button:hover:not(.on){background:rgba(0,0,0,.06)}
+  .tabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.18)}
+  .tabs .c{background:var(--amberInk);color:#fff;border-radius:20px;padding:1px 7px;font-size:11px;font-weight:700}
+
+  .pseg{display:inline-flex;background:#f1f1f1;border:1px solid var(--line);border-radius:9px;padding:3px;flex-wrap:wrap}
+  .pseg button{border:0;background:transparent;color:var(--muted);font-size:12.5px;font-weight:600;padding:6px 12px;border-radius:7px;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+  .pseg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.1)}
+  .pseg button.add{color:var(--link)}
+  .pseg .c{font-size:11px;font-weight:700;color:var(--faint)}
+  .pseg button.on .c{color:var(--muted)}
+
+  .statline{color:var(--muted);font-size:12.5px;display:flex;align-items:center;flex-wrap:wrap}
+  .statline b{color:var(--ink);font-weight:650}
+  .statline .dot{width:3px;height:3px;border-radius:50%;background:#c4c4c4;margin:0 10px;display:inline-block}
+  .statline .warn{color:var(--amberInk);font-weight:650}
+  .statline .bad{color:var(--critical);font-weight:650}
+
+  .toprow{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+  .toprow .spacer{flex:1}
+  .chipf{display:inline-flex;align-items:center;gap:7px;background:#eef4ff;border:1px solid #cddcff;color:#1b46a8;border-radius:8px;padding:5px 8px 5px 11px;font-size:12.5px;font-weight:600}
+  .chipf .x{cursor:pointer;font-size:15px;line-height:1;color:#5b7fc4}
+  .chipf .x:hover{color:#1b46a8}
+  .synchint{font-size:11.5px;color:var(--faint);display:inline-flex;align-items:center;gap:6px}
+
+  .callout{display:flex;gap:11px;align-items:flex-start;border-radius:11px;padding:12px 14px;margin-bottom:16px;font-size:13px;line-height:1.5}
+  .callout .ci{width:20px;height:20px;flex:none;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:12px;margin-top:1px}
+  .callout.amber{background:var(--amberBg);border:1px solid #f0dca6;color:#5c4410}
+  .callout.amber .ci{background:#e6b53f;color:#5c4410}
+  .callout.info{background:var(--infoBg);border:1px solid #bfe0ff;color:#1c4a63}
+  .callout.info .ci{background:#4aa3d6;color:#fff}
+  .callout b{font-weight:700}
+
+  .card{background:var(--p-surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 1px 0 rgba(0,0,0,.04);overflow:hidden}
+  .cardhd{padding:14px 16px 4px}
+  .cardhd h3{margin:0;font-size:14.5px;font-weight:650}
+  .cardhd .d{font-size:12.5px;color:var(--muted);margin-top:3px}
+  .toolbar{display:flex;align-items:center;gap:10px;padding:12px 14px;flex-wrap:wrap}
+  .search{flex:1 1 240px;min-width:200px;position:relative}
+  .search input{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 12px 8px 32px;font-size:13px;background:#fff;color:var(--ink)}
+  .search input:focus{outline:2px solid #cfe0ff;border-color:#7aa6f0}
+  .search svg{position:absolute;left:10px;top:9px;color:var(--faint)}
+  .select{border:1px solid var(--line);border-radius:8px;padding:8px 28px 8px 11px;font-size:12.5px;background:#fff url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23616161' stroke-width='1.6'><path d='M2 4l4 4 4-4'/></svg>") no-repeat right 10px center;-webkit-appearance:none;appearance:none;color:var(--ink);font-weight:600;cursor:pointer}
+
+  table{width:100%;border-collapse:collapse}
+  thead th{text-align:left;font-size:11px;font-weight:650;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;padding:11px 14px;border-top:1px solid var(--line);background:#fafafa}
+  thead th.num{text-align:right}
+  tbody td{padding:13px 14px;border-top:1px solid var(--line);vertical-align:middle}
+  tbody td.num{text-align:right;font-variant-numeric:tabular-nums}
+  tbody tr.main:hover{background:#fafafa}
+  .ck{width:16px;height:16px;cursor:pointer;accent-color:#005bd3}
+  .ckcol{width:34px;text-align:center}
+  .pname{font-weight:600;color:var(--ink)}
+  .sku{color:var(--faint);font-size:12px;margin-top:2px}
+  .mono{font-variant-numeric:tabular-nums;font-weight:600;color:var(--muted);font-size:12.5px}
+  .linkcell{color:var(--link);cursor:pointer}
+  .linkcell:hover{text-decoration:underline}
+  .cust{font-weight:600;color:var(--link);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .cust:hover{text-decoration:underline}
+  .cust .chev{color:var(--faint);transition:transform .15s;font-size:10px}
+  .cust.open .chev{transform:rotate(90deg)}
+  .sub2{color:var(--muted);font-size:12px;margin-top:2px}
+
+  .stat{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:12.5px;white-space:nowrap}
+  .stat .d{width:9px;height:9px;border-radius:50%;flex:none}
+  .stat.link{cursor:pointer}.stat.link:hover{text-decoration:underline}
+  .stat.hold .d{background:#e6a417}.stat.hold{color:var(--amberInk)}
+  .stat.covered .d{background:var(--success)}.stat.covered{color:#0f5132}
+  .stat.tight .d{background:#e6a417}.stat.tight{color:var(--amberInk)}
+  .stat.upcoming .d{background:#4aa3d6}.stat.upcoming{color:var(--infoInk)}
+  .stat.delivered .d{background:var(--success)}.stat.delivered{color:#0f5132}
+  .stat.paused .d{background:#9aa0a6}.stat.paused{color:#5f6368}
+  .stat.cancelreq .d{background:#d97706}.stat.cancelreq{color:#8a4b0e}
+  .awaiting{color:var(--amberInk);font-size:11.5px;font-weight:600;margin-top:3px}
+  .remind{color:var(--faint);font-size:11px;margin-top:2px}
+  .invflag{font-size:11px;font-weight:700;margin-top:5px;display:inline-flex;align-items:center;gap:4px}
+  .invflag .d{width:7px;height:7px;border-radius:50%}
+  .invflag.out{color:var(--critical)}.invflag.out .d{background:var(--critical)}
+  .invflag.low{color:var(--amberInk)}.invflag.low .d{background:#e6a417}
+  .tp{display:inline-flex;flex-direction:column;gap:5px;align-items:flex-start}
+
+  .short{font-weight:700;color:var(--critical);font-variant-numeric:tabular-nums}
+  .ok{font-weight:600;color:var(--success);font-variant-numeric:tabular-nums}
+  .held{display:inline-flex;flex-direction:column}
+  .held .n{font-weight:700}.held .n.bad{color:var(--critical)}.held .n.warn{color:var(--amberInk)}
+
+  .typetag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;white-space:nowrap}
+  .t-sub{background:#eef4ff;color:#1b46a8}
+  .t-bundlesub{background:#eafaf0;color:#0f6b3b}
+  .t-bundle{background:#f2f4f6;color:#42474d}
+  .paytag{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap;border:1px solid var(--line)}
+  .paytag.prepaid{background:#eef4ff;border-color:#cddcff;color:#1b46a8}
+  .paytag.payg{background:#f3eefe;border-color:#ddd0f7;color:#5a34b0}
+  .paytag.onetime{background:#f2f4f6;border-color:#dfe3e8;color:#42474d}
+
+  .rowact{display:flex;align-items:center;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+  .kebabwrap{position:relative;display:inline-block}
+  .kebab{border:1px solid var(--line);background:#fff;border-radius:7px;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);box-shadow:0 1px 0 rgba(0,0,0,.04)}
+  .kebab:hover{background:#fafafa}
+  .dropmenu{position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.16);padding:6px;min-width:200px;z-index:30}
+  .dropmenu .mi{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:8px;cursor:pointer;font-weight:600;white-space:nowrap}
+  .dropmenu .mi:hover{background:#f6f6f7}
+  .dropmenu .mi.critical{color:var(--critical)}
+  .dropmenu .sep{height:1px;background:var(--line2);margin:5px 2px}
+
+  .bulkbar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#eef4ff;border-bottom:1px solid #cddcff;font-size:13px;font-weight:650;color:#1b46a8}
+  .bulkbar .x{margin-left:auto;cursor:pointer;color:#5b7fc4;font-size:16px}
+
+  .subrow td{background:#fafbfb;padding:0 14px 14px 44px;border-top:0}
+  .detail{display:flex;gap:26px;flex-wrap:wrap;padding-top:4px;align-items:flex-end}
+  .detblk{min-width:150px}
+  .detblk .l{font-size:10.5px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.03em;margin-bottom:3px}
+  .detblk .v{font-size:13px;color:var(--ink);font-weight:600}
+  .detblk .v.sm{font-weight:500;color:var(--muted);font-size:12.5px;line-height:1.5}
+  .viewcust{margin-left:auto;align-self:center}
+
+  .pager{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+  .pager .pg{display:flex;gap:6px}
+  .pager .pg button{border:1px solid var(--line);background:#fff;border-radius:7px;width:30px;height:30px;cursor:pointer;color:var(--muted)}
+  .pager .pg button:hover{background:#fafafa}
+
+  .tfoot{padding:11px 14px;color:var(--faint);font-size:12px;text-align:center;border-top:1px solid var(--line)}
+  .empty{padding:52px 24px 56px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px}
+  .emptytitle{font-size:15px;font-weight:700;margin-top:4px}
+  .emptysub{font-size:13px;color:var(--muted);max-width:420px;line-height:1.55}
+
+  .setgrid{display:flex;flex-direction:column;gap:16px}
+  .frow{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 0;border-top:1px solid var(--line2)}
+  .frow:first-child{border-top:0}
+  .frow .fl{font-weight:600;font-size:13.5px}
+  .frow .fd{color:var(--muted);font-size:12.5px;margin-top:2px;max-width:600px;line-height:1.5}
+  .tog{width:38px;height:22px;border-radius:20px;background:#c4c9ce;position:relative;cursor:pointer;flex:none;transition:background .15s}
+  .tog::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:left .15s}
+  .tog.on{background:#2b7a4b}.tog.on::after{left:18px}
+  .policycard{display:flex;gap:12px;align-items:flex-start;border:1px solid #bcd0f0;border-radius:11px;padding:14px;background:#f5f8ff}
+  .policycard .pi{width:34px;height:34px;border-radius:9px;background:#dce8ff;color:#1b46a8;display:grid;place-items:center;flex:none}
+  .policycard .pt{font-weight:700;font-size:14px}
+  .policycard .pd{color:var(--muted);font-size:12.5px;margin-top:3px;line-height:1.5}
+  .onlybadge{font-size:10.5px;font-weight:700;color:#1b46a8;background:#dce8ff;border-radius:6px;padding:1px 7px;margin-left:8px;text-transform:uppercase;letter-spacing:.03em}
+  .condnote{display:flex;gap:9px;align-items:flex-start;margin-top:14px;font-size:12.5px;color:var(--muted);line-height:1.5}
+  .condnote .ci{color:#5f6368;flex:none;margin-top:1px}
+
+  .glad{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+  .gstep{display:flex;gap:11px;align-items:flex-start}
+  .gstep .gn{width:22px;height:22px;border-radius:50%;background:#eef4ff;color:#1b46a8;font-size:11px;font-weight:800;display:grid;place-items:center;flex:none}
+  .gstep.mer .gn{background:#dce8ff}
+  .gstep .gt{font-weight:650;font-size:13px}
+  .gstep .gd{color:var(--muted);font-size:12px;margin-top:2px;line-height:1.45}
+  .gtag{font-size:10px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.04em;margin-left:6px}
+
+  .pagenote{max-width:1300px;color:var(--faint);font-size:11.5px;margin-top:20px;line-height:1.7}
+  .pagenote b{color:var(--muted)}
+  .pagenote code{background:#ececec;border-radius:4px;padding:0 4px;color:#5a5a5a}
+
+  .modalov{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:80}
+  .modal{background:#fff;border-radius:12px;width:min(460px,92vw);display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:86vh}
+  .modalhd{display:flex;align-items:flex-start;justify-content:space-between;padding:16px 18px 12px;border-bottom:1px solid var(--line2)}
+  .modalhd h3{margin:0;font-size:15px}
+  .modalhd .sub{font-size:12px;color:var(--muted);margin-top:3px}
+  .modalhd .xclose{cursor:pointer;color:var(--muted);font-size:20px;border:0;background:none;line-height:1}
+  .modalbody{padding:16px 18px 18px;overflow:auto}
+  .invrow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:6px 0 4px}
+  .invrow .k{font-size:12.5px;color:var(--muted);font-weight:600}
+  .invrow .val{font-weight:700;font-size:14px}
+  .qtyin{width:88px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:14px;text-align:center;font-weight:700}
+  .synced{font-size:11.5px;color:var(--muted);margin-top:10px;display:flex;gap:6px;align-items:flex-start;line-height:1.5}
+  .warnbox{background:var(--amberBg);border:1px solid #f0dca6;color:#5c4410;border-radius:9px;padding:11px 13px;font-size:12.5px;line-height:1.5}
+
+  .demo{position:fixed;top:12px;right:14px;z-index:60;background:#111;color:#fff;border-radius:10px;padding:6px;display:flex;gap:4px;align-items:center;box-shadow:0 6px 24px rgba(0,0,0,.28)}
+  .demo .lbl{color:#8b8b8b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:0 6px}
+  .demo button{background:transparent;color:#cfcfcf;border:0;padding:6px 10px;border-radius:7px;font-size:11.5px;font-weight:600;cursor:pointer}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:11px 18px;border-radius:9px;font-size:13px;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:120;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
+  .hide{display:none !important}
+</style>
+</head>
+<body>
+
+<div class="demo">
+  <span class="lbl">Demo</span>
+  <button onclick="setTab('fore')">Forecast</button>
+  <button onclick="setTab('orders')">Orders</button>
+  <button onclick="setTab('hold')">Holds</button>
+  <button onclick="setTab('set')">Settings</button>
+</div>
+
+<div class="admin">
+  <aside class="navL">
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8.5 10 3l7 5.5V16a1 1 0 0 1-1 1h-3v-5H7v5H4a1 1 0 0 1-1-1z"/></svg>Home</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="13" rx="2"/><path d="M7 8h6M7 11h6"/></svg>Orders<span class="ct">127</span></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h12v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M7 6V5a3 3 0 0 1 6 0v1"/></svg>Products</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="7" r="3"/><path d="M4 16c0-3 2.7-5 6-5s6 2 6 5"/></svg>Customers</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 15V9m4 6V5m4 10v-4m4 4V7"/></svg>Growth</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="3"/><path d="M12 12l4 4M13.5 6.5 16 4"/></svg>Discounts</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="12" rx="2"/><path d="M7 8h6M7 11h4"/></svg>Content</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="6"/><path d="M4 10h12M10 4c2 2 2 10 0 12M10 4c-2 2-2 10 0 12"/></svg>Markets</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 16h12M6 16V9m4 7V5m4 11v-4"/></svg>Analytics</div>
+
+    <div class="navSec">Sales channels<span class="chev">›</span></div>
+    <div class="navSec">Apps<span class="chev">›</span></div>
+
+    <div class="navApp"><span class="logo">◆</span>StackBack Subscrip…<span class="dot"></span></div>
+    <div class="navSub">Manage Purchase Options</div>
+    <div class="navSub">Purchase Contracts</div>
+    <div class="navSub sel">Orders &amp; Inventory<span class="ct" id="navHoldCt">2</span></div>
+    <div class="navSub">Payment Reminders</div>
+    <div class="navSub">Customers</div>
+    <div class="navSub">View more</div>
+
+    <div class="navGap"></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m7-7h-2M5 10H3m12.5-5-1.5 1.5M6 14l-1.5 1.5m11 0L14 14M6 6 4.5 4.5"/></svg>Settings</div>
+  </aside>
+
+  <div class="appmain">
+    <div class="appbar"><span class="logo">◆</span><span class="name">StackBack Subscriptions &amp; More</span><span class="more">⋯</span></div>
+
+    <div class="pagehdr">
+      <div><h1>Orders &amp; Inventory</h1><div class="sub">Forecast demand, manage upcoming and delivered orders, and clear held deliveries.</div></div>
+      <div class="acts"><span class="btn">Help guide</span></div>
+    </div>
+
+    <div class="wrap">
+      <div class="tabs">
+        <button id="tFore" class="on" onclick="setTab('fore')">Forecast</button>
+        <button id="tOrders" onclick="setTab('orders')">Orders</button>
+        <button id="tHold" onclick="setTab('hold')">Holds <span class="c" id="holdTabCt">2</span></button>
+        <button id="tSet" onclick="setTab('set')">Settings</button>
+      </div>
+
+      <!-- ============ FORECAST ============ -->
+      <section id="paneFore">
+        <div class="toprow">
+          <div class="pseg"><button class="on" onclick="setWindow(this,7)">Next 7 days</button><button onclick="setWindow(this,14)">Next 14 days</button><button onclick="setWindow(this,30)">Next 30 days</button><button onclick="toast('Custom range')">Custom</button></div>
+        </div>
+        <div class="statline" id="foreStat" style="margin-bottom:14px"></div>
+        <div class="callout amber" id="foreBanner"><span class="ci">!</span><div id="foreBannerTxt"></div></div>
+        <div class="card">
+          <div class="toolbar">
+            <div class="search"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg><input id="foreSearch" oninput="renderFore()" placeholder="Search products or SKUs"></div>
+            <select class="select" id="foreSort" onchange="renderFore()"><option value="short">Sort: Shortfall first</option><option value="az">Product A to Z</option><option value="due">Most deliveries due</option><option value="hand">Lowest on hand</option></select>
+          </div>
+          <table><thead><tr><th>Product</th><th>Variant / SKU</th><th class="num">Deliveries due</th><th class="num">Qty needed</th><th class="num">On hand</th><th class="num">Surplus / shortfall</th><th style="width:150px"></th></tr></thead><tbody id="foreBody"></tbody></table>
+          <div class="tfoot" id="foreFoot"></div>
+        </div>
+      </section>
+
+      <!-- ============ ORDERS ============ -->
+      <section id="paneOrders" class="hide">
+        <div class="toprow">
+          <div class="pseg" id="ordSeg">
+            <button class="on" onclick="setOrdStatus(this,'all')">All <span class="c" id="cAll"></span></button>
+            <button onclick="setOrdStatus(this,'upcoming')">Upcoming <span class="c" id="cUp"></span></button>
+            <button onclick="setOrdStatus(this,'hold')">On hold <span class="c" id="cHold"></span></button>
+            <button onclick="setOrdStatus(this,'delivered')">Delivered <span class="c" id="cDel"></span></button>
+            <button onclick="setOrdStatus(this,'paused')">Paused <span class="c" id="cPa"></span></button>
+            <button onclick="setOrdStatus(this,'cancelreq')">Cancellation requests <span class="c" id="cCx"></span></button>
+            <button class="add" onclick="toast('View saved')">+ Save view</button>
+          </div>
+        </div>
+        <div class="toprow" id="ordChipRow" style="margin-top:-4px"></div>
+        <div class="card">
+          <div class="bulkbar hide" id="bulkbar"><span id="bulkCount">0 selected</span><button class="btn sm" onclick="toast('Reminders sent')">Send reminders</button><button class="btn sm" onclick="toast('Pushed to Shopify')">Push to Shopify</button><button class="btn sm" onclick="toast('Reschedule')">Reschedule</button><span class="x" onclick="clearSel()">×</span></div>
+          <div class="toolbar">
+            <div class="search"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg><input id="ordSearch" oninput="renderOrders()" placeholder="Search customer, order, product, payment type, or contract ID"></div>
+            <select class="select" id="ordRange" onchange="renderOrders()"><option value="all">All dates</option><option value="7">Next 7 days</option><option value="14">Next 14 days</option><option value="30">Next 30 days</option><option value="custom">Custom range</option></select>
+            <select class="select" id="ordType" onchange="renderOrders()"><option value="all">All types</option><option value="sub">Subscription</option><option value="bundlesub">Bundle subscription</option><option value="bundle">One-time bundle</option></select>
+            <select class="select" id="ordPay" onchange="renderOrders()"><option value="all">All payments</option><option value="prepaid">Prepaid</option><option value="payg">Pay per delivery</option><option value="onetime">One-time</option></select>
+            <select class="select" id="ordSort" onchange="renderOrders()"><option value="date">Sort: Delivery date</option><option value="cust">Customer A to Z</option></select>
+          </div>
+          <table>
+            <thead><tr><th class="ckcol"><input type="checkbox" class="ck" id="ckAll" onclick="toggleAll(this)"></th><th>Delivery date</th><th>Customer</th><th>Products</th><th>Type &amp; payment</th><th>Status</th><th style="width:240px"></th></tr></thead>
+            <tbody id="ordBody"></tbody>
+          </table>
+          <div class="pager"><span id="pagerTxt"></span><div class="pg"><button onclick="toast('Previous page')">‹</button><button onclick="toast('Next page')">›</button></div></div>
+        </div>
+      </section>
+
+      <!-- ============ HOLDS ============ -->
+      <section id="paneHold" class="hide">
+        <div class="toprow">
+          <div class="statline"><span class="warn">2 deliveries on hold</span><span class="dot"></span><span>waiting on stock</span><span class="dot"></span><span>oldest held <b>9 days</b></span></div>
+          <div class="spacer"></div>
+          <button class="btn sm" onclick="openGuide()"><span class="qm">?</span>How a hold clears</button>
+          <span class="synchint">Last synced 6 min ago</span>
+          <button class="btn sync" onclick="toast('Inventory re-synced to Shopify. Held deliveries re-checked.')"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M15.5 8A6 6 0 0 0 5 5.5M4.5 12A6 6 0 0 0 15 14.5"/><path d="M15.5 4v4h-4M4.5 16v-4h4"/></svg>Sync inventory now</button>
+        </div>
+        <div class="card" id="holdCard">
+          <table><thead><tr><th>Customer</th><th>Delivery</th><th>Contract</th><th>Held since</th><th style="width:230px"></th></tr></thead><tbody id="holdBody"></tbody></table>
+          <div class="tfoot">Update inventory to release automatically (not immediate); use Sync inventory now to force it. Prepaid schedules roll forward by the delay.</div>
+        </div>
+      </section>
+
+      <!-- ============ SETTINGS ============ -->
+      <section id="paneSet" class="hide">
+        <div class="setgrid">
+          <div class="card">
+            <div class="cardhd"><h3>Out-of-stock handling</h3><div class="d">What StackBack does when a subscription delivery is due and an item is out of stock.</div></div>
+            <div style="padding:8px 16px 16px">
+              <div class="policycard">
+                <div class="pi"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M7 8V6a5 5 0 0 1 10 0v2"/></svg></div>
+                <div><div class="pt">Hold until stock is back <span class="onlybadge">Active</span></div><div class="pd">The delivery is not created while the item is out of stock. It waits in <b>Holds</b> and is created once you update inventory. StackBack never oversells.</div></div>
+              </div>
+              <div class="condnote"><svg class="ci" width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6h.01"/></svg><div>This policy applies only to stores that <b>do not</b> continue selling when a variant hits zero. Your store is set to stop at 0, so Hold is active. If you enable "continue selling when out of stock" in Shopify, orders are always created and nothing lands in Holds.</div></div>
+              <div class="callout info" style="margin:16px 0 0"><span class="ci">i</span><div><b>Prepaid deliveries roll the schedule forward.</b> Because the customer already paid, a held prepaid delivery is created when stock returns and every later delivery shifts out by the same gap.</div></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="cardhd"><h3>Customer notifications and portal</h3></div>
+            <div style="padding:4px 16px 16px">
+              <div class="frow"><div><div class="fl">Tell customers when a delivery is delayed</div><div class="fd">Sent over Email and WhatsApp when a delivery goes on hold for stock.</div></div><div class="tog on" onclick="this.classList.toggle('on')"></div></div>
+              <div class="frow"><div><div class="fl">Show out-of-stock items in the customer portal</div><div class="fd">Out-of-stock products appear when a customer edits their subscription, tagged "Back in stock soon" and not selectable.</div></div><div class="tog on" onclick="this.classList.toggle('on')"></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <p class="pagenote">
+        <b>v5 changes:</b> <b>Orders</b> now shows <b>On hold</b> at order level (click the status to jump to that customer in Holds) plus <b>Out of stock / Low stock</b> flags on rows (only for stores that do not continue selling at 0); <b>bulk select + bulk actions</b>; a <b>cancellation review</b> panel (approve / keep active); PAYG rows show <b>reminders sent + last-sent</b>; <b>saved views</b> (+ Save view); a <b>pager</b>; and <b>pause/cancel confirms</b> that the whole subscription is affected. <b>Forecast</b> populates real data per 7/14/30 window, adds <b>sort</b>, and renames "Cover" to <b>Surplus / shortfall</b>. <b>Settings</b> notes the policy is conditional on non-oversell stores and the "How a hold clears" guide moved to <b>Holds</b> as a "?" popover.<br>
+        <b>Naming:</b> Contract (PC-####) = the subscription contract in Purchase Contracts; SB-#### = one individual order the contract generates. One-time bundle orders have an order code but no contract.<br>
+        <b>DEV must confirm:</b> (1) read the Shopify variant "continue selling when out of stock" flag to decide whether Holds + inventory flags apply per store; (2) upcoming deliveries queryable pre-creation; (3) order-level actions reuse existing services; (4) reminder count + last-sent available from the Payment Reminders log; (5) Paused / Cancellation-request are contract-level states; (6) inventory write-back + on-demand re-check. Build the list on Polaris <code>IndexTable</code> + <code>IndexFilters</code> (native bulk actions, saved views, pagination). <b>Mocked data.</b>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Update inventory modal -->
+<div id="invOverlay" class="modalov hide" onclick="if(event.target===this)closeModal('invOverlay')">
+  <div class="modal">
+    <div class="modalhd"><div><h3>Update inventory</h3><div class="sub" id="invSub">Everpure 1L · 1 litre · EVP-1L</div></div><button class="xclose" onclick="closeModal('invOverlay')">×</button></div>
+    <div class="modalbody">
+      <div class="invrow"><span class="k">On hand now</span><span class="val" id="invNow">12</span></div>
+      <div class="invrow"><span class="k">New quantity</span><input class="qtyin" id="invQty" value="60"></div>
+      <div class="synced"><span style="color:#4aa3d6">↻</span><span>Syncs to Shopify on save. Held deliveries release on the next refresh. To force it right away, use <b>Sync inventory now</b>.</span></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button class="btn" onclick="closeModal('invOverlay')">Cancel</button><button class="btn primary" onclick="closeModal('invOverlay');toast('Inventory saved and syncing to Shopify')">Save and sync</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Cancellation review modal -->
+<div id="cxOverlay" class="modalov hide" onclick="if(event.target===this)closeModal('cxOverlay')">
+  <div class="modal">
+    <div class="modalhd"><div><h3>Review cancellation request</h3><div class="sub" id="cxSub">Tara Bose · Daily Dairy · PC-1099</div></div><button class="xclose" onclick="closeModal('cxOverlay')">×</button></div>
+    <div class="modalbody">
+      <div class="warnbox">The customer requested to cancel this prepaid subscription. Approving stops all future deliveries and starts the refund or store-credit path per your cancellation policy.</div>
+      <div class="detblk" style="margin-top:14px"><div class="l">Reason given</div><div class="v sm">"Getting more than I can use, want to stop for now."</div></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px"><button class="btn" onclick="closeModal('cxOverlay');toast('Kept active')">Keep active</button><button class="btn critical" onclick="closeModal('cxOverlay');toast('Cancellation approved')">Approve cancellation</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Pause/Cancel confirm modal -->
+<div id="cfOverlay" class="modalov hide" onclick="if(event.target===this)closeModal('cfOverlay')">
+  <div class="modal">
+    <div class="modalhd"><div><h3 id="cfTitle">Pause subscription?</h3><div class="sub" id="cfSub"></div></div><button class="xclose" onclick="closeModal('cfOverlay')">×</button></div>
+    <div class="modalbody">
+      <div class="warnbox" id="cfBody"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px"><button class="btn" onclick="closeModal('cfOverlay')">Back</button><button class="btn critical" id="cfGo">Confirm</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- How a hold clears guide -->
+<div id="guideOverlay" class="modalov hide" onclick="if(event.target===this)closeModal('guideOverlay')">
+  <div class="modal">
+    <div class="modalhd"><div><h3>How a hold clears</h3><div class="sub">The path every held delivery follows.</div></div><button class="xclose" onclick="closeModal('guideOverlay')">×</button></div>
+    <div class="modalbody">
+      <div class="glad">
+        <div class="gstep"><div class="gn">1</div><div><div class="gt">Item out of stock <span class="gtag">Auto</span></div><div class="gd">The due delivery is held instead of created. It appears in this tab.</div></div></div>
+        <div class="gstep mer"><div class="gn">2</div><div><div class="gt">Update inventory <span class="gtag">Merchant</span></div><div class="gd">Set the new on-hand quantity on the held row.</div></div></div>
+        <div class="gstep"><div class="gn">3</div><div><div class="gt">Syncs to Shopify <span class="gtag">Auto</span></div><div class="gd">Inventory pushes to Shopify and held deliveries release (not immediate).</div></div></div>
+        <div class="gstep mer"><div class="gn">4</div><div><div class="gt">Sync now <span class="gtag">Optional</span></div><div class="gd">Need it immediately? Use "Sync inventory now" to force it.</div></div></div>
+      </div>
+      <div class="callout info" style="margin:16px 0 0"><span class="ci">i</span><div>Prepaid schedules roll forward by the delay, so the customer still receives every delivery they paid for.</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ---- forecast data per window ----
+var FOREW={
+  7:{short:2,due:128,units:40,rows:[
+    {p:'Everpure 1L',variant:'1 litre',sku:'EVP-1L',due:38,need:38,hand:12},
+    {p:'A2 Milk 500ml',variant:'500 ml',sku:'A2-500',due:54,need:54,hand:40},
+    {p:'House Espresso',variant:'1 kg',sku:'ESP-1K',due:30,need:30,hand:33},
+    {p:'Cold Brew Concentrate',variant:'250 ml',sku:'CB-250',due:22,need:22,hand:60},
+    {p:'A2 Ghee 500g',variant:'500 g',sku:'A2-GHEE',due:15,need:15,hand:90}]},
+  14:{short:3,due:266,units:97,rows:[
+    {p:'Everpure 1L',variant:'1 litre',sku:'EVP-1L',due:74,need:74,hand:12},
+    {p:'A2 Milk 500ml',variant:'500 ml',sku:'A2-500',due:108,need:108,hand:70},
+    {p:'House Espresso',variant:'1 kg',sku:'ESP-1K',due:58,need:58,hand:41},
+    {p:'Cold Brew Concentrate',variant:'250 ml',sku:'CB-250',due:44,need:44,hand:60},
+    {p:'A2 Ghee 500g',variant:'500 g',sku:'A2-GHEE',due:29,need:29,hand:90}]},
+  30:{short:4,due:552,units:243,rows:[
+    {p:'Everpure 1L',variant:'1 litre',sku:'EVP-1L',due:158,need:158,hand:12},
+    {p:'A2 Milk 500ml',variant:'500 ml',sku:'A2-500',due:232,need:232,hand:70},
+    {p:'House Espresso',variant:'1 kg',sku:'ESP-1K',due:124,need:124,hand:41},
+    {p:'Cold Brew Concentrate',variant:'250 ml',sku:'CB-250',due:96,need:96,hand:88},
+    {p:'A2 Ghee 500g',variant:'500 g',sku:'A2-GHEE',due:62,need:62,hand:90}]}
+};
+var foreWin=7;
+
+// ---- orders ----
+var ORDERS=[
+  {date:'26 Jul',id:'SB-3041',cust:'Aarav Shah',email:'aarav.shah@gmail.com',phone:'+91 98200 11223',addr:'14 Carter Rd, Bandra W, Mumbai 400050',prod:'Everpure 1L',qty:1,items:0,type:'sub',pay:'prepaid',status:'hold',inv:'out',pstate:null,rem:0,last:'',plan:'Hydration Plan · 3 of 6',contract:'PC-1041'},
+  {date:'26 Jul',id:'SB-3042',cust:'Meera Iyer',email:'meera.iyer@outlook.com',phone:'+91 99400 55667',addr:'8 Besant Nagar, Chennai 600090',prod:'A2 Milk 500ml',qty:2,items:0,type:'sub',pay:'payg',status:'hold',inv:'out',pstate:null,rem:0,last:'',plan:'Daily Dairy · 2 of 12',contract:'PC-1088'},
+  {date:'28 Jul',id:'SB-3048',cust:'Sara Khan',email:'sara.khan@gmail.com',phone:'+91 97600 33445',addr:'5 Banjara Hills, Hyderabad 500034',prod:'House Espresso',qty:1,items:0,type:'sub',pay:'payg',status:'upcoming',inv:'low',pstate:'awaiting',rem:2,last:'2d ago',plan:'Coffee Ritual · 1 of 6',contract:'PC-1115'},
+  {date:'27 Jul',id:'SB-3045',cust:'Rohan Das',email:'rohan.d@gmail.com',phone:'+91 98300 22114',addr:'22 Park St, Kolkata 700016',prod:'Coffee Ritual Box',qty:0,items:3,type:'bundlesub',pay:'prepaid',status:'upcoming',inv:'none',pstate:null,rem:0,last:'',plan:'Monthly bundle · 5 of 8',contract:'PC-1102'},
+  {date:'29 Jul',id:'SB-3052',cust:'Dev Menon',email:'dev.menon@gmail.com',phone:'+91 90000 88776',addr:'40 MG Rd, Kochi 682016',prod:'Cold Brew Concentrate',qty:1,items:0,type:'sub',pay:'prepaid',status:'paused',inv:'none',pstate:null,rem:0,last:'',plan:'Coffee Ritual · paused by customer',contract:'PC-1131'},
+  {date:'27 Jul',id:'SB-3047',cust:'Tara Bose',email:'tara.bose@gmail.com',phone:'+91 98311 44559',addr:'9 Salt Lake, Kolkata 700091',prod:'A2 Milk 500ml',qty:2,items:0,type:'sub',pay:'payg',status:'cancelreq',inv:'none',pstate:null,rem:0,last:'',plan:'Daily Dairy · 6 of 12',contract:'PC-1099'},
+  {date:'25 Jul',id:'SB-3039',cust:'Ivan Lee',email:'ivan.lee@gmail.com',phone:'+91 90080 77665',addr:'31 Indiranagar, Bengaluru 560038',prod:'A2 Ghee 500g',qty:1,items:0,type:'sub',pay:'prepaid',status:'delivered',inv:'none',pstate:null,rem:0,last:'',plan:'Daily Dairy · 4 of 12',contract:'PC-1030'},
+  {date:'24 Jul',id:'SB-3036',cust:'Priya Nair',email:'priya.nair@gmail.com',phone:'+91 99620 33447',addr:'18 T Nagar, Chennai 600017',prod:'Starter Coffee Box',qty:0,items:3,type:'bundle',pay:'onetime',status:'delivered',inv:'none',pstate:null,rem:0,last:'',plan:'One-time bundle',contract:''},
+  {date:'23 Jul',id:'SB-3030',cust:'Nina Patel',email:'nina.patel@gmail.com',phone:'+91 99870 44556',addr:'12 CG Rd, Ahmedabad 380009',prod:'Everpure 1L',qty:1,items:0,type:'sub',pay:'prepaid',status:'delivered',inv:'none',pstate:null,rem:0,last:'',plan:'Hydration Plan · 2 of 6',contract:'PC-1012'}
+];
+var ordFilter={status:'all',product:null};
+var sel={};
+var TL={sub:'Subscription',bundlesub:'Bundle subscription',bundle:'One-time bundle'};
+var PL={prepaid:'Prepaid',payg:'Pay per delivery',onetime:'One-time'};
+var SL={upcoming:'Upcoming',hold:'On hold',delivered:'Delivered',paused:'Paused',cancelreq:'Cancellation request'};
+var INV={out:'Out of stock',low:'Low stock'};
+function esc(s){return String(s).replace(/[&<>"]/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];});}
+function jsq(s){return String(s).replace(/'/g,"\\'");}
+
+function renderFore(){
+  var W=FOREW[foreWin], q=(document.getElementById('foreSearch').value||'').toLowerCase(), sort=document.getElementById('foreSort').value;
+  document.getElementById('foreStat').innerHTML=(W.short?'<span class="bad">'+W.short+' products short</span><span class="dot"></span>':'<span class="stat covered"><span class="d"></span>All covered</span><span class="dot"></span>')+'<span><b>'+W.due+'</b> deliveries due</span><span class="dot"></span><span><b>'+W.units+'</b> units short in total</span>';
+  document.getElementById('foreBanner').classList.toggle('hide',!W.short);
+  document.getElementById('foreBannerTxt').innerHTML='You will be short on <b>'+W.short+' products</b> for deliveries in the next '+foreWin+' days. Update inventory before their delivery dates to avoid holds. Deliveries that cannot be fulfilled move to <b>Holds</b> automatically.';
+  var rows=W.rows.filter(function(r){return !q||(r.p+r.sku).toLowerCase().indexOf(q)>=0;});
+  rows.sort(function(a,b){
+    if(sort==='az')return a.p.localeCompare(b.p);
+    if(sort==='due')return b.due-a.due;
+    if(sort==='hand')return a.hand-b.hand;
+    return (a.hand-a.need)-(b.hand-b.need);
+  });
+  document.getElementById('foreBody').innerHTML=rows.map(function(r){
+    var cover=r.hand-r.need,cell,act;
+    if(cover<0){cell='<span class="short">'+cover+'</span>';act='<div class="rowact"><button class="btn sm" onclick="viewDeliveries(\''+esc(r.p)+'\')">View deliveries</button></div>';}
+    else if(cover<=3){cell='<span class="stat tight"><span class="d"></span>+'+cover+'</span>';act='<div class="rowact"><span style="color:var(--faint);font-size:12px">running tight</span></div>';}
+    else{cell='<span class="ok">+'+cover+'</span>';act='<div class="rowact"><span class="stat covered"><span class="d"></span>Covered</span></div>';}
+    return '<tr class="main"><td><div class="pname">'+esc(r.p)+'</div></td><td><div>'+esc(r.variant)+'</div><div class="sku">'+esc(r.sku)+'</div></td><td class="num">'+r.due+'</td><td class="num">'+r.need+'</td><td class="num">'+r.hand+'</td><td class="num">'+cell+'</td><td>'+act+'</td></tr>';
+  }).join('');
+  document.getElementById('foreFoot').textContent='Products with subscription deliveries due in the next '+foreWin+' days.';
+}
+function setWindow(el,n){[].forEach.call(el.parentNode.children,function(b){b.classList.remove('on');});el.classList.add('on');foreWin=n;renderFore();}
+function viewDeliveries(p){ordFilter.product=p;ordFilter.status='all';document.getElementById('ordType').value='all';document.getElementById('ordPay').value='all';document.getElementById('ordRange').value='7';setTab('orders');resetSeg();toast('Orders filtered: '+p);}
+function resetSeg(){var s=document.getElementById('ordSeg');[].forEach.call(s.querySelectorAll('button'),function(b,i){b.classList.toggle('on',i===0);});}
+
+function openContract(code,id){toast(code?('Opening contract '+code):('Opening order '+id));}
+
+function renderOrders(){
+  var q=(document.getElementById('ordSearch').value||'').toLowerCase();
+  var ty=document.getElementById('ordType').value, py=document.getElementById('ordPay').value, sort=document.getElementById('ordSort').value;
+  var c={all:0,upcoming:0,hold:0,delivered:0,paused:0,cancelreq:0}; ORDERS.forEach(function(o){c.all++;c[o.status]++;});
+  ['cAll','cUp','cHold','cDel','cPa','cCx'].forEach(function(id,i){document.getElementById(id).textContent=[c.all,c.upcoming,c.hold,c.delivered,c.paused,c.cancelreq][i];});
+  document.getElementById('ordChipRow').innerHTML=ordFilter.product?'<span class="chipf">Product: '+esc(ordFilter.product)+'<span class="x" onclick="clearProd()">×</span></span>':'';
+  var rows=ORDERS.filter(function(o){
+    if(ordFilter.status!=='all'&&o.status!==ordFilter.status)return false;
+    if(ordFilter.product&&o.prod!==ordFilter.product)return false;
+    if(ty!=='all'&&o.type!==ty)return false;
+    if(py!=='all'&&o.pay!==py)return false;
+    if(q&&(o.cust+o.id+o.prod+PL[o.pay]+(o.contract||'')).toLowerCase().indexOf(q)<0)return false;
+    return true;
+  });
+  if(sort==='cust')rows.sort(function(a,b){return a.cust.localeCompare(b.cust);});
+  document.getElementById('ordBody').innerHTML=rows.length?rows.map(function(o,i){
+    var prodline=o.items?('<div class="sku">'+o.items+' products</div>'):('<div class="sku">Qty '+o.qty+'</div>');
+    var invf=(o.inv&&o.inv!=='none')?'<div class="invflag '+o.inv+'"><span class="d"></span>'+INV[o.inv]+'</div>':'';
+    var statusInner='<span class="stat '+o.status+(o.status==='hold'?' link':'')+'"'+(o.status==='hold'?' onclick="setTab(\'hold\')" title="Open in Holds"':'')+'><span class="d"></span>'+SL[o.status]+'</span>';
+    var awaiting=o.pstate==='awaiting'?'<div class="awaiting">Awaiting payment</div><div class="remind">'+o.rem+' reminders sent · last '+o.last+'</div>':'';
+    var link="openContract('"+jsq(o.contract)+"','"+jsq(o.id)+"')";
+    var view='<button class="btn sm" onclick="toast(\'Opening order '+jsq(o.id)+'\')">View order</button>';
+    var act;
+    if(o.status==='upcoming'){
+      var reminder=(o.pay==='payg'&&o.pstate==='awaiting')?'<button class="btn sm amber" onclick="toast(\'Payment reminder sent\')">Send a payment reminder</button>':'';
+      act='<div class="rowact">'+view+reminder+'<div class="kebabwrap"><button class="kebab" onclick="tglMenu(this,event)">⋯</button><div class="dropmenu hide">'+
+        '<div class="mi" onclick="toast(\'Pushed to Shopify\');closeMenus()">Push to Shopify</div>'+
+        '<div class="mi" onclick="toast(\'Reschedule\');closeMenus()">Reschedule delivery</div>'+
+        '<div class="mi" onclick="confirmAction(\'pause\',\''+jsq(o.cust)+'\');closeMenus()">Pause subscription</div>'+
+        '<div class="sep"></div><div class="mi critical" onclick="confirmAction(\'cancel\',\''+jsq(o.cust)+'\');closeMenus()">Cancel delivery</div>'+
+        '</div></div></div>';
+    } else if(o.status==='hold'){
+      act='<div class="rowact">'+view+'<button class="btn sm" onclick="setTab(\'hold\')">Resolve in Holds</button><div class="kebabwrap"><button class="kebab" onclick="tglMenu(this,event)">⋯</button><div class="dropmenu hide">'+
+        '<div class="mi" onclick="toast(\'Reschedule\');closeMenus()">Reschedule delivery</div>'+
+        '<div class="mi critical" onclick="confirmAction(\'cancel\',\''+jsq(o.cust)+'\');closeMenus()">Cancel delivery</div>'+
+        '</div></div></div>';
+    } else if(o.status==='paused'){
+      act='<div class="rowact">'+view+'<div class="kebabwrap"><button class="kebab" onclick="tglMenu(this,event)">⋯</button><div class="dropmenu hide">'+
+        '<div class="mi" onclick="toast(\'Resumed\');closeMenus()">Resume subscription</div>'+
+        '<div class="mi critical" onclick="confirmAction(\'cancel\',\''+jsq(o.cust)+'\');closeMenus()">Cancel subscription</div>'+
+        '</div></div></div>';
+    } else if(o.status==='cancelreq'){
+      act='<div class="rowact">'+view+'<button class="btn sm amber" onclick="openCx(\''+jsq(o.cust)+'\',\''+jsq(o.plan)+'\',\''+jsq(o.contract)+'\')">Review request</button></div>';
+    } else {
+      act='<div class="rowact">'+view+'</div>';
+    }
+    var checked=sel[o.id]?' checked':'';
+    return '<tr class="main"><td class="ckcol"><input type="checkbox" class="ck"'+checked+' onclick="toggleSel(\''+jsq(o.id)+'\')"></td>'+
+      '<td><div class="pname linkcell" onclick="'+link+'">'+o.date+'</div><div class="sku linkcell" onclick="'+link+'">'+o.id+'</div></td>'+
+      '<td><span class="cust" id="ocust'+i+'" onclick="toggleOrdCust('+i+')"><span class="chev">▶</span>'+esc(o.cust)+'</span><div class="sub2">'+esc(o.plan)+'</div></td>'+
+      '<td><div class="pname">'+esc(o.prod)+'</div>'+prodline+invf+'</td>'+
+      '<td><div class="tp"><span class="typetag t-'+o.type+'">'+TL[o.type]+'</span><span class="paytag '+o.pay+'">'+PL[o.pay]+'</span></div></td>'+
+      '<td>'+statusInner+awaiting+'</td><td>'+act+'</td></tr>'+
+      '<tr class="subrow hide" id="osub'+i+'"><td></td><td colspan="6"><div class="detail">'+
+        '<div class="detblk"><div class="l">Order</div><div class="v sm linkcell" onclick="'+link+'">'+esc(o.id)+'</div></div>'+
+        (o.contract?'<div class="detblk"><div class="l">Contract</div><div class="v sm linkcell" onclick="'+link+'">'+esc(o.contract)+'</div></div>':'')+
+        '<div class="detblk"><div class="l">Email</div><div class="v sm">'+esc(o.email)+'</div></div>'+
+        '<div class="detblk"><div class="l">Phone</div><div class="v sm">'+esc(o.phone)+'</div></div>'+
+        '<div class="detblk" style="min-width:210px"><div class="l">Shipping address</div><div class="v sm">'+esc(o.addr)+'</div></div>'+
+        '<div class="viewcust"><button class="btn sm" onclick="toast(\'Opening customer profile\')">View customer →</button></div>'+
+      '</div></td></tr>';
+  }).join(''):'<tr><td colspan="7"><div class="empty" style="padding:36px 0"><div class="emptytitle">No orders match</div><div class="emptysub">Try clearing a filter or the search.</div></div></td></tr>';
+  document.getElementById('pagerTxt').innerHTML='Showing <b>'+rows.length+'</b> of 214 orders';
+  renderBulk();
+}
+function setOrdStatus(el,s){[].forEach.call(el.parentNode.querySelectorAll('button'),function(b){b.classList.remove('on');});el.classList.add('on');ordFilter.status=s;renderOrders();}
+function clearProd(){ordFilter.product=null;renderOrders();}
+function toggleOrdCust(i){document.getElementById('osub'+i).classList.toggle('hide');document.getElementById('ocust'+i).classList.toggle('open');}
+function toggleSel(id){if(sel[id])delete sel[id];else sel[id]=1;renderBulk();document.getElementById('ckAll').checked=false;}
+function toggleAll(el){var vis=document.querySelectorAll('#ordBody tr.main');sel={};if(el.checked){ORDERS.forEach(function(o){sel[o.id]=1;});}renderOrders();document.getElementById('ckAll').checked=el.checked;}
+function clearSel(){sel={};document.getElementById('ckAll').checked=false;renderOrders();}
+function renderBulk(){var n=Object.keys(sel).length;var bb=document.getElementById('bulkbar');bb.classList.toggle('hide',n===0);if(n)document.getElementById('bulkCount').textContent=n+' selected';}
+
+// ---- holds ----
+var HOLDS=[
+  {c:'Aarav Shah',email:'aarav.shah@gmail.com',phone:'+91 98200 11223',addr:'14 Carter Rd, Bandra W, Mumbai 400050',item:'Everpure 1L',variant:'1 litre',sku:'EVP-1L',plan:'Hydration Plan · delivery 3 of 6',contract:'PC-1041',days:9,onhand:12},
+  {c:'Meera Iyer',email:'meera.iyer@outlook.com',phone:'+91 99400 55667',addr:'8 Besant Nagar, Chennai 600090',item:'A2 Milk 500ml',variant:'500 ml',sku:'A2-500',plan:'Daily Dairy · delivery 2 of 12',contract:'PC-1088',days:2,onhand:40}
+];
+function renderHolds(){
+  document.getElementById('holdBody').innerHTML=HOLDS.map(function(h,i){
+    var dc=h.days>7?'bad':'warn';
+    var act='<div class="rowact"><button class="btn sm primary" onclick="openInv(\''+esc(h.item)+'\',\''+esc(h.variant)+'\',\''+esc(h.sku)+'\','+h.onhand+')">Update inventory</button>'+
+      '<div class="kebabwrap"><button class="kebab" onclick="tglMenu(this,event)">⋯</button><div class="dropmenu hide">'+
+      '<div class="mi" onclick="toast(\'Swap product\');closeMenus()">Swap product</div>'+
+      '<div class="mi" onclick="toast(\'Reschedule\');closeMenus()">Reschedule delivery</div>'+
+      '</div></div></div>';
+    return '<tr class="main"><td><span class="cust" id="cust'+i+'" onclick="toggleCust('+i+')"><span class="chev">▶</span>'+esc(h.c)+'</span></td>'+
+      '<td><div class="pname">'+esc(h.item)+'</div><div class="sub2">'+esc(h.plan)+'</div></td>'+
+      '<td><span class="mono">'+esc(h.contract)+'</span></td>'+
+      '<td><div class="held"><span class="n '+dc+'">'+h.days+' days</span><span class="sub2">waiting on stock</span></div></td>'+
+      '<td>'+act+'</td></tr>'+
+      '<tr class="subrow hide" id="sub'+i+'"><td colspan="5"><div class="detail">'+
+        '<div class="detblk"><div class="l">Customer</div><div class="v">'+esc(h.c)+'</div></div>'+
+        '<div class="detblk"><div class="l">Email</div><div class="v sm">'+esc(h.email)+'</div></div>'+
+        '<div class="detblk"><div class="l">Phone</div><div class="v sm">'+esc(h.phone)+'</div></div>'+
+        '<div class="detblk" style="min-width:210px"><div class="l">Shipping address</div><div class="v sm">'+esc(h.addr)+'</div></div>'+
+        '<div class="detblk"><div class="l">Contract</div><div class="v sm">'+esc(h.contract)+'</div></div>'+
+        '<div class="viewcust"><button class="btn sm" onclick="toast(\'Opening customer profile\')">View customer →</button></div>'+
+      '</div></td></tr>';
+  }).join('');
+}
+function toggleCust(i){document.getElementById('sub'+i).classList.toggle('hide');document.getElementById('cust'+i).classList.toggle('open');}
+
+// ---- modals / tabs ----
+function setTab(t){
+  var m={fore:'paneFore',orders:'paneOrders',hold:'paneHold',set:'paneSet'},b={fore:'tFore',orders:'tOrders',hold:'tHold',set:'tSet'};
+  for(var k in m){document.getElementById(m[k]).classList.add('hide');document.getElementById(b[k]).classList.remove('on');}
+  document.getElementById(m[t]).classList.remove('hide');document.getElementById(b[t]).classList.add('on');
+  if(t==='orders')renderOrders();
+  window.scrollTo(0,0);
+}
+function openInv(item,variant,sku,onhand){document.getElementById('invSub').textContent=item+' · '+variant+' · '+sku;document.getElementById('invNow').textContent=onhand;document.getElementById('invQty').value=onhand+48;openModal('invOverlay');}
+function openCx(cust,plan,contract){document.getElementById('cxSub').textContent=cust+' · '+plan+' · '+contract;openModal('cxOverlay');}
+function confirmAction(kind,cust){
+  document.getElementById('cfTitle').textContent=kind==='pause'?'Pause the whole subscription?':'Cancel the whole subscription?';
+  document.getElementById('cfSub').textContent=cust;
+  document.getElementById('cfBody').innerHTML=(kind==='pause'?'This pauses <b>all future deliveries</b> for '+esc(cust)+', not just this one. You can resume anytime.':'This cancels <b>all future deliveries</b> for '+esc(cust)+', not just this one. This cannot be undone.');
+  var go=document.getElementById('cfGo');go.textContent=kind==='pause'?'Pause subscription':'Cancel subscription';
+  go.onclick=function(){closeModal('cfOverlay');toast(kind==='pause'?'Subscription paused':'Subscription cancelled');};
+  openModal('cfOverlay');
+}
+function openGuide(){openModal('guideOverlay');}
+function openModal(id){document.getElementById(id).classList.remove('hide');}
+function closeModal(id){document.getElementById(id).classList.add('hide');}
+function tglMenu(btn,e){e.stopPropagation();closeMenus();btn.nextElementSibling.classList.toggle('hide');}
+function closeMenus(){[].forEach.call(document.querySelectorAll('.dropmenu'),function(m){m.classList.add('hide');});}
+document.addEventListener('click',closeMenus);
+var tId;function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(tId);tId=setTimeout(function(){t.classList.remove('show');},2000);}
+renderFore();renderHolds();renderOrders();
+</script>
+</body>
+</html>

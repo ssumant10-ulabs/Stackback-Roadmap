@@ -1,0 +1,783 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Payment Reminders (Polaris web components v3)</title>
+<script src="https://cdn.shopify.com/shopifycloud/polaris.js"></script>
+<style>
+  :root{
+    --p-ink:#303030; --p-muted:#616161; --p-faint:#8a8a8a;
+    --p-line:#e3e3e3; --p-line2:#ebebeb; --p-surface:#fff;
+    --p-primary:#303030; --p-success:#29845a; --p-success-bg:#cdfee1;
+    --p-link:#005bd3; --p-attn-bg:#ffefcf; --p-attn:#8a6116;
+  }
+  body{margin:0;background:#f1f1f1;font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--p-ink)}
+
+  /* Shopify admin shell */
+  .admin{display:flex;min-height:100vh}
+  .navL{flex:none;width:232px;background:#ebebeb;border-right:1px solid var(--p-line);
+    padding:10px 8px;display:flex;flex-direction:column;gap:1px;position:sticky;top:0;align-self:flex-start;height:100vh;overflow:auto}
+  .navItem{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;color:var(--p-ink);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
+  .navItem:hover{background:#dedede}
+  .navItem .ico{width:18px;height:18px;flex:none;color:#4a4a4a}
+  .navItem .ct{margin-left:auto;font-size:12px;color:var(--p-muted);background:#e0e0e0;border-radius:8px;padding:0 7px;line-height:18px}
+  .navSec{color:var(--p-muted);font-size:13px;font-weight:500;display:flex;align-items:center;height:30px;padding:0 8px;margin-top:6px}
+  .navSec .chev{margin-left:auto;color:var(--p-faint)}
+  .navApp{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;font-weight:600;background:#fff;box-shadow:0 1px 0 rgba(0,0,0,.04);margin-top:2px}
+  .navApp .logo{width:20px;height:20px;border-radius:5px;background:var(--p-primary);display:grid;place-items:center;color:#fff;font-size:11px;flex:none}
+  .navApp .dot{margin-left:auto;width:6px;height:6px;border-radius:50%;background:#8a8a8a}
+  .navSub{display:flex;align-items:center;height:30px;padding:0 8px 0 34px;border-radius:8px;color:var(--p-muted);font-size:13px;cursor:pointer;text-decoration:none}
+  .navSub:hover{background:#dedede;color:var(--p-ink)}
+  .navSub.sel{color:var(--p-ink);font-weight:500}
+  .navGap{flex:1}
+  /* Same reason as Orders v5: without a stable gutter the table silently loses ~47px on the tabs
+     long enough to scroll, so columns jump between tabs and the row actions clip on the busy one. */
+  html{scrollbar-gutter:stable}
+  .appmain{flex:1;min-width:0;display:flex;flex-direction:column}
+  .appbar{height:52px;background:#fff;border-bottom:1px solid var(--p-line);display:flex;align-items:center;gap:10px;padding:0 18px}
+  .appbar .logo{width:24px;height:24px;border-radius:6px;background:var(--p-primary);display:grid;place-items:center;color:#fff;font-size:12px}
+  .appbar .name{font-weight:650;font-size:14px}
+  .appbar .more{margin-left:auto;color:var(--p-muted);font-size:20px;cursor:pointer;letter-spacing:1px}
+  .hide{display:none !important}
+</style>
+<!-- bare mode: when embedded in the WIP prototype shell, hide this file's own admin chrome
+so the shell is not drawn twice. Standalone viewing is unaffected. -->
+<script>if(/bare/.test(location.search+location.hash))document.documentElement.classList.add("bare");</script>
+<style>html.bare .navL,html.bare .appbar{display:none!important}html.bare .admin{min-height:0}html.bare,html.bare body{background:#f1f1f1}</style>
+</head>
+<body>
+<div class="admin">
+
+  <aside class="navL">
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8.5 10 3l7 5.5V16a1 1 0 0 1-1 1h-3v-5H7v5H4a1 1 0 0 1-1-1z"/></svg>Home</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="13" rx="2"/><path d="M7 8h6M7 11h6"/></svg>Orders<span class="ct">127</span></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h12v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M7 6V5a3 3 0 0 1 6 0v1"/></svg>Products</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="7" r="3"/><path d="M4 16c0-3 2.7-5 6-5s6 2 6 5"/></svg>Customers</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 15V9m4 6V5m4 10v-4m4 4V7"/></svg>Growth</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="3"/><path d="M12 12l4 4M13.5 6.5 16 4"/></svg>Discounts</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="12" rx="2"/><path d="M7 8h6M7 11h4"/></svg>Content</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="6"/><path d="M4 10h12M10 4c2 2 2 10 0 12M10 4c-2 2-2 10 0 12"/></svg>Markets</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 16h12M6 16V9m4 7V5m4 11v-4"/></svg>Analytics</div>
+    <div class="navSec">Sales channels<span class="chev">&#8250;</span></div>
+    <div class="navSec">Apps<span class="chev">&#8250;</span></div>
+    <!-- Nav is the LOCKED IA: twelve items, Billing directly below Settings. -->
+    <div class="navApp"><span class="logo">&#9670;</span>StackBack Subscrip&hellip;<span class="dot"></span></div>
+    <div class="navSub">Plans</div>
+    <div class="navSub">Subscriptions</div>
+    <a class="navSub" href="Orders_Polaris_v5.html">Orders</a>
+    <div class="navSub sel">Payment reminders</div>
+    <a class="navSub" href="Inventory_Polaris_v4.html">Inventory</a>
+    <div class="navSub">Customers</div>
+    <div class="navSub">Widget</div>
+    <div class="navSub">Portal</div>
+    <div class="navSub">Landing pages</div>
+    <div class="navSub">Analytics</div>
+    <div class="navSub">Settings</div>
+    <div class="navSub">Billing</div>
+    <div class="navGap"></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m7-7h-2M5 10H3m12.5-5-1.5 1.5M6 14l-1.5 1.5m11 0L14 14M6 6 4.5 4.5"/></svg>Settings</div>
+  </aside>
+
+  <div class="appmain">
+    <div class="appbar"><span class="logo">&#9670;</span><span class="name">StackBack Subscriptions &amp; More</span><span class="more">&ctdot;</span></div>
+
+    <style>
+      /* ==========================================================================
+         v3 REBUILD NOTE. v1 and v2 drew every row by hand as a flex div, which was
+         the single outstanding defect on this module: the same one Orders carried
+         at v2 and shed at v3. Rows are now real Polaris s-table, status is s-badge,
+         products are the s-thumbnail capsule stack shared with Orders v5 and the
+         Purchase Options listing, and the kebab is a real s-menu.
+         Everything below is layout around Polaris, not a substitute for it.
+         ========================================================================== */
+      .lwrap{padding:0 0 26px}
+      .tabs{display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin:0 0 4px}
+      .tabs button{appearance:none;border:1px solid transparent;background:transparent;font:inherit;font-size:13px;font-weight:600;color:var(--p-muted);height:32px;padding:0 12px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+      .tabs button.on{background:#fff;color:var(--p-ink);border-color:var(--p-line);box-shadow:0 1px 0 rgba(0,0,0,.04)}
+      .tabs button .n{font-size:11px;font-weight:700;opacity:.7}
+      .tabhint{font-size:12px;color:var(--p-faint);margin:0 0 14px}
+      .subtabs{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+      .subtabs button{appearance:none;height:28px;padding:0 11px;border-radius:99px;border:1px solid var(--p-line);background:#fff;font:inherit;font-size:12.5px;font-weight:600;color:var(--p-muted);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+      .subtabs button.on{background:var(--p-ink);color:#fff;border-color:var(--p-ink)}
+      .subtabs button .n{font-size:11px;font-weight:700;opacity:.75}
+
+      /* arrived-from-Inventory chip, matching Orders' applied-filter affordance */
+      .chiprow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+      .skuchip{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--p-line);
+        border-radius:99px;padding:3px 6px 3px 12px;font-size:12px;color:var(--p-ink);font-weight:600}
+      .skuchip .x{border:0;background:#ededed;color:var(--p-muted);border-radius:50%;width:18px;height:18px;
+        cursor:pointer;font:inherit;font-size:12px;line-height:1;display:grid;place-items:center;padding:0}
+      .skuchip .x:hover{background:#e0e0e0;color:var(--p-ink)}
+      .chipnote{font-size:12px;color:var(--p-faint)}
+
+      /* filter row, same control vocabulary as Orders v5 */
+      .frow{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin:0 0 14px}
+      .fq{flex:1 1 300px;min-width:220px}
+      .fw{flex:none;min-width:168px}
+
+      /* bulk-action bar, revealed by selection. In v2 the header "Send selected" was a dead
+         button with nothing to select, which is why bulk select is part of this rebuild. */
+      .bulk{display:none;align-items:center;gap:10px;background:#eaf1fb;border:1px solid #bcd4f2;
+        border-radius:10px;padding:9px 12px;margin:0 0 12px;flex-wrap:wrap}
+      .bulk.on{display:flex}
+      .bulk .cnt{font-size:12.5px;font-weight:650;color:#1f3f7a;margin-right:2px}
+      .bulk .sp{flex:1}
+
+      /* table cell typography, shared vocabulary with Orders v5 */
+      .c1{font:700 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+      .c2{color:var(--p-muted);font-size:12px;margin-top:2px;line-height:1.45}
+      .c2mono{font:600 11.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;margin-top:2px}
+      .lnk{color:var(--p-link);font-weight:600;font-size:12.5px;cursor:pointer;text-decoration:none;background:none;border:0;padding:0;font-family:inherit;text-align:left}
+      .lnk:hover{text-decoration:underline}
+      .money{font-variant-numeric:tabular-nums;font-weight:600;font-size:12.5px;white-space:nowrap}
+      .rowacts{display:flex;align-items:center;gap:6px;justify-content:flex-end}
+      /* Overdue: the number carries the weight, the unit stays quiet, both on tabular figures so
+         the column reads as a scannable ladder. Lifted from the Orders days-late column, because
+         this screen sorts on urgency for the same reason that one does. */
+      .late .n{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+      .late .u{font-size:11.5px;color:var(--p-muted);margin-left:3px}
+      .late.crit .n{color:#8e1f0b}
+      .duetoday{font-size:12.5px;font-weight:600;color:var(--p-muted)}
+
+      /* reminder progress: sent out of the store's real dunning cap, never a bare count.
+         Kept as a custom mark because Polaris has no progress-pip primitive, and a badge would
+         lose the at-a-glance "how far through the sequence" reading that makes the column work. */
+      .seq{display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+      .seq .pips{display:flex;gap:3px}
+      .seq .pip{width:7px;height:7px;border-radius:50%;background:#e0e0e0}
+      .seq .pip.on{background:#c8952a}
+      .seq .pip.last{background:#8e1f0b}
+      .seq .txt{font-size:11.5px;font-weight:650;color:var(--p-muted);white-space:nowrap}
+
+      /* product preview capsules, identical to Orders v5 and Purchase Options v12 */
+      .thumbline{display:inline-flex;flex-direction:column;align-items:flex-start;gap:4px;
+        border:0;background:none;cursor:pointer;padding:0;white-space:nowrap;font:inherit;text-align:left}
+      .thumbline .trow{display:inline-flex;align-items:center}
+      .thumbline .tchip{width:26px;height:26px;border-radius:7px;background:#f1f1f1;
+        display:inline-flex;align-items:center;justify-content:center;color:#9a9a9a;
+        margin-left:-6px;position:relative;box-shadow:0 0 0 1px var(--p-line),0 0 0 3px #fff}
+      .thumbline .tchip:first-child{margin-left:0}
+      .thumbline .tchip.hit{box-shadow:0 0 0 1px #1f3f7a,0 0 0 3px #fff}
+      .thumbline .tmore{margin-left:8px;font-size:12px;font-weight:700;color:var(--p-muted)}
+      .thumbline .tcount{font-size:12.5px;color:var(--p-link);font-weight:600}
+      .thumbline:hover .tcount{text-decoration:underline}
+
+      /* kebab activator: borderless so it reads as a row affordance, not a second button */
+      .b{height:28px;padding:0 11px;border-radius:8px;border:1px solid var(--p-line);background:#fff;font:inherit;font-size:12.5px;font-weight:600;color:var(--p-ink);cursor:pointer;white-space:nowrap}
+      .b.pri{background:var(--p-ink);color:#fff;border-color:var(--p-ink)}
+      .b:disabled{opacity:.45;cursor:default}
+      .kebab{border-color:transparent;background:none;padding:0 7px;font-size:15px;line-height:1;color:var(--p-muted)}
+      .kebab:hover{background:#f1f1f1;border-color:var(--p-line)}
+
+      /* centred popup, the shared pattern from Orders v5 */
+      .pop{position:fixed;inset:0;background:rgba(0,0,0,.28);z-index:90;display:none;align-items:center;justify-content:center}
+      .pop.on{display:flex}
+      .popbox{background:#fff;border-radius:12px;width:min(560px,94vw);max-height:86vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+      .pophd{padding:14px 18px;border-bottom:1px solid var(--p-line);display:flex;align-items:flex-start;gap:10px}
+      .pophd .t{font-size:14.5px;font-weight:650}
+      .pophd .x{margin-left:auto;appearance:none;border:0;background:none;font-size:17px;color:var(--p-muted);cursor:pointer;line-height:1;padding:2px 4px}
+      .popbody{padding:16px 18px;overflow:auto}
+      .popfoot{padding:13px 18px;border-top:1px solid var(--p-line);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+      .popbody>.dsec{margin-bottom:16px}
+      .popbody>.dsec:last-child{margin-bottom:0}
+      .dsec .h{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--p-faint);margin-bottom:9px}
+      .metarow{display:flex;gap:0;flex-wrap:wrap;background:#fafafa;border:1px solid var(--p-line2);
+        border-radius:10px;padding:12px 4px;align-items:flex-start}
+      .metaitem{flex:1 1 auto;min-width:92px;padding:0 12px;position:relative}
+      .metaitem+.metaitem::before{content:"";position:absolute;left:0;top:1px;bottom:1px;width:1px;background:var(--p-line2)}
+      .metaitem .k{font-size:10.5px;letter-spacing:.3px;text-transform:uppercase;color:var(--p-faint);font-weight:700;margin-bottom:3px}
+      .metaitem .v{font-size:12.5px;font-weight:600;line-height:1.35}
+      .iline{display:flex;align-items:baseline;gap:12px;padding:9px 0;border-bottom:1px solid var(--p-line2)}
+      .iline:last-of-type{border-bottom:0}
+      .iline .g{flex:1;min-width:0}
+      .iline .qty{display:inline-block;font-weight:700;font-variant-numeric:tabular-nums;font-size:11.5px;
+        color:var(--p-muted);background:#f1f1f1;border-radius:5px;padding:1px 5px;margin-left:4px;vertical-align:1px}
+      .iline .amt{flex:none;font-weight:600;font-variant-numeric:tabular-nums;font-size:12.5px}
+      .iline.tot{border-top:1px solid var(--p-line);border-bottom:0;margin-top:4px;padding-top:11px}
+      .iline.tot .amt{font-size:13.5px;font-weight:700}
+      .iline .sk{color:var(--p-faint);font-size:11.5px;font-family:ui-monospace,Menlo,monospace}
+      .iline .hit{font-weight:700;color:var(--p-ink)}
+      /* the reminder history inside the popup: what was actually sent, and when */
+      .tline{display:flex;gap:10px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--p-line2);font-size:12.5px}
+      .tline:last-child{border-bottom:0}
+      .tline .w{flex:none;width:82px;color:var(--p-faint);font-size:11.5px;font-variant-numeric:tabular-nums}
+      .tline .g{flex:1;min-width:0}
+
+      .wstrip{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:0 0 14px;align-items:stretch}
+      .wtile{background:#fff;border:1px solid var(--p-line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:3px}
+      .wtile .k{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--p-faint)}
+      .wtile .v{font-size:21px;font-weight:650;letter-spacing:-.3px}
+      .wtile .d{font-size:12px;color:var(--p-muted);margin-top:auto}
+      .note{background:#eaf4ff;border:1px solid #b9dcf5;color:#00527c;border-radius:10px;padding:11px 13px;font-size:12.5px;margin:14px 0 0}
+      /* NOT named .warn. In v1 that class collided with the .sdot warn status modifier and painted
+         every mid-stage dot as a 36x32 amber blob. v2 renamed it, v3 keeps the rename. */
+      .notewarn{background:#ffefcf;border:1px solid #f0d9a8;color:#8a6116;border-radius:10px;padding:11px 13px;font-size:12.5px;margin:14px 0 0}
+      .note b,.notewarn b{font-weight:650}
+      .emptyRow{padding:34px 16px;text-align:center;color:var(--p-faint);font-size:12.5px}
+      .hide{display:none !important}
+    </style>
+
+    <s-page heading="Payment reminders" inline-size="large">
+      <s-button slot="secondary-actions">Export</s-button>
+      <!-- v2 shipped this as a dead control: there was nothing on the screen to select. It is now
+           wired to the table's checkboxes and reports its own count. -->
+      <s-button slot="primary-action" variant="primary" id="sendSel" disabled>Send selected</s-button>
+
+      <div class="lwrap">
+
+        <!-- Primary job is the live reminder queue. Paused is deliberately secondary. -->
+        <div class="tabs" id="tabs">
+          <button data-tab="ongoing" class="on">Ongoing reminders <span class="n"></span></button>
+          <button data-tab="paused">Paused <span class="n"></span></button>
+        </div>
+        <p class="tabhint" id="tabhint">Subscriptions still live, with an invoice outstanding and a reminder sequence running. This is the queue to work.</p>
+
+        <div class="chiprow hide" id="skuRow"></div>
+
+        <!-- ===== ONGOING ===== -->
+        <div id="paneOngoing">
+          <div class="wstrip">
+            <div class="wtile"><div class="k">Awaiting payment</div><div class="v" id="wCount">0</div><div class="d" id="wCountD">all still active subscriptions</div></div>
+            <div class="wtile"><div class="k">Outstanding</div><div class="v" id="wOut">0</div><div class="d" id="wOutD">across 0 invoices</div></div>
+            <div class="wtile"><div class="k">On final reminder</div><div class="v" id="wFinal">0</div><div class="d">pause automatically if unpaid</div></div>
+            <div class="wtile"><div class="k">Recovered, 30d</div><div class="v">61%</div><div class="d">paid after at least one reminder</div></div>
+          </div>
+
+          <div class="frow">
+            <div class="fq">
+              <s-search-field id="q" label="Search reminders" labelAccessibilityVisibility="exclusive"
+                placeholder="Search customer, order, subscription, product or SKU"></s-search-field>
+            </div>
+            <div class="fw"><s-select id="fStage" label="Stage">
+              <s-option value="all">All unpaid</s-option>
+              <s-option value="first">First reminder</s-option>
+              <s-option value="mid">Chasing</s-option>
+              <s-option value="final">Final reminder</s-option>
+            </s-select></div>
+            <div class="fw"><s-select id="fSort" label="Sort by">
+              <s-option value="urgency">Closest to auto-pause</s-option>
+              <s-option value="overdue">Days overdue</s-option>
+              <s-option value="amount">Amount outstanding</s-option>
+              <s-option value="customer">Customer name</s-option>
+            </s-select></div>
+          </div>
+
+          <div class="bulk" id="bulkBar">
+            <span class="cnt" id="bulkCnt">0 selected</span>
+            <span class="sp"></span>
+            <button class="b pri" id="bulkSend">Send reminder</button>
+            <button class="b" id="bulkClear">Clear</button>
+          </div>
+
+          <s-section padding="none">
+            <!-- s-table stacks into label/value pairs when its container is narrower than its
+                 natural width, which is why the headers are written to read on their own. -->
+            <div id="tblOngoing"></div>
+          </s-section>
+
+          <div class="note">
+            <b>The count is a fraction, never a bare number.</b> The denominator is your store's own Retry failed payments setting in Settings, Payments, currently 4. When the sequence runs out the subscription auto-pauses and the customer moves to the Paused tab under Paused for non-payment. They do not stay in this queue.
+          </div>
+        </div>
+
+        <!-- ===== PAUSED ===== -->
+        <div id="panePaused" class="hide">
+          <div class="subtabs" id="subtabs">
+            <button data-sub="nonpay" class="on">Paused for non-payment <span class="n"></span></button>
+            <button data-sub="customer">Paused by customer <span class="n"></span></button>
+          </div>
+
+          <s-section padding="none">
+            <div id="tblPaused"></div>
+          </s-section>
+
+          <div class="notewarn" id="pausedNote">
+            <b>These are the churn risk, and most of them do not know they stopped.</b> The subscription paused itself when the reminder sequence ran out, so the customer took no action and got no decision point. That makes this a call, not another email, which is why they are separated from the customers who paused on purpose.
+          </div>
+        </div>
+
+      </div>
+    </s-page>
+  </div>
+</div>
+
+<!-- shared popup: reminder detail (what they owe for, and what has been sent) -->
+<div class="pop" id="pop">
+  <div class="popbox">
+    <div class="pophd"><div><div class="t" id="popT">Detail</div><div class="c2" id="popS"></div></div>
+      <button class="x" id="popX" aria-label="Close">&#10005;</button></div>
+    <div class="popbody" id="popB"></div>
+    <div class="popfoot" id="popF"></div>
+  </div>
+</div>
+
+<script>
+  var $ = function(id){ return document.getElementById(id); };
+  var CAP = 4;   /* from Settings, Payments, Retry failed payments */
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function INR(n){ return n.toLocaleString('en-IN'); }
+
+  /* Inventory links in as PaymentReminders_Polaris_v3.html#sku=CPC-500 when someone clicks the
+     NOT-PAID-YET count on a forecast row. v1 could not honour that: its rows carried no products
+     and no SKUs at all, so the reminder queue has to know its LINE ITEMS for the link to exist.
+     That remains a dev implication beyond the wireframe. `items` is [name, SKU, qty, unitPrice],
+     matching the shape Orders already uses, with the price added so the popup can total. */
+  var ONGOING = [
+    {cust:'Sneha Kulkarni', sb:'SB-8794', pc:'PC-1021', sent:4, amt:2250, over:9, stage:'final',
+      plan:'Quarterly Wellness Box', last:'2 days ago',
+      items:[['Cold Pressed Coffee 500g','CPC-500',2,675],['Herbal Tea Sampler','HTS-01',1,900]]},
+    {cust:'Deepak Rao',     sb:'SB-8799', pc:'PC-1025', sent:4, amt:1180, over:7, stage:'final',
+      plan:'Monthly Essentials', last:'3 days ago',
+      items:[['Collagen Peptides 500g','COL-500',1,1180]]},
+    {cust:'Kabir Shah',     sb:'SB-8801', pc:'PC-1028', sent:2, amt:1499, over:4, stage:'mid',
+      plan:'Monthly Essentials', last:'yesterday',
+      items:[['Cold Pressed Coffee 500g','CPC-500',1,675],['Ashwagandha Gummies 60ct','ASH-060',2,412]]},
+    {cust:'Nisha Verma',    sb:'SB-8806', pc:'PC-1031', sent:2, amt:899,  over:3, stage:'mid',
+      plan:'Coffee Club', last:'yesterday',
+      items:[['Wellness Powder 250g','WLP-250',1,899]]},
+    {cust:'Vikram Patel',   sb:'SB-8788', pc:'PC-1014', sent:1, amt:899,  over:1, stage:'first',
+      plan:'Coffee Club', last:'today',
+      items:[['Herbal Tea Sampler','HTS-01',3,300]]},
+    {cust:'Ritu Malhotra',  sb:'SB-8812', pc:'PC-1036', sent:1, amt:2100, over:0, stage:'first',
+      plan:'Build Your Box', last:'today',
+      items:[['Cold Pressed Coffee 500g','CPC-500',1,675],['Magnesium Glycinate 90ct','MAG-090',1,1425]]}
+  ];
+
+  var PAUSED_NONPAY = [
+    {cust:'Farah Sheikh',  pc:'PC-1009', amt:1499, days:12, plan:'Monthly Essentials'},
+    {cust:'Amit Joshi',    pc:'PC-1012', amt:2250, days:8,  plan:'Quarterly Wellness Box'},
+    {cust:'Leena George',  pc:'PC-1017', amt:899,  days:5,  plan:'Coffee Club'}
+  ];
+
+  var PAUSED_CUSTOMER = [
+    {cust:'Ananya Rao',    pc:'PC-1032', resume:'1 Sep',  plan:'Monthly Essentials', reason:'Travelling',      passed:false},
+    {cust:'Sameer Khan',   pc:'PC-1040', resume:'15 Aug', plan:'Coffee Club',        reason:'Too much stock',  passed:false},
+    {cust:'Divya Menon',   pc:'PC-1043', resume:'',       plan:'Build Your Box',     reason:'Not given',       passed:false}
+  ];
+
+  /* ---------- SKU arrival ---------- */
+  /* Read from the hash, not the query string: a static server's clean-URL rewrite drops the query
+     when it strips ".html", which is why the whole convention is a #hash here and on Orders. */
+  function readSkuHash(){
+    var m = /[#&]sku=([^&]+)/.exec(location.hash);
+    if (!m) return null;
+    try { return decodeURIComponent(m[1]); } catch(e){ return m[1]; }
+  }
+  var skuFilter = readSkuHash();
+  /* the hash is read once at load, but arriving from Inventory while this screen is already open
+     only changes the hash, so without this the second click does nothing */
+  window.addEventListener('hashchange', function(){
+    var next = readSkuHash();
+    if(next === skuFilter) return;
+    skuFilter = next; sel = {};
+    /* Arriving from Inventory must land on the tab the filter actually applies to. Without this,
+       clicking a Not-paid-yet count while this screen happens to be open on Paused drops you on a
+       list the chip itself says is not scoped by SKU, which reads as a broken filter. Found in
+       verification, not by reading the code. */
+    if(next) showTab('ongoing');
+    render();
+  });
+  function skuOK(r){
+    if (!skuFilter) return true;
+    /* a delivery matches if ANY line carries the SKU, since one unpaid delivery can hold several */
+    return (r.items||[]).some(function(l){ return l[1]===skuFilter; });
+  }
+  function skuName(){
+    for (var i=0;i<ONGOING.length;i++){
+      var hit=(ONGOING[i].items||[]).filter(function(l){ return l[1]===skuFilter; })[0];
+      if (hit) return hit[0];
+    }
+    return skuFilter;
+  }
+
+  /* ---------- state ---------- */
+  var stage='all', sortBy='urgency', sub='nonpay', query='', sel={}, tab='ongoing';
+
+  function baseOngoing(){ return ONGOING.filter(skuOK); }
+
+  function visibleOngoing(){
+    var rows = baseOngoing().filter(function(r){ return stage==='all' || r.stage===stage; });
+    if(query){
+      var q=query.toLowerCase();
+      rows = rows.filter(function(r){
+        var hay = [r.cust,r.sb,r.pc,r.plan].join(' ').toLowerCase()
+          + ' ' + (r.items||[]).map(function(l){ return l[0]+' '+l[1]; }).join(' ').toLowerCase();
+        return hay.indexOf(q)>-1;
+      });
+    }
+    var s = rows.slice();
+    if(sortBy==='urgency')   s.sort(function(a,b){ return (b.sent-a.sent) || (b.over-a.over); });
+    if(sortBy==='overdue')   s.sort(function(a,b){ return b.over-a.over; });
+    if(sortBy==='amount')    s.sort(function(a,b){ return b.amt-a.amt; });
+    if(sortBy==='customer')  s.sort(function(a,b){ return a.cust.localeCompare(b.cust); });
+    return s;
+  }
+
+  /* ---------- cells ---------- */
+  function pips(sent){
+    var out='';
+    for(var i=1;i<=CAP;i++){
+      var cls = i<=sent ? (i===CAP?'pip on last':'pip on') : 'pip';
+      out += '<span class="'+cls+'"></span>';
+    }
+    return '<div class="seq"><span class="pips">'+out+'</span>'
+      + '<span class="txt">'+sent+' of '+CAP+' sent</span></div>';
+  }
+
+  function picIcon(){
+    return '<svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor"'
+      +' stroke-width="1.8"><rect x="3" y="4" width="14" height="12" rx="2"/>'
+      +'<circle cx="7.5" cy="8.5" r="1.3"/><path d="M4 14l4-4 3 3 2-2 3 3"/></svg>';
+  }
+  /* The capsule stack replaces v2's inline comma-separated item text. Same information, but it
+     matches Orders and the listing, and it survives a narrow column instead of wrapping to three
+     lines. The matched SKU keeps a ring so a filtered list still shows WHY each row survived. */
+  function owedCell(r){
+    var max=3, shown=r.items.slice(0,max), extra=r.items.length-shown.length;
+    var units=0; r.items.forEach(function(l){ units+=l[2]; });
+    var chips=shown.map(function(l){
+      var on = skuFilter && l[1]===skuFilter;
+      return '<span class="tchip'+(on?' hit':'')+'" title="'+esc(l[0])+' '+esc(l[1])+' &times;'+l[2]+'">'+picIcon()+'</span>';
+    }).join('');
+    var more = extra>0 ? '<span class="tmore">+'+extra+'</span>' : '';
+    return '<button class="thumbline" data-open="'+esc(r.sb)+'" title="View what '+esc(r.cust)+' owes for">'
+      +'<span class="trow">'+chips+more+'</span>'
+      +'<span class="trow"><span class="tcount">'+units+' unit'+(units===1?'':'s')+'</span></span>'
+      +'</button>';
+  }
+
+  function overdueCell(r){
+    if(r.over===0) return '<span class="duetoday">Due today</span>';
+    return '<span class="late'+(r.over>=7?' crit':'')+'"><span class="n">'+r.over+'</span>'
+      + '<span class="u">day'+(r.over===1?'':'s')+'</span></span>';
+  }
+
+  function stageBadge(r){
+    if(r.sent>=CAP) return '<s-badge tone="critical">Pauses next</s-badge>';
+    if(r.sent>1)    return '<s-badge tone="warning">Chasing</s-badge>';
+    return '<s-badge>First reminder</s-badge>';
+  }
+
+  /* ---------- ongoing table ---------- */
+  var OHEADS = [
+    ['',''],                            /* select */
+    ['Customer',''],
+    ['Reference',''],
+    ['Overdue',''],
+    ['Stage',''],
+    ['Reminders',''],
+    ['Owed for',''],
+    ['Amount',''],
+    ['','']                             /* actions */
+  ];
+
+  function ongoingRow(r){
+    var atCap = r.sent>=CAP;
+    return '<s-table-row>'
+      +'<s-table-cell><s-checkbox '+(sel[r.sb]?'checked':'')+' data-ck="'+esc(r.sb)+'"'
+        +' accessibilityLabel="Select '+esc(r.cust)+'"></s-checkbox></s-table-cell>'
+      +'<s-table-cell><button class="lnk" data-cust="'+esc(r.cust)+'">'+esc(r.cust)+'</button>'
+        +'<div class="c2">'+esc(r.plan)+'</div></s-table-cell>'
+      +'<s-table-cell><div class="c1">'+esc(r.sb)+'</div><div class="c2mono">'+esc(r.pc)+'</div></s-table-cell>'
+      +'<s-table-cell>'+overdueCell(r)+'</s-table-cell>'
+      +'<s-table-cell>'+stageBadge(r)+'</s-table-cell>'
+      +'<s-table-cell>'+pips(r.sent)+'</s-table-cell>'
+      +'<s-table-cell>'+owedCell(r)+'</s-table-cell>'
+      +'<s-table-cell><span class="money">'+INR(r.amt)+'</span></s-table-cell>'
+      +'<s-table-cell><div class="rowacts">'
+        /* At the cap the primary flips: another email is pointless when the next event is a pause. */
+        +'<button class="b pri" data-act="'+esc(r.sb)+'">'+(atCap?'Call customer':'Send reminder')+'</button>'
+        /* s-menu is a bare popover with no trigger slot: the activator lives OUTSIDE it and is
+           wired with commandfor + command="--show". Putting the button inside makes s-menu swallow
+           it as a menu item and no kebab renders at all, which is the defect that hid four row
+           actions on Orders v3 for four days. */
+        +'<button class="b kebab" commandfor="m-'+esc(r.sb)+'" command="--show"'
+          +' aria-label="More actions for '+esc(r.cust)+'">&#8943;</button>'
+        +'<s-menu id="m-'+esc(r.sb)+'" accessibilityLabel="More actions for '+esc(r.cust)+'">'
+          +'<s-button data-mopen="'+esc(r.sb)+'">View what they owe for</s-button>'
+          +(atCap?'<s-button data-mact="'+esc(r.sb)+'">Send one more reminder</s-button>':'')
+          +'<s-button data-mcust="'+esc(r.cust)+'">View customer</s-button>'
+          +'<s-button data-msub="'+esc(r.pc)+'">View subscription</s-button>'
+          +'<s-button tone="critical" data-mpause="'+esc(r.sb)+'">Pause now</s-button>'
+        +'</s-menu>'
+      +'</div></s-table-cell>'
+      +'</s-table-row>';
+  }
+
+  function headerRow(heads, withSelect, allOn, someOn){
+    var cells = heads.map(function(h,i){
+      if(withSelect && i===0){
+        return '<s-table-header accessibilityLabel="Select all reminders">'
+          +'<s-checkbox id="ckAll" '+(allOn?'checked':'')+' '+(!allOn&&someOn?'indeterminate':'')
+          +' accessibilityLabel="Select all reminders"></s-checkbox></s-table-header>';
+      }
+      return '<s-table-header>'+(h[0]||'')+'</s-table-header>';
+    }).join('');
+    return '<s-table-header-row slot="headings">'+cells+'</s-table-header-row>';
+  }
+
+  function renderOngoing(){
+    var rows = visibleOngoing();
+    if(!rows.length){
+      $('tblOngoing').innerHTML = '<div class="emptyRow">'
+        + (skuFilter ? 'No unpaid reminder contains '+esc(skuFilter)+'.'
+           : query ? 'Nothing matches that search.' : 'Nobody at this stage.')+'</div>';
+      return;
+    }
+    var ids = rows.map(function(r){ return r.sb; });
+    var on  = ids.filter(function(i){ return sel[i]; }).length;
+    /* variant="table" pins the grid layout. s-table brings its own horizontal scroll. */
+    $('tblOngoing').innerHTML = '<s-table variant="table">'
+      + headerRow(OHEADS, true, on===ids.length, on>0)
+      + '<s-table-body>' + rows.map(ongoingRow).join('') + '</s-table-body></s-table>';
+  }
+
+  /* ---------- paused tables ---------- */
+  function nonpayRow(r){
+    return '<s-table-row>'
+      +'<s-table-cell><button class="lnk" data-cust="'+esc(r.cust)+'">'+esc(r.cust)+'</button>'
+        +'<div class="c2">'+esc(r.plan)+'</div></s-table-cell>'
+      +'<s-table-cell><div class="c1">'+esc(r.pc)+'</div></s-table-cell>'
+      +'<s-table-cell><span class="late crit"><span class="n">'+r.days+'</span>'
+        +'<span class="u">day'+(r.days===1?'':'s')+'</span></span>'
+        +'<div class="c2">after '+CAP+' of '+CAP+' reminders</div></s-table-cell>'
+      +'<s-table-cell><s-badge tone="critical">Stopped, unaware</s-badge></s-table-cell>'
+      +'<s-table-cell><span class="money">'+INR(r.amt)+'</span></s-table-cell>'
+      +'<s-table-cell><div class="rowacts">'
+        +'<button class="b pri" data-call="'+esc(r.cust)+'">Call customer</button>'
+        +'<button class="b kebab" commandfor="p-'+esc(r.pc)+'" command="--show"'
+          +' aria-label="More actions for '+esc(r.cust)+'">&#8943;</button>'
+        +'<s-menu id="p-'+esc(r.pc)+'" accessibilityLabel="More actions for '+esc(r.cust)+'">'
+          +'<s-button data-mcust="'+esc(r.cust)+'">View customer</s-button>'
+          +'<s-button data-msub="'+esc(r.pc)+'">View subscription</s-button>'
+          +'<s-button data-mresume="'+esc(r.pc)+'">Resume subscription</s-button>'
+        +'</s-menu>'
+      +'</div></s-table-cell>'
+      +'</s-table-row>';
+  }
+
+  function custRow(r){
+    /* A resume date that has already passed is the one case on this tab that needs a person.
+       Flagged rather than left to look identical to the rest, which was an open question on v2. */
+    var noDate = !r.resume;
+    return '<s-table-row>'
+      +'<s-table-cell><button class="lnk" data-cust="'+esc(r.cust)+'">'+esc(r.cust)+'</button>'
+        +'<div class="c2">'+esc(r.plan)+'</div></s-table-cell>'
+      +'<s-table-cell><div class="c1">'+esc(r.pc)+'</div></s-table-cell>'
+      +'<s-table-cell>'+(noDate
+          ? '<span class="c2">No date set</span>'
+          : '<span class="duetoday">Resumes '+esc(r.resume)+'</span>')+'</s-table-cell>'
+      +'<s-table-cell>'+(noDate
+          ? '<s-badge tone="warning">Open ended</s-badge>'
+          : '<s-badge tone="info">Paused by choice</s-badge>')+'</s-table-cell>'
+      +'<s-table-cell>'+esc(r.reason)+'</s-table-cell>'
+      +'<s-table-cell><div class="rowacts">'
+        /* No chase action. They chose this, so the row is a record, not a task. */
+        +'<button class="b kebab" commandfor="c-'+esc(r.pc)+'" command="--show"'
+          +' aria-label="More actions for '+esc(r.cust)+'">&#8943;</button>'
+        +'<s-menu id="c-'+esc(r.pc)+'" accessibilityLabel="More actions for '+esc(r.cust)+'">'
+          +'<s-button data-mcust="'+esc(r.cust)+'">View customer</s-button>'
+          +'<s-button data-msub="'+esc(r.pc)+'">View subscription</s-button>'
+        +'</s-menu>'
+      +'</div></s-table-cell>'
+      +'</s-table-row>';
+  }
+
+  var NHEADS=[['Customer'],['Subscription'],['Paused'],['Status'],['Outstanding'],['']];
+  var CHEADS=[['Customer'],['Subscription'],['Resumes'],['Status'],['Reason'],['']];
+
+  function renderPaused(){
+    var heads = sub==='nonpay' ? NHEADS : CHEADS;
+    var rows  = sub==='nonpay' ? PAUSED_NONPAY.map(nonpayRow) : PAUSED_CUSTOMER.map(custRow);
+    $('tblPaused').innerHTML = '<s-table variant="table">'
+      + headerRow(heads,false)
+      + '<s-table-body>' + rows.join('') + '</s-table-body></s-table>';
+    $('pausedNote').classList.toggle('hide', sub!=='nonpay');
+  }
+
+  /* ---------- popup ---------- */
+  function closePop(){ $('pop').classList.remove('on'); }
+  $('popX').onclick = closePop;
+  $('pop').addEventListener('click', function(e){ if(e.target===$('pop')) closePop(); });
+
+  function openOwed(sb){
+    var r = ONGOING.filter(function(x){ return x.sb===sb; })[0]; if(!r) return;
+    var atCap = r.sent>=CAP;
+    $('popT').textContent = r.cust;
+    $('popS').innerHTML = esc(r.sb)+' &middot; '+esc(r.pc)+' &middot; '+esc(r.plan);
+    var tot=0; r.items.forEach(function(l){ tot += l[2]*l[3]; });
+    var lines = r.items.map(function(l){
+      var on = skuFilter && l[1]===skuFilter;
+      return '<div class="iline"><div class="g'+(on?' hit':'')+'">'+esc(l[0])
+        +' <span class="sk">'+esc(l[1])+'</span><span class="qty">&times;'+l[2]+'</span></div>'
+        +'<div class="amt">'+INR(l[2]*l[3])+'</div></div>';
+    }).join('');
+    /* the reminder history: v2 showed only how many were sent, not what they were or when */
+    var hist='';
+    for(var i=1;i<=r.sent;i++){
+      var label = i===1 ? 'First reminder' : (i===CAP ? 'Final reminder' : 'Reminder '+i);
+      hist += '<div class="tline"><span class="w">'+(i===r.sent?r.last:'earlier')+'</span>'
+        +'<span class="g">'+label+' sent by email and WhatsApp</span></div>';
+    }
+    $('popB').innerHTML =
+      '<div class="dsec"><div class="metarow">'
+        +'<div class="metaitem"><div class="k">Overdue</div><div class="v">'
+          +(r.over===0?'Due today':r.over+' day'+(r.over===1?'':'s'))+'</div></div>'
+        +'<div class="metaitem"><div class="k">Reminders</div><div class="v">'+r.sent+' of '+CAP+'</div></div>'
+        +'<div class="metaitem"><div class="k">Outstanding</div><div class="v">'+INR(r.amt)+'</div></div>'
+        +'<div class="metaitem"><div class="k">Next event</div><div class="v">'
+          +(atCap?'Auto-pause':'Reminder '+(r.sent+1))+'</div></div>'
+      +'</div></div>'
+      +'<div class="dsec"><div class="h">What this invoice covers</div>'+lines
+        +'<div class="iline tot"><div class="g">Total</div><div class="amt">'+INR(tot)+'</div></div></div>'
+      +'<div class="dsec"><div class="h">Reminders sent</div>'+hist+'</div>';
+    $('popF').innerHTML = '<button class="b" id="popClose2">Close</button>'
+      +'<button class="b pri">'+(atCap?'Call customer':'Send reminder')+'</button>';
+    $('popClose2').onclick = closePop;
+    $('pop').classList.add('on');
+  }
+
+  function openCustomer(name){
+    $('popT').textContent = name;
+    $('popS').textContent = 'Customer record';
+    $('popB').innerHTML = '<div class="dsec"><div class="metarow">'
+      +'<div class="metaitem"><div class="k">Email</div><div class="v">'
+        +esc(name.toLowerCase().replace(/[^a-z]+/g,'.'))+'@example.com</div></div>'
+      +'<div class="metaitem"><div class="k">Phone</div><div class="v">+91 98xxx xxxxx</div></div>'
+      +'<div class="metaitem"><div class="k">Subscriptions</div><div class="v">1 active</div></div>'
+      +'</div></div>'
+      +'<div class="dsec"><div class="h">Note</div><div class="c2">Mock record. The real screen '
+      +'reuses the customer popup already built on Orders v5, so this stays one component, not two.</div></div>';
+    $('popF').innerHTML = '<button class="b" id="popClose2">Close</button>';
+    $('popClose2').onclick = closePop;
+    $('pop').classList.add('on');
+  }
+
+  /* ---------- derived counts ---------- */
+  /* Every count and tile derives from the SAME set the rows come from, so a SKU filter narrows the
+     numbers along with the list. A tab claiming 23 above a list of 3 is the defect this prevents. */
+  function counts(){
+    var set=function(sel2,n){ var e=document.querySelector(sel2); if(e) e.textContent=n; };
+    var B=baseOngoing();
+    set('#tabs button[data-tab="ongoing"] .n', B.length);
+    set('#tabs button[data-tab="paused"] .n',  PAUSED_NONPAY.length + PAUSED_CUSTOMER.length);
+    set('#subtabs button[data-sub="nonpay"] .n',   PAUSED_NONPAY.length);
+    set('#subtabs button[data-sub="customer"] .n', PAUSED_CUSTOMER.length);
+
+    var out=0; B.forEach(function(r){ out += r.amt; });
+    $('wCount').textContent = B.length;
+    $('wOut').textContent   = INR(out);
+    $('wFinal').textContent = B.filter(function(r){ return r.sent>=CAP; }).length;
+    $('wOutD').textContent  = 'across '+B.length+' invoice'+(B.length===1?'':'s');
+    $('wCountD').textContent = skuFilter
+      ? 'active subscriptions containing '+skuFilter
+      : 'all still active subscriptions';
+  }
+
+  function renderSkuChip(){
+    var row = $('skuRow');
+    if(!skuFilter){ row.classList.add('hide'); row.innerHTML=''; return; }
+    row.classList.remove('hide');
+    row.innerHTML = '<span class="skuchip">From Inventory, SKU: '+esc(skuFilter)+' ('+esc(skuName())+')'
+      + '<button class="x" id="skuX" aria-label="Clear the SKU filter and show every unpaid reminder">&#10005;</button></span>'
+      /* stated, not hidden: the Paused tab cannot be scoped by SKU because paused rows carry no
+         line items in the model, so pretending the filter applied there would be a lie */
+      + '<span class="chipnote">Applies to the reminder queue. The Paused tab is not scoped by SKU.</span>';
+    $('skuX').onclick = function(){
+      skuFilter = null; sel = {};
+      if(window.history && history.replaceState) history.replaceState(null,'',location.pathname);
+      render();
+    };
+  }
+
+  function renderBulk(){
+    var ids = visibleOngoing().map(function(r){ return r.sb; });
+    var n = ids.filter(function(i){ return sel[i]; }).length;
+    $('bulkBar').classList.toggle('on', n>0);
+    $('bulkCnt').textContent = n+' selected';
+    /* The send action belongs to the reminder QUEUE. On the Paused tab there is nothing to select
+       and nothing to send, so it goes back to disabled rather than sitting there offering to send
+       reminders for rows that are not on screen. The selection itself is kept, so tabbing away and
+       back does not silently discard the work of picking rows. */
+    var live = tab==='ongoing' && n>0;
+    var b=$('sendSel');
+    if(b){ b.textContent = live ? 'Send '+n+' reminder'+(n===1?'':'s') : 'Send selected';
+           if(live) b.removeAttribute('disabled'); else b.setAttribute('disabled',''); }
+  }
+
+  function render(){
+    renderSkuChip();
+    renderOngoing();
+    renderPaused();
+    counts();
+    renderBulk();
+  }
+
+  /* ---------- events ---------- */
+  function showTab(which){
+    tab = which;
+    var b = $('tabs').querySelector('button[data-tab="'+which+'"]');
+    $('tabs').querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x===b); });
+    var on = which==='ongoing';
+    $('paneOngoing').classList.toggle('hide', !on);
+    $('panePaused').classList.toggle('hide', on);
+    $('tabhint').textContent = on
+      ? 'Subscriptions still live, with an invoice outstanding and a reminder sequence running. This is the queue to work.'
+      : 'Secondary priority. Subscriptions that have already stopped, split by whether the customer chose it or the reminder sequence ran out.';
+    renderBulk();
+  }
+
+  $('tabs').addEventListener('click', function(e){
+    var b=e.target.closest('button[data-tab]'); if(!b) return;
+    showTab(b.dataset.tab);
+  });
+
+  $('subtabs').addEventListener('click', function(e){
+    var b=e.target.closest('button[data-sub]'); if(!b) return;
+    sub=b.dataset.sub;
+    $('subtabs').querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x===b); });
+    renderPaused();
+  });
+
+  $('fStage').addEventListener('change', function(e){ stage=e.target.value; sel={}; render(); });
+  $('fSort').addEventListener('change',  function(e){ sortBy=e.target.value; renderOngoing(); });
+  $('q').addEventListener('input', function(e){ query=e.target.value||''; sel={}; render(); });
+
+  /* delegated: the tables are re-rendered wholesale, so per-node handlers would go stale */
+  document.addEventListener('click', function(e){
+    var t=e.target;
+    var open=t.closest&&t.closest('[data-open]');
+    if(open){ openOwed(open.getAttribute('data-open')); return; }
+    var mo=t.closest&&t.closest('[data-mopen]');
+    if(mo){ openOwed(mo.getAttribute('data-mopen')); return; }
+    var cu=t.closest&&t.closest('[data-cust]');
+    if(cu){ openCustomer(cu.getAttribute('data-cust')); return; }
+    var mc=t.closest&&t.closest('[data-mcust]');
+    if(mc){ openCustomer(mc.getAttribute('data-mcust')); return; }
+  });
+
+  document.addEventListener('change', function(e){
+    var t=e.target;
+    if(t.id==='ckAll'){
+      var ids=visibleOngoing().map(function(r){ return r.sb; });
+      var all=ids.every(function(i){ return sel[i]; });
+      ids.forEach(function(i){ if(all) delete sel[i]; else sel[i]=true; });
+      renderOngoing(); renderBulk(); return;
+    }
+    var ck=t.getAttribute&&t.getAttribute('data-ck');
+    if(ck){ if(sel[ck]) delete sel[ck]; else sel[ck]=true; renderBulk();
+      var head=document.getElementById('ckAll');
+      if(head){ var ids2=visibleOngoing().map(function(r){ return r.sb; });
+        var on=ids2.filter(function(i){ return sel[i]; }).length;
+        head.checked = on===ids2.length && on>0;
+        head.indeterminate = on>0 && on<ids2.length; }
+    }
+  });
+
+  $('bulkClear').onclick = function(){ sel={}; renderOngoing(); renderBulk(); };
+
+  render();
+</script>
+</body>
+</html>

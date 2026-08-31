@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 import type {
   Activity, ActivityKind, Assignee, Comment, Filter, Node, Roadmap, Roster, Status,
-  Theme, ViewId, TimelineMode, SimpleMode, TeamGran, Feature, FeatureBand, PilotStore,
+  Theme, ViewId, TimelineMode, SimpleMode, TeamGran, Feature, FeatureBand, PilotStore, Shot,
 } from "./types";
 import { DEFAULT_ROSTER, STATUS_CYCLE } from "./constants";
 import { SEED_VERSION, seed, stampIds } from "./seed";
@@ -12,6 +12,7 @@ import { reconcile } from "./dates";
 import { featureSeed } from "./featureSeed";
 import { pilotSeed } from "./pilotSeed";
 import { autoLink, boardStatusOf, isDrifted, matchTask } from "./featureLink";
+import { SHOT_MAX_PER_REQUEST, SHOT_TOTAL_BUDGET, fmtBytes } from "./shots";
 import { CLIENT_ID, loadRemote, saveRemote, subscribeRemote, supabaseEnabled } from "./remote";
 
 const ROADMAPS_KEY = "stackback_roadmaps_v3";
@@ -24,12 +25,13 @@ const ME_KEY = "stackback_me_v1";
 const SHEET_ROADMAP_ID = "stackback";
 /** Two surfaces hang off the roadmap header.
  *  UI/UX work: the hosted admin UI where prototypes are reviewed.
- *  Merchant UI: the WIP prototype, the approved state of every screen. It is the front
- *  door: its top-right link opens the module tracker, which holds the work in progress,
- *  the site map and every file and backlog item. Served on 4340 because the approved
- *  screens use /Design/... absolute paths, which need that server root. */
+ *  Merchant UI: the WIP prototype, the approved state of every screen, now served from
+ *  this app's own public/merchant folder rather than a localhost static server. It is the
+ *  front door: its top-right link opens the module tracker, which holds the work in
+ *  progress, the site map and every file and backlog item. Editing those files here and
+ *  pushing redeploys them with the roadmap, so the two can never fall out of step. */
 const DEFAULT_UIUX_URL = "https://stackback-admin-ui-iota.vercel.app/";
-const DEFAULT_ADMIN_URL = "http://localhost:4340/Design/Wireframes/StackBack_WIP_Prototype.html";
+const DEFAULT_ADMIN_URL = "/merchant/StackBack_WIP_Prototype.html";
 /** The activity log lives in the shared blob, so it has to stay bounded. */
 const ACTIVITY_CAP = 300;
 /** Rolling local snapshots. Until the shared backend is on, a browser's localStorage is the
@@ -246,13 +248,24 @@ class Store {
       return;
     }
     try {
+      this.writeLocal();
+    } catch { /* handled by persistStrict for writes that can legitimately be too big */ }
+  }
+  private writeLocal() {
+    {
       localStorage.setItem(ROADMAPS_KEY, JSON.stringify({
         activeId: this.data.activeId, roadmaps: this.data.roadmaps, activity: this.data.activity,
         adminUrl: this.data.adminUrl, uiuxUrl: this.data.uiuxUrl,
         features: this.data.features, pilots: this.data.pilots, seeded: this.data.seeded,
       }));
       localStorage.setItem(ROSTER_KEY, JSON.stringify(this.data.roster));
-    } catch {}
+    }
+  }
+  /** Writes and tells you whether it worked. Everything that can legitimately overflow the
+   *  quota (screenshots) goes through this so it can undo itself instead of failing quietly. */
+  private persistStrict(): boolean {
+    if (supabaseEnabled) { this.persist(); return true; }
+    try { this.writeLocal(); return true; } catch { return false; }
   }
   private commit() {
     this.persist();
@@ -335,7 +348,10 @@ class Store {
 
   /* ---- admin UI ---- */
   get adminUrl(): string {
-    return this.data.adminUrl || DEFAULT_ADMIN_URL;
+    const v = this.data.adminUrl;
+    // Browsers that saved the old localhost address would keep a dead link forever.
+    if (!v || /localhost:4340/.test(v)) return DEFAULT_ADMIN_URL;
+    return v;
   }
   setAdminUrl(url: string) {
     this.data.adminUrl = (url || "").trim() || DEFAULT_ADMIN_URL;
@@ -672,6 +688,17 @@ class Store {
     f.updatedAt = new Date().toISOString();
     this.commit();
   }
+  /** The Requests tab owns a plain three-value status. It answers "have we picked this up",
+   *  which is a different question from how far the delivery has got on the board, and the
+   *  board answer still shows beside it. */
+  setRequestStatus(id: string, status: string) {
+    const f = this.features.find((x) => x.id === id);
+    if (!f) return;
+    f.sheetStatus = status || null;
+    f.updatedAt = new Date().toISOString();
+    this.log("status", f.title, status || "cleared", undefined);
+    this.commit();
+  }
   setRequestUrgency(id: string, urgency: string) {
     const f = this.features.find((x) => x.id === id);
     if (!f) return;
@@ -702,6 +729,63 @@ class Store {
     if (n) this.persist();
     return n;
   }
+
+  /* ---- screenshots ---- */
+  shotBytesUsed(): number {
+    return this.features.reduce((a, f) => a + (f.shots || []).reduce((b, s2) => b + (s2.bytes || 0), 0), 0);
+  }
+  /** Adds a screenshot, or explains exactly why it could not. Rolls the image back out of
+   *  state if the write is refused, so a rejected upload never costs the surrounding edits. */
+  addShot(featureId: string, name: string, src: string, bytes: number): { ok: boolean; error?: string } {
+    const f = this.features.find((x) => x.id === featureId);
+    if (!f) return { ok: false, error: "That request no longer exists." };
+    f.shots = f.shots || [];
+    if (f.shots.length >= SHOT_MAX_PER_REQUEST) {
+      return { ok: false, error: `Up to ${SHOT_MAX_PER_REQUEST} screenshots per request.` };
+    }
+    const projected = this.shotBytesUsed() + bytes;
+    if (projected > SHOT_TOTAL_BUDGET) {
+      return { ok: false, error: `That would take screenshots to ${fmtBytes(projected)}, past the ${fmtBytes(SHOT_TOTAL_BUDGET)} budget for this browser. Delete a few first, or wait for the shared backend.` };
+    }
+    const shot: Shot = { id: uid("s_"), name: name.slice(0, 80), src, at: new Date().toISOString(), bytes };
+    f.shots.push(shot);
+    if (!this.persistStrict()) {
+      f.shots = f.shots.filter((x) => x.id !== shot.id);
+      this.persist();
+      return { ok: false, error: "This browser's storage is full, so the screenshot was not saved. Nothing else was lost. Download a backup and clear some screenshots." };
+    }
+    f.updatedAt = new Date().toISOString();
+    this.log("comment", f.title, `screenshot: ${shot.name}`, undefined);
+    this.notify();
+    return { ok: true };
+  }
+  /** A hosted image, pasted as a URL. Costs nothing against the storage budget, which is
+   *  why it is the better default once a team has somewhere to put images. */
+  addShotLink(featureId: string, url: string): { ok: boolean; error?: string } {
+    const f = this.features.find((x) => x.id === featureId);
+    if (!f) return { ok: false, error: "That request no longer exists." };
+    const clean = (url || "").trim();
+    if (!/^https?:\/\//i.test(clean)) return { ok: false, error: "Paste a full link starting with http:// or https://" };
+    f.shots = f.shots || [];
+    if (f.shots.length >= SHOT_MAX_PER_REQUEST) {
+      return { ok: false, error: `Up to ${SHOT_MAX_PER_REQUEST} images per request.` };
+    }
+    let name = clean;
+    try { name = decodeURIComponent(new URL(clean).pathname.split("/").pop() || clean); } catch {}
+    f.shots.push({ id: uid("s_"), name: name.slice(0, 80), src: clean, at: new Date().toISOString(), bytes: 0 });
+    f.updatedAt = new Date().toISOString();
+    this.log("comment", f.title, `image link: ${name}`, undefined);
+    this.commit();
+    return { ok: true };
+  }
+  delShot(featureId: string, shotId: string) {
+    const f = this.features.find((x) => x.id === featureId);
+    if (!f || !f.shots) return;
+    f.shots = f.shots.filter((x) => x.id !== shotId);
+    f.updatedAt = new Date().toISOString();
+    this.commit();
+  }
+
   addFeature(title: string, band: FeatureBand, ref = ""): string | null {
     title = (title || "").trim();
     if (!title) return null;

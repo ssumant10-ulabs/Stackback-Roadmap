@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Create bundle (Polaris web components v2)</title>
+<script src="https://cdn.shopify.com/shopifycloud/polaris.js"></script>
+<style>
+  :root{
+    --p-ink:#303030; --p-muted:#616161; --p-faint:#8a8a8a;
+    --p-line:#e3e3e3; --p-line2:#ebebeb; --p-surface:#fff;
+    --p-primary:#303030; --p-success:#29845a; --p-success-bg:#cdfee1;
+    --p-link:#005bd3; --p-attn-bg:#ffefcf; --p-attn:#8a6116;
+  }
+  body{margin:0;background:#f1f1f1;font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--p-ink)}
+  .admin{display:flex;min-height:100vh}
+  .navL{flex:none;width:232px;background:#ebebeb;border-right:1px solid var(--p-line);padding:10px 8px;display:flex;flex-direction:column;gap:1px;position:sticky;top:0;align-self:flex-start;height:100vh;overflow:auto}
+  .navItem{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;color:var(--p-ink);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
+  .navItem:hover{background:#dedede}
+  .navItem .ico{width:18px;height:18px;flex:none;color:#4a4a4a}
+  .navItem .ct{margin-left:auto;font-size:12px;color:var(--p-muted);background:#e0e0e0;border-radius:8px;padding:0 7px;line-height:18px}
+  .navSec{color:var(--p-muted);font-size:13px;font-weight:500;display:flex;align-items:center;height:30px;padding:0 8px;margin-top:6px}
+  .navSec .chev{margin-left:auto;color:var(--p-faint)}
+  .navApp{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;font-weight:600;background:#fff;box-shadow:0 1px 0 rgba(0,0,0,.04);margin-top:2px}
+  .navApp .logo{width:20px;height:20px;border-radius:5px;background:var(--p-primary);display:grid;place-items:center;color:#fff;font-size:11px;flex:none}
+  .navApp .dot{margin-left:auto;width:6px;height:6px;border-radius:50%;background:#8a8a8a}
+  .navSub{display:flex;align-items:center;height:30px;padding:0 8px 0 34px;border-radius:8px;color:var(--p-muted);font-size:13px;cursor:pointer}
+  .navSub:hover{background:#dedede;color:var(--p-ink)}
+  .navSub.sel{color:var(--p-ink);font-weight:500}
+  .navGap{flex:1}
+  .appmain{flex:1;min-width:0;display:flex;flex-direction:column}
+  .appbar{height:52px;background:#fff;border-bottom:1px solid var(--p-line);display:flex;align-items:center;gap:10px;padding:0 18px}
+  .appbar .logo{width:24px;height:24px;border-radius:6px;background:var(--p-primary);display:grid;place-items:center;color:#fff;font-size:12px}
+  .appbar .name{font-weight:650;font-size:14px}
+  .appbar .more{margin-left:auto;color:var(--p-muted);font-size:20px;cursor:pointer;letter-spacing:1px}
+  .savebar{position:sticky;top:0;z-index:60;min-height:52px;background:#1a1a1a;color:#fff;display:flex;align-items:center;gap:12px;padding:8px 16px}
+  .savebar .sbtxt{font-weight:600;font-size:13px}
+  .savebar .sbacts{margin-left:auto;display:flex;gap:8px}
+  .savebar button{font:inherit;font-size:13px;font-weight:600;border-radius:8px;padding:6px 13px;cursor:pointer}
+  .savebar .discard{background:transparent;border:1px solid #4a4a4a;color:#fff}
+  .savebar .save{background:#fff;border:1px solid #fff;color:#1a1a1a}
+  .pcols{display:flex;gap:16px;align-items:flex-start}
+  .maincol{flex:1;min-width:0}
+  .sidecol{flex:none;width:326px}
+  .card{background:#fff;border:1px solid var(--p-line);border-radius:12px;box-shadow:0 1px 0 rgba(0,0,0,.04);margin-bottom:14px;overflow:hidden}
+  .cardpad{padding:16px 18px}
+  .step .stephdr{display:flex;gap:12px;align-items:flex-start;padding:15px 18px;cursor:pointer;user-select:none}
+  .step .num{flex:none;width:26px;height:26px;border-radius:50%;background:var(--p-primary);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:600}
+  .step .sttl{flex:1;min-width:0}
+  .step h2{margin:0;font-size:15px;font-weight:650}
+  .step .stephdr p{margin:2px 0 0;color:var(--p-muted);font-size:12.5px}
+  .step .stepchev{color:var(--p-faint);font-size:18px;transition:transform .15s;align-self:center}
+  .step.open .stepchev{transform:rotate(90deg)}
+  .stepbody{padding:16px 18px 18px;border-top:1px solid var(--p-line2)}
+  .stepbody.collapsed{display:none}
+  .step .collsum{margin:2px 0 0;color:var(--p-muted);font-size:12.5px}
+  .opt{font-size:10px;font-weight:600;color:var(--p-faint);border:1px solid var(--p-line);border-radius:5px;padding:1px 6px;text-transform:uppercase;letter-spacing:.03em;margin-left:8px;vertical-align:middle}
+  .req-star{color:#e51c00;font-weight:700}
+
+  /* bundle type radio cards (Step 1, question format) */
+  .typegrid{display:flex;gap:10px;flex-wrap:wrap}
+  .typecard{flex:1;min-width:210px;display:flex;gap:10px;align-items:flex-start;padding:13px;border:1px solid var(--p-line);border-radius:10px;background:#fff;cursor:pointer}
+  .typecard.on{border-color:var(--p-primary);box-shadow:inset 0 0 0 1px var(--p-primary)}
+  .tcradio{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--p-faint);flex:none;margin-top:2px}
+  .typecard.on .tcradio{border-color:var(--p-primary);background:radial-gradient(circle,var(--p-primary) 45%,#fff 47%)}
+  .tctitle{font-weight:650;font-size:13.5px}
+  .tcdesc{color:var(--p-muted);font-size:12px;margin-top:2px}
+
+  .seg{display:inline-flex;border:1px solid var(--p-line);border-radius:8px;overflow:hidden;background:#fff}
+  .seg button{border:0;background:#fff;padding:6px 12px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--p-muted)}
+  .seg button.on{background:var(--p-primary);color:#fff}
+  .chkchip{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border:1px solid var(--p-line);border-radius:20px;font-size:12.5px;font-weight:600;color:var(--p-muted);cursor:pointer;background:#fff}
+  .chkchip::before{content:"";width:14px;height:14px;border-radius:50%;border:1.5px solid var(--p-faint);flex:none}
+  .chkchip.on{border-color:var(--p-success);color:#0f5132;background:var(--p-success-bg)}
+  .chkchip.on::before{content:"\2713";border:0;color:#0f5132;font-size:11px;line-height:14px;text-align:center}
+  .disc{display:inline-flex;align-items:center;gap:7px;cursor:pointer;color:var(--p-link);font-weight:600;font-size:12.5px;background:none;border:0;padding:4px 0}
+  .disc .chev{transition:transform .15s}
+  .disc.open .chev{transform:rotate(90deg)}
+  .prow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--p-line2)}
+  .prow .x{margin-left:auto;color:var(--p-muted);font-size:12px;cursor:pointer;background:none;border:0}
+  .rowline{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .field{border:1px solid var(--p-line);border-radius:8px;padding:6px 10px;background:#fff;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--p-muted)}
+  .divv{width:1px;height:22px;background:var(--p-line)}
+  .help{font-size:12px;color:var(--p-muted)}
+  .calc{border:1px solid var(--p-line);background:#f7f7f7;border-radius:9px;padding:11px 13px;font-size:12.5px;color:var(--p-muted)}
+  .calc b{color:var(--p-ink)}
+  .lbl{font-size:12px;font-weight:600;color:var(--p-muted);margin:0 0 6px;text-transform:uppercase;letter-spacing:.04em}
+  .card2{border:1px solid var(--p-line);border-radius:10px;padding:13px 14px;background:#fff}
+  .tierrow{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--p-line2)}
+  .tierrow:last-child{border-bottom:0}
+  .simcard{border:1px solid var(--p-line);border-radius:9px;padding:11px 13px;margin-bottom:8px;background:#fff}
+  .simhd{font-size:11px;font-weight:700;color:var(--p-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+  .simrow{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:5px 0;font-size:12.5px;border-bottom:1px solid var(--p-line2)}
+  .simrow:last-child{border-bottom:0}
+  .simrow b{color:var(--p-ink)}
+  .simrow.tot{border-top:1px solid var(--p-line);margin-top:2px;padding-top:8px}
+  .simOverlay{position:fixed;inset:0;background:rgba(20,20,20,.45);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px}
+  .simModal{background:#fff;border-radius:12px;width:480px;max-width:100%;max-height:min(80vh,640px);overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+  .simModalHead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-bottom:1px solid var(--p-line);position:sticky;top:0;background:#fff}
+  .simModalHead b{font-size:14px}
+  .simModalClose{background:none;border:0;color:var(--p-muted);font-size:15px;cursor:pointer;padding:4px 6px;border-radius:6px}
+  .simModalClose:hover{background:#f1f1f1;color:var(--p-ink)}
+  .simModalBody{padding:16px}
+  .simModalBody .simcard:last-of-type{margin-bottom:0}
+  .save{color:var(--p-success);font-weight:700}
+  .price{border:1px solid var(--p-line);background:#fff;border-radius:9px;padding:11px 13px;font-size:13px;color:var(--p-ink);display:flex;align-items:flex-start;gap:10px}
+  .price .k{color:var(--p-muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;font-weight:600;flex:none;white-space:nowrap;padding-top:2px}
+  .price .divv{align-self:stretch;height:auto}
+  .price > span:last-child{flex:1;min-width:0;line-height:1.5;padding-top:1px}
+  .price b{font-weight:700}.price .save{color:var(--p-success);font-weight:700}
+  .mmcat{margin-bottom:10px}
+  .optlist{margin-bottom:10px}
+  .optcard{border:1px solid var(--p-line);border-radius:10px;margin-bottom:10px;background:#fff}
+  .optcard.dragging{opacity:.45}
+  .optsum{display:flex;align-items:center;gap:10px;padding:11px 14px}
+  .draghandle{cursor:grab;color:var(--p-faint);font-size:15px;padding:0 2px;flex:none;line-height:1}
+  .optsum .title{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;min-width:0}
+  .optsum .chips{display:flex;gap:6px;flex-wrap:nowrap;margin-left:6px;flex:none}
+  .optsum .act{margin-left:auto;display:flex;gap:6px;flex:none}
+  .pill{border:1px solid var(--p-line);border-radius:20px;padding:2px 10px;font-size:12px;color:var(--p-muted);background:#fafafa}
+  .tagchip{display:inline-flex;align-items:center;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600;color:#fff}
+  .opteditor{border-top:1px solid var(--p-line2);padding:15px;background:#fbfbfb}
+  .q{font-weight:600;margin:0 0 8px;font-size:13.5px}
+  .qgroup{margin-bottom:16px}
+  .btnsm{border:1px solid var(--p-line);background:#fff;border-radius:8px;padding:4px 10px;font:inherit;font-size:12px;font-weight:600;color:var(--p-ink);cursor:pointer}
+  .btnsm.ico-x{padding:4px 8px;color:var(--p-muted)}
+  .btnghost{border:1px dashed var(--p-line);background:#fff;border-radius:8px;padding:6px 12px;font:inherit;font-size:12.5px;font-weight:500;color:var(--p-muted);cursor:pointer}
+  .sumrow{display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--p-line2)}
+  .sumrow:last-child{border-bottom:0}
+  /* plain status lights, not checkboxes: a solid dot, no glyph, so it never reads as checkable */
+  /* status lights: identical solid dots, only the colour differs (green = done, grey = optional-not-set) */
+  .sicon{display:inline-block;box-sizing:border-box;width:10px;height:10px;min-width:10px;border-radius:50%;flex:none;margin-top:6px;background:#c7c7c7}
+  .sicon.ok{background:var(--p-success)}
+  .sicon.opt{background:#c7c7c7}
+  .sname{font-weight:600;font-size:12.5px;display:flex;align-items:center;gap:6px}
+  .sname .optm{font-weight:600;color:var(--p-faint);font-size:10px;border:1px solid var(--p-line);border-radius:5px;padding:0 5px;text-transform:uppercase;letter-spacing:.03em}
+  .sval{color:var(--p-muted);font-size:12px}
+  .drow{padding:11px 0;border-bottom:1px solid var(--p-line2)}
+  .drow:last-child{border-bottom:0}
+  .drow .dtop{display:flex;align-items:center;gap:8px}
+  .drow .dname{font-weight:650;font-size:13px}
+  .drow .dact{margin-left:auto}
+  .lnk{background:none;border:0;color:var(--p-link);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;padding:0}
+  .badge2{display:inline-flex;align-items:center;gap:5px;border-radius:8px;padding:1px 8px;font-size:11.5px;font-weight:600}
+  .badge2.ok{background:var(--p-success-bg);color:#0f5132}
+  .badge2.attn{background:var(--p-attn-bg);color:var(--p-attn)}
+  .badge2.info{background:#d6ecff;color:#00527c}
+  .badge2.sub{background:#ededed;color:#5c5c5c}
+  .mqgrid{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+  .mqleft{flex:1;min-width:220px}
+  .mqright{flex:none;width:280px}
+  .wprev{border:1px solid var(--p-line);border-radius:12px;overflow:hidden;transition:opacity .2s,filter .2s}
+  .wprev.off{opacity:.5;filter:grayscale(.4)}
+  .wbar{background:#16233f;color:#fff;display:flex;align-items:center;justify-content:center;gap:7px;padding:10px 12px;font-size:12px}
+  .wbar .msgwrap{position:relative;height:16px;min-width:150px;max-width:210px;overflow:hidden;text-align:center}
+  .wbar .msg{position:absolute;left:0;right:0;top:0;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:0;transition:opacity .5s}
+  .wbar .msg.show{opacity:1}
+  .wbar .arrow{color:#aeb9cf;letter-spacing:-2px}
+  .wbody{background:#F4F0E8;padding:14px}
+  .wbody .prow2{display:flex;align-items:center;gap:9px}
+  .wbody .wradio{width:16px;height:16px;border-radius:50%;border:2px solid #16233f;position:relative;flex:none}
+  .wbody .wradio::after{content:"";position:absolute;inset:3px;border-radius:50%;background:#16233f}
+  .wbody .wtitle{font-weight:700;color:#2B2B2B;font-size:14px}
+  .wbody .wpill{margin-left:auto;background:#E3A23E;color:#5A3A0E;font-weight:700;font-size:11px;border-radius:20px;padding:3px 11px}
+  .wbody .wsel{margin-top:13px;color:#9A9486;font-size:10px;font-weight:700;letter-spacing:.06em}
+  .hide{display:none !important}
+</style>
+<!-- bare mode: when embedded in the WIP prototype shell, hide this file's own admin chrome
+so the shell is not drawn twice. Standalone viewing is unaffected. -->
+<script>if(/bare/.test(location.search+location.hash))document.documentElement.classList.add("bare");</script>
+<style>html.bare .navL,html.bare .appbar,html.bare .savebar{display:none!important}html.bare .admin{min-height:0}html.bare,html.bare body{background:#f1f1f1}</style>
+</head>
+<body>
+<div class="admin">
+  <aside class="navL">
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8.5 10 3l7 5.5V16a1 1 0 0 1-1 1h-3v-5H7v5H4a1 1 0 0 1-1-1z"/></svg>Home</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="13" rx="2"/><path d="M7 8h6M7 11h6"/></svg>Orders<span class="ct">127</span></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h12v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M7 6V5a3 3 0 0 1 6 0v1"/></svg>Products</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="7" r="3"/><path d="M4 16c0-3 2.7-5 6-5s6 2 6 5"/></svg>Customers</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 15V9m4 6V5m4 10v-4m4 4V7"/></svg>Growth</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="3"/><path d="M12 12l4 4M13.5 6.5 16 4"/></svg>Discounts</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="12" rx="2"/><path d="M7 8h6M7 11h4"/></svg>Content</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="6"/><path d="M4 10h12M10 4c2 2 2 10 0 12M10 4c-2 2-2 10 0 12"/></svg>Markets</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 16h12M6 16V9m4 7V5m4 11v-4"/></svg>Analytics</div>
+    <div class="navSec">Sales channels<span class="chev">&#8250;</span></div>
+    <div class="navSec">Apps<span class="chev">&#8250;</span></div>
+    <div class="navApp"><span class="logo">&#9670;</span>StackBack Subscrip&hellip;<span class="dot"></span></div>
+    <div class="navSub sel">Manage Purchase Options</div>
+    <div class="navSub">Purchase Contracts</div>
+    <div class="navSub">One-Time Orders</div>
+    <div class="navSub">Orders</div>
+    <div class="navSub">Payment Reminders</div>
+    <div class="navSub">Customers</div>
+    <div class="navSub">View more</div>
+    <div class="navGap"></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m7-7h-2M5 10H3m12.5-5-1.5 1.5M6 14l-1.5 1.5m11 0L14 14M6 6 4.5 4.5"/></svg>Settings</div>
+  </aside>
+
+  <div class="appmain">
+    <div class="savebar"><span class="sbtxt">Unsaved changes</span><span class="sbacts"><button class="discard">Discard</button><button class="save">Save</button></span></div>
+    <div class="appbar"><span class="logo">&#9670;</span><span class="name">StackBack Subscriptions &amp; More</span><span class="more">&ctdot;</span></div>
+
+    <s-page heading="Create bundle" inline-size="large">
+      <s-link slot="breadcrumb-actions" href="#">Manage Purchase Options</s-link>
+      <s-button slot="secondary-actions">Save as draft</s-button>
+      <s-button slot="primary-action" variant="primary">Publish</s-button>
+
+      <div class="pcols">
+        <div class="maincol">
+
+          <!-- Bundle name -->
+          <div class="card"><div class="cardpad">
+            <s-text-field label="Bundle name" required value="Build-Your-Own Wellness Box" details="Customers see this on the widget and at checkout."></s-text-field>
+          </div></div>
+
+          <!-- STEP 1 - Bundle type (question) -->
+          <div class="card step open" data-step>
+            <div class="stephdr"><div class="num">1</div>
+              <div class="sttl"><h2>What kind of bundle is this? <span class="req-star">*</span></h2><p class="collsum">Build your own box</p></div>
+              <span class="stepchev">&#8250;</span></div>
+            <div class="stepbody">
+              <div class="typegrid" id="typegrid">
+                <label class="typecard" data-type="fixed"><span class="tcradio"></span><div><div class="tctitle">Fixed box</div><div class="tcdesc">You pick the exact products. Every customer gets the same box.</div></div></label>
+                <label class="typecard on" data-type="byob"><span class="tcradio"></span><div><div class="tctitle">Build-your-own box</div><div class="tcdesc">Customers choose any items from a list you set, within a min and max.</div></div></label>
+                <label class="typecard" data-type="mix"><span class="tcradio"></span><div><div class="tctitle">Pick-from-each box</div><div class="tcdesc">You set up categories, like Base and Add-on. Customers pick a set number from each category.</div></div></label>
+                <label class="typecard" data-type="bxgy"><span class="tcradio"></span><div><div class="tctitle">Buy X Get Y</div><div class="tcdesc">Customers buy some products and get others free. You mark which products are Buy and which are Free.</div></div></label>
+                <label class="typecard" data-type="tier"><span class="tcradio"></span><div><div class="tctitle">Buy more, save more box</div><div class="tcdesc">Customers pick from a list, and the more items they add, the bigger the discount. You set the tiers.</div></div></label>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 2 - What's in it -->
+          <div class="card step" data-step>
+            <div class="stephdr"><div class="num">2</div>
+              <div class="sttl"><h2 id="s2title">What can customers pick? <span class="req-star">*</span></h2><p class="collsum" id="s2sum">3 products in pool &middot; pick 3&ndash;6</p></div>
+              <span class="stepchev">&#8250;</span></div>
+            <div class="stepbody collapsed">
+              <!-- BYOB -->
+              <div class="tblock" data-t="byob">
+                <div class="rowline" style="margin-bottom:10px"><span class="lbl" style="margin:0 4px 0 0">Add by</span>
+                  <span class="seg addby"><button data-lvl="pv" class="on">Products &amp; Variants</button><button data-lvl="collection">Collections</button></span></div>
+                <div class="prow"><s-thumbnail size="small"></s-thumbnail><span>Ashwagandha Gummies &middot; 60ct</span><button class="x">Remove &#10005;</button></div>
+                <div class="prow"><s-thumbnail size="small"></s-thumbnail><span>Magnesium Glycinate &middot; 90ct</span><button class="x">Remove &#10005;</button></div>
+                <div class="prow"><s-thumbnail size="small"></s-thumbnail><span>Collagen Peptides &middot; 500g</span><button class="x">Remove &#10005;</button></div>
+                <div class="rowline" style="padding-top:9px"><button class="btnghost">&#65291; Select products / variants</button><span class="field">3 products in pool</span></div>
+                <div class="card2" style="margin-top:14px">
+                  <div class="lbl" style="margin:0 0 10px">How many can a customer pick?</div>
+                  <div class="rowline"><span>Minimum</span><span class="field">3</span><span class="divv"></span><span>Maximum</span><span class="field">6</span></div>
+                  <div class="calc" style="margin-top:10px">Customer picks <b>3&ndash;6</b> items from the pool. The box won't check out below the minimum.</div>
+                </div>
+              </div>
+              <!-- FIXED -->
+              <div class="tblock hide" data-t="fixed">
+                <div class="rowline" style="margin-bottom:10px"><span class="lbl" style="margin:0 4px 0 0">Add by</span>
+                  <span class="seg addby"><button data-lvl="pv" class="on">Products &amp; Variants</button><button data-lvl="collection">Collections</button></span></div>
+                <div class="prow"><s-thumbnail size="small"></s-thumbnail><span>Ashwagandha Gummies &middot; 60ct</span><span class="field" style="margin-left:auto">Qty 1</span><button class="x" style="margin-left:8px">Remove &#10005;</button></div>
+                <div class="prow"><s-thumbnail size="small"></s-thumbnail><span>Magnesium Glycinate &middot; 90ct</span><span class="field" style="margin-left:auto">Qty 2</span><button class="x" style="margin-left:8px">Remove &#10005;</button></div>
+                <div class="rowline" style="padding-top:9px"><button class="btnghost">&#65291; Select products / variants</button></div>
+                <div class="calc" style="margin-top:12px">Every customer gets the same <b>3</b> items across <b>2</b> products.</div>
+              </div>
+              <!-- MIX -->
+              <div class="tblock hide" data-t="mix">
+                <div class="help" style="margin:-4px 0 12px">Create the categories customers pick from. Each category has its own products and pick rules.</div>
+                <div class="card2 mmcat">
+                  <div class="rowline" style="justify-content:space-between"><input class="field" style="width:180px" value="Base" /><span class="rowline"><span class="help">Min</span><span class="field">1</span><span class="help">Max</span><span class="field">1</span><button class="btnsm ico-x">&#10005;</button></span></div>
+                  <div class="rowline" style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--p-line2)"><button class="btnghost">&#65291; Add products to Base</button><span class="field">1 product</span></div>
+                </div>
+                <div class="card2 mmcat">
+                  <div class="rowline" style="justify-content:space-between"><input class="field" style="width:180px" value="Add-on" /><span class="rowline"><span class="help">Min</span><span class="field">1</span><span class="help">Max</span><span class="field">2</span><button class="btnsm ico-x">&#10005;</button></span></div>
+                  <div class="rowline" style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--p-line2)"><button class="btnghost">&#65291; Add products to Add-on</button><span class="field">2 products</span></div>
+                </div>
+                <button class="btnghost">&#65291; Add category</button>
+              </div>
+              <!-- BUY X GET Y -->
+              <div class="tblock hide" data-t="bxgy">
+                <div class="rowline" style="margin-bottom:10px"><span class="lbl" style="margin:0 4px 0 0">Add by</span>
+                  <span class="seg addby"><button data-lvl="pv" class="on">Products &amp; Variants</button><button data-lvl="collection">Collections</button></span></div>
+                <div class="rowline" style="justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--p-line2)">
+                  <span class="rowline"><s-thumbnail size="small"></s-thumbnail><span>Ashwagandha Gummies &middot; 60ct</span></span>
+                  <span class="seg bxgToggle"><button data-role="buy" class="on">Buy</button><button data-role="free">Free</button></span>
+                </div>
+                <div class="rowline" style="justify-content:space-between;padding:9px 0">
+                  <span class="rowline"><s-thumbnail size="small"></s-thumbnail><span>Magnesium Glycinate &middot; 90ct</span></span>
+                  <span class="seg bxgToggle"><button data-role="buy">Buy</button><button data-role="free" class="on">Free</button></span>
+                </div>
+                <div class="rowline" style="padding-top:9px"><button class="btnghost">&#65291; Select products / variants</button></div>
+                <div class="help" style="margin-top:10px">Mark each product as one the customer buys, or one they get free. Free products contribute INR 0 to the total.</div>
+              </div>
+              <!-- BUY MORE SAVE MORE (tiered): a product pool, discount tiers set in Step 3 -->
+              <div class="tblock hide" data-t="tier">
+                <div class="rowline" style="margin-bottom:10px"><span class="lbl" style="margin:0 4px 0 0">Add by</span>
+                  <span class="seg addby"><button data-lvl="pv" class="on">Products &amp; Variants</button><button data-lvl="collection">Collections</button></span></div>
+                <div class="prow"><s-thumbnail size="small"></s-thumbnail><span>Ashwagandha Gummies &middot; 60ct</span><button class="x">Remove &#10005;</button></div>
+                <div class="prow"><s-thumbnail size="small"></s-thumbnail><span>Magnesium Glycinate &middot; 90ct</span><button class="x">Remove &#10005;</button></div>
+                <div class="prow"><s-thumbnail size="small"></s-thumbnail><span>Collagen Peptides &middot; 500g</span><button class="x">Remove &#10005;</button></div>
+                <div class="rowline" style="padding-top:9px"><button class="btnghost">&#65291; Select products / variants</button><span class="field">3 products in pool</span></div>
+                <div class="calc" style="margin-top:12px">Customers add items from this pool. The discount grows with how many they add, you set the tiers in the next step.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 3 - Pricing -->
+          <div class="card step" data-step>
+            <div class="stephdr"><div class="num">3</div>
+              <div class="sttl"><h2>How is it priced? <span class="req-star">*</span></h2><p class="collsum" id="s3sum">Sum of products</p></div>
+              <span class="stepchev">&#8250;</span></div>
+            <div class="stepbody collapsed">
+              <!-- BYOB pricing -->
+              <div class="tblock" data-t="byob">
+                <span class="seg priceSeg byob" style="margin-bottom:12px">
+                  <button data-m="sum" class="on">Sum of products</button>
+                  <button data-m="pct">Percentage off</button>
+                </span>
+                <div class="pblock" data-m="pct" style="display:none"><div class="card2"><div class="rowline"><span>Take</span><span class="field">15</span><span>% off the sum of everything picked</span></div></div></div>
+                <div class="price"><span class="k">Customer pays</span><span class="divv"></span><span id="byobPay">the exact sum of what they pick</span></div>
+              </div>
+              <!-- BUY MORE SAVE MORE (tiered) pricing: tiers table + all-tiers preview popup -->
+              <div class="tblock hide" data-t="tier">
+                <div class="card2">
+                  <div class="lbl" style="margin:0 0 8px">Tiers (discount grows with how many they pick)</div>
+                  <div class="tierrow"><span>Pick</span><span class="field">3</span><span>items</span><span class="field">10</span><span>% off</span></div>
+                  <div class="tierrow"><span>Pick</span><span class="field">5</span><span>items</span><span class="field">15</span><span>% off</span></div>
+                  <div class="tierrow"><span>Pick</span><span class="field">6</span><span>items</span><span class="field">20</span><span>% off</span></div>
+                  <div style="padding-top:14px"><button class="btnghost">&#65291; Add a tier</button></div>
+                </div>
+                <div class="rowline" style="justify-content:space-between;margin-top:14px;padding:11px 13px;border:1px solid var(--p-line);border-radius:9px;background:#f7f7f7">
+                  <span class="help">See a sample basket and total at each tier before locking these in.</span>
+                  <button class="btnsm" id="openSimBtn">&#128065; Preview simulation</button>
+                </div>
+                <!-- simulation opens in a popup, kept out of the page flow -->
+                <div class="simOverlay hide" id="simOverlay">
+                  <div class="simModal">
+                    <div class="simModalHead">
+                      <b>Price simulation &middot; all tiers</b>
+                      <button class="simModalClose" id="simModalClose" aria-label="Close">&#10005;</button>
+                    </div>
+                    <div class="simModalBody">
+                      <div class="simcard">
+                        <div class="simhd">Pick 3 &middot; 10% off</div>
+                        <div class="simrow"><span>Ashwagandha Gummies &middot; 60ct</span><b>&#8377;600</b></div>
+                        <div class="simrow"><span>Magnesium Glycinate &middot; 90ct</span><b>&#8377;500</b></div>
+                        <div class="simrow"><span>Collagen Peptides &middot; 500g</span><b>&#8377;900</b></div>
+                        <div class="simrow tot"><span>Original price</span><b>&#8377;2,000</b></div>
+                        <div class="simrow"><span>Bundle price</span><b>&#8377;1,800</b></div>
+                        <div class="simrow"><span>Customer saves</span><span class="save">&#8377;200 (10%)</span></div>
+                      </div>
+                      <div class="simcard">
+                        <div class="simhd">Pick 5 &middot; 15% off</div>
+                        <div class="simrow"><span>Ashwagandha Gummies &middot; 60ct &times;2</span><b>&#8377;1,200</b></div>
+                        <div class="simrow"><span>Magnesium Glycinate &middot; 90ct &times;2</span><b>&#8377;1,000</b></div>
+                        <div class="simrow"><span>Collagen Peptides &middot; 500g</span><b>&#8377;900</b></div>
+                        <div class="simrow tot"><span>Original price</span><b>&#8377;3,100</b></div>
+                        <div class="simrow"><span>Bundle price</span><b>&#8377;2,635</b></div>
+                        <div class="simrow"><span>Customer saves</span><span class="save">&#8377;465 (15%)</span></div>
+                      </div>
+                      <div class="simcard">
+                        <div class="simhd">Pick 6 &middot; 20% off</div>
+                        <div class="simrow"><span>Ashwagandha Gummies &middot; 60ct &times;2</span><b>&#8377;1,200</b></div>
+                        <div class="simrow"><span>Magnesium Glycinate &middot; 90ct &times;2</span><b>&#8377;1,000</b></div>
+                        <div class="simrow"><span>Collagen Peptides &middot; 500g &times;2</span><b>&#8377;1,800</b></div>
+                        <div class="simrow tot"><span>Original price</span><b>&#8377;4,000</b></div>
+                        <div class="simrow"><span>Bundle price</span><b>&#8377;3,200</b></div>
+                        <div class="simrow"><span>Customer saves</span><span class="save">&#8377;800 (20%)</span></div>
+                      </div>
+                      <div class="help" style="margin-top:4px">Sample basket per tier, built from the products in the pool. Updates live from real prices and quantities picked.</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="price" style="margin-top:14px"><span class="k">Customer pays</span><span class="divv"></span><span id="tierPay">a tiered discount that grows with how many they pick, see the preview for the price at each tier</span></div>
+              </div>
+              <!-- FIXED pricing -->
+              <div class="tblock hide" data-t="fixed">
+                <span class="seg priceSeg fixed" style="margin-bottom:12px">
+                  <button data-m="orig" class="on">Original price</button>
+                  <button data-m="static">Static price</button>
+                  <button data-m="pct">Percentage off</button>
+                </span>
+                <div class="pblock" data-m="static" style="display:none"><div class="card2"><div class="rowline"><span>Bundle price INR</span><span class="field">1,499</span></div><div class="help" style="margin-top:8px">One flat price for the whole bundle.</div></div></div>
+                <div class="pblock" data-m="pct" style="display:none"><div class="card2"><div class="rowline"><span>Take</span><span class="field">20</span><span>% off the original total</span></div></div></div>
+                <div class="price"><span class="k">Customer pays</span><span class="divv"></span><span id="fixedPay">the sum of the products' prices</span></div>
+              </div>
+              <!-- BUY X GET Y pricing: no mode choice, price is set entirely by the Buy/Free marks in Step 2 -->
+              <div class="tblock hide" data-t="bxgy">
+                <div class="help" style="margin-bottom:12px">This pricing is set by the Buy / Free marks in Step 2, there is no separate pricing mode to choose.</div>
+                <div class="price"><span class="k">Customer pays</span><span class="divv"></span><span id="bxgyPay">for the products marked Buy; products marked Free contribute INR 0</span></div>
+              </div>
+              <!-- MIX pricing -->
+              <div class="tblock hide" data-t="mix">
+                <span class="seg priceSeg mix" style="margin-bottom:12px">
+                  <button data-m="sum" class="on">Sum of products</button>
+                  <button data-m="static">Per-category price</button>
+                  <button data-m="pct">Per-category % off</button>
+                  <button data-m="bxgy">Buy X get Y</button>
+                </span>
+                <div class="calc" id="mixPay">Customer pays the sum of the products they pick across all categories.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 4 - Subscription (optional) -->
+          <div class="card step" data-step>
+            <div class="stephdr"><div class="num">4</div>
+              <div class="sttl"><h2>Subscription <span class="opt">Optional</span></h2><p class="collsum" id="s4sum">Offered &middot; 1 buying option</p></div>
+              <span class="stepchev">&#8250;</span></div>
+            <div class="stepbody collapsed">
+              <div class="card2 rowline" style="justify-content:space-between;margin-bottom:12px">
+                <div><b>Offer this bundle as a subscription</b><div class="help">Add recurring buying options so customers can subscribe to this box.</div></div>
+                <s-switch id="subsw" checked></s-switch>
+              </div>
+              <div id="subeditor">
+                <div class="optlist" id="optlist">
+                  <div class="optcard" data-opt>
+                    <div class="optsum">
+                      <span class="draghandle">&#8942;&#8942;</span>
+                      <span class="title">Every month &middot; 6 deliveries</span>
+                      <span class="chips hide"></span>
+                      <span class="act"><button class="btnsm t-edit">Collapse</button><button class="btnsm">Duplicate</button><button class="btnsm ico-x">&#10005;</button></span>
+                    </div>
+                    <div class="opteditor">
+                      <div class="qgroup">
+                        <p class="q">Payment &amp; pricing</p>
+                        <div class="rowline"><span class="chkchip on pay-prepaid">Prepaid</span><span class="chkchip pay-payg">Pay per delivery</span></div>
+                        <div class="methodGroup hide" style="margin-top:10px"><p class="help">Billed pay-as-you-go: the customer gets an invoice and email reminder to pay as each delivery ships.</p></div>
+                      </div>
+                      <div class="qgroup">
+                        <p class="q">Schedule</p>
+                        <div class="rowline">
+                          <span class="seg durSeg"><button data-dur="fixed" class="on">Fixed length</button><button data-dur="choice">Customer decides</button><button data-dur="none" class="hide">No end date</button></span>
+                          <span class="sched-fixed">for <span class="field">6</span> deliveries</span>
+                          <span class="sched-choice hide help">Customer chooses how many deliveries in the widget.</span>
+                          <span class="sched-none hide help">Runs continuously until the customer cancels. Available with pay-per-delivery only.</span>
+                        </div>
+                        <div class="rowline" style="margin-top:8px">
+                          <span>Deliver every</span><span class="field">1</span><span class="field">month &#9662;</span><span class="divv"></span>
+                          <span>Discount</span>
+                          <span class="field" style="padding:0"><select class="discType" style="border:0;background:none;font:inherit;color:inherit;padding:6px 10px;cursor:pointer;font-family:ui-monospace,Menlo,monospace"><option value="pct">Percentage (%)</option><option value="amt">Amount off</option></select></span>
+                          <span class="field hide discPrefix">INR</span><span class="field discVal">15</span><span class="discSuffix">%</span>
+                        </div>
+                      </div>
+                      <div class="qgroup" style="margin-bottom:12px">
+                        <button class="disc extrasToggle"><span class="chev">&#8250;</span>More options <span class="help" style="font-weight:400">(free gifts, badge)</span></button>
+                        <div class="extrasBody hide" style="margin-top:12px">
+                          <p class="q">Badge <span class="help" style="font-weight:400">(optional)</span></p>
+                          <div class="rowline"><span class="field">Most Popular &#9662;</span><span class="tagchip" style="background:#6B5BD6">Most Popular</span></div>
+                          <p class="q" style="margin-top:14px">Free gifts <span class="help" style="font-weight:400">(optional)</span></p>
+                          <div class="freelist"></div>
+                          <div class="rowline" style="margin-top:2px"><button class="btnghost addfree">&#65291; Add a gift</button></div>
+                        </div>
+                      </div>
+                      <div class="calc deliveryPreview"></div>
+                      <div class="rowline" style="margin-top:14px"><s-button variant="primary">Save option</s-button><s-button>Cancel</s-button></div>
+                    </div>
+                  </div>
+                </div>
+                <button class="btnghost">&#65291; Add another buying option</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- SHIPPING OVERRIDE (own section, outside the numbered flow).
+               It only means anything once the bundle has recurring delivery, so the whole
+               section is hidden until the Subscription switch is on. Outside placement per
+               Sumant 2026-07-28: it reads as its own concern, not a subscription sub-field,
+               but it must never appear on a one-time-only bundle. -->
+          <div class="card step hide" data-step id="shipStep">
+            <div class="stephdr"><div><h2>Shipping override <span class="opt">Optional</span></h2><p class="collsum" id="shipCollsum">Off, uses shop shipping</p></div><span class="stepchev">&#8250;</span></div>
+            <div class="stepbody collapsed">
+              <div class="help" style="margin:0 0 10px">By default this bundle uses the shop-wide shipping from Settings, Shipping Zones. This section only applies to subscription deliveries.</div>
+              <div class="rowline" style="justify-content:space-between">
+                <span>Override shipping for this bundle</span>
+                <s-switch id="shipOvSw"></s-switch>
+              </div>
+              <div id="shipOvCfg" class="hide" style="margin-top:14px">
+                <div class="rowline" style="margin-bottom:12px"><span>Shipping charge per delivery</span><span class="field">INR</span><input class="field" id="shipOvPrice" value="0" style="width:110px" /></div>
+                <p class="help" id="shipOvHint" style="margin:0 0 12px">Set to 0 for free shipping. Any amount above 0 is charged per delivery.</p>
+                <div style="display:flex;gap:12px;margin-bottom:12px">
+                  <div style="flex:1;min-width:0"><s-text-field label="Minimum order value" placeholder="Optional"></s-text-field></div>
+                  <div style="flex:1;min-width:0"><s-text-field label="Maximum order value" placeholder="Optional"></s-text-field></div>
+                </div>
+                <p class="q" style="margin-bottom:6px">ZIP patterns</p>
+                <span class="seg" id="shipZipMode" style="margin-bottom:12px"><button data-zip="exact" class="on">Exact</button><button data-zip="pattern">Pattern</button><button data-zip="range">Range</button></span>
+                <s-text-field label="ZIPs" placeholder="e.g. 400001, 400002, 400003"></s-text-field>
+              </div>
+            </div>
+          </div>
+
+          <!-- ENHANCEMENTS (outside numbered flow) -->
+          <div class="card step" data-step id="enhStep">
+            <div class="stephdr"><div><h2>Enhancements <span class="opt">Optional</span></h2><p class="collsum">Widget marquee off</p></div><span class="stepchev">&#8250;</span></div>
+            <div class="stepbody collapsed">
+              <div class="mqgrid">
+                <div class="mqleft">
+                  <div class="rowline" style="justify-content:space-between"><div><b>Widget marquee</b><div class="help">A scrolling strip of promo messages on the widget. Up to 3 messages take turns.</div></div><s-switch id="mqsw"></s-switch></div>
+                  <div id="mqfields" class="hide" style="margin-top:14px"><s-stack direction="block" gap="base">
+                    <s-text-field label="Message 1 (optional)" class="mqmsg" value="Build your box: pick 3, save 10%"></s-text-field>
+                    <div class="msgrow2 hide"><s-text-field label="Message 2" class="mqmsg"></s-text-field></div>
+                    <div><button class="btnghost" id="addmsg">&#65291; Add another message</button></div>
+                  </s-stack></div>
+                </div>
+                <div class="mqright"><div class="help" style="font-weight:600;margin-bottom:6px">Preview on your widget</div>
+                  <div class="wprev off"><div class="wbar"><span class="msgwrap" id="wmsgwrap"></span><span class="arrow">&#8250;&#8250;&#8250;</span></div>
+                    <div class="wbody"><div class="prow2"><span class="wradio"></span><span class="wtitle">Build Your Box</span><span class="wpill">PICK 3, SAVE 10%</span></div><div class="wsel">CHOOSE YOUR ITEMS</div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- SIDE COLUMN -->
+        <div class="sidecol">
+          <div class="card"><div class="cardpad">
+            <div class="rowline" style="justify-content:space-between;margin-bottom:12px"><b style="font-size:13.5px">Bundle summary</b><span class="badge2 info">Not live yet</span></div>
+            <div>
+              <div class="sumrow"><span class="sicon ok"></span><div><div class="sname">Bundle name <span class="req-star">*</span></div><div class="sval">What customers see on the widget and at checkout.</div></div></div>
+              <div class="sumrow"><span class="sicon ok"></span><div><div class="sname">Bundle type <span class="req-star">*</span></div><div class="sval" id="sumType">The kind of bundle and how customers build it.</div></div></div>
+              <div class="sumrow"><span class="sicon ok"></span><div><div class="sname">What's in it <span class="req-star">*</span></div><div class="sval">The products or categories the bundle is made of.</div></div></div>
+              <div class="sumrow" id="sumPricing"><span class="sicon ok"></span><div><div class="sname">Pricing <span class="req-star">*</span></div><div class="sval">How the bundle total is calculated.</div></div></div>
+              <div class="sumrow" id="sumSub"><span class="sicon ok"></span><div><div class="sname">Subscription</div><div class="sval">Offered, 1 buying option</div></div></div>
+              <div class="sumrow" id="sumShip"><span class="sicon opt"></span><div><div class="sname">Shipping override</div><div class="sval">Off, uses shop shipping</div></div></div>
+              <div class="sumrow" id="sumEnh"><span class="sicon opt"></span><div><div class="sname">Enhancements</div><div class="sval">Widget marquee off</div></div></div>
+            </div>
+          </div></div>
+
+          <div class="card"><div class="cardpad">
+            <div class="rowline" style="justify-content:space-between;margin-bottom:4px"><b style="font-size:13.5px">Set up to sell</b><button class="lnk">Re-check</button></div>
+            <div class="help" style="margin-bottom:6px">We check these automatically. Set up anything that isn't ready.</div>
+            <div class="drow"><div class="dtop"><span class="dname">Checkout</span><span class="dact"><span class="badge2 ok">Shopify checkout</span></span></div><div class="help" style="margin-top:4px">Detected on your store (best-effort). <button class="lnk">Using a custom checkout? Set it up &#8594;</button></div></div>
+            <div class="drow"><div class="dtop"><span class="dname">Widget</span><span class="dact"><span class="badge2 attn">Not on these products</span></span></div><div class="help" style="margin-top:4px">No StackBack widget found on the pool products. <button class="lnk">Add in Widgets &#8594;</button></div></div>
+            <div class="drow"><div class="dtop"><span class="dname">Landing page</span><span class="dact"><span class="badge2 sub">Not created</span></span></div><div class="help" style="margin-top:4px">A shareable page for just this bundle. <button class="lnk">Create in Portal &#8594;</button></div></div>
+          </div></div>
+        </div>
+      </div>
+    </s-page>
+  </div>
+</div>
+
+<script>
+  (function(){
+    var $ = function(id){ return document.getElementById(id); };
+    var steps=[].slice.call(document.querySelectorAll('.step[data-step]'));
+    function openStep(idx){ steps.forEach(function(s,i){ var on=(i===idx); s.classList.toggle('open', on); s.querySelector('.stepbody').classList.toggle('collapsed', !on); }); }
+    steps.forEach(function(s,i){ s.querySelector('.stephdr').addEventListener('click', function(e){ if(e.target.closest('button,select,input,.seg,label,a')) return; openStep(i); }); });
+    openStep(0);
+
+    // ---------- bundle type ----------
+    var typegrid=$('typegrid');
+    var TYPE={ fixed:{label:'Fixed box', s2:'What is in the box?', s2sum:'Same set for every customer', s3sum:'Original price'},
+               byob:{label:'Build-your-own box', s2:'What can customers pick?', s2sum:'3 products in pool, pick 3-6', s3sum:'Sum of products'},
+               mix:{label:'Pick-from-each box', s2:'Set up the categories', s2sum:'2 categories', s3sum:'Sum of products'},
+               bxgy:{label:'Buy X Get Y', s2:'Mark which products are Buy or Free', s2sum:'2 products marked', s3sum:'Buy X Get Y'},
+               tier:{label:'Buy more, save more box', s2:'What can customers pick?', s2sum:'3 products in pool', s3sum:'Tiered discount'} };
+    function setType(t){
+      typegrid.querySelectorAll('.typecard').forEach(function(c){ c.classList.toggle('on', c.dataset.type===t); });
+      document.querySelectorAll('.tblock').forEach(function(b){ b.classList.toggle('hide', b.dataset.t!==t); });
+      $('s2title').textContent = TYPE[t].s2 + '';
+      $('s2title').innerHTML = TYPE[t].s2 + ' <span class="req-star">*</span>';
+      $('s2sum').textContent = TYPE[t].s2sum;
+      $('s3sum').textContent = TYPE[t].s3sum;
+      steps[0].querySelector('.collsum').textContent = TYPE[t].label;
+      $('sumType').textContent = TYPE[t].label;
+      if(typeof renderBxgyPay==='function') renderBxgyPay();
+      applyPricingStep(t);
+    }
+
+    // Buy X Get Y has no pricing mode to choose: the price is fully determined by the
+    // Buy / Free marks made in Step 2. A step that only restates an earlier answer is a
+    // step a merchant has to open for nothing, so the pricing step is dropped entirely
+    // for this format and the outcome moves to the summary. (Sumant 2026-07-28)
+    var NO_PRICING_STEP = { bxgy:true };
+    function applyPricingStep(t){
+      var drop = !!NO_PRICING_STEP[t], pricing = steps[2];
+      pricing.classList.toggle('hide', drop);
+      var sumPricing = $('sumPricing');
+      if(drop){
+        pricing.querySelector('.stepbody').classList.add('collapsed');
+        pricing.classList.remove('open');
+        if(sumPricing) sumPricing.querySelector('.sval').textContent =
+          'Set by the Buy and Free marks in the previous step, no separate pricing step.';
+      } else if(sumPricing){
+        sumPricing.querySelector('.sval').textContent = 'How the bundle total is calculated.';
+      }
+    }
+    typegrid.addEventListener('click', function(e){ var c=e.target.closest('.typecard'); if(!c) return; setType(c.dataset.type); });
+    setType('byob');
+
+    // ---------- generic Add by (products/collections) ----------
+    document.querySelectorAll('.seg.addby').forEach(function(seg){ seg.addEventListener('click', function(e){ var l=e.target.dataset.lvl; if(!l) return; seg.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.dataset.lvl===l); }); }); });
+
+    // ---------- pricing segmented (per type), each mode has its OWN "Customer pays" text ----------
+    // Modes where the field above already states the price/discount in full: the Customer Pays
+    // row would just repeat it, so it's hidden for those modes (kept for sum/tier/original,
+    // where it's the only place the outcome is explained).
+    var PAY_TEXT = {
+      byob:  { sum:"the exact sum of what they pick", pct:"15% off the sum of everything picked" },
+      fixed: { orig:"the sum of the products' original prices, no discount", static:"one flat price for the whole bundle (INR 1,499), no matter the products' original total", pct:"20% off the bundle's original total" },
+      mix:   { sum:"the sum of the products they pick, across all categories, no discount", static:"a fixed price per category, added together across the categories they pick from", pct:"each category's own percentage off applied to the products picked from it", bxgy:"the sum of paid categories; categories marked Free contribute INR 0" }
+    };
+    var HIDE_PAY = { byob:{pct:true}, fixed:{static:true, pct:true}, mix:{} };
+
+    // Buy X Get Y is its own bundle type now: the Buy/Free marks live in Step 2, and this
+    // renders the live "Customer pays" line in Step 3 from those marks (no pricing mode to pick).
+    function renderBxgyPay(){
+      var rows=[].slice.call(document.querySelectorAll('.tblock[data-t="bxgy"] .bxgToggle'));
+      var buys=rows.filter(function(r){ return r.querySelector('[data-role="buy"]').classList.contains('on'); }).length;
+      var frees=rows.length-buys;
+      var el=$('bxgyPay'); if(!el) return;
+      el.textContent = 'for the '+buys+' product'+(buys===1?'':'s')+' marked Buy; the '+frees+' marked Free contribute'+(frees===1?'s':'')+' INR 0';
+    }
+    document.querySelectorAll('.bxgToggle').forEach(function(seg){
+      seg.addEventListener('click', function(e){
+        var role=e.target.dataset.role; if(!role) return;
+        seg.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.dataset.role===role); });
+        renderBxgyPay();
+      });
+    });
+
+    document.querySelectorAll('.seg.priceSeg').forEach(function(seg){
+      var kind = seg.classList.contains('byob') ? 'byob' : seg.classList.contains('fixed') ? 'fixed' : 'mix';
+      var payEl = kind==='byob' ? $('byobPay') : kind==='fixed' ? $('fixedPay') : $('mixPay');
+      var priceRow = payEl ? payEl.closest('.price') : null;
+      function apply(m){
+        seg.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.dataset.m===m); });
+        var block=seg.closest('.tblock');
+        block.querySelectorAll('.pblock').forEach(function(p){ p.style.display = p.dataset.m===m ? '' : 'none'; });
+        var onBtn=[].slice.call(seg.querySelectorAll('button')).find(function(b){ return b.dataset.m===m; });
+        $('s3sum').textContent = onBtn ? onBtn.textContent.trim() : '';
+        if(!payEl) return;
+        var hide = !!(HIDE_PAY[kind] && HIDE_PAY[kind][m]);
+        if(priceRow) priceRow.classList.toggle('hide', hide);
+        if(hide) return;
+        var txt = PAY_TEXT[kind][m] || '';
+        payEl.textContent = kind==='mix' ? ('Customer pays '+txt+'.') : txt;
+      }
+      seg.addEventListener('click', function(e){ var m=e.target.dataset.m; if(!m) return; apply(m); });
+      var initBtn=seg.querySelector('button.on'); if(initBtn) apply(initBtn.dataset.m);
+    });
+
+    // ---------- per-card buying-option editor ----------
+    var PAYG_LABEL='by invoice and email reminder (pay-as-you-go)';
+    function initEditor(card){
+      var q=function(s){ return card.querySelector(s); };
+      var durSeg=q('.durSeg'), payPre=q('.pay-prepaid'), payGo=q('.pay-payg'), methodGroup=q('.methodGroup'),
+          durNoneBtn=durSeg.querySelector('[data-dur="none"]'), deliveryPreview=q('.deliveryPreview'),
+          sf=q('.sched-fixed'), sc=q('.sched-choice'), sn=q('.sched-none');
+      function setDuration(mode){ durSeg.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.dataset.dur===mode); }); sf.classList.toggle('hide', mode!=='fixed'); sc.classList.toggle('hide', mode!=='choice'); sn.classList.toggle('hide', mode!=='none'); }
+      function preview(){
+        var pre=payPre.classList.contains('on'), pg=payGo.classList.contains('on'), on=durSeg.querySelector('button.on'), mode=on?on.dataset.dur:'fixed';
+        var count = mode==='fixed'?'for the set number of deliveries':mode==='choice'?'for the number of deliveries the customer picks':'with no end date', body;
+        if(pre&&pg) body='the customer chooses how to pay: prepay '+count+'; or pay per delivery, charged '+PAYG_LABEL;
+        else if(pre) body='the customer prepays '+count+', then it ends';
+        else if(pg) body='it runs '+count+'; each delivery is charged '+PAYG_LABEL;
+        else body='no payment option is selected yet';
+        deliveryPreview.innerHTML='<b>When delivery happens:</b> '+body+'.';
+      }
+      function sync(){ var pre=payPre.classList.contains('on'), pg=payGo.classList.contains('on'); methodGroup.classList.toggle('hide', !pg); var ok=pg&&!pre; durNoneBtn.classList.toggle('hide', !ok); if(!ok&&durNoneBtn.classList.contains('on')) setDuration('fixed'); preview(); }
+      durSeg.addEventListener('click', function(e){ if(!e.target.dataset.dur) return; setDuration(e.target.dataset.dur); preview(); });
+      payPre.addEventListener('click', function(){ payPre.classList.toggle('on'); if(!payPre.classList.contains('on')&&payGo.classList.contains('on')) setDuration('none'); sync(); });
+      payGo.addEventListener('click', function(){ payGo.classList.toggle('on'); if(payGo.classList.contains('on')&&!payPre.classList.contains('on')) setDuration('none'); sync(); });
+      var dt=q('.discType'), dp=q('.discPrefix'), ds=q('.discSuffix'), dv=q('.discVal'), base=dv.textContent;
+      function disc(){ var amt=dt.value==='amt'; dp.classList.toggle('hide', !amt); ds.classList.toggle('hide', amt); dv.textContent = amt?'100':base; }
+      dt.addEventListener('change', disc);
+      var et=q('.extrasToggle'), eb=q('.extrasBody'); et.addEventListener('click', function(){ var o=eb.classList.toggle('hide')===false; et.classList.toggle('open', o); });
+      var fl=q('.freelist'), af=q('.addfree'); af.addEventListener('click', function(){ var d=document.createElement('div'); d.className='rowline'; d.style.padding='9px 0'; d.innerHTML='<span>Delivery #</span><span class="field">3</span><s-thumbnail size="small"></s-thumbnail><input class="field" style="width:220px" placeholder="e.g. Free sample" /><button class="x" style="margin-left:auto">Remove</button>'; d.querySelector('.x').addEventListener('click', function(){ d.remove(); }); fl.appendChild(d); });
+      sync(); disc();
+    }
+    function summarize(card){
+      var pre=card.querySelector('.pay-prepaid').classList.contains('on'), pg=card.querySelector('.pay-payg').classList.contains('on');
+      var pt = pre&&pg?'Both':pre?'Prepaid':pg?'Pay per delivery':'';
+      var dt=card.querySelector('.discType').value, dv=card.querySelector('.discVal').textContent;
+      var disc = dt==='amt'?('INR '+dv+' off'):(dv+'% off');
+      var chips=card.querySelector('.chips'); chips.innerHTML=''; if(pt){ var a=document.createElement('span'); a.className='pill'; a.textContent=pt; chips.appendChild(a);} var b=document.createElement('span'); b.className='pill'; b.textContent=disc; chips.appendChild(b);
+    }
+    [].slice.call(document.querySelectorAll('.optcard[data-opt]')).forEach(function(card){
+      initEditor(card);
+      var ed=card.querySelector('.opteditor'), btn=card.querySelector('.t-edit'), chips=card.querySelector('.chips');
+      function setOpen(open){ if(!open) summarize(card); ed.classList.toggle('hide', !open); btn.textContent=open?'Collapse':'Edit'; if(chips) chips.classList.toggle('hide', open); }
+      btn.addEventListener('click', function(){ setOpen(ed.classList.contains('hide')); });
+      if(ed.classList.contains('hide')) summarize(card);
+    });
+
+    // ---------- drag reorder ----------
+    var optlist=$('optlist'), dragEl=null;
+    if(optlist){ optlist.querySelectorAll('.optcard').forEach(function(card){ var h=card.querySelector('.draghandle'); if(!h) return; h.addEventListener('mousedown', function(){ card.setAttribute('draggable','true'); }); h.addEventListener('mouseup', function(){ card.removeAttribute('draggable'); }); card.addEventListener('dragstart', function(){ dragEl=card; setTimeout(function(){ card.classList.add('dragging'); },0); }); card.addEventListener('dragend', function(){ card.classList.remove('dragging'); card.removeAttribute('draggable'); dragEl=null; }); });
+      optlist.addEventListener('dragover', function(e){ e.preventDefault(); if(!dragEl) return; var els=[].slice.call(optlist.querySelectorAll('.optcard:not(.dragging)')); var after=els.find(function(c){ var r=c.getBoundingClientRect(); return e.clientY < r.top+r.height/2; }); if(after) optlist.insertBefore(dragEl, after); else optlist.appendChild(dragEl); }); }
+
+    // ---------- simulation popup ----------
+    var openSimBtn=$('openSimBtn'), simOverlay=$('simOverlay'), simModalClose=$('simModalClose');
+    if(openSimBtn && simOverlay){
+      openSimBtn.addEventListener('click', function(){ simOverlay.classList.remove('hide'); });
+      simModalClose.addEventListener('click', function(){ simOverlay.classList.add('hide'); });
+      simOverlay.addEventListener('click', function(e){ if(e.target===simOverlay) simOverlay.classList.add('hide'); });
+      document.addEventListener('keydown', function(e){ if(e.key==='Escape') simOverlay.classList.add('hide'); });
+    }
+
+    // ---------- summaries: subscription / shipping / enhancements ----------
+    function setSumRow(row, filled, txt){ if(!row) return; var i=row.querySelector('.sicon'); i.className='sicon '+(filled?'ok':'opt'); row.querySelector('.sval').textContent=txt; }
+    var subsw=$('subsw'), subeditor=$('subeditor');
+    subsw.addEventListener('change', function(){ subeditor.classList.toggle('hide', !subsw.checked); var on=subsw.checked; setSumRow($('sumSub'), on, on?'Offered, 1 buying option':'Not offered'); steps[3].querySelector('.collsum').textContent = on?'Offered, 1 buying option':'Not offered'; applyShipGate(); });
+
+    // Shipping override is its own section but is meaningless without recurring delivery,
+    // so the whole section (and its summary row) disappears when Subscription is off.
+    function applyShipGate(){
+      var on = subsw.checked, sec = $('shipStep'), row = $('sumShip');
+      if(sec) sec.classList.toggle('hide', !on);
+      if(row) row.classList.toggle('hide', !on);
+      if(!on && shipOvSw && shipOvSw.checked){    // leaving it on invisibly would ship a hidden charge
+        shipOvSw.checked = false;
+        $('shipOvCfg').classList.add('hide');
+        shipSum();
+        $('shipCollsum').textContent = 'Off, uses shop shipping';
+      }
+    }
+    applyShipGate();
+
+    var shipOvSw=$('shipOvSw'), shipOvCfg=$('shipOvCfg'), shipOvPrice=$('shipOvPrice'), shipOvHint=$('shipOvHint');
+    function shipHint(){ var v=parseFloat(shipOvPrice.value); if(isNaN(v)||v<0) v=0; shipOvHint.textContent = v===0?'Free shipping for this bundle.':'Charged INR '+v+' per delivery.'; }
+    function shipSum(){ var on=shipOvSw.checked, v=parseFloat(shipOvPrice.value); if(isNaN(v)||v<0) v=0; var t=!on?'Off, uses shop shipping':(v===0?'Override on, free shipping':'Override on, INR '+v+' per delivery'); setSumRow($('sumShip'), on, t); var cs=$('shipCollsum'); if(cs) cs.textContent=t; }
+    shipOvSw.addEventListener('change', function(){ shipOvCfg.classList.toggle('hide', !shipOvSw.checked); shipHint(); shipSum(); });
+    shipOvPrice.addEventListener('input', function(){ shipHint(); shipSum(); });
+    shipHint(); shipSum();
+    var szm=$('shipZipMode'); szm.addEventListener('click', function(e){ var z=e.target.dataset.zip; if(!z) return; szm.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.dataset.zip===z); }); });
+
+    // ---------- marquee ----------
+    var mqsw=$('mqsw'), wprev=document.querySelector('.wprev'), msgwrap=$('wmsgwrap'), mqfields=$('mqfields'), addmsg=$('addmsg'); var rot=null, ri=0;
+    function collect(){ var v=[]; var f=mqfields.querySelector('s-text-field.mqmsg'); if(f&&f.value) v.push(f.value.trim()); mqfields.querySelectorAll('.msgrow2:not(.hide) s-text-field').forEach(function(x){ if(x.value) v.push(x.value.trim()); }); return v.filter(Boolean); }
+    function build(){ var m=collect(); if(!m.length) m=['Your deal message']; msgwrap.innerHTML=''; m.forEach(function(t,i){ var s=document.createElement('span'); s.className='msg'+(i===0?' show':''); s.textContent=t; msgwrap.appendChild(s); }); ri=0; if(rot){ clearInterval(rot); rot=null; } if(m.length>1){ rot=setInterval(function(){ var sp=msgwrap.querySelectorAll('.msg'); sp[ri].classList.remove('show'); ri=(ri+1)%sp.length; sp[ri].classList.add('show'); },2600); } }
+    function enhSum(){ var on=mqsw.checked, t=on?'Widget marquee on':'Widget marquee off'; setSumRow($('sumEnh'), on, t); $('enhStep').querySelector('.collsum').textContent=t; }
+    mqsw.addEventListener('change', function(){ mqfields.classList.toggle('hide', !mqsw.checked); wprev.classList.toggle('off', !mqsw.checked); enhSum(); });
+    addmsg.addEventListener('click', function(){ var n=mqfields.querySelector('.msgrow2.hide'); if(n) n.classList.remove('hide'); build(); });
+    mqfields.addEventListener('input', build); build(); enhSum();
+  })();
+</script>
+</body>
+</html>

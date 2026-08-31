@@ -1,0 +1,1341 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Subscriptions (Polaris web components v1)</title>
+<script src="https://cdn.shopify.com/shopifycloud/polaris.js"></script>
+<style>
+  :root{
+    --p-ink:#303030; --p-muted:#616161; --p-faint:#8a8a8a;
+    --p-line:#e3e3e3; --p-line2:#ebebeb; --p-surface:#fff;
+    --p-primary:#303030; --p-success:#29845a; --p-success-bg:#cdfee1;
+    --p-link:#005bd3; --p-attn-bg:#ffefcf; --p-attn:#8a6116;
+    --p-crit:#8e1f0b; --p-crit-bg:#fedad1;
+  }
+  body{margin:0;background:#f1f1f1;font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--p-ink)}
+
+  /* Shopify admin shell, carried verbatim from the locked Orders and Payment Reminders screens so
+     the five admin wireframes share one chrome. */
+  .admin{display:flex;min-height:100vh}
+  .navL{flex:none;width:232px;background:#ebebeb;border-right:1px solid var(--p-line);
+    padding:10px 8px;display:flex;flex-direction:column;gap:1px;position:sticky;top:0;align-self:flex-start;height:100vh;overflow:auto}
+  .navItem{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;color:var(--p-ink);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
+  .navItem:hover{background:#dedede}
+  .navItem .ico{width:18px;height:18px;flex:none;color:#4a4a4a}
+  .navItem .ct{margin-left:auto;font-size:12px;color:var(--p-muted);background:#e0e0e0;border-radius:8px;padding:0 7px;line-height:18px}
+  .navSec{color:var(--p-muted);font-size:13px;font-weight:500;display:flex;align-items:center;height:30px;padding:0 8px;margin-top:6px}
+  .navSec .chev{margin-left:auto;color:var(--p-faint)}
+  .navApp{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;font-weight:600;background:#fff;box-shadow:0 1px 0 rgba(0,0,0,.04);margin-top:2px}
+  .navApp .logo{width:20px;height:20px;border-radius:5px;background:var(--p-primary);display:grid;place-items:center;color:#fff;font-size:11px;flex:none}
+  .navApp .dot{margin-left:auto;width:6px;height:6px;border-radius:50%;background:#8a8a8a}
+  .navSub{display:flex;align-items:center;height:30px;padding:0 8px 0 34px;border-radius:8px;color:var(--p-muted);font-size:13px;cursor:pointer;text-decoration:none}
+  .navSub:hover{background:#dedede;color:var(--p-ink)}
+  .navSub.sel{color:var(--p-ink);font-weight:500}
+  .navGap{flex:1}
+  /* scrollbar-gutter keeps the content column one width whether or not the list scrolls. Without it
+     the table loses ~47px on the busy tabs, so columns jump between tabs and the row actions clip
+     only where there are most rows. */
+  html{scrollbar-gutter:stable}
+  .appmain{flex:1;min-width:0;display:flex;flex-direction:column}
+  .appbar{height:52px;background:#fff;border-bottom:1px solid var(--p-line);display:flex;align-items:center;gap:10px;padding:0 18px}
+  .appbar .logo{width:24px;height:24px;border-radius:6px;background:var(--p-primary);display:grid;place-items:center;color:#fff;font-size:12px}
+  .appbar .name{font-weight:650;font-size:14px}
+  .appbar .more{margin-left:auto;color:var(--p-muted);font-size:20px;cursor:pointer;letter-spacing:1px}
+  .hide{display:none !important}
+</style>
+<!-- bare mode: when embedded in the WIP prototype shell, hide this file's own admin chrome so the
+shell is not drawn twice. Standalone viewing is unaffected. -->
+<script>if(/bare/.test(location.search+location.hash))document.documentElement.classList.add("bare");</script>
+<style>html.bare .navL,html.bare .appbar{display:none!important}html.bare .admin{min-height:0}html.bare,html.bare body{background:#f1f1f1}</style>
+</head>
+<body>
+<div class="admin">
+
+  <aside class="navL">
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8.5 10 3l7 5.5V16a1 1 0 0 1-1 1h-3v-5H7v5H4a1 1 0 0 1-1-1z"/></svg>Home</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="13" rx="2"/><path d="M7 8h6M7 11h6"/></svg>Orders<span class="ct">127</span></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h12v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M7 6V5a3 3 0 0 1 6 0v1"/></svg>Products</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="7" r="3"/><path d="M4 16c0-3 2.7-5 6-5s6 2 6 5"/></svg>Customers</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 15V9m4 6V5m4 10v-4m4 4V7"/></svg>Growth</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="3"/><path d="M12 12l4 4M13.5 6.5 16 4"/></svg>Discounts</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="12" rx="2"/><path d="M7 8h6M7 11h4"/></svg>Content</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="6"/><path d="M4 10h12M10 4c2 2 2 10 0 12M10 4c-2 2-2 10 0 12"/></svg>Markets</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 16h12M6 16V9m4 7V5m4 11v-4"/></svg>Analytics</div>
+    <div class="navSec">Sales channels<span class="chev">&#8250;</span></div>
+    <div class="navSec">Apps<span class="chev">&#8250;</span></div>
+    <div class="navApp"><span class="logo">&#9670;</span>StackBack Subscrip&hellip;<span class="dot"></span></div>
+    <!-- Twelve flat items, ordered by data lineage, per the locked IA. Subscriptions is item 2. -->
+    <div class="navSub">Plans</div>
+    <div class="navSub sel">Subscriptions</div>
+    <a class="navSub" href="Orders_Polaris_v5.html">Orders</a>
+    <a class="navSub" href="PaymentReminders_Polaris_v6.html">Payment reminders</a>
+    <a class="navSub" href="Inventory_Polaris_v4.html">Inventory</a>
+    <div class="navSub">Customers</div>
+    <div class="navSub">Widget</div>
+    <div class="navSub">Portal</div>
+    <div class="navSub">Landing pages</div>
+    <div class="navSub">Analytics</div>
+    <div class="navSub">Settings</div>
+    <div class="navSub">Billing</div>
+    <div class="navGap"></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m7-7h-2M5 10H3m12.5-5-1.5 1.5M6 14l-1.5 1.5m11 0L14 14M6 6 4.5 4.5"/></svg>Settings</div>
+  </aside>
+
+  <div class="appmain">
+    <div class="appbar"><span class="logo">&#9670;</span><span class="name">StackBack Subscriptions &amp; More</span><span class="more">&ctdot;</span></div>
+
+    <style>
+      .lwrap{padding:0 0 26px}
+      .tabrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0 12px}
+      .tabs{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+      .tabs button{appearance:none;border:1px solid transparent;background:transparent;font:inherit;font-size:13px;font-weight:600;color:var(--p-muted);height:32px;padding:0 12px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+      .tabs button.on{background:#fff;color:var(--p-ink);border-color:var(--p-line);box-shadow:0 1px 0 rgba(0,0,0,.04)}
+      .tabs button .n{font-size:11px;font-weight:700;opacity:.7}
+
+      .toolbar{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin:0 0 10px}
+      .toolbar .grow{flex:1 1 260px;min-width:220px}
+      .toolbar .fw{flex:0 0 auto;min-width:142px}
+      .chipRow{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px;align-items:center}
+      .chipf{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 6px 0 10px;border-radius:99px;border:1px solid var(--p-line);background:#fff;font-size:12px;font-weight:600;color:var(--p-muted)}
+      .chipf .x{cursor:pointer;color:var(--p-faint);font-weight:700;padding:0 3px;border-radius:50%}
+      .chipf .x:hover{background:#f1f1f1;color:var(--p-ink)}
+      .clearAll{appearance:none;border:0;background:none;font:inherit;font-size:12px;font-weight:600;color:var(--p-link);cursor:pointer;padding:0 4px}
+
+      .wstrip{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:12px;margin:0 0 14px;align-items:stretch}
+      .wtile{background:#fff;border:1px solid var(--p-line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:3px}
+      .wtile .k{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--p-faint);display:flex;align-items:center;gap:6px}
+      /* a tile that is deliberately STORE-level rather than view-derived says so, so a filtered
+         view never makes a store number look like it moved */
+      .wtile .k .sb{font-size:9.5px;font-weight:700;letter-spacing:.3px;color:var(--p-muted);
+        background:#ededed;border-radius:5px;padding:0 5px;text-transform:uppercase}
+      .wtile .v{font-size:21px;font-weight:650;letter-spacing:-.3px}
+      .wtile .d{font-size:12px;color:var(--p-muted);margin-top:auto}
+
+      /* bulk action bar, appears only with a selection */
+      .bulk{display:none;align-items:center;gap:8px;flex-wrap:wrap;background:#f1f5ff;border:1px solid #c7d9f7;border-radius:10px;padding:9px 12px;margin:0 0 12px}
+      .bulk.on{display:flex}
+      .bulk .cnt{font-size:12.5px;font-weight:650;color:#1f3f7a;margin-right:2px}
+      .bulk .sp{flex:1}
+
+      .c1{font:700 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+      .c2{color:var(--p-muted);font-size:12px;margin-top:2px;line-height:1.45}
+      .lnk{color:var(--p-link);font-weight:600;font-size:12.5px;cursor:pointer;text-decoration:none;background:none;border:0;padding:0;font-family:inherit;text-align:left}
+      .lnk:hover{text-decoration:underline}
+      .money{font-variant-numeric:tabular-nums;font-weight:600;font-size:12.5px;white-space:nowrap}
+      .rowacts{display:flex;align-items:center;gap:6px;justify-content:flex-end}
+      /* Plan name is capped and ellipsised: "Quarterly Wellness Box" must not widen the table to the
+         point where the row actions leave the screen. */
+      .planname{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:168px}
+      /* the customer name was wrapping to two lines on every row ("Priya / Menon"), which made the
+         column's width float with whichever name happened to be longest and read as ragged. Capped
+         and ellipsised, same treatment as the plan name. */
+      .custname{display:inline-block;max-width:132px;white-space:nowrap;overflow:hidden;
+        text-overflow:ellipsis;vertical-align:bottom}
+      .planmeta{color:var(--p-muted);font-size:11.5px;margin-top:2px;white-space:nowrap}
+      .dnum{font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+      .nextdate{font-size:12.5px;font-weight:600;white-space:nowrap}
+      /* the type capsule under the code. Type is also a filter, so keeping it here rather than in its
+         own column buys the ~85px the row actions need at 919px. */
+      .typecap{display:inline-block;margin-top:3px;font-size:10.5px;font-weight:700;letter-spacing:.2px;
+        text-transform:uppercase;color:var(--p-muted);background:#f1f1f1;border:1px solid var(--p-line2);
+        border-radius:5px;padding:0 5px}
+      .prodline{font-size:12.5px;line-height:1.45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:270px}
+      .prodline .sku{color:var(--p-faint);font-size:11.5px;font-family:ui-monospace,Menlo,monospace}
+
+      /* product preview capsules, ported from the Purchase Options listing v12 chip stack so every
+         admin list reads as one product-preview language */
+      .thumbline{display:inline-flex;flex-direction:column;align-items:flex-start;gap:4px;
+        border:0;background:none;cursor:pointer;padding:0;white-space:nowrap;font:inherit;text-align:left}
+      .thumbline .trow{display:inline-flex;align-items:center}
+      .thumbline .tchip{width:26px;height:26px;border-radius:7px;background:#f1f1f1;
+        display:inline-flex;align-items:center;justify-content:center;color:#9a9a9a;
+        margin-left:-6px;position:relative;box-shadow:0 0 0 1px var(--p-line),0 0 0 3px #fff}
+      .thumbline .tchip:first-child{margin-left:0}
+      .thumbline .tmore{margin-left:8px;font-size:12px;font-weight:700;color:var(--p-muted)}
+      .thumbline .tcount{font-size:12.5px;color:var(--p-link);font-weight:600}
+      .thumbline:hover .tcount{text-decoration:underline}
+
+      /* kebab activator: borderless so it reads as a row affordance rather than a second button */
+      .kebab{border-color:transparent;background:none;padding:0 7px;font-size:15px;line-height:1;color:var(--p-muted)}
+      .kebab:hover{background:#f1f1f1;border-color:var(--p-line)}
+
+      .pop{position:fixed;inset:0;background:rgba(0,0,0,.28);z-index:90;display:none;align-items:center;justify-content:center}
+      .pop.on{display:flex}
+      .popbox{background:#fff;border-radius:12px;width:min(520px,94vw);max-height:86vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+      .popbox.wide{width:min(620px,94vw)}
+      .pophd{padding:14px 18px;border-bottom:1px solid var(--p-line);display:flex;align-items:flex-start;gap:10px}
+      .pophd .t{font-size:14.5px;font-weight:650}
+      .pophd .x{margin-left:auto;appearance:none;border:0;background:none;font-size:17px;color:var(--p-muted);cursor:pointer;line-height:1;padding:2px 4px}
+      .popbody{padding:16px 18px;overflow:auto}
+      .popfoot{padding:13px 18px;border-top:1px solid var(--p-line);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+      .popbody>.dsec{margin-bottom:16px}
+      .popbody>.dsec:last-child{margin-bottom:0}
+      .dsec .h{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--p-faint);margin-bottom:9px}
+
+      /* a GRID, not flex-wrap. On flex the items sized to their own content, so one long value
+         ("Cancellation requested") made the row wrap ragged and the dividers between items no longer
+         lined up down the block. Three fixed columns keep every label on a column edge however long
+         the value is. */
+      .metarow{display:grid;grid-template-columns:repeat(3,1fr);row-gap:13px;
+        background:#fafafa;border:1px solid var(--p-line2);border-radius:10px;padding:12px 4px}
+      .metaitem{padding:0 12px;position:relative;min-width:0}
+      /* divider on every item except the first of each row, so it reads as a grid and not as a list */
+      .metaitem:not(:nth-child(3n+1))::before{content:"";position:absolute;left:0;top:1px;bottom:1px;
+        width:1px;background:var(--p-line2)}
+      .metaitem .k{font-size:10.5px;letter-spacing:.3px;text-transform:uppercase;color:var(--p-faint);font-weight:700;margin-bottom:3px}
+      .metaitem .v{font-size:12.5px;font-weight:600;line-height:1.35}
+
+      .iline{display:flex;align-items:baseline;gap:12px;padding:9px 0;border-bottom:1px solid var(--p-line2)}
+      .iline:last-of-type{border-bottom:0}
+      .iline .g{flex:1;min-width:0}
+      .iline .qty{display:inline-block;font-weight:700;font-variant-numeric:tabular-nums;font-size:11.5px;
+        color:var(--p-muted);background:#f1f1f1;border-radius:5px;padding:1px 5px;margin-left:4px;vertical-align:1px}
+      .iline .amt{flex:none;font-weight:600;font-variant-numeric:tabular-nums;font-size:12.5px}
+      .iline.tot{border-top:1px solid var(--p-line);border-bottom:0;margin-top:4px;padding-top:11px}
+      .iline.tot .amt{font-size:13.5px;font-weight:700}
+
+      .custgrid{display:grid;grid-template-columns:1fr 1fr;gap:13px 16px}
+      .df .k{font-size:11px;color:var(--p-faint);font-weight:600;margin-bottom:2px}
+      .df .v{font-size:12.5px}
+
+      /* order timeline inside the details popup. Read-only: Orders owns every per-delivery action,
+         so this states what happened and links out rather than offering a second place to fix it. */
+      .tl{position:relative;padding-left:18px}
+      .tl::before{content:"";position:absolute;left:4px;top:6px;bottom:6px;width:1px;background:var(--p-line)}
+      .tlrow{position:relative;display:flex;align-items:baseline;gap:10px;padding:7px 0}
+      .tlrow .mk{position:absolute;left:-18px;top:12px;width:9px;height:9px;border-radius:50%;
+        background:#c7c7c7;box-shadow:0 0 0 3px #fff}
+      .tlrow.ok .mk{background:var(--p-success)}
+      .tlrow.due .mk{background:var(--p-attn)}
+      .tlrow.fail .mk{background:var(--p-crit)}
+      .tlrow .g{flex:1;min-width:0}
+      .tlrow .dt{font-size:12.5px;font-weight:600}
+      .tlrow .amt{flex:none;font-variant-numeric:tabular-nums;font-weight:600;font-size:12.5px}
+
+      .dateopt{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+      .dateopt button{appearance:none;height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--p-line);background:#fff;font:inherit;font-size:12.5px;font-weight:600;color:var(--p-ink);cursor:pointer}
+      .dateopt button.on{background:var(--p-ink);color:#fff;border-color:var(--p-ink)}
+      .b{height:28px;padding:0 11px;border-radius:8px;border:1px solid var(--p-line);background:#fff;font:inherit;font-size:12.5px;font-weight:600;color:var(--p-ink);cursor:pointer;white-space:nowrap}
+      .b.pri{background:var(--p-ink);color:#fff;border-color:var(--p-ink)}
+      .b.crit{color:var(--p-crit);border-color:#f0bfb4}
+      .b:disabled{opacity:.45;cursor:default}
+
+      .pager{display:flex;align-items:center;gap:10px;justify-content:center;padding:12px 14px;flex-wrap:wrap;font-size:12.5px;color:var(--p-muted)}
+      .note{background:#eaf4ff;border:1px solid #b9dcf5;color:#00527c;border-radius:10px;padding:11px 13px;font-size:12.5px;margin:14px 0 0}
+      .warnNote{background:#ffefcf;border:1px solid #f0d9a8;color:#8a6116;border-radius:10px;padding:11px 13px;font-size:12.5px;margin:14px 0 0}
+      .critNote{background:var(--p-crit-bg);border:1px solid #f5b8a8;color:var(--p-crit);border-radius:9px;padding:10px 12px;font-size:12.5px;line-height:1.5}
+      .note b,.warnNote b{font-weight:650}
+      .emptyRow{padding:34px 16px;text-align:center;color:var(--p-faint);font-size:12.5px}
+      .hide{display:none !important}
+    </style>
+
+    <s-page heading="Subscriptions" inline-size="large">
+      <s-button slot="secondary-actions">Export</s-button>
+      <!-- Create covers BOTH single and bundle contracts, so the primary is a disclosure rather than
+           one flow. s-button's own chevron is correct here (unlike on a kebab), and the menu is a
+           SIBLING wired with commandfor, because s-menu has no trigger slot and swallows any child
+           as menu item #1. -->
+      <s-button slot="primary-action" variant="primary" commandfor="createMenu" command="--show">Create subscription</s-button>
+
+      <div class="lwrap">
+
+        <div class="wstrip" id="wstrip">
+          <div class="wtile">
+            <div class="k">Active <span class="sb">Store</span></div>
+            <div class="v" id="wActive">0</div><div class="d">contracts billing on schedule</div>
+          </div>
+          <div class="wtile">
+            <div class="k">Paused <span class="sb">Store</span></div>
+            <div class="v" id="wPaused">0</div><div class="d">no deliveries going out</div>
+          </div>
+          <div class="wtile">
+            <div class="k">Renewing in 7 days <span class="sb">Store</span></div>
+            <div class="v" id="wSoon">0</div><div class="d">active, next order inside a week</div>
+          </div>
+          <div class="wtile">
+            <div class="k">Ending soon <span class="sb">Store</span></div>
+            <div class="v" id="wEnd">0</div><div class="d">1 delivery or less left on a fixed run</div>
+          </div>
+        </div>
+
+        <!-- Tabs carry CONTRACT-level state only. Failed and pending payment are order-level and are
+             worked in Payment Reminders; a stock-delayed delivery is order-level and is worked in
+             Orders. Putting either here would be a second place to fix one event. Pending first
+             charge stays a badge on All rather than a tab: it resolves itself within a day and never
+             holds enough rows to earn one. -->
+        <div class="tabrow">
+          <div class="tabs" id="tabs">
+            <button data-tab="all" class="on">All <span class="n"></span></button>
+            <button data-tab="active">Active <span class="n"></span></button>
+            <button data-tab="paused">Paused <span class="n"></span></button>
+            <button data-tab="cancelreq">Cancellation requested <span class="n"></span></button>
+            <button data-tab="cancelled">Cancelled <span class="n"></span></button>
+            <button data-tab="completed">Completed <span class="n"></span></button>
+          </div>
+        </div>
+
+        <div class="toolbar" id="toolbar">
+          <div class="grow">
+            <s-search-field id="q" label="Search subscriptions" labelAccessibilityVisibility="exclusive"
+              placeholder="Search subscription, customer, email, plan, product or SKU"></s-search-field>
+          </div>
+          <div class="fw"><s-select id="fType" label="Type">
+            <s-option value="all" selected>All types</s-option>
+            <s-option value="single">Single</s-option>
+            <s-option value="bundle">Bundle</s-option>
+          </s-select></div>
+          <div class="fw"><s-select id="fPay" label="Payment">
+            <s-option value="all" selected>All payments</s-option>
+            <s-option value="prepaid">Prepaid</s-option>
+            <s-option value="payg">Pay per delivery</s-option>
+          </s-select></div>
+          <div class="fw"><s-select id="fPlan" label="Plan">
+            <s-option value="all" selected>All plans</s-option>
+          </s-select></div>
+          <div class="fw"><s-select id="fSort" label="Sort by">
+            <s-option value="next" selected>Next order date</s-option>
+            <s-option value="created">Date created, newest</s-option>
+            <s-option value="customer">Customer A to Z</s-option>
+            <s-option value="left">Deliveries left, fewest first</s-option>
+            <s-option value="value">Value per renewal</s-option>
+          </s-select></div>
+        </div>
+
+        <div class="chipRow" id="chipRow"></div>
+
+        <div class="bulk" id="bulk">
+          <span class="cnt" id="bulkCnt">0 selected</span>
+          <button class="b pri" id="bkResched">Reschedule all deliveries</button>
+          <button class="b" id="bkPause">Pause</button>
+          <button class="b" id="bkResume">Resume</button>
+          <button class="b crit" id="bkCancel">Cancel</button>
+          <button class="b" id="bkExport">Export selected</button>
+          <span class="sp"></span>
+          <button class="clearAll" id="bkClear">Clear selection</button>
+        </div>
+
+        <div id="listWrap">
+          <s-section padding="none">
+            <!-- s-table stacks into label/value pairs when its container is narrower than its
+                 columns need, and it decides once, on upgrade. overflow-x is the safety net at
+                 narrow window widths; the one-shot reflow at the bottom of this file is what stops
+                 it locking into the stacked variant permanently. -->
+            <div style="overflow-x:auto"><div id="tableHost"></div></div>
+            <div class="emptyRow hide" id="emptyRow">
+              No subscriptions match this search or filter.
+              <div style="margin-top:10px"><button class="b" id="clearBtn">Clear search and filters</button></div>
+            </div>
+            <div class="pager" id="pager"></div>
+          </s-section>
+        </div>
+
+        <div class="note">
+          <b>What this screen is, and is not.</b> Every row is a contract, so everything here is a
+          whole-agreement fact and a whole-agreement action. One delivery inside a contract is an
+          order: it is rescheduled, pushed or retried in Orders, and chased for payment in Payment
+          Reminders. The order timeline is readable from any row here, but the actions on it are not
+          repeated, because exactly one screen owns each action.
+        </div>
+
+        <div class="warnNote">
+          <b>Two boundaries worth naming.</b> "Reschedule all deliveries" shifts the whole schedule
+          forward; rescheduling a single shipment is an Orders action. And a contract paused for
+          non-payment reads simply as Paused here, because the reason does not change what you do
+          with the contract. Recovering it is Payment Reminders work, where the contact history and
+          the payment state both live. Filter by Pay per delivery if you want to see which paused
+          contracts sit on the payment side.
+        </div>
+
+      </div>
+    </s-page>
+  </div>
+</div>
+
+<!-- create-subscription disclosure. Sibling of its activator, never a child. -->
+<s-menu id="createMenu" accessibilityLabel="Create a subscription">
+  <s-button id="crSingle">Single product subscription</s-button>
+  <s-button id="crBundle">Bundle subscription</s-button>
+</s-menu>
+
+<div class="pop" id="pop"><div class="popbox" id="popbox"></div></div>
+
+<script>
+  var $ = function(id){ return document.getElementById(id); };
+  var esc = function(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+  var INR = function(n){ return '₹' + Number(n).toLocaleString('en-IN'); };
+
+  /* ---------- contract states ----------
+     Contract-level only. Every one of these is a fact about the agreement, not about a delivery.
+     Completed is a SUCCESS end state, deliberately not folded in with Cancelled: a prepaid run that
+     delivered 6 of 6 finished the thing the customer paid for, and reading it as churn would make
+     the cancelled count wrong and hide the one population worth a renewal offer. */
+  var ST = {
+    active:    { tone:'success',  label:'Active' },
+    /* "Pending" on the row, "Pending first charge" in the popup. The full phrase is the honest one but
+       it measured ~60px more than any other badge, in the one column that has to hold the widest of
+       them all. The popup meta row states it in full where there is room. */
+    pending:   { tone:'caution',  label:'Pending', full:'Pending first charge' },
+    paused:    { tone:'neutral',  label:'Paused' },
+    cancelreq: { tone:'caution',  label:'Cancellation requested' },
+    cancelled: { tone:'critical', label:'Cancelled' },
+    completed: { tone:'info',     label:'Completed' }
+  };
+
+  /* Unit prices by SKU, shared with Orders v5 and Inventory v4 so the three screens describe one
+     catalogue. The value per renewal is DERIVED from these, never stored, so the row and the item
+     lines in the popup cannot disagree. */
+  var PRICE = {
+    'CPC-500':633, 'WLP-250':549, 'HTS-01':425,
+    'COL-500':899, 'MAG-090':649, 'ASH-060':499
+  };
+  var lineTotal = function(l){ return l[2] * (PRICE[l[1]]||0); };
+
+  /* Plans, taken from the same seed set as Orders v5. freq drives the timeline spacing, so the
+     dates in the popup can never contradict the frequency shown on the row. */
+  var PLANS = {
+    'Monthly Essentials':     { freq:'Monthly',   days:30, kind:'single', p:[['Cold Pressed Coffee 500g','CPC-500',3]] },
+    'Coffee Club':            { freq:'Bi-weekly', days:14, kind:'single', p:[['Cold Pressed Coffee 500g','CPC-500',2]] },
+    'Daily Greens':           { freq:'Monthly',   days:30, kind:'single', p:[['Wellness Powder 250g','WLP-250',2]] },
+    'Sleep Support':          { freq:'Monthly',   days:30, kind:'single', p:[['Magnesium Glycinate 90ct','MAG-090',1]] },
+    'Quarterly Wellness Box': { freq:'Quarterly', days:90, kind:'bundle', p:[['Herbal Tea Sampler','HTS-01',2],['Collagen Peptides 500g','COL-500',2],['Magnesium Glycinate 90ct','MAG-090',2]] },
+    'Build Your Box':         { freq:'Monthly',   days:30, kind:'bundle', p:[['Ashwagandha Gummies 60ct','ASH-060',2],['Collagen Peptides 500g','COL-500',2]] }
+  };
+
+  var STREETS = [
+    'Sunder Nagar, Linking Road', 'Koramangala 5th Block', 'Jubilee Hills Road 36',
+    'Salt Lake Sector 2', 'Panampilly Nagar', 'Vasant Kunj Sector B',
+    'Besant Nagar, 2nd Avenue', 'Kalyani Nagar Lane 6', 'Satellite Road, Jodhpur Cross',
+    'Malviya Nagar, Tonk Road'
+  ];
+  var WHO = [
+    ['Priya Menon','priya.menon@gmail.com','Mumbai','400001'],
+    ['Anita Desai','anita.desai@gmail.com','Mumbai','400020'],
+    ['Rohan Mehta','rohan.mehta@gmail.com','Delhi','110016'],
+    ['Divya Menon','divya.menon@gmail.com','Chennai','600020'],
+    ['Farah Sheikh','farah.s@gmail.com','Hyderabad','500034'],
+    ['Nikhil Rao','nikhil.rao@gmail.com','Bengaluru','560001'],
+    ['Meera Nair','meera.nair@gmail.com','Kochi','682016'],
+    ['Ritu Malhotra','ritu.m@gmail.com','Mumbai','400013'],
+    ['Deepak Rao','deepak.rao@gmail.com','Pune','411001'],
+    ['Leena George','leena.g@gmail.com','Chennai','600028'],
+    ['Amit Joshi','amit.joshi@gmail.com','Delhi','110024'],
+    ['Ishaan Verma','ishaan.verma@gmail.com','Mumbai','400072'],
+    ['Tara Krishnan','tara.k@outlook.com','Bengaluru','560095'],
+    ['Zoya Ahmed','zoya.ahmed@gmail.com','Hyderabad','500081'],
+    ['Kunal Bose','kunal.bose@gmail.com','Kolkata','700091'],
+    ['Ananya Pillai','ananya.p@gmail.com','Kochi','682030'],
+    ['Devansh Gupta','devansh.g@yahoo.in','Delhi','110092'],
+    ['Nisha Reddy','nisha.reddy@gmail.com','Chennai','600096'],
+    ['Aarav Shetty','aarav.shetty@gmail.com','Pune','411045'],
+    ['Ira Chatterjee','ira.c@gmail.com','Ahmedabad','380054'],
+    ['Rehan Qureshi','rehan.q@outlook.com','Jaipur','302020'],
+    ['Tanvi Bhatt','tanvi.bhatt@gmail.com','Surat','395007'],
+    ['Omkar Naik','omkar.naik@outlook.com','Nagpur','440010'],
+    ['Arjun Das','arjun.das@gmail.com','Kolkata','700019']
+  ];
+
+  var TODAY = '2026-08-12';
+  function addDays(iso,n){
+    var d = new Date(iso + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() + n);
+    return d.toISOString().slice(0,10);
+  }
+  function dayDiff(a,b){ return Math.round((new Date(a+'T00:00:00Z') - new Date(b+'T00:00:00Z'))/86400000); }
+  var MONS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function fmt(iso){
+    if(!iso) return null;
+    return iso.slice(8,10) + ' ' + MONS[parseInt(iso.slice(5,7),10)-1] + ' ' + iso.slice(0,4);
+  }
+  function fmtShort(iso){
+    if(!iso) return null;
+    return iso.slice(8,10) + ' ' + MONS[parseInt(iso.slice(5,7),10)-1];
+  }
+
+  /* ---------- contracts ----------
+     Seeded rather than hand-written so every tab holds a non-empty, deterministic set. Each row
+     declares only what cannot be derived: who, which plan, the payment shape, the cap, how far
+     through the run it is, and the state. Value, units, dates and the timeline all compute from
+     those, which is why nothing on the screen can contradict anything else on it.
+
+     PAYMENT AND CAP ARE INDEPENDENT (locked in this session). Prepaid is always capped, because a
+     prepaid run is a fixed number of paid-for deliveries. Pay per delivery may be capped (a cycle
+     count) or endless, and it defaults to endless. So the delivery fraction renders only where the
+     cap is real: "3 of 6" when there is one, a bare count when there is not. This is the same rule
+     as the reminder fraction on Payment Reminders, applied to a run instead of a dunning sequence. */
+  var SEED = [
+    ['Monthly Essentials',     'prepaid', 6,    3, 'active'],
+    ['Coffee Club',            'payg',    null, 7, 'active'],
+    ['Build Your Box',         'prepaid', 3,    1, 'active'],
+    ['Daily Greens',           'payg',    6,    2, 'active'],
+    ['Quarterly Wellness Box', 'prepaid', 4,    2, 'active'],
+    ['Sleep Support',          'prepaid', 3,    2, 'active'],
+    ['Monthly Essentials',     'payg',    null, 1, 'active'],
+    ['Coffee Club',            'payg',    null, 12, 'active'],
+    ['Build Your Box',         'prepaid', 3,    2, 'active'],
+    ['Monthly Essentials',     'prepaid', 6,    5, 'active'],
+    ['Daily Greens',           'payg',    null, 4, 'active'],
+    ['Quarterly Wellness Box', 'prepaid', 4,    3, 'active'],
+    ['Sleep Support',          'payg',    null, 2, 'paused'],
+    ['Coffee Club',            'payg',    null, 3, 'paused'],
+    ['Monthly Essentials',     'prepaid', 6,    2, 'paused'],
+    ['Build Your Box',         'prepaid', 3,    1, 'paused'],
+    ['Daily Greens',           'payg',    null, 1, 'cancelreq'],
+    ['Monthly Essentials',     'prepaid', 6,    4, 'cancelreq'],
+    ['Coffee Club',            'payg',    null, 5, 'cancelled'],
+    ['Sleep Support',          'prepaid', 3,    1, 'cancelled'],
+    ['Quarterly Wellness Box', 'prepaid', 4,    1, 'cancelled'],
+    ['Monthly Essentials',     'prepaid', 6,    6, 'completed'],
+    ['Build Your Box',         'prepaid', 3,    3, 'completed'],
+    ['Sleep Support',          'prepaid', 3,    3, 'completed'],
+    ['Daily Greens',           'payg',    6,    6, 'completed'],
+    ['Coffee Club',            'payg',    null, 0, 'pending']
+  ];
+  var CANCEL_REASONS = ['Too much product', 'Found it cheaper elsewhere', 'Taking a break', 'Moving house', 'No longer needed'];
+
+  var SUBS = [];
+  SEED.forEach(function(s, i){
+    var planName = s[0], pay = s[1], cap = s[2], done = s[3], st = s[4];
+    var plan = PLANS[planName];
+    var who = WHO[i % WHO.length];
+    /* created is walked BACK from the deliveries already made, so the run length on the row and the
+       age of the contract agree. A contract 5 deliveries into a monthly plan cannot be 3 days old. */
+    var created = addDays(TODAY, -(done * plan.days + 6 + (i % 9)));
+    var last = done > 0 ? addDays(created, (done - 1) * plan.days + 2) : null;
+    /* An ended contract has no next order. Nothing is invented to fill the column: the cell says so. */
+    var ended = (st === 'cancelled' || st === 'completed');
+    var next = ended ? null
+      : (st === 'pending' ? addDays(TODAY, 1 + (i % 4))
+        : addDays(TODAY, 1 + ((i * 5) % 34)));
+    var p = plan.p.map(function(l){ return l.slice(); });
+    var seedN = 1000 + i;
+    SUBS.push({
+      pc: 'PC-' + (1030 + i),
+      cust: who[0], email: who[1], city: who[2], pin: who[3],
+      phone: '+91 ' + (70000 + (seedN % 29999)) + ' ' + (10000 + (seedN % 89999)),
+      street: (101 + (seedN % 780)) + ', ' + STREETS[i % STREETS.length],
+      plan: planName, kind: plan.kind, freq: plan.freq, days: plan.days,
+      pay: pay, dTot: cap, dNum: done, st: st,
+      created: created, last: last, next: next,
+      p: p,
+      /* the cancellation request carries what the merchant needs to answer it */
+      req: st === 'cancelreq'
+        ? { on: addDays(TODAY, -(1 + (i % 3))), why: CANCEL_REASONS[i % CANCEL_REASONS.length] }
+        : null
+    });
+  });
+
+  SUBS.forEach(function(o){
+    o.units = o.p.reduce(function(a,l){ return a + l[2]; }, 0);
+    o.value = o.p.reduce(function(a,l){ return a + lineTotal(l); }, 0);
+    /* deliveries LEFT only exists where there is a cap. Used by the sort and the ending-soon tile. */
+    o.left = o.dTot ? Math.max(0, o.dTot - o.dNum) : null;
+  });
+
+  /* Lifetime order count is not the number of deliveries on this contract: a customer can hold more
+     than one. The customer popup states both so neither is read as the other. */
+  var CUST_TOTAL = {};
+  SUBS.forEach(function(o){
+    if(CUST_TOTAL[o.cust] == null) CUST_TOTAL[o.cust] = o.dNum + 2 + (o.pc.charCodeAt(5) % 9);
+  });
+
+  /* The order timeline, derived. Every delivery already made is a placed order stepping back by the
+     plan's own frequency; the one ahead is the next order, not yet placed. Because both the count and
+     the spacing come from the contract, the timeline can never disagree with the Deliveries column or
+     the frequency beside it. */
+  function timeline(o){
+    var out = [];
+    for(var i = 0; i < o.dNum; i++){
+      out.push({
+        n: i + 1,
+        code: 'SB-' + (8600 + (parseInt(o.pc.slice(3),10) % 90) * 3 + i),
+        iso: addDays(o.created, i * o.days + 2),
+        st: 'placed'
+      });
+    }
+    if(o.next){
+      out.push({ n: o.dNum + 1, code: null, iso: o.next, st: o.st === 'paused' ? 'held' : 'due' });
+    }
+    return out.reverse();
+  }
+
+  var payLabel  = function(p){ return p === 'payg' ? 'Pay per delivery' : 'Prepaid'; };
+  var kindLabel = function(k){ return k === 'bundle' ? 'Bundle' : 'Single'; };
+  /* chip labels read off one map rather than off the select's DOM, so a chip can never disagree with
+     the option it came from after the markup is reordered */
+  var SORTLBL = {
+    next:'next order date', created:'date created', customer:'customer A to Z',
+    left:'deliveries left', value:'value per renewal'
+  };
+
+  var tab='all', q='', fType='all', fPay='all', fPlan='all', fSort='next';
+  var sel={}, page=1, perPage=25;
+
+  /* plan filter options are built from the data, so a plan can never be missing from its own filter */
+  (function(){
+    var host = $('fPlan');
+    Object.keys(PLANS).forEach(function(name){
+      var o = document.createElement('s-option');
+      o.setAttribute('value', name); o.textContent = name;
+      host.appendChild(o);
+    });
+  })();
+
+  function matchesQuery(o){
+    if(!q) return true;
+    var hay = [o.pc, o.cust, o.email, o.plan, o.freq, kindLabel(o.kind), payLabel(o.pay),
+               ST[o.st].label, o.city, o.pin]
+      .concat(o.p.map(function(l){ return l[0] + ' ' + l[1]; })).join(' ').toLowerCase();
+    return hay.indexOf(q) >= 0;
+  }
+
+  function filtered(){
+    var rows = SUBS.filter(function(o){
+      if(tab !== 'all' && o.st !== tab) return false;
+      if(fType !== 'all' && o.kind !== fType) return false;
+      if(fPay  !== 'all' && o.pay  !== fPay)  return false;
+      if(fPlan !== 'all' && o.plan !== fPlan) return false;
+      return matchesQuery(o);
+    });
+    rows.sort(function(a,b){
+      if(fSort === 'created')  return a.created < b.created ? 1 : a.created > b.created ? -1 : 0;
+      if(fSort === 'customer') return a.cust.localeCompare(b.cust);
+      if(fSort === 'value')    return b.value - a.value;
+      /* fewest deliveries left first, and contracts with no cap sort last rather than as zero: an
+         endless plan is not "about to end". */
+      if(fSort === 'left'){
+        var al = a.left == null ? 9999 : a.left, bl = b.left == null ? 9999 : b.left;
+        return al - bl;
+      }
+      /* ended contracts have no next order, so they sort by when they ended instead of floating to
+         the top of an ascending date sort as blanks */
+      if(!a.next && !b.next) return a.created < b.created ? 1 : -1;
+      if(!a.next) return 1;
+      if(!b.next) return -1;
+      return a.next < b.next ? -1 : a.next > b.next ? 1 : 0;
+    });
+    return rows;
+  }
+  function paged(rows){ var s=(page-1)*perPage; return rows.slice(s,s+perPage); }
+
+  /* ---------- cells ---------- */
+  function picIcon(){
+    return '<svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor"'
+      +' stroke-width="1.8"><rect x="3" y="4" width="14" height="12" rx="2"/>'
+      +'<circle cx="7.5" cy="8.5" r="1.3"/><path d="M4 14l4-4 3 3 2-2 3 3"/></svg>';
+  }
+  function pickCell(o){
+    var max=3, shown=o.p.slice(0,max), extra=o.p.length-shown.length;
+    var chips = shown.map(function(l){
+      return '<span class="tchip" title="'+esc(l[0])+' '+esc(l[1])+' &times;'+l[2]+'">'+picIcon()+'</span>';
+    }).join('');
+    var more = extra>0 ? '<span class="tmore">+'+extra+'</span>' : '';
+    /* count sits UNDER the capsules, not beside them: side by side the cell wants ~120px and pushes
+       the row actions off screen at the width the shell actually gives us. */
+    return '<button class="thumbline" data-open="'+esc(o.pc)+'" title="View details for '+esc(o.pc)+'">'
+      +'<span class="trow">'+chips+more+'</span>'
+      +'<span class="trow"><span class="tcount">'+o.units+' unit'+(o.units===1?'':'s')+'</span></span>'
+      +'</button>';
+  }
+
+  /* Identity is PC-####, the locked code for the agreement (SB-#### is one delivery inside it). The
+     screen is named Subscriptions but the code keeps its prefix, because Orders and the customer
+     record already print PC-#### and a second prefix for the same object would be drift.
+     Type rides under the code as a capsule instead of taking its own column. */
+  function refCell(o){
+    return '<button class="lnk c1" data-open="'+esc(o.pc)+'">'+esc(o.pc)+'</button>'
+      +'<div><span class="typecap">'+kindLabel(o.kind)+'</span></div>';
+  }
+
+  /* Plan carries the frequency and the payment shape on one meta line: both are properties of the
+     buying option, so stating them together costs one column instead of two.
+
+     VALUE PER RENEWAL IS DELIBERATELY NOT HERE (measured 2026-08-12). It was, and it was the widest
+     thing on the row: with it the actions sat at 1360 to 1403 against a container ending at 1328, so
+     the primary button and the kebab were both off screen. Worse than a normal overflow, because the
+     row content escaped without widening the table's own box, so scrollWidth equalled clientWidth,
+     no scrollbar appeared, and the two controls were simply unreachable rather than scrollable to.
+     Value is also PLAN-level, not contract-level: every Build Your Box row carried the same ₹2,796,
+     so it was repeating one fact 26 times to buy the column that made the row unusable. It lives in
+     the details popup, in the customer popup, and in the value sort. */
+  function planCell(o){
+    return '<div class="planname" title="'+esc(o.plan)+'">'+esc(o.plan)+'</div>'
+      +'<div class="planmeta">'+esc(o.freq)+' &middot; '+payLabel(o.pay)+'</div>';
+  }
+
+  /* "3 of 6" where the cap is real, a bare count where the plan is endless. Prepaid always has a
+     cap; pay per delivery may or may not, so the shape is read off the contract, never off the
+     payment type. A cap of nothing rendered as "3 of infinity" would be noise, and dropping the
+     column entirely would lose the number that says a prepaid run is about to finish. */
+  function deliveryCell(o){
+    if(o.dTot) return '<span class="dnum">'+o.dNum+' of '+o.dTot+'</span>'
+      + (o.left <= 1 && o.st === 'active' ? '<div class="c2">ending soon</div>' : '');
+    return '<span class="dnum">'+o.dNum+'</span><div class="c2">ongoing</div>';
+  }
+
+  function nextCell(o){
+    if(!o.next){
+      /* an em-dash placeholder is a data value here, not prose punctuation */
+      return '<span class="c2">&mdash;</span>';
+    }
+    var d = dayDiff(o.next, TODAY);
+    var rel = d === 0 ? 'today' : d === 1 ? 'tomorrow' : 'in ' + d + ' days';
+    /* "on hold", not "held while paused": the longer phrase wrapped to three lines in a column whose
+       own header was already wrapping, and the Status column beside it already says Paused. */
+    return '<span class="nextdate">'+fmtShort(o.next)+'</span>'
+      + '<div class="c2">'+(o.st === 'paused' ? 'on hold' : rel)+'</div>';
+  }
+
+  /* Status is only worth a column where rows actually differ. On the five single-state tabs it
+     repeats the tab name down the page, so it is dropped there and the width goes to the row
+     actions instead. All is the only tab that mixes states. */
+  function showStatus(){ return tab === 'all'; }
+
+  /* All is the only tab that has to carry Status, and it pays for it by dropping Deliveries.
+     MEASURED, not guessed (2026-08-12): the nine columns' CONTENT totals only 655px against a 966px
+     container, so the binding cost is s-table's own per-column gutter at roughly 35px a column. That
+     makes removing a column worth ~35px more than shortening anything inside one, which is why label
+     trimming was not the fix.
+
+     Deliveries is the column to drop here because it is the one whose MEANING is unstable across
+     mixed states: "1 of 3" is a stopped run on a cancelled row, a finished one on a completed row and
+     progress on an active row, so on the mixing tab it asks the reader to interpret three things in
+     one column. Products means the same thing in every state, so it stays. Deliveries is present on
+     all five single-state tabs, where the meaning is fixed by the tab and the width is free because
+     Status is gone. */
+  function showDeliveries(){ return tab !== 'all'; }
+
+  function headSpec(){
+    var h = [['',''], ['Subscription','primary'], ['Customer',''], ['Products',''], ['Plan','']];
+    if(showDeliveries()) h.push(['Deliveries','']);
+    h.push(['Next order','']);
+    if(showStatus()) h.push(['Status','']);
+    h.push(['','']);
+    return h;
+  }
+
+  /* Row actions: exactly ONE primary beside the kebab, per the locked rule. The primary is the one
+     thing the state makes most likely, and it is never repeated as a kebab item in the same row.
+     Nothing offered is invalid for the state: a cancelled contract gets no Pause, and an ended
+     contract gets no Reschedule. */
+  function primaryFor(o){
+    if(o.st === 'paused')    return ['resume',  'Resume'];
+    if(o.st === 'cancelreq') return ['review',  'Review request'];
+    if(o.st === 'cancelled' || o.st === 'completed') return ['timeline', 'View orders'];
+    return ['edit', 'Edit'];
+  }
+  function kebabFor(o){
+    var items = [];
+    if(o.st === 'active' || o.st === 'pending') items.push(['resched','Reschedule all deliveries']);
+    if(o.st === 'active') items.push(['pause','Pause']);
+    if(o.st === 'cancelreq') items.push(['pause','Pause instead']);
+    if(o.st === 'paused' || o.st === 'cancelreq') items.push(['edit','Edit']);
+    items.push(['timeline','View order timeline']);
+    items.push(['cust','View customer']);
+    if(o.st === 'active' || o.st === 'paused' || o.st === 'pending') items.push(['cancel','Cancel subscription']);
+    return items;
+  }
+
+  function buildTable(rowsHtml){
+    var heads = headSpec().map(function(h,i){
+      var a = h[1] ? ' listSlot="'+h[1]+'"' : '';
+      if(i === 0){
+        var pg = paged(filtered()), on = pg.length>0 && pg.every(function(o){ return sel[o.pc]; });
+        var some = pg.some(function(o){ return sel[o.pc]; });
+        return '<s-table-header accessibilityLabel="Select all subscriptions on this page">'
+          +'<s-checkbox id="ckAll" '+(on?'checked':'')+' '+(!on&&some?'indeterminate':'')
+          +' accessibilityLabel="Select all subscriptions on this page"></s-checkbox></s-table-header>';
+      }
+      var acc = h[0] ? '' : ' accessibilityLabel="Row actions"';
+      return '<s-table-header'+a+acc+'>'+(h[0]||'')+'</s-table-header>';
+    }).join('');
+    /* variant="table" pins the grid layout. variant="auto" silently degrades to a stacked
+       label/value list when the container measures narrow, which reads as a broken table. */
+    return '<s-table variant="table">'
+      +'<s-table-header-row slot="headings">'+heads+'</s-table-header-row>'
+      +'<s-table-body>'+rowsHtml+'</s-table-body></s-table>';
+  }
+
+  function rowHtml(o){
+    var s = ST[o.st], pri = primaryFor(o);
+    var menu = kebabFor(o).map(function(it){
+      return '<s-button data-m="'+it[0]+'" data-pc="'+esc(o.pc)+'">'+esc(it[1])+'</s-button>';
+    }).join('');
+    return '<s-table-row>'
+      +'<s-table-cell><s-checkbox '+(sel[o.pc]?'checked':'')+' data-ck="'+esc(o.pc)+'" accessibilityLabel="Select '+esc(o.pc)+'"></s-checkbox></s-table-cell>'
+      +'<s-table-cell>'+refCell(o)+'</s-table-cell>'
+      +'<s-table-cell><button class="lnk" data-cust="'+esc(o.cust)+'" title="'+esc(o.cust)+'">'
+        +'<span class="custname">'+esc(o.cust)+'</span></button></s-table-cell>'
+      +'<s-table-cell>'+pickCell(o)+'</s-table-cell>'
+      +'<s-table-cell>'+planCell(o)+'</s-table-cell>'
+      /* must stay in lockstep with headSpec: same predicate, same position */
+      +(showDeliveries() ? '<s-table-cell>'+deliveryCell(o)+'</s-table-cell>' : '')
+      +'<s-table-cell>'+nextCell(o)+'</s-table-cell>'
+      +(showStatus() ? '<s-table-cell><s-badge tone="'+s.tone+'">'+s.label+'</s-badge></s-table-cell>' : '')
+      +'<s-table-cell><div class="rowacts">'
+        +'<button class="b pri" data-a="'+pri[0]+'" data-pc="'+esc(o.pc)+'">'+pri[1]+'</button>'
+        /* the activator is a NATIVE button and a SIBLING of the menu. s-menu has no trigger slot:
+           anything placed inside it becomes menu item #1 and no kebab ever renders. It is wired with
+           the platform invoker API instead. Not an s-button, which adds a disclosure chevron that
+           reads wrong on a kebab and measures ~48px against this one's 36px. */
+        +'<button class="b kebab" commandfor="m-'+esc(o.pc)+'" command="--show"'
+          +' aria-label="More actions for '+esc(o.pc)+'">&#8943;</button>'
+        +'<s-menu id="m-'+esc(o.pc)+'" accessibilityLabel="More actions for '+esc(o.pc)+'">'+menu+'</s-menu>'
+      +'</div></s-table-cell>'
+      +'</s-table-row>';
+  }
+
+  /* ---------- details popup ----------
+     The contract record plus its order timeline. The timeline is the third job Sumant named for this
+     screen, and it is READ-ONLY here: Orders owns rescheduling, pushing and retrying a delivery, so
+     this states what happened and links out rather than becoming a second place to fix it. */
+  function openDetails(pc){
+    var o = byPc(pc); if(!o) return;
+    var tl = timeline(o);
+    $('popbox').className = 'popbox wide';
+    $('popbox').innerHTML =
+      '<div class="pophd"><div><div class="t">'+esc(o.pc)+'</div>'
+        +'<div class="c2">'+esc(o.plan)+' &middot; '+esc(o.cust)+'</div></div>'
+        +'<button class="x" id="dClose" aria-label="Close">&#10005;</button></div>'
+      +'<div class="popbody">'
+        +(o.req
+          ? '<div class="dsec"><div class="critNote"><b>Cancellation requested '+fmt(o.req.on)+'.</b> '
+            +'Reason given: '+esc(o.req.why)+'.'
+            +'<div style="margin-top:5px">Approve it to cancel the contract, or offer a pause instead. '
+            +'Until you answer, deliveries keep going out.</div></div></div>'
+          : '')
+        +'<div class="dsec"><div class="metarow">'
+          /* Status is omitted when the cancellation banner is showing: that banner already names the
+             state and dates it, so repeating it two lines lower states one fact twice and leaves the
+             meta grid one item short of a clean row. */
+          +(o.req ? '' : '<div class="metaitem"><div class="k">Status</div><div class="v">'+(ST[o.st].full||ST[o.st].label)+'</div></div>')
+          +'<div class="metaitem"><div class="k">Type</div><div class="v">'+kindLabel(o.kind)+'</div></div>'
+          +'<div class="metaitem"><div class="k">Schedule</div><div class="v">'+esc(o.freq)+'</div></div>'
+          +'<div class="metaitem"><div class="k">Payment</div><div class="v">'+payLabel(o.pay)+'</div></div>'
+          +'<div class="metaitem"><div class="k">Deliveries</div><div class="v">'
+            +(o.dTot ? o.dNum+' of '+o.dTot : o.dNum+', ongoing')+'</div></div>'
+          +'<div class="metaitem"><div class="k">Started</div><div class="v">'+fmt(o.created)+'</div></div>'
+        +'</div></div>'
+        +'<div class="dsec"><div class="h">'
+          +o.p.length+(o.p.length===1?' item':' items')+', '+o.units+' unit'+(o.units===1?'':'s')+' per delivery</div>'
+          + o.p.map(function(l){
+              return '<div class="iline">'
+                +'<div class="g"><div class="prodline">'+esc(l[0])+' <span class="qty">&times;'+l[2]+'</span></div>'
+                +'<div class="c2"><span class="sku">'+esc(l[1])+'</span> &middot; '+INR(PRICE[l[1]]||0)+' each</div></div>'
+                +'<div class="amt money">'+INR(lineTotal(l))+'</div></div>';
+            }).join('')
+          +'<div class="iline tot"><div class="g"><b>Per renewal</b></div>'
+            +'<div class="amt money">'+INR(o.value)+'</div></div>'
+        +'</div>'
+        +'<div class="dsec"><div class="h">Order timeline</div>'
+          + tl.map(function(t){
+              var cls = t.st === 'placed' ? 'ok' : t.st === 'held' ? '' : 'due';
+              var lbl = t.st === 'placed'
+                ? '<button class="lnk c1" data-order="'+esc(t.code)+'">'+esc(t.code)+'</button>'
+                : '<span class="c1" style="color:var(--p-muted)">Next order</span>';
+              var note = t.st === 'placed' ? 'Placed in Shopify'
+                : t.st === 'held' ? 'Held while the subscription is paused'
+                : 'Not placed yet';
+              return '<div class="tlrow '+cls+'"><span class="mk"></span>'
+                +'<div class="g"><div class="dt">'+fmt(t.iso)+'</div>'
+                +'<div class="c2">Delivery '+t.n+(o.dTot ? ' of '+o.dTot : '')+' &middot; '+note+'</div></div>'
+                +'<div class="amt">'+lbl+'</div></div>';
+            }).join('')
+          +'<div class="c2" style="margin-top:10px">Rescheduling, pushing or retrying one of these '
+          +'deliveries happens in Orders. This list is the contract’s history.</div>'
+        +'</div>'
+      +'</div>'
+      +'<div class="popfoot">'
+        +'<button class="b" data-a="cust" data-pc="'+esc(o.pc)+'">View customer</button>'
+        +'<button class="b" id="dOrders">Open in Orders</button>'
+        +(o.st === 'cancelreq'
+          ? '<button class="b pri" data-a="review" data-pc="'+esc(o.pc)+'">Review request</button>'
+          : o.st === 'paused'
+            ? '<button class="b pri" data-a="resume" data-pc="'+esc(o.pc)+'">Resume</button>'
+            : (o.st === 'cancelled' || o.st === 'completed')
+              ? ''
+              : '<button class="b pri" data-a="edit" data-pc="'+esc(o.pc)+'">Edit subscription</button>')
+      +'</div>';
+    $('pop').classList.add('on');
+    $('dClose').onclick = closePop;
+    $('dOrders').onclick = function(){
+      closePop();
+      alert('Opens Orders filtered to '+o.pc+'.\n\nIn the real app this routes to /orders?contract='+o.pc+'.');
+    };
+    wireActions($('popbox'));
+  }
+
+  /* ---------- customer popup ----------
+     The customer record is its own surface, opened from the name in the row. Contact details belong
+     to the person, not to one contract, and a popup rather than an expanded row because s-table has
+     no colspan. */
+  function popCustomer(name){
+    var mine = SUBS.filter(function(x){ return x.cust === name; });
+    var o = mine[0]; if(!o) return;
+    var live = mine.filter(function(x){ return x.st === 'active' || x.st === 'pending'; }).length;
+    $('popbox').className = 'popbox';
+    $('popbox').innerHTML =
+      '<div class="pophd"><div><div class="t">'+esc(o.cust)+'</div>'
+        +'<div class="c2">'+mine.length+' subscription'+(mine.length===1?'':'s')
+        +(live ? ', '+live+' active' : '')+'</div></div>'
+        +'<button class="x" id="cClose" aria-label="Close">&#10005;</button></div>'
+      +'<div class="popbody">'
+        +'<div class="dsec"><div class="custgrid">'
+          +'<div class="df"><div class="k">Phone</div><div class="v">'+esc(o.phone)+'</div></div>'
+          +'<div class="df"><div class="k">Email</div><div class="v">'+esc(o.email)+'</div></div>'
+          +'<div class="df" style="grid-column:1/-1"><div class="k">Address</div><div class="v">'
+            +esc(o.street)+'<br>'+esc(o.city)+' '+esc(o.pin)+'</div></div>'
+          +'<div class="df"><div class="k">Subscriptions</div><div class="v">'+mine.length+'</div></div>'
+          +'<div class="df"><div class="k">Total orders</div><div class="v">'+(CUST_TOTAL[o.cust]||mine.length)
+            +' <span class="c2">all time</span></div></div>'
+        +'</div></div>'
+        +'<div class="dsec"><div class="h">Subscription'+(mine.length===1?'':'s')+'</div>'
+        + mine.map(function(x){
+            return '<div class="iline"><div class="g">'
+              +'<button class="lnk c1" data-a="open" data-pc="'+esc(x.pc)+'">'+esc(x.pc)+'</button>'
+              +'<div class="c2">'+esc(x.plan)+' &middot; '+esc(x.freq)+' &middot; '+ST[x.st].label+'</div></div>'
+              +'<div class="amt money">'+INR(x.value)+'</div></div>';
+          }).join('')
+        +'</div>'
+      +'</div>'
+      +'<div class="popfoot">'
+        +'<button class="b" id="cClose2">Close</button>'
+        +'<button class="b pri" id="cFull">Open customer record</button>'
+      +'</div>';
+    $('pop').classList.add('on');
+    $('cClose').onclick = closePop;
+    $('cClose2').onclick = closePop;
+    $('cFull').onclick = function(){
+      closePop();
+      alert('Opens the full customer record for '+name+'.\n\nIn the real app this routes to /customers/:id.');
+    };
+    wireActions($('popbox'));
+  }
+
+  /* ---------- whole-contract actions ---------- */
+  function popResched(codes){
+    var many = codes.length > 1, o = byPc(codes[0]);
+    $('popbox').className = 'popbox';
+    $('popbox').innerHTML =
+      '<div class="pophd"><div><div class="t">Reschedule '
+        +(many ? codes.length+' subscriptions' : 'every delivery on '+esc(o.pc))+'</div>'
+        +'<div class="c2">'+(many
+          ? 'All selected schedules move by the same amount.'
+          : 'Next order '+fmt(o.next)+', then every '+o.freq.toLowerCase()+' after it.')+'</div></div>'
+        +'<button class="x" id="popX" aria-label="Close">&#10005;</button></div>'
+      +'<div class="popbody">'
+        +'<div class="c2" style="margin-bottom:4px">Move the whole schedule forward by</div>'
+        +'<div class="dateopt" id="dOpt">'
+          +'<button data-d="3" class="on">3 days</button><button data-d="7">1 week</button>'
+          +'<button data-d="14">2 weeks</button><button data-d="30">1 month</button>'
+        +'</div>'
+        +'<div style="margin-top:14px"><s-date-field label="Or set the next order date"></s-date-field></div>'
+        /* the boundary against Orders, stated where the action is taken rather than only in a note
+           at the bottom of the page */
+        +'<div class="c2" style="margin-top:14px">This shifts the whole schedule, so every later '
+        +'delivery moves with it. To move one shipment and leave the rest alone, reschedule that '
+        +'order in Orders.</div>'
+        +'<div style="margin-top:10px"><s-checkbox label="Notify the customer by email and WhatsApp" checked></s-checkbox></div>'
+      +'</div>'
+      +'<div class="popfoot"><button class="b" id="popCancel">Cancel</button>'
+      +'<button class="b pri" id="popDo">Reschedule</button></div>';
+    openPop();
+    $('dOpt').onclick = function(e){
+      var b = e.target.closest('button[data-d]'); if(!b) return;
+      var bs = $('dOpt').querySelectorAll('button');
+      for(var i=0;i<bs.length;i++) bs[i].classList.toggle('on', bs[i]===b);
+    };
+    $('popDo').onclick = function(){ closePop(); alert('Rescheduled '+codes.length+' subscription(s). Mocked.'); };
+  }
+
+  function popPause(codes){
+    var many = codes.length > 1, o = byPc(codes[0]);
+    $('popbox').className = 'popbox';
+    $('popbox').innerHTML =
+      '<div class="pophd"><div><div class="t">Pause '+(many ? codes.length+' subscriptions' : esc(o.pc))+'</div>'
+        +'<div class="c2">'+(many ? 'No deliveries go out while paused.'
+          : esc(o.cust)+' &middot; '+esc(o.plan))+'</div></div>'
+        +'<button class="x" id="popX" aria-label="Close">&#10005;</button></div>'
+      +'<div class="popbody">'
+        +'<div style="margin-bottom:12px"><s-select label="Resume">'
+          +'<s-option value="manual" selected>When I resume it manually</s-option>'
+          +'<s-option value="1">After 1 cycle</s-option>'
+          +'<s-option value="2">After 2 cycles</s-option>'
+          +'<s-option value="date">On a date I choose</s-option>'
+        +'</s-select></div>'
+        /* prepaid deliveries are already paid for, so pausing cannot lose them. Stating it here is
+           what stops a merchant refunding a customer who did not lose anything. */
+        +'<div class="c2">Pausing rolls the schedule forward. Nothing is lost on a prepaid run: the '
+        +'deliveries already paid for stay on the contract and resume from where they stopped.</div>'
+        +'<div style="margin-top:10px"><s-checkbox label="Notify the customer by email and WhatsApp" checked></s-checkbox></div>'
+      +'</div>'
+      +'<div class="popfoot"><button class="b" id="popCancel">Cancel</button>'
+      +'<button class="b pri" id="popDo">Pause</button></div>';
+    openPop();
+    $('popDo').onclick = function(){
+      codes.forEach(function(c){ var x=byPc(c); if(x){ x.st='paused'; } });
+      sel={}; closePop(); render();
+    };
+  }
+
+  function popResume(codes){
+    var many = codes.length > 1, o = byPc(codes[0]);
+    $('popbox').className = 'popbox';
+    $('popbox').innerHTML =
+      '<div class="pophd"><div><div class="t">Resume '+(many ? codes.length+' subscriptions' : esc(o.pc))+'</div>'
+        +'<div class="c2">'+(many ? '' : esc(o.cust)+' &middot; '+esc(o.plan))+'</div></div>'
+        +'<button class="x" id="popX" aria-label="Close">&#10005;</button></div>'
+      +'<div class="popbody">'
+        +'<div style="margin-bottom:12px"><s-date-field label="First delivery after resuming"></s-date-field></div>'
+        /* the honest caveat on the population Payment Reminders owns: resuming a contract that was
+           paused because a payment failed will fail again unless the payment is fixed first. The
+           screen does not distinguish pause reasons, so it names the risk rather than hiding it. */
+        +'<div class="c2">If this was paused because a payment did not clear, fix the payment first '
+        +'in Payment Reminders. Resuming on its own will stop again at the next charge.</div>'
+        +'<div style="margin-top:10px"><s-checkbox label="Notify the customer by email and WhatsApp" checked></s-checkbox></div>'
+      +'</div>'
+      +'<div class="popfoot"><button class="b" id="popCancel">Cancel</button>'
+      +'<button class="b pri" id="popDo">Resume</button></div>';
+    openPop();
+    $('popDo').onclick = function(){
+      codes.forEach(function(c){ var x=byPc(c); if(x){ x.st='active'; } });
+      sel={}; closePop(); render();
+    };
+  }
+
+  function popCancel(codes){
+    var many = codes.length > 1, o = byPc(codes[0]);
+    var prepaidLeft = codes.map(byPc).filter(function(x){ return x && x.dTot && x.left > 0 && x.pay === 'prepaid'; });
+    $('popbox').className = 'popbox';
+    $('popbox').innerHTML =
+      '<div class="pophd"><div><div class="t">Cancel '+(many ? codes.length+' subscriptions' : esc(o.pc))+'</div>'
+        +'<div class="c2">'+(many ? 'This cannot be undone.' : esc(o.cust)+' &middot; '+esc(o.plan))+'</div></div>'
+        +'<button class="x" id="popX" aria-label="Close">&#10005;</button></div>'
+      +'<div class="popbody">'
+        /* a prepaid run cancelled mid-term leaves paid-for deliveries undelivered, which is a refund
+           question and the one thing that must not be discovered after the fact */
+        +(prepaidLeft.length
+          ? '<div class="critNote" style="margin-bottom:14px"><b>Paid-for deliveries would be lost.</b> '
+            +(many ? prepaidLeft.length+' of these contracts have' : 'This contract has ')
+            +(many ? '' : prepaidLeft[0].left+' ')+'prepaid deliveries still owed to the customer. '
+            +'Cancelling does not refund them.</div>'
+          : '')
+        +'<div style="margin-bottom:12px"><s-select label="Reason">'
+          +'<s-option value="" selected>Choose a reason</s-option>'
+          +'<s-option value="customer">Customer asked to cancel</s-option>'
+          +'<s-option value="payment">Payment could not be recovered</s-option>'
+          +'<s-option value="stock">Product no longer available</s-option>'
+          +'<s-option value="duplicate">Duplicate subscription</s-option>'
+          +'<s-option value="other">Other</s-option>'
+        +'</s-select></div>'
+        +'<div class="c2">Cancelling stops every future delivery and charge. Orders already placed in '
+        +'Shopify are unaffected.</div>'
+        +'<div style="margin-top:10px"><s-checkbox label="Notify the customer by email and WhatsApp" checked></s-checkbox></div>'
+      +'</div>'
+      +'<div class="popfoot"><button class="b" id="popCancel">Keep subscription</button>'
+      +'<button class="b pri" id="popDo">Cancel subscription</button></div>';
+    openPop();
+    $('popDo').onclick = function(){
+      codes.forEach(function(c){ var x=byPc(c); if(x){ x.st='cancelled'; x.next=null; x.req=null; } });
+      sel={}; closePop(); render();
+    };
+  }
+
+  /* Answering a cancellation request is the one action that exists nowhere else in the admin, which
+     is why it earns its own tab and its own popup rather than being a variant of Cancel. */
+  function popReview(pc){
+    var o = byPc(pc); if(!o) return;
+    $('popbox').className = 'popbox';
+    $('popbox').innerHTML =
+      '<div class="pophd"><div><div class="t">Cancellation request, '+esc(o.pc)+'</div>'
+        +'<div class="c2">'+esc(o.cust)+' &middot; '+esc(o.plan)+'</div></div>'
+        +'<button class="x" id="popX" aria-label="Close">&#10005;</button></div>'
+      +'<div class="popbody">'
+        +'<div class="dsec"><div class="metarow">'
+          +'<div class="metaitem"><div class="k">Requested</div><div class="v">'+fmt(o.req.on)+'</div></div>'
+          +'<div class="metaitem"><div class="k">Reason</div><div class="v">'+esc(o.req.why)+'</div></div>'
+          +'<div class="metaitem"><div class="k">Deliveries</div><div class="v">'
+            +(o.dTot ? o.dNum+' of '+o.dTot : o.dNum+', ongoing')+'</div></div>'
+        +'</div></div>'
+        +(o.dTot && o.left > 0 && o.pay === 'prepaid'
+          ? '<div class="critNote" style="margin-bottom:14px"><b>'+o.left+' prepaid deliver'
+            +(o.left===1?'y is':'ies are')+' still owed.</b> Approving the cancellation does not '
+            +'refund them, so a pause is usually the better offer.</div>'
+          : '')
+        +'<div class="c2">Until you answer, deliveries keep going out on schedule. Offering a pause '
+        +'keeps the contract and the paid-for deliveries intact.</div>'
+      +'</div>'
+      +'<div class="popfoot">'
+        +'<button class="b" id="popCancel">Decide later</button>'
+        +'<button class="b" id="rvPause">Offer a pause instead</button>'
+        +'<button class="b pri" id="rvOk">Approve cancellation</button>'
+      +'</div>';
+    openPop();
+    $('rvPause').onclick = function(){ closePop(); popPause([pc]); };
+    $('rvOk').onclick = function(){
+      o.st = 'cancelled'; o.next = null; o.req = null;
+      closePop(); render();
+    };
+  }
+
+  /* ---------- popup plumbing ---------- */
+  function byPc(pc){ return SUBS.filter(function(x){ return x.pc === pc; })[0]; }
+  function openPop(){
+    $('pop').classList.add('on');
+    if($('popX')) $('popX').onclick = closePop;
+    if($('popCancel')) $('popCancel').onclick = closePop;
+  }
+  function closePop(){ $('pop').classList.remove('on'); $('popbox').className = 'popbox'; }
+  $('pop').addEventListener('click', function(e){ if(e.target === $('pop')) closePop(); });
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closePop(); });
+
+  /* one dispatcher for every action, wherever it is raised: the row primary, the kebab, the details
+     popup footer and the customer popup all go through here, so a row action and its popup twin can
+     never drift apart */
+  function act(kind, pc){
+    if(kind === 'open')     { closePop(); openDetails(pc); return; }
+    if(kind === 'timeline') { closePop(); openDetails(pc); return; }
+    if(kind === 'cust')     { var o = byPc(pc); closePop(); if(o) popCustomer(o.cust); return; }
+    if(kind === 'resched')  { closePop(); popResched([pc]); return; }
+    if(kind === 'pause')    { closePop(); popPause([pc]); return; }
+    if(kind === 'resume')   { closePop(); popResume([pc]); return; }
+    if(kind === 'cancel')   { closePop(); popCancel([pc]); return; }
+    if(kind === 'review')   { closePop(); popReview(pc); return; }
+    if(kind === 'edit'){
+      closePop();
+      /* Edit is a deep link, not a popup: editing the products, schedule, discount or shipping on a
+         contract is a form, and that form already exists as its own screen. */
+      alert('Opens the edit screen for '+pc+'.\n\nIn the real app this routes to /subscriptions/'+pc+'/edit.');
+      return;
+    }
+  }
+
+  function wireActions(root){
+    var as = root.querySelectorAll('[data-a]');
+    for(var i=0;i<as.length;i++){
+      as[i].onclick = (function(k,pc){ return function(){ act(k,pc); }; })(
+        as[i].getAttribute('data-a'), as[i].getAttribute('data-pc'));
+    }
+    var ms = root.querySelectorAll('[data-m]');
+    for(var j=0;j<ms.length;j++){
+      ms[j].onclick = (function(k,pc){ return function(){ act(k,pc); }; })(
+        ms[j].getAttribute('data-m'), ms[j].getAttribute('data-pc'));
+    }
+    var os = root.querySelectorAll('[data-open]');
+    for(var k=0;k<os.length;k++){
+      os[k].onclick = (function(pc){ return function(){ closePop(); openDetails(pc); }; })(os[k].getAttribute('data-open'));
+    }
+    var cs = root.querySelectorAll('[data-cust]');
+    for(var m=0;m<cs.length;m++){
+      cs[m].onclick = (function(n){ return function(){ closePop(); popCustomer(n); }; })(cs[m].getAttribute('data-cust'));
+    }
+    var ords = root.querySelectorAll('[data-order]');
+    for(var n=0;n<ords.length;n++){
+      ords[n].onclick = (function(c){ return function(){
+        closePop();
+        alert('Opens order '+c+'.\n\nIn the real app this routes to the order in Orders.');
+      }; })(ords[n].getAttribute('data-order'));
+    }
+  }
+
+  /* ---------- chips ---------- */
+  function chips(){
+    var c = [];
+    if(q)             c.push(['Search: '+esc(q),'q']);
+    if(fType !== 'all') c.push(['Type: '+kindLabel(fType === 'bundle' ? 'bundle' : 'single'),'type']);
+    if(fPay  !== 'all') c.push(['Payment: '+payLabel(fPay),'pay']);
+    if(fPlan !== 'all') c.push(['Plan: '+esc(fPlan),'plan']);
+    if(fSort !== 'next') c.push(['Sorted by '+SORTLBL[fSort],'sort']);
+    $('chipRow').innerHTML = c.length
+      ? c.map(function(p){ return '<span class="chipf">'+p[0]+'<span class="x" data-clr="'+p[1]+'">&#10005;</span></span>'; }).join('')
+        +'<button class="clearAll" id="clearAll">Clear all</button>'
+      : '';
+    var xs = $('chipRow').querySelectorAll('[data-clr]');
+    for(var i=0;i<xs.length;i++) xs[i].onclick = (function(k){ return function(){ clearOne(k); }; })(xs[i].getAttribute('data-clr'));
+    if($('clearAll')) $('clearAll').onclick = clearAllF;
+  }
+  function clearOne(k){
+    if(k === 'q'){ q=''; $('q').value=''; }
+    if(k === 'type'){ fType='all'; $('fType').value='all'; }
+    if(k === 'pay'){ fPay='all'; $('fPay').value='all'; }
+    if(k === 'plan'){ fPlan='all'; $('fPlan').value='all'; }
+    if(k === 'sort'){ fSort='next'; $('fSort').value='next'; }
+    page=1; render();
+  }
+  function clearAllF(){
+    q=''; $('q').value='';
+    fType='all'; $('fType').value='all';
+    fPay='all';  $('fPay').value='all';
+    fPlan='all'; $('fPlan').value='all';
+    fSort='next';$('fSort').value='next';
+    page=1; render();
+  }
+
+  /* ---------- tiles ----------
+     ALL FOUR ARE STORE-LEVEL and every one carries the Store badge, so the strip answers the same
+     question whichever tab or filter is on.
+
+     Renewing-in-7-days and Ending-soon were view-derived first, and that was wrong: both count only
+     ACTIVE contracts, so on the Paused, Cancelled and Completed tabs they rendered a hard 0. A zero
+     that means "not in this filter" is read as "none exist", which is the worse of the two failures
+     the derived-counts rule is meant to prevent. They are forward-work signals about the store, not
+     properties of the current view, so they do not belong on the view's scope.
+
+     The view-derived numbers on this screen are the TAB COUNTS and the pager, which is where a number
+     that moves with the filter belongs. */
+  function tiles(){
+    var by = function(f){ return SUBS.filter(f).length; };
+    $('wActive').textContent = by(function(o){ return o.st === 'active'; });
+    $('wPaused').textContent = by(function(o){ return o.st === 'paused'; });
+    $('wSoon').textContent   = by(function(o){ return o.st === 'active' && o.next && dayDiff(o.next, TODAY) <= 7; });
+    $('wEnd').textContent    = by(function(o){ return o.st === 'active' && o.left != null && o.left <= 1; });
+  }
+
+  function counts(){
+    var set = function(s,n){ var e = document.querySelector(s); if(e) e.textContent = n; };
+    var by = function(st){ return SUBS.filter(function(o){ return o.st === st; }).length; };
+    set('#tabs button[data-tab="all"] .n',       SUBS.length);
+    set('#tabs button[data-tab="active"] .n',    by('active'));
+    set('#tabs button[data-tab="paused"] .n',    by('paused'));
+    set('#tabs button[data-tab="cancelreq"] .n', by('cancelreq'));
+    set('#tabs button[data-tab="cancelled"] .n', by('cancelled'));
+    set('#tabs button[data-tab="completed"] .n', by('completed'));
+  }
+
+  function selectedCodes(){ return Object.keys(sel).filter(function(k){ return sel[k]; }); }
+  function bulkBar(){
+    var codes = selectedCodes(), n = codes.length;
+    $('bulk').className = 'bulk' + (n ? ' on' : '');
+    $('bulkCnt').textContent = n + ' selected';
+    var rows = codes.map(byPc).filter(Boolean);
+    /* every bulk button is disabled unless the selection contains a contract it is valid for, so a
+       bulk action never silently no-ops on rows that cannot take it */
+    var anyLive   = rows.some(function(o){ return o.st === 'active' || o.st === 'pending'; });
+    var anyPaused = rows.some(function(o){ return o.st === 'paused'; });
+    var anyOpen   = rows.some(function(o){ return o.st !== 'cancelled' && o.st !== 'completed'; });
+    $('bkResched').disabled = !anyLive;
+    $('bkPause').disabled   = !rows.some(function(o){ return o.st === 'active'; });
+    $('bkResume').disabled  = !anyPaused;
+    $('bkCancel').disabled  = !anyOpen;
+  }
+
+  function wire(){
+    var host = $('tableHost');
+    var cks = host.querySelectorAll('[data-ck]');
+    for(var i=0;i<cks.length;i++){
+      cks[i].addEventListener('change', (function(pc,el){ return function(){
+        sel[pc] = !!el.checked; bulkBar(); syncSelectAll();
+      }; })(cks[i].getAttribute('data-ck'), cks[i]));
+    }
+    var all = $('ckAll');
+    if(all) all.addEventListener('change', function(){
+      var on = !!all.checked;
+      paged(filtered()).forEach(function(o){ sel[o.pc] = on; });
+      render();
+    });
+    wireActions(host);
+  }
+  function syncSelectAll(){
+    var all = $('ckAll'); if(!all) return;
+    var pg = paged(filtered());
+    var on = pg.length > 0 && pg.every(function(o){ return sel[o.pc]; });
+    var some = pg.some(function(o){ return sel[o.pc]; });
+    all.checked = on; all.indeterminate = !on && some;
+  }
+
+  /* ---------- render ---------- */
+  function render(){
+    var all = filtered(), rows = paged(all);
+    $('tableHost').innerHTML = rows.length ? buildTable(rows.map(rowHtml).join('')) : '';
+    $('emptyRow').className = 'emptyRow' + (rows.length ? ' hide' : '');
+
+    var pages = Math.max(1, Math.ceil(all.length / perPage));
+    if(page > pages) page = pages;
+    $('pager').innerHTML = all.length
+      ? 'Showing '+((page-1)*perPage+1)+' to '+Math.min(page*perPage, all.length)+' of '+all.length
+        +' &nbsp; <button class="b" id="pPrev" '+(page<=1?'disabled':'')+'>&#8592;</button>'
+        +' <span>Page '+page+' of '+pages+'</span> '
+        +'<button class="b" id="pNext" '+(page>=pages?'disabled':'')+'>&#8594;</button>'
+      : '';
+    if($('pPrev')) $('pPrev').onclick = function(){ if(page>1){ page--; render(); } };
+    if($('pNext')) $('pNext').onclick = function(){ if(page<pages){ page++; render(); } };
+
+    tiles(); counts(); chips(); bulkBar(); wire();
+  }
+
+  /* ---------- events ---------- */
+  $('tabs').addEventListener('click', function(e){
+    var b = e.target.closest('button[data-tab]'); if(!b) return;
+    tab = b.getAttribute('data-tab'); page = 1; sel = {};
+    var bs = $('tabs').querySelectorAll('[data-tab]');
+    for(var i=0;i<bs.length;i++) bs[i].classList.toggle('on', bs[i] === b);
+    render();
+  });
+  $('q').addEventListener('input', function(e){ q = (e.target.value||'').toLowerCase().trim(); page=1; render(); });
+  ['fType','fPay','fPlan','fSort'].forEach(function(id){
+    $(id).addEventListener('change', function(e){
+      var v = e.target.value;
+      if(id === 'fType') fType = v;
+      if(id === 'fPay')  fPay  = v;
+      if(id === 'fPlan') fPlan = v;
+      if(id === 'fSort') fSort = v;
+      page = 1; render();
+    });
+  });
+  $('clearBtn').onclick = clearAllF;
+  $('bkClear').onclick = function(){ sel = {}; render(); };
+  $('bkResched').onclick = function(){
+    var c = selectedCodes().filter(function(k){ var o=byPc(k); return o && (o.st==='active'||o.st==='pending'); });
+    if(c.length) popResched(c);
+  };
+  $('bkPause').onclick = function(){
+    var c = selectedCodes().filter(function(k){ var o=byPc(k); return o && o.st==='active'; });
+    if(c.length) popPause(c);
+  };
+  $('bkResume').onclick = function(){
+    var c = selectedCodes().filter(function(k){ var o=byPc(k); return o && o.st==='paused'; });
+    if(c.length) popResume(c);
+  };
+  $('bkCancel').onclick = function(){
+    var c = selectedCodes().filter(function(k){ var o=byPc(k); return o && o.st!=='cancelled' && o.st!=='completed'; });
+    if(c.length) popCancel(c);
+  };
+  $('bkExport').onclick = function(){
+    alert('Export '+selectedCodes().length+' subscription(s).\n\nMocked action.');
+  };
+  $('crSingle').onclick = function(){
+    alert('Opens the create flow for a single product subscription.\n\nIn the real app this routes to /subscriptions/new?type=single.');
+  };
+  $('crBundle').onclick = function(){
+    alert('Opens the create flow for a bundle subscription.\n\nIn the real app this routes to /subscriptions/new?type=bundle.');
+  };
+
+  render();
+
+  /* ---------- why this re-renders itself once ----------
+     s-table chooses between its real table layout and a stacked label/value fallback by MEASURING
+     its container, and it makes that choice once, when it upgrades. This script runs before the
+     Polaris CDN has defined the elements, so the first render hands s-table an unlaid-out container,
+     it measures roughly nothing, concludes it cannot fit, and locks into the stacked variant
+     permanently. The screen then reads as a phone list at every width, which presents exactly like a
+     width problem and is not one.
+
+     So: paint immediately for a fast first frame, then re-render once the components are defined and
+     one frame has been laid out. Also on resize, debounced, because the measurement has to be redone
+     when the window changes materially. */
+  if(window.customElements && customElements.whenDefined){
+    Promise.all(['s-table','s-table-row','s-badge'].map(function(n){
+      return customElements.whenDefined(n);
+    })).then(function(){
+      requestAnimationFrame(function(){ requestAnimationFrame(render); });
+    });
+  } else {
+    setTimeout(render, 300);
+  }
+  var rzT;
+  window.addEventListener('resize', function(){
+    clearTimeout(rzT); rzT = setTimeout(render, 180);
+  });
+</script>
+</body>
+</html>

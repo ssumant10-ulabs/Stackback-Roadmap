@@ -1,0 +1,1020 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Inventory (Polaris web components v4)</title>
+<script src="https://cdn.shopify.com/shopifycloud/polaris.js"></script>
+<style>
+  :root{
+    --p-ink:#303030; --p-muted:#616161; --p-faint:#8a8a8a;
+    --p-line:#e3e3e3; --p-line2:#ebebeb; --p-surface:#fff;
+    --p-primary:#303030; --p-success:#29845a; --p-success-bg:#cdfee1;
+    --p-link:#005bd3; --p-attn-bg:#ffefcf; --p-attn:#8a6116;
+    --p-crit:#d03b3b; --p-crit-bg:#fee9e8; --p-warn:#fab219;
+
+    /* Chart roles. Paid / mandated / not-paid-yet is an ORDINAL ramp (certainty decreasing),
+       not a categorical palette, so it is ONE hue stepped light to dark rather than three
+       arbitrary colours. Validated with the data-viz ordinal checker against the real Polaris
+       surfaces: light on #ffffff and dark on #1a1a1a, all four checks PASS in both modes
+       (lightness monotone, adjacent dL >= 0.06, light-end contrast 2.11:1 light / 2.15:1 dark,
+       single hue spread 3 degrees). Do not substitute eyeballed blues here. */
+    --c-paid:#184f95;
+    --c-mandated:#2a78d6;
+    --c-unpaid:#86b6ef;
+    --c-grid:#e1e0d9;
+    --c-axis:#c3c2b7;
+    --c-tickink:#898781;
+  }
+  /* The chart layer carries its own dark steps so it is theme-ready. The admin SHELL stays
+     light because the locked sibling screen (Orders_Polaris_v4) is light only, and inventing a
+     dark shell here would put the two screens out of sync. Stated rather than silent. */
+  @media (prefers-color-scheme: dark){
+    :root:where(:not([data-theme="light"])){
+      --c-paid:#9ec5f4; --c-mandated:#3987e5; --c-unpaid:#184f95;
+      --c-grid:#2c2c2a; --c-axis:#383835;
+    }
+  }
+  :root[data-theme="dark"]{
+    --c-paid:#9ec5f4; --c-mandated:#3987e5; --c-unpaid:#184f95;
+    --c-grid:#2c2c2a; --c-axis:#383835;
+  }
+
+  body{margin:0;background:#f1f1f1;font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--p-ink)}
+
+  /* ---------- Shopify admin shell (matched to Orders_Polaris_v4) ---------- */
+  .admin{display:flex;min-height:100vh}
+  .navL{flex:none;width:232px;background:#ebebeb;border-right:1px solid var(--p-line);
+    padding:10px 8px;display:flex;flex-direction:column;gap:1px;position:sticky;top:0;align-self:flex-start;height:100vh;overflow:auto}
+  .navItem{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;color:var(--p-ink);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
+  .navItem:hover{background:#dedede}
+  .navItem .ico{width:18px;height:18px;flex:none;color:#4a4a4a}
+  .navItem .ct{margin-left:auto;font-size:12px;color:var(--p-muted);background:#e0e0e0;border-radius:8px;padding:0 7px;line-height:18px}
+  .navSec{color:var(--p-muted);font-size:13px;font-weight:500;display:flex;align-items:center;height:30px;padding:0 8px;margin-top:6px}
+  .navApp{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;font-weight:600;background:#fff;box-shadow:0 1px 0 rgba(0,0,0,.04);margin-top:2px}
+  .navApp .logo{width:20px;height:20px;border-radius:5px;background:var(--p-primary);display:grid;place-items:center;color:#fff;font-size:11px;flex:none}
+  .navSub{display:flex;align-items:center;height:30px;padding:0 8px 0 34px;border-radius:8px;color:var(--p-muted);font-size:13px;cursor:pointer;text-decoration:none}
+  .navSub:hover{background:#dedede;color:var(--p-ink)}
+  .navSub.sel{color:var(--p-ink);font-weight:600;background:#dedede}
+  .navGap{flex:1}
+
+  /* scrollbar-gutter keeps the content column one width whether or not the list scrolls.
+     Without it the table silently loses ~47px on the busy view, so columns jump between tabs
+     and the right-most column clips only when there are enough rows to scroll. */
+  html{scrollbar-gutter:stable}
+
+  .appmain{flex:1;min-width:0;display:flex;flex-direction:column}
+  .appbar{height:52px;background:#fff;border-bottom:1px solid var(--p-line);display:flex;align-items:center;gap:10px;padding:0 18px}
+  .appbar .logo{width:24px;height:24px;border-radius:6px;background:var(--p-primary);display:grid;place-items:center;color:#fff;font-size:12px}
+  .appbar .name{font-weight:650;font-size:14px}
+  .appbar .bell{margin-left:auto;position:relative;cursor:pointer;color:var(--p-muted)}
+  .appbar .bell .bdot{position:absolute;top:-1px;right:-1px;width:7px;height:7px;border-radius:50%;background:var(--p-crit);border:1.5px solid #fff}
+
+  .lwrap{padding-top:2px}
+
+  /* ---------- stat tiles ---------- */
+  .wstrip{display:flex;gap:12px;margin:0 0 14px}
+  .wtile{flex:1;min-width:0;background:#fff;border:1px solid var(--p-line);border-radius:12px;padding:12px 14px;box-shadow:0 1px 0 rgba(0,0,0,.04)}
+  .wtile .k{font-size:12px;color:var(--p-muted);font-weight:500}
+  .wtile .v{font-size:22px;font-weight:650;line-height:1.25;margin-top:2px}
+  .wtile .d{font-size:11.5px;color:var(--p-faint);margin-top:1px}
+  .wtile.crit .v{color:var(--p-crit)}
+
+  /* ---------- tabs + toolbar ---------- */
+  .tabrow{display:flex;align-items:flex-end;gap:12px;border-bottom:1px solid var(--p-line);margin-bottom:12px}
+  .tabs{display:flex;gap:2px}
+  .tabs button{border:0;background:none;font:inherit;font-size:13px;font-weight:600;color:var(--p-muted);
+    padding:8px 12px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;display:flex;align-items:center;gap:6px}
+  .tabs button:hover{color:var(--p-ink)}
+  .tabs button.on{color:var(--p-ink);border-bottom-color:var(--p-primary)}
+  .tabs button .n{font-size:11.5px;font-weight:600;color:var(--p-muted);background:#ededed;border-radius:8px;padding:0 6px;line-height:17px}
+  .tabs button.on .n{background:#e0e0e0;color:var(--p-ink)}
+
+  .toolbar{display:flex;gap:10px;align-items:flex-end;margin-bottom:10px;flex-wrap:wrap}
+  .toolbar .grow{flex:1;min-width:200px}
+  .toolbar .fw{flex:none;width:168px}
+  /* the payment labels are the longest in the toolbar; at 168px they truncate and hide the
+     very distinction the control exists for */
+  .toolbar .fw.wide{width:214px}
+  .rlab{display:block;font-size:12px;color:var(--p-muted);margin-bottom:4px;font-weight:500}
+  .dinput{border:1px solid #8a8a8a;border-radius:8px;padding:6px 9px;font:inherit;font-size:13px;
+    background:#fff;color:var(--p-ink);width:100%;box-sizing:border-box;height:32px}
+  .dinput.bad{border-color:var(--p-crit);box-shadow:0 0 0 1px var(--p-crit)}
+
+  /* applied-range chip, same affordance as the Orders screen */
+  .chiprow{display:flex;gap:8px;align-items:center;margin:0 0 12px;min-height:0}
+  .rchip{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--p-line);
+    border-radius:20px;padding:3px 6px 3px 11px;font-size:12px;color:var(--p-ink);font-weight:500}
+  .rchip button{border:0;background:#ededed;color:var(--p-muted);border-radius:50%;width:18px;height:18px;
+    cursor:pointer;font:inherit;font-size:12px;line-height:1;display:grid;place-items:center;padding:0}
+  .rchip button:hover{background:#e0e0e0;color:var(--p-ink)}
+  .rwarn{font-size:12px;color:var(--p-crit);font-weight:600}
+
+  /* ---------- cards + charts ---------- */
+  .card{background:#fff;border:1px solid var(--p-line);border-radius:12px;box-shadow:0 1px 0 rgba(0,0,0,.04);margin-bottom:14px;overflow:hidden}
+  .cardhdr{padding:13px 16px 0}
+  .cardhdr h2{margin:0;font-size:14px;font-weight:650}
+  .cardhdr p{margin:2px 0 0;font-size:12px;color:var(--p-muted)}
+  .cardpad{padding:12px 16px 16px}
+
+  .legend{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:10px 16px 0}
+  .legend .li{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--p-muted)}
+  .legend .sw{width:11px;height:11px;border-radius:3px;flex:none}
+  .legend .li.dormant{opacity:.55}
+  .legend .li .tagf{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;border:1px solid var(--p-line);border-radius:5px;padding:0 5px;color:var(--p-faint)}
+
+  .chartbox{position:relative;overflow-x:auto}
+  .chartbox svg{display:block}
+  svg text{font-family:inherit}
+  .tick{fill:var(--c-tickink);font-size:10.5px;font-variant-numeric:tabular-nums}
+  .axline{stroke:var(--c-axis);stroke-width:1}
+  .gridline{stroke:var(--c-grid);stroke-width:1}
+  .dlabel{fill:var(--p-muted);font-size:10.5px;font-variant-numeric:tabular-nums}
+  .barseg{cursor:default}
+  .barseg:hover{filter:brightness(1.08)}
+
+  /* tooltip: charts get a hover layer by default, per the data-viz interaction rule */
+  .vtip{position:fixed;z-index:120;pointer-events:none;opacity:0;transition:opacity .09s;
+    background:#1a1a1a;color:#fff;border-radius:8px;padding:7px 10px;font-size:12px;line-height:1.45;
+    box-shadow:0 3px 10px rgba(0,0,0,.22);max-width:240px}
+  .vtip .tt{font-weight:650;margin-bottom:2px}
+  .vtip .tr{display:flex;gap:10px;align-items:center}
+  .vtip .tr .sw{width:9px;height:9px;border-radius:2px;flex:none}
+  .vtip .tr .tv{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:600}
+  .vtip .tsum{border-top:1px solid #3a3a3a;margin-top:4px;padding-top:4px;display:flex;gap:10px}
+  .vtip .tsum .tv{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:600}
+
+  /* ---------- attention block ---------- */
+  .arow{display:flex;gap:10px;align-items:flex-start;padding:10px 16px;border-top:1px solid var(--p-line2)}
+  .arow:first-child{border-top:0}
+  .arow .adot{width:9px;height:9px;border-radius:50%;flex:none;margin-top:5px;background:var(--p-crit)}
+  .arow .abody{flex:1;min-width:0}
+  .arow .an{font-weight:600;font-size:12.5px}
+  .arow .as{font-size:12px;color:var(--p-muted);margin-top:1px}
+  .arow .aq{flex:none;text-align:right;font-variant-numeric:tabular-nums}
+  .arow .aq .qn{font-weight:650;font-size:13px}
+  .arow .aq .ql{font-size:11px;color:var(--p-faint)}
+  .emptyblk{padding:16px;font-size:12.5px;color:var(--p-muted)}
+
+  /* ---------- table cells ---------- */
+  .pcell{display:flex;gap:9px;align-items:center;min-width:0}
+  .pcell .pn{font-weight:600;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pv{font-size:11.5px;color:var(--p-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .skuc{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--p-muted)}
+  .num{font-variant-numeric:tabular-nums;font-weight:600;font-size:12.5px}
+  .num.big{font-size:13.5px}
+  .num.soft{font-weight:500;color:var(--p-muted)}
+
+  /* A paid delivery and an unpaid one live on DIFFERENT screens, so they cannot share one link.
+     Orders is paid-only by the locked model, which means an unpaid pay-per-delivery line is not
+     in Orders at all, it is in Payment Reminders until it clears. So the Paid number links to
+     Orders and the Not-paid-yet number links to Payment Reminders. The Deliveries count spans
+     both and is therefore NOT a link: one destination would be wrong half the time. */
+  .dlink{font-variant-numeric:tabular-nums;font-weight:600;font-size:12.5px;color:var(--p-link);
+    text-decoration:none;background:none;border:0;padding:0;font-family:inherit;cursor:pointer}
+  .dlink:hover{text-decoration:underline}
+
+  /* row actions: the kebab is the explicit, labelled route to both screens, for anyone who does
+     not discover that the numbers themselves are links */
+  .rowacts{display:flex;align-items:center;gap:6px;justify-content:flex-end}
+  .kebab{border:1px solid var(--p-line);background:#fff;border-radius:8px;width:32px;height:32px;
+    font:inherit;font-size:15px;line-height:1;color:var(--p-ink);cursor:pointer;padding:0;
+    display:grid;place-items:center;flex:none}
+  .kebab:hover{background:#f7f7f7}
+  .mlink{display:block;padding:0;font:inherit;font-size:12.5px;color:var(--p-ink);text-decoration:none}
+
+  .splitbar{display:flex;height:4px;border-radius:2px;overflow:hidden;margin-top:3px;width:62px;background:#f0f0f0}
+  .splitbar i{display:block;height:100%}
+  .splitbar i.cm{background:var(--c-paid)}
+  /* 2px surface gap between adjacent fills, per the mark spec */
+  .splitbar i.pb{background:var(--c-unpaid);margin-left:2px}
+  .dtl{font-size:12.5px;font-variant-numeric:tabular-nums}
+  .dtl .soonl{color:var(--p-attn);font-weight:600}
+
+  /* Issue cell: a plain solid dot plus a TEXT label. The dot carries no glyph (standing
+     StackBack rule: status lights are never checkmarks or hollow circles) and the text means
+     colour never carries the meaning alone. Draft and archived collapse to ONE label, with the
+     specific reason on hover, because both have the same consequence and the same remedy. */
+  .iss{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--p-crit);cursor:help}
+  .iss .idot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--p-crit)}
+
+  .thumb{width:30px;height:30px;border-radius:6px;flex:none;display:grid;place-items:center;
+    font-size:10.5px;font-weight:700;color:#fff;letter-spacing:.02em}
+
+  .foot{display:flex;align-items:center;gap:10px;padding:11px 16px;border-top:1px solid var(--p-line2);font-size:12px;color:var(--p-muted)}
+  .foot .fg{margin-left:auto;display:flex;gap:8px}
+  .note{margin:0 0 14px;padding:11px 14px;background:#fff;border:1px solid var(--p-line);border-left:3px solid var(--p-link);
+    border-radius:10px;font-size:12.5px;color:var(--p-muted)}
+  .note b{color:var(--p-ink)}
+  .hide{display:none !important}
+</style>
+<!-- bare mode: when embedded in the WIP prototype shell, hide this file's own admin chrome
+     so the shell is not drawn twice. Standalone viewing is unaffected. A #hash is used rather
+     than ?query because a static server's clean-URL rewrite drops the query string. -->
+<script>if(/bare/.test(location.search+location.hash))document.documentElement.classList.add("bare");</script>
+<style>html.bare .navL,html.bare .appbar{display:none!important}html.bare .admin{min-height:0}html.bare,html.bare body{background:#f1f1f1}</style>
+</head>
+<body>
+<div class="admin">
+
+  <aside class="navL">
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8.5 10 3l7 5.5V16a1 1 0 0 1-1 1h-3v-5H7v5H4a1 1 0 0 1-1-1z"/></svg>Home</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="13" rx="2"/><path d="M7 8h6M7 11h6"/></svg>Orders<span class="ct">127</span></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h12v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M7 6V5a3 3 0 0 1 6 0v1"/></svg>Products</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="7" r="3"/><path d="M4 17c0-3 2.7-5 6-5s6 2 6 5"/></svg>Customers</div>
+    <div class="navSec">Sales channels</div>
+    <div class="navSec">Apps</div>
+
+    <!-- Twelve items, matching the locked IA plus Billing pulled back out of Settings and placed
+         directly below it. Inventory is the selected route. -->
+    <div class="navApp"><span class="logo">SB</span>StackBack</div>
+    <div class="navSub">Plans</div>
+    <div class="navSub">Subscriptions</div>
+    <a class="navSub" href="Orders_Polaris_v5.html">Orders</a>
+    <a class="navSub" href="PaymentReminders_Polaris_v2.html">Payment reminders</a>
+    <div class="navSub sel">Inventory</div>
+    <div class="navSub">Customers</div>
+    <div class="navSub">Widget</div>
+    <div class="navSub">Portal</div>
+    <div class="navSub">Landing pages</div>
+    <div class="navSub">Analytics</div>
+    <div class="navSub">Settings</div>
+    <div class="navSub">Billing</div>
+    <div class="navGap"></div>
+  </aside>
+
+  <div class="appmain">
+    <div class="appbar">
+      <span class="logo">SB</span><span class="name">StackBack</span>
+      <span class="bell" title="Admin alerts">
+        <svg width="19" height="19" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 8a4 4 0 0 1 8 0c0 3 1 4 1 4H5s1-1 1-4z"/><path d="M8.5 15a1.5 1.5 0 0 0 3 0"/></svg>
+        <span class="bdot"></span>
+      </span>
+    </div>
+
+    <s-page heading="Inventory" inline-size="large">
+      <!-- Read-only screen: the only header action is the export, because the output of this
+           screen is a list the Ops person hands to the warehouse or a supplier. There is no
+           "Sync now" counterpart to the Orders header, since nothing here is pushed. -->
+      <s-button slot="primary-action" variant="primary" id="expBtn">Export</s-button>
+      <!-- Screen-level routes to the two screens that own the work. Paid deliveries are Orders
+           rows; unpaid ones are not, because Orders is paid-only, so they belong to Payment
+           Reminders. Two buttons rather than one, because one "View orders" would quietly drop
+           whichever half it did not point at. -->
+      <s-button slot="secondary-actions" id="goOrders">View paid orders</s-button>
+      <s-button slot="secondary-actions" id="goRemind">View unpaid orders</s-button>
+
+      <div class="lwrap">
+
+        <p class="note">
+          <b>This is a demand forecast, not a stock count.</b>
+          It reads StackBack&rsquo;s own subscription contracts to answer &ldquo;what has to leave the
+          warehouse, and when&rdquo;. It does not read Shopify stock, so it never claims you are short.
+          <b>Paid</b> deliveries are already paid for. <b>Not paid yet</b> is pay&#8209;per&#8209;delivery,
+          which only ships once the customer pays. Subscription deliveries only: one&#8209;time and
+          bundle purchases are not counted here.
+          <br><b>Paid</b> deliveries open in <b>Orders</b>. <b>Not paid yet</b> deliveries open in
+          <b>Payment reminders</b>, because Orders only ever lists paid work.
+        </p>
+
+        <div class="wstrip" id="wstrip">
+          <div class="wtile"><div class="k">Units to ship</div><div class="v" id="wUnits">0</div><div class="d" id="wUnitsD">across 0 SKUs</div></div>
+          <div class="wtile"><div class="k">Paid</div><div class="v" id="wPaid">0</div><div class="d" id="wPaidD">already paid for</div></div>
+          <div class="wtile"><div class="k">Not paid yet</div><div class="v" id="wUnpaid">0</div><div class="d" id="wUnpaidD">pay per delivery</div></div>
+          <div class="wtile" id="tileIssue"><div class="k">Not live</div><div class="v" id="wIssue">0</div><div class="d" id="wIssueD">will be refused by Shopify</div></div>
+        </div>
+
+        <div class="tabrow">
+          <div class="tabs" id="tabs">
+            <button data-tab="summary" class="on">Summary</button>
+            <button data-tab="byproduct">By product <span class="n" id="nByProd"></span></button>
+          </div>
+        </div>
+
+        <div class="toolbar" id="toolbar">
+          <div class="grow hide" id="searchWrap">
+            <s-search-field id="q" label="Search products" labelAccessibilityVisibility="exclusive"
+              placeholder="Search product, variant or SKU"></s-search-field>
+          </div>
+          <!-- "Horizon" was jargon. "Delivery window" is the label already locked on the Orders
+               screen for this identical control, so the two screens teach one vocabulary. -->
+          <div class="fw"><s-select id="fWin" label="Delivery window">
+            <s-option value="7">Next 7 days</s-option>
+            <s-option value="14" selected>Next 14 days</s-option>
+            <s-option value="30">Next 30 days</s-option>
+            <s-option value="custom">Custom range</s-option>
+          </s-select></div>
+          <div class="fw hide" id="rangeWrap">
+            <label class="rlab" for="rFrom">From</label>
+            <input type="date" id="rFrom" class="dinput" value="2026-08-04">
+          </div>
+          <div class="fw hide" id="rangeWrap2">
+            <label class="rlab" for="rTo">To</label>
+            <input type="date" id="rTo" class="dinput" value="2026-09-04">
+          </div>
+          <div class="fw wide"><s-select id="fCert" label="Payment">
+            <s-option value="all" selected>Paid and not paid yet</s-option>
+            <s-option value="paid">Paid only</s-option>
+            <s-option value="unpaid">Not paid yet only</s-option>
+          </s-select></div>
+          <div class="fw hide" id="sortWrap"><s-select id="fSort" label="Sort by">
+            <s-option value="units" selected>Units, most first</s-option>
+            <s-option value="deliveries">Most deliveries due</s-option>
+            <s-option value="soonest">Soonest needed</s-option>
+            <s-option value="product">Product A to Z</s-option>
+            <s-option value="issue">Not live first</s-option>
+          </s-select></div>
+        </div>
+
+        <div class="chiprow" id="chiprow"></div>
+
+        <!-- ============ TAB 1: SUMMARY ============ -->
+        <div id="panelSummary">
+
+          <div class="card">
+            <div class="cardhdr">
+              <h2>Units to ship</h2>
+              <p id="c1sub">What has to be picked, day by day</p>
+            </div>
+            <div class="legend" id="legend1"></div>
+            <div class="cardpad">
+              <div class="chartbox" id="chart1"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="cardhdr">
+              <h2>Busiest SKUs</h2>
+              <p id="c2sub">Where the volume is concentrated</p>
+            </div>
+            <div class="cardpad">
+              <div class="chartbox" id="chart2"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="cardhdr" style="padding-bottom:12px">
+              <h2>Needs a decision before the date arrives</h2>
+              <p>A contract still points at a product that is no longer live in the store. Shopify
+                 will refuse the order whatever the stock is, so this fails on the day unless the
+                 product is put back on sale or the plan is repointed.</p>
+            </div>
+            <div id="attnList"></div>
+          </div>
+
+        </div>
+
+        <!-- ============ TAB 2: BY PRODUCT ============ -->
+        <div id="panelByProduct" class="hide">
+          <div class="card">
+            <div id="tblwrap"></div>
+            <div class="foot">
+              <span id="footCount">0 rows</span>
+              <span class="fg"><s-button id="expBtn2">Export this list</s-button></span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </s-page>
+  </div>
+</div>
+
+<div class="vtip" id="vtip"></div>
+
+<script>
+(function(){
+  "use strict";
+  /* Everything is wrapped so no top-level identifier can collide with a window property.
+     A helper named `chrome` once shadowed window.chrome and killed an entire sibling file in
+     real Chrome while the in-app preview pane reported no errors at all. */
+
+  var TODAY = new Date(2026, 7, 4);          /* 2026-08-04 */
+
+  /* The window is a DATE RANGE, not a day count, so a custom From/To is a first-class mode
+     rather than a special case bolted onto a number. Presets simply compute their own range. */
+  var WIN = { mode:"14", from:new Date(2026, 7, 4), to:new Date(2026, 8, 4) };
+  var CERT = "all", SORT = "units", QUERY = "", TAB = "summary", RANGE_BAD = false;
+
+  function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+  function addDays(d, n){ var x = new Date(d.getTime()); x.setDate(x.getDate() + n); return x; }
+  function dayKey(d){ return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2); }
+  var MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  function fmtDay(d){ return d.getDate()+" "+MON[d.getMonth()]; }
+  function parseDate(v){ var p = (v||"").split("-"); return p.length===3 ? new Date(+p[0], +p[1]-1, +p[2]) : null; }
+
+  function winStart(){ return WIN.mode === "custom" ? WIN.from : TODAY; }
+  /* exclusive end, so a range and a preset can share one comparison */
+  function winEnd(){
+    return WIN.mode === "custom" ? addDays(WIN.to, 1) : addDays(TODAY, parseInt(WIN.mode, 10));
+  }
+  function winDays(){ return Math.max(1, Math.round((winEnd() - winStart()) / 86400000)); }
+  function winLabel(){
+    if (WIN.mode === "custom") return fmtDay(WIN.from) + " to " + fmtDay(WIN.to);
+    return "next " + WIN.mode + " days";
+  }
+  /* Prose contexts need the article, a terse one must not have it: "over the next 14 days" is
+     right but "over the 4 Aug to 15 Nov" is not, and "16 rows, the next 14 days" is not either.
+     So the label comes in two shapes rather than one shape plus a hardcoded "the". */
+  function winProse(){
+    return WIN.mode === "custom" ? winLabel() : "the " + winLabel();
+  }
+
+  /* Deterministic generator. A wireframe must not reshuffle its own numbers on reload, or two
+     screenshots of "the same" screen disagree and nobody can tell a real change from noise. */
+  var _s = 20260804;
+  function rnd(){ _s = (_s * 1103515245 + 12345) & 0x7fffffff; return _s / 0x7fffffff; }
+  function pick(min, max){ return min + Math.floor(rnd() * (max - min + 1)); }
+
+  /* ---------------- catalogue ----------------
+     Product `pstatus` is ACTIVE / DRAFT / ARCHIVED, which is the Admin API's own publish-state
+     enum. This is not an invented field: the shipped portal-products service already reads
+     `status` per product and hides on explicit DRAFT or ARCHIVED. The UI collapses DRAFT and
+     ARCHIVED into one "Not live" label, but the underlying value is kept so the specific
+     reason can be shown on hover.
+
+     v4 CATALOGUE ALIGNMENT, and this matters more than it looks. v3 used its own invented SKUs
+     (GG-MAT-030 and friends) while Orders uses CPC-500, HTS-01, COL-500, MAG-090, ASH-060 and
+     WLP-250. So a v3 row link filtered Orders to a SKU that does not exist there and landed on an
+     empty list: mechanically working, practically a dead promise, the same defect class as the
+     failed-order popup's View-in-Shopify. All three screens now share ONE SKU vocabulary, so every
+     link lands on real rows. The catalogue is therefore six products, not eighteen, because that
+     is what the store actually sells in this mock.
+
+     HONEST LIMIT: the three screens are still independently mocked, so per-SKU QUANTITIES will not
+     tie out numerically between Inventory, Orders and Payment Reminders. Only the SKU vocabulary
+     is shared. Reconciling the numbers needs one shared data module, which is past what a
+     wireframe should carry. */
+  var CATALOG = [
+    { p:"Cold Pressed Coffee",   v:"500 g",  sku:"CPC-500", tone:"#8a5a34", pstatus:"ACTIVE"   },
+    { p:"Herbal Tea Sampler",    v:"Box",    sku:"HTS-01",  tone:"#4d7c3a", pstatus:"ACTIVE"   },
+    { p:"Collagen Peptides",     v:"500 g",  sku:"COL-500", tone:"#7a5ea8", pstatus:"ACTIVE"   },
+    { p:"Magnesium Glycinate",   v:"90 ct",  sku:"MAG-090", tone:"#5b5ea6", pstatus:"DRAFT"    },
+    { p:"Ashwagandha Gummies",   v:"60 ct",  sku:"ASH-060", tone:"#a3574f", pstatus:"ACTIVE"   },
+    { p:"Wellness Powder",       v:"250 g",  sku:"WLP-250", tone:"#b3862f", pstatus:"ARCHIVED" }
+  ];
+
+  /* ---------------- delivery generation ----------------
+     Deliveries are generated first and every displayed number is aggregated FROM them. Nothing
+     on this screen is a typed-in total: a hardcoded count contradicting the rows beneath it is
+     a defect this project has already shipped twice.
+
+     Generated across 120 days so a custom range can reach well past the 30-day preset and still
+     find real data. The paid / pay-per-delivery mix leans to pay-per-delivery, which is what the
+     pilot data looks like: of 61 Glow Glossary subscriptions imported this month, only 11 had
+     ever produced a renewal. Not-paid-yet is not a rounding error here, it is most of the column. */
+  var DELIVERIES = [];
+  (function seed(){
+    for (var i = 0; i < CATALOG.length; i++){
+      var c = CATALOG[i];
+      var n = pick(12, 46);
+      for (var k = 0; k < n; k++){
+        DELIVERIES.push({
+          sku: c.sku,
+          date: addDays(TODAY, pick(0, 119)),
+          qty: pick(1, 3),
+          pay: rnd() < (i % 3 === 0 ? 0.45 : 0.7) ? "payg" : "prepaid",
+          /* No delivery carries a mandate today. read_payment_mandate and
+             write_payment_mandate are both granted scopes, but there is not a single
+             paymentMandate reference anywhere in the backend, so auto-debit is genuinely
+             unbuilt. The tier exists in the model and the legend so it can light up without a
+             rebuild; it is deliberately empty, not forgotten. */
+          mandated: false
+        });
+      }
+    }
+  })();
+
+  var BYSKU = {};
+  CATALOG.forEach(function(c){ BYSKU[c.sku] = c; });
+
+  /* ---------------- aggregation ---------------- */
+  function inWindow(d){
+    return d.getTime() >= winStart().getTime() && d.getTime() < winEnd().getTime();
+  }
+  function certOK(d){
+    if (CERT === "paid")   return d.pay === "prepaid";
+    if (CERT === "unpaid") return d.pay === "payg";
+    return true;
+  }
+  function scoped(){
+    if (RANGE_BAD) return [];
+    return DELIVERIES.filter(function(d){ return inWindow(d.date) && certOK(d); });
+  }
+
+  function rows(){
+    var acc = {};
+    scoped().forEach(function(d){
+      var r = acc[d.sku];
+      if (!r){
+        var c = BYSKU[d.sku];
+        r = acc[d.sku] = { sku:d.sku, p:c.p, v:c.v, tone:c.tone, pstatus:c.pstatus,
+                           deliveries:0, paid:0, unpaid:0, mandated:0, first:null };
+      }
+      r.deliveries += 1;
+      if (d.pay === "prepaid") r.paid += d.qty;
+      else if (d.mandated)     r.mandated += d.qty;
+      else                     r.unpaid += d.qty;
+      if (r.first === null || d.date.getTime() < r.first.getTime()) r.first = d.date;
+    });
+    var out = Object.keys(acc).map(function(k){
+      var r = acc[k];
+      r.units = r.paid + r.mandated + r.unpaid;   /* derived, never stored */
+      return r;
+    });
+    if (QUERY){
+      var q = QUERY.toLowerCase();
+      out = out.filter(function(r){ return (r.p+" "+r.v+" "+r.sku).toLowerCase().indexOf(q) > -1; });
+    }
+    var issueRank = { ARCHIVED:0, DRAFT:1, ACTIVE:2 };
+    out.sort(function(a, b){
+      if (SORT === "product")    return a.p.localeCompare(b.p) || a.v.localeCompare(b.v);
+      if (SORT === "soonest")    return a.first - b.first || b.units - a.units;
+      if (SORT === "issue")      return issueRank[a.pstatus] - issueRank[b.pstatus] || b.units - a.units;
+      /* deliveries count answers a different question from units: 30 units across 3 orders is
+         nothing like 30 units across 22 orders, and the second is the harder picking day. */
+      if (SORT === "deliveries") return b.deliveries - a.deliveries || b.units - a.units;
+      return b.units - a.units || a.p.localeCompare(b.p);
+    });
+    return out;
+  }
+
+  /* Buckets for chart 1. A custom range can be months long, so beyond 45 days the bars switch
+     from daily to weekly. 180 daily bars is not a chart, it is a texture. */
+  function buckets(){
+    var days = winDays(), weekly = days > 45;
+    var size = weekly ? 7 : 1;
+    var out = [], idx = {}, start = winStart();
+    for (var i = 0; i < days; i += size){
+      var d = addDays(start, i);
+      out.push({ d:d, weekly:weekly, paid:0, mandated:0, unpaid:0, total:0 });
+      for (var j = 0; j < size && i + j < days; j++) idx[dayKey(addDays(start, i + j))] = out.length - 1;
+    }
+    scoped().forEach(function(dl){
+      var b = out[idx[dayKey(dl.date)]];
+      if (!b) return;
+      if (dl.pay === "prepaid") b.paid += dl.qty;
+      else if (dl.mandated)     b.mandated += dl.qty;
+      else                      b.unpaid += dl.qty;
+    });
+    out.forEach(function(b){ b.total = b.paid + b.mandated + b.unpaid; });
+    return out;
+  }
+
+  /* ---------------- tooltip ---------------- */
+  var tip = document.getElementById("vtip");
+  function tipShow(html, ev){
+    tip.innerHTML = html; tip.style.opacity = "1";
+    var r = tip.getBoundingClientRect();
+    var x = ev.clientX + 14, y = ev.clientY - r.height - 10;
+    if (x + r.width > window.innerWidth - 8) x = ev.clientX - r.width - 14;
+    if (y < 8) y = ev.clientY + 16;
+    tip.style.left = x + "px"; tip.style.top = y + "px";
+  }
+  function tipHide(){ tip.style.opacity = "0"; }
+  function tipRows(o){
+    var s = "";
+    if (o.paid)      s += '<div class="tr"><span class="sw" style="background:var(--c-paid)"></span>Paid<span class="tv">' + o.paid + '</span></div>';
+    if (o.mandated)  s += '<div class="tr"><span class="sw" style="background:var(--c-mandated)"></span>Not paid yet, mandate<span class="tv">' + o.mandated + '</span></div>';
+    if (o.unpaid)    s += '<div class="tr"><span class="sw" style="background:var(--c-unpaid)"></span>Not paid yet<span class="tv">' + o.unpaid + '</span></div>';
+    return s;
+  }
+
+  /* ---------------- legend ----------------
+     Two or more series always carry a legend, so identity is never colour alone. The mandate
+     tier is present but flagged dormant rather than hidden, because a legend that silently
+     changes shape when auto-debit ships reads as a different chart. */
+  function renderLegend(){
+    var hasM = scoped().some(function(d){ return d.mandated; });
+    var h = "";
+    if (CERT !== "unpaid")
+      h += '<span class="li"><span class="sw" style="background:var(--c-paid)"></span>Paid</span>';
+    if (CERT !== "paid"){
+      h += '<span class="li' + (hasM ? '' : ' dormant') + '"><span class="sw" style="background:var(--c-mandated)"></span>Not paid yet, auto&#8209;debit mandate'
+         + (hasM ? '' : ' <span class="tagf">not live</span>') + '</span>';
+      h += '<span class="li"><span class="sw" style="background:var(--c-unpaid)"></span>Not paid yet, customer pays each time</span>';
+    }
+    document.getElementById("legend1").innerHTML = h;
+  }
+
+  /* ---------------- chart 1 ---------------- */
+  function renderChart1(){
+    var data = buckets();
+    var W = 880, H = 232, PL = 38, PR = 8, PT = 14, PB = 34;
+    var iw = W - PL - PR, ih = H - PT - PB;
+    var box = document.getElementById("chart1");
+    if (!data.length){ box.innerHTML = '<div class="emptyblk">Nothing to ship in this window.</div>'; return; }
+
+    var max = Math.max.apply(null, data.map(function(b){ return b.total; }));
+    max = Math.max(4, Math.ceil(max / 4) * 4);
+    var step = iw / data.length;
+    var bw = Math.max(5, Math.min(30, step - (data.length > 20 ? 4 : 10)));
+    function y(v){ return PT + ih - (v / max) * ih; }
+
+    var g = "";
+    for (var t = 0; t <= 4; t++){
+      var v = max * t / 4, yy = y(v);
+      g += '<line class="gridline" x1="' + PL + '" y1="' + yy + '" x2="' + (W - PR) + '" y2="' + yy + '"/>';
+      g += '<text class="tick" x="' + (PL - 7) + '" y="' + (yy + 3.5) + '" text-anchor="end">' + Math.round(v) + '</text>';
+    }
+    g += '<line class="axline" x1="' + PL + '" y1="' + y(0) + '" x2="' + (W - PR) + '" y2="' + y(0) + '"/>';
+
+    var every = data.length <= 8 ? 1 : (data.length <= 16 ? 2 : Math.ceil(data.length / 8));
+
+    data.forEach(function(b, i){
+      var cx = PL + step * i + step / 2;
+      if (i % every === 0)
+        g += '<text class="tick" x="' + cx + '" y="' + (H - 13) + '" text-anchor="middle">' + fmtDay(b.d) + '</text>';
+
+      /* The hit target is emitted for EVERY bucket, including empty ones, so hovering a gap
+         answers "nothing to ship" instead of doing nothing. Emitting it after an early return
+         on total===0 left the tooltip's own empty branch permanently unreachable. */
+      g += '<rect class="hit" x="' + (PL + step * i) + '" y="' + PT + '" width="' + step + '" height="' + ih + '" fill="transparent" data-day="' + i + '"></rect>';
+      if (b.total === 0) return;
+
+      /* Paid sits on the BASELINE, not-paid-yet stacks above it. Two reasons: the axis then
+         reads the floor you can rely on ("at minimum this much leaves the warehouse"), and it
+         matches the horizontal chart below, which anchors paid at its origin. Stacking them in
+         opposite orders under one shared legend is how a reader learns to distrust both. */
+      var segs = [
+        { v:b.paid,     c:"var(--c-paid)"     },
+        { v:b.mandated, c:"var(--c-mandated)" },
+        { v:b.unpaid,   c:"var(--c-unpaid)"   }
+      ].filter(function(s){ return s.v > 0; });
+
+      var cursor = 0, x0 = cx - bw / 2;
+      segs.forEach(function(s, si){
+        var h0 = (s.v / max) * ih, gap = si === 0 ? 0 : 2;
+        g += '<rect class="barseg" x="' + x0 + '" y="' + (y(0) - cursor - h0) + '" width="' + bw
+           + '" height="' + Math.max(1, h0 - gap) + '" fill="' + s.c + '"'
+           + (si === segs.length - 1 ? ' rx="3"' : '') + '></rect>';
+        cursor += h0;
+      });
+    });
+
+    box.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img"'
+      + ' aria-label="Units to ship per ' + (data[0].weekly ? "week" : "day") + ' over ' + winProse() + ', split by payment">' + g + '</svg>';
+
+    box.querySelectorAll(".hit").forEach(function(el){
+      el.addEventListener("mousemove", function(ev){
+        var b = data[+el.getAttribute("data-day")];
+        var ttl = b.weekly ? ("Week of " + fmtDay(b.d)) : fmtDay(b.d);
+        tipShow('<div class="tt">' + ttl + '</div>' + (b.total
+          ? tipRows(b) + '<div class="tsum">Units<span class="tv">' + b.total + '</span></div>'
+          : '<div class="tr">Nothing to ship</div>'), ev);
+      });
+      el.addEventListener("mouseleave", tipHide);
+    });
+  }
+
+  /* ---------------- chart 2 ---------------- */
+  function renderChart2(){
+    var all = rows(), data = all.slice(0, 8);
+    var box = document.getElementById("chart2");
+    if (!data.length){ box.innerHTML = '<div class="emptyblk">Nothing due in this window.</div>';
+      document.getElementById("c2sub").textContent = "No SKUs in this window"; return; }
+
+    var LBL = 210, PR = 6, rowH = 30, barH = 13;
+    var W = 880, iw = W - LBL - 46 - PR, H = data.length * rowH + 10;
+    var max = Math.max.apply(null, data.map(function(r){ return r.units; }));
+
+    var g = "";
+    data.forEach(function(r, i){
+      var cy = i * rowH + rowH / 2 + 4;
+      var label = r.p + (r.v ? ", " + r.v : "");
+      if (label.length > 34) label = label.slice(0, 33) + "…";
+      g += '<text class="dlabel" x="0" y="' + (cy + 4) + '">' + esc(label) + '</text>';
+
+      var segs = [
+        { v:r.paid,     c:"var(--c-paid)"     },
+        { v:r.mandated, c:"var(--c-mandated)" },
+        { v:r.unpaid,   c:"var(--c-unpaid)"   }
+      ].filter(function(s){ return s.v > 0; });
+
+      var cursor = 0;
+      segs.forEach(function(s, si){
+        var w0 = (s.v / max) * iw, gap = si === 0 ? 0 : 2;
+        g += '<rect class="barseg" x="' + (LBL + cursor + gap) + '" y="' + (cy - barH / 2)
+           + '" width="' + Math.max(1, w0 - gap) + '" height="' + barH + '" fill="' + s.c + '"'
+           + (si === segs.length - 1 ? ' rx="3"' : '') + '></rect>';
+        cursor += w0;
+      });
+      /* the value is a direct label in text ink, never in the series colour */
+      g += '<text class="dlabel" x="' + (W - PR) + '" y="' + (cy + 4) + '" text-anchor="end" style="font-weight:600">' + r.units + '</text>';
+      g += '<rect class="hit" x="0" y="' + (i * rowH + 4) + '" width="' + W + '" height="' + rowH + '" fill="transparent" data-r="' + i + '"></rect>';
+    });
+
+    box.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img"'
+      + ' aria-label="The SKUs with the most units due, split by payment">' + g + '</svg>';
+
+    box.querySelectorAll(".hit").forEach(function(el){
+      el.addEventListener("mousemove", function(ev){
+        var r = data[+el.getAttribute("data-r")];
+        tipShow('<div class="tt">' + esc(r.p + ", " + r.v) + '</div>' + tipRows(r)
+          + '<div class="tsum">Units<span class="tv">' + r.units + '</span></div>'
+          + '<div class="tsum">Deliveries<span class="tv">' + r.deliveries + '</span></div>', ev);
+      });
+      el.addEventListener("mouseleave", tipHide);
+    });
+
+    document.getElementById("c2sub").textContent = data.length === all.length
+      ? "All " + all.length + " SKUs due in this window"
+      : "Top " + data.length + " of " + all.length + " SKUs due in this window";
+  }
+
+  /* ---------------- attention block ---------------- */
+  function reasonText(st){
+    return st === "ARCHIVED"
+      ? "Archived in Shopify, so the order cannot be created at all."
+      : "Set to draft in Shopify, so it is not published and the order will be refused.";
+  }
+  function renderAttn(){
+    var bad = rows().filter(function(r){ return r.pstatus !== "ACTIVE"; });
+    var el = document.getElementById("attnList");
+    if (!bad.length){
+      el.innerHTML = '<div class="emptyblk">Every product with a delivery in this window is live in the store. Nothing to decide.</div>';
+      return;
+    }
+    el.innerHTML = bad.map(function(r){
+      return '<div class="arow">'
+        + '<span class="adot"></span>'
+        + '<div class="abody">'
+          + '<div class="an">' + esc(r.p + ", " + r.v) + '</div>'
+          + '<div class="as">Not live. ' + reasonText(r.pstatus) + ' First delivery ' + fmtDay(r.first) + '.</div>'
+        + '</div>'
+        + '<div class="aq"><div class="qn">' + r.units + '</div><div class="ql">units</div></div>'
+        + '</div>';
+    }).join("");
+  }
+
+  /* ---------------- table ----------------
+     Built in JS after load. Declaring s-table in static markup makes it run its structure check
+     before children parse, which emits spurious warnings about a missing header row.
+
+     Width budget: the embedded app content column is capped at 966px no matter how wide the
+     browser is, and a scrolling list costs a further ~47px, so the real budget is 919px. These
+     eight columns measured 778px of content on the worst-case view, leaving room for the ~50px
+     row-actions column added in v3. */
+  var HEAD = [
+    ["Product",       "primary",   null],
+    ["Variant / SKU", null,        null],
+    ["Deliveries",    null,        "number"],
+    ["Units due",     "secondary", "number"],
+    ["Paid",          null,        "number"],
+    ["Not paid yet",  null,        "number"],
+    ["First needed",  null,        null],
+    ["Issue",         null,        null],
+    ["",              null,        null]
+  ];
+
+  /* Where each half of a row goes. Orders is paid-only, so unpaid work lives in Payment
+     Reminders. Both targets are the canonical locked screens for those modules. */
+  function ordersHref(sku){ return "Orders_Polaris_v5.html#sku=" + encodeURIComponent(sku); }
+  function remindHref(sku){ return "PaymentReminders_Polaris_v2.html#sku=" + encodeURIComponent(sku); }
+
+  function renderTable(){
+    var rs = rows();
+    var heads = HEAD.map(function(h){
+      var a = h[1] ? ' listSlot="' + h[1] + '"' : "";
+      if (h[2]) a += ' format="' + h[2] + '"';
+      return "<s-table-header" + a + ">" + h[0] + "</s-table-header>";
+    }).join("");
+
+    var body = rs.map(function(r){
+      var initials = r.p.split(/\s+/).slice(0, 2).map(function(w){ return w[0]; }).join("").toUpperCase();
+      var soon = (r.first - TODAY) / 86400000 < 7;
+      var pctC = r.units ? Math.round((r.paid / r.units) * 100) : 0;
+      var unpaidTotal = r.unpaid + r.mandated;
+
+      /* Draft and archived collapse to ONE label, with the specific reason on hover. Both have
+         the same consequence (Shopify refuses the order) and the same remedy (put it back on
+         sale or repoint the plan), so two labels bought nothing at a glance. The underlying
+         status is kept, not discarded, so the reason is still answerable. */
+      var issue = r.pstatus === "ACTIVE" ? ""
+        : '<span class="iss" title="' + esc(reasonText(r.pstatus)) + '"><span class="idot"></span>Not live</span>';
+
+      return "<s-table-row>"
+        + '<s-table-cell><div class="pcell">'
+            + '<span class="thumb" style="background:' + r.tone + '">' + esc(initials) + '</span>'
+            + '<span class="pn">' + esc(r.p) + '</span>'
+          + '</div></s-table-cell>'
+        + '<s-table-cell><div class="pv">' + esc(r.v) + '</div><div class="skuc">' + esc(r.sku) + '</div></s-table-cell>'
+        /* NOT a link. A row's deliveries span both paid and unpaid, and those live on two
+           different screens, so a single destination would be wrong for half the count. */
+        + '<s-table-cell><span class="num soft">' + r.deliveries + '</span></s-table-cell>'
+        /* Units due is COMPUTED from the two columns beside it. A stored total sitting next to
+           its own inputs is how a table starts contradicting itself. */
+        + '<s-table-cell><span class="num big">' + r.units + '</span>'
+            + '<div class="splitbar" title="' + pctC + '% paid">'
+              + (r.paid ? '<i class="cm" style="width:' + pctC + '%"></i>' : '')
+              + (unpaidTotal ? '<i class="pb" style="width:' + (100 - pctC) + '%"></i>' : '')
+            + '</div></s-table-cell>'
+        /* Paid goes to ORDERS. These deliveries are paid for, so they are real Orders rows. */
+        + '<s-table-cell>' + (r.paid
+            ? '<a class="dlink" href="' + ordersHref(r.sku) + '" title="See the paid deliveries for this SKU in Orders">' + r.paid + '</a>'
+            : '<span class="num"></span>') + '</s-table-cell>'
+        /* Not paid yet goes to PAYMENT REMINDERS, not Orders. Orders is paid-only, so an unpaid
+           pay-per-delivery line has no Orders row to link to; it sits in the reminder queue
+           until it clears. Sending it to Orders would land on a list it is absent from. */
+        + '<s-table-cell>' + (unpaidTotal
+            ? '<a class="dlink" href="' + remindHref(r.sku) + '" title="See the unpaid deliveries for this SKU in Payment reminders">' + unpaidTotal + '</a>'
+            : '<span class="num"></span>') + '</s-table-cell>'
+        + '<s-table-cell><span class="dtl' + (soon ? ' soonl' : '') + '">' + fmtDay(r.first) + '</span></s-table-cell>'
+        + '<s-table-cell>' + issue + '</s-table-cell>'
+        /* The kebab is the explicit labelled route, for anyone who does not spot that the two
+           numbers are themselves links. s-menu has NO trigger slot: every child becomes a menu
+           item and the element is display:contents, so an activator placed inside it is silently
+           swallowed as item #1 and no kebab renders at all. The trigger must therefore be a
+           SIBLING outside the menu, wired with the platform invoker API. It is a native button,
+           not an s-button, because s-button adds a disclosure chevron that reads wrong on a
+           kebab and measures ~48px against this one's 32px. */
+        + '<s-table-cell><div class="rowacts">'
+          + '<button class="kebab" commandfor="m-' + esc(r.sku) + '" command="--show"'
+            + ' aria-label="More actions for ' + esc(r.p) + ' ' + esc(r.v) + '">&#8943;</button>'
+          /* Items are s-button because that is what the working sibling (Orders v4) uses, and
+             transcribing the shipped pattern beats inventing one. HONEST LIMIT: raw anchors were
+             tried first and appeared not to open, but that reading was an artefact of asserting
+             :popover-open on the s-menu HOST, which is display:contents and is never itself the
+             popover. Whether raw anchors would also have worked was never established. Do not
+             cite this comment as evidence that anchors are unsupported.
+
+             TO VERIFY AN s-menu OPENED: query menu.shadowRoot.querySelector('[popover]') and
+             assert on THAT element. The host always reports closed, so testing the host makes a
+             working kebab look dead. This is the same display:contents trap as the geometry one. */
+          + '<s-menu id="m-' + esc(r.sku) + '" accessibilityLabel="More actions for ' + esc(r.sku) + '">'
+            /* TWO items, never three. v3 also carried "View this SKU in Orders", which was the
+               same destination as "View paid orders" and so read as a third choice that did not
+               exist. Paid and unpaid is the whole set: those are the only two places a delivery
+               for this SKU can be. An item is omitted rather than disabled when its half is zero,
+               since a menu entry that leads to an empty list is noise. */
+            + (r.paid ? '<s-button data-mord="' + esc(r.sku) + '">View paid orders</s-button>' : '')
+            + (unpaidTotal ? '<s-button data-mrem="' + esc(r.sku) + '">View unpaid orders</s-button>' : '')
+          + '</s-menu>'
+        + '</div></s-table-cell>'
+        + "</s-table-row>";
+    }).join("");
+
+    document.getElementById("tblwrap").innerHTML = rs.length
+      ? '<s-table variant="table">'
+        + '<s-table-header-row slot="headings">' + heads + "</s-table-header-row>"
+        + "<s-table-body>" + body + "</s-table-body></s-table>"
+      : '<div class="emptyblk">' + (RANGE_BAD
+          ? 'Fix the date range to see results.'
+          : 'No SKU has a delivery in ' + winProse()
+            + (QUERY ? ' matching "' + esc(QUERY) + '"' : "") + '.') + '</div>';
+
+    document.getElementById("footCount").textContent =
+      rs.length + (rs.length === 1 ? " row" : " rows") + ", " + winLabel();
+  }
+
+  /* ---------------- tiles ---------------- */
+  function renderTiles(){
+    var rs = rows();
+    var units = 0, paid = 0, unpaid = 0;
+    rs.forEach(function(r){ units += r.units; paid += r.paid; unpaid += r.unpaid + r.mandated; });
+    var issues = rs.filter(function(r){ return r.pstatus !== "ACTIVE"; });
+    var issueUnits = issues.reduce(function(a, r){ return a + r.units; }, 0);
+
+    document.getElementById("wUnits").textContent = units;
+    document.getElementById("wUnitsD").textContent = "across " + rs.length + (rs.length === 1 ? " SKU" : " SKUs") + ", " + winLabel();
+    document.getElementById("wPaid").textContent = paid;
+    document.getElementById("wPaidD").textContent = units ? Math.round(paid / units * 100) + "% of units, already paid" : "already paid for";
+    document.getElementById("wUnpaid").textContent = unpaid;
+    document.getElementById("wUnpaidD").textContent = units ? Math.round(unpaid / units * 100) + "% of units, ships only if paid" : "pay per delivery";
+    document.getElementById("wIssue").textContent = issues.length;
+    document.getElementById("wIssueD").textContent = issues.length
+      ? issueUnits + " units on products not live in the store"
+      : "every product is live in the store";
+    document.getElementById("tileIssue").className = "wtile" + (issues.length ? " crit" : "");
+    document.getElementById("nByProd").textContent = rs.length;
+    document.getElementById("c1sub").textContent =
+      "What has to be picked, " + (winDays() > 45 ? "week by week" : "day by day") + ", over " + winProse();
+  }
+
+  /* ---------------- range chip ---------------- */
+  function renderChip(){
+    var el = document.getElementById("chiprow");
+    if (RANGE_BAD){
+      el.innerHTML = '<span class="rwarn">The From date is after the To date, so nothing can match. Swap them to see results.</span>';
+      return;
+    }
+    el.innerHTML = WIN.mode === "custom"
+      ? '<span class="rchip">' + fmtDay(WIN.from) + " to " + fmtDay(WIN.to)
+        + '<button id="chipX" aria-label="Clear the custom range and go back to the next 14 days">&#215;</button></span>'
+      : "";
+    var x = document.getElementById("chipX");
+    if (x) x.addEventListener("click", function(){
+      WIN.mode = "14"; document.getElementById("fWin").value = "14"; syncRangeUI(); renderAll();
+    });
+  }
+  function syncRangeUI(){
+    var custom = WIN.mode === "custom";
+    document.getElementById("rangeWrap").classList.toggle("hide", !custom);
+    document.getElementById("rangeWrap2").classList.toggle("hide", !custom);
+  }
+
+  /* ---------------- export ----------------
+     The screen's real output is a list somebody else acts on, so the export writes the same
+     rows that are on screen, in the same order, honouring the same filters. */
+  function exportCsv(){
+    var rs = rows();
+    var lines = [["Product","Variant","SKU","Deliveries","Units due","Paid","Not paid yet","First needed","In store"].join(",")];
+    rs.forEach(function(r){
+      lines.push([
+        '"' + r.p.replace(/"/g, '""') + '"',
+        '"' + r.v.replace(/"/g, '""') + '"',
+        r.sku, r.deliveries, r.units, r.paid, r.unpaid + r.mandated,
+        dayKey(r.first), r.pstatus === "ACTIVE" ? "Yes" : "No, " + r.pstatus.toLowerCase()
+      ].join(","));
+    });
+    var blob = new Blob([lines.join("\n")], { type:"text/csv;charset=utf-8" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "stackback-inventory-forecast-" + dayKey(winStart()) + "-to-" + dayKey(addDays(winEnd(), -1)) + ".csv";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+  }
+
+  /* ---------------- render + wiring ---------------- */
+  function renderAll(){
+    renderChip(); renderTiles();
+    if (TAB === "summary"){ renderLegend(); renderChart1(); renderChart2(); renderAttn(); }
+    else renderTable();
+  }
+
+  function setTab(t){
+    TAB = t;
+    document.querySelectorAll("#tabs button").forEach(function(b){
+      b.classList.toggle("on", b.getAttribute("data-tab") === t);
+    });
+    document.getElementById("panelSummary").classList.toggle("hide", t !== "summary");
+    document.getElementById("panelByProduct").classList.toggle("hide", t !== "byproduct");
+    /* search and sort belong to the list, not the summary */
+    document.getElementById("searchWrap").classList.toggle("hide", t !== "byproduct");
+    document.getElementById("sortWrap").classList.toggle("hide", t !== "byproduct");
+    renderAll();
+  }
+
+  function readRange(){
+    var f = parseDate(document.getElementById("rFrom").value);
+    var t = parseDate(document.getElementById("rTo").value);
+    /* inverted-range guard: say so rather than silently returning zero rows */
+    RANGE_BAD = !!(f && t && f.getTime() > t.getTime());
+    document.getElementById("rFrom").classList.toggle("bad", RANGE_BAD);
+    document.getElementById("rTo").classList.toggle("bad", RANGE_BAD);
+    if (f) WIN.from = f;
+    if (t) WIN.to = t;
+  }
+
+  function boot(){
+    document.getElementById("tabs").addEventListener("click", function(e){
+      var b = e.target.closest("button[data-tab]");
+      if (b) setTab(b.getAttribute("data-tab"));
+    });
+
+    var fWin = document.getElementById("fWin");
+    fWin.addEventListener("change", function(){
+      WIN.mode = fWin.value;
+      if (WIN.mode === "custom") readRange(); else RANGE_BAD = false;
+      syncRangeUI(); renderAll();
+    });
+    ["rFrom", "rTo"].forEach(function(id){
+      document.getElementById(id).addEventListener("change", function(){ readRange(); renderAll(); });
+    });
+
+    var fCert = document.getElementById("fCert");
+    fCert.addEventListener("change", function(){ CERT = fCert.value; renderAll(); });
+    var fSort = document.getElementById("fSort");
+    fSort.addEventListener("change", function(){ SORT = fSort.value; renderAll(); });
+    var q = document.getElementById("q");
+    q.addEventListener("input", function(){ QUERY = q.value || ""; if (TAB === "byproduct") renderTable(); });
+
+    document.getElementById("expBtn").addEventListener("click", exportCsv);
+    document.getElementById("expBtn2").addEventListener("click", exportCsv);
+    document.getElementById("goOrders").addEventListener("click", function(){
+      location.href = "Orders_Polaris_v5.html#state=toplace";
+    });
+    document.getElementById("goRemind").addEventListener("click", function(){
+      location.href = "PaymentReminders_Polaris_v2.html";
+    });
+
+    /* Kebab items are s-buttons, so they navigate through a delegated handler rather than an
+       href. Delegation also survives the table being rebuilt on every filter change. */
+    document.getElementById("tblwrap").addEventListener("click", function(e){
+      var el = e.target.closest("[data-mord],[data-mrem]");
+      if (!el) return;
+      if (el.hasAttribute("data-mrem")) location.href = remindHref(el.getAttribute("data-mrem"));
+      else location.href = ordersHref(el.getAttribute("data-mord"));
+    });
+    window.addEventListener("resize", function(){ if (TAB === "summary"){ renderChart1(); renderChart2(); } });
+
+    syncRangeUI(); renderAll();
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+})();
+</script>
+</body>
+</html>

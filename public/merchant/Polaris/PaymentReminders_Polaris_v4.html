@@ -1,0 +1,898 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Payment Reminders (Polaris web components v4)</title>
+<script src="https://cdn.shopify.com/shopifycloud/polaris.js"></script>
+<style>
+  :root{
+    --p-ink:#303030; --p-muted:#616161; --p-faint:#8a8a8a;
+    --p-line:#e3e3e3; --p-line2:#ebebeb; --p-surface:#fff;
+    --p-primary:#303030; --p-success:#29845a; --p-success-bg:#cdfee1;
+    --p-link:#005bd3; --p-attn-bg:#ffefcf; --p-attn:#8a6116;
+  }
+  body{margin:0;background:#f1f1f1;font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--p-ink)}
+  .admin{display:flex;min-height:100vh}
+  .navL{flex:none;width:232px;background:#ebebeb;border-right:1px solid var(--p-line);
+    padding:10px 8px;display:flex;flex-direction:column;gap:1px;position:sticky;top:0;align-self:flex-start;height:100vh;overflow:auto}
+  .navItem{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;color:var(--p-ink);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
+  .navItem:hover{background:#dedede}
+  .navItem .ico{width:18px;height:18px;flex:none;color:#4a4a4a}
+  .navItem .ct{margin-left:auto;font-size:12px;color:var(--p-muted);background:#e0e0e0;border-radius:8px;padding:0 7px;line-height:18px}
+  .navSec{color:var(--p-muted);font-size:13px;font-weight:500;display:flex;align-items:center;height:30px;padding:0 8px;margin-top:6px}
+  .navSec .chev{margin-left:auto;color:var(--p-faint)}
+  .navApp{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;font-weight:600;background:#fff;box-shadow:0 1px 0 rgba(0,0,0,.04);margin-top:2px}
+  .navApp .logo{width:20px;height:20px;border-radius:5px;background:var(--p-primary);display:grid;place-items:center;color:#fff;font-size:11px;flex:none}
+  .navApp .dot{margin-left:auto;width:6px;height:6px;border-radius:50%;background:#8a8a8a}
+  .navSub{display:flex;align-items:center;height:30px;padding:0 8px 0 34px;border-radius:8px;color:var(--p-muted);font-size:13px;cursor:pointer;text-decoration:none}
+  .navSub:hover{background:#dedede;color:var(--p-ink)}
+  .navSub.sel{color:var(--p-ink);font-weight:500}
+  .navGap{flex:1}
+  html{scrollbar-gutter:stable}
+  .appmain{flex:1;min-width:0;display:flex;flex-direction:column}
+  .appbar{height:52px;background:#fff;border-bottom:1px solid var(--p-line);display:flex;align-items:center;gap:10px;padding:0 18px}
+  .appbar .logo{width:24px;height:24px;border-radius:6px;background:var(--p-primary);display:grid;place-items:center;color:#fff;font-size:12px}
+  .appbar .name{font-weight:650;font-size:14px}
+  .appbar .more{margin-left:auto;color:var(--p-muted);font-size:20px;cursor:pointer;letter-spacing:1px}
+  .hide{display:none !important}
+</style>
+<script>if(/bare/.test(location.search+location.hash))document.documentElement.classList.add("bare");</script>
+<style>html.bare .navL,html.bare .appbar{display:none!important}html.bare .admin{min-height:0}html.bare,html.bare body{background:#f1f1f1}</style>
+</head>
+<body>
+<div class="admin">
+
+  <aside class="navL">
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8.5 10 3l7 5.5V16a1 1 0 0 1-1 1h-3v-5H7v5H4a1 1 0 0 1-1-1z"/></svg>Home</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="13" rx="2"/><path d="M7 8h6M7 11h6"/></svg>Orders<span class="ct">127</span></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h12v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M7 6V5a3 3 0 0 1 6 0v1"/></svg>Products</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="7" r="3"/><path d="M4 16c0-3 2.7-5 6-5s6 2 6 5"/></svg>Customers</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 15V9m4 6V5m4 10v-4m4 4V7"/></svg>Growth</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="3"/><path d="M12 12l4 4M13.5 6.5 16 4"/></svg>Discounts</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="12" rx="2"/><path d="M7 8h6M7 11h4"/></svg>Content</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="6"/><path d="M4 10h12M10 4c2 2 2 10 0 12M10 4c-2 2-2 10 0 12"/></svg>Markets</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 16h12M6 16V9m4 7V5m4 11v-4"/></svg>Analytics</div>
+    <div class="navSec">Sales channels<span class="chev">&#8250;</span></div>
+    <div class="navSec">Apps<span class="chev">&#8250;</span></div>
+    <div class="navApp"><span class="logo">&#9670;</span>StackBack Subscrip&hellip;<span class="dot"></span></div>
+    <div class="navSub">Plans</div>
+    <div class="navSub">Subscriptions</div>
+    <a class="navSub" href="Orders_Polaris_v5.html">Orders</a>
+    <div class="navSub sel">Payment reminders</div>
+    <a class="navSub" href="Inventory_Polaris_v4.html">Inventory</a>
+    <div class="navSub">Customers</div>
+    <div class="navSub">Widget</div>
+    <div class="navSub">Portal</div>
+    <div class="navSub">Landing pages</div>
+    <div class="navSub">Analytics</div>
+    <div class="navSub">Settings</div>
+    <div class="navSub">Billing</div>
+    <div class="navGap"></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m7-7h-2M5 10H3m12.5-5-1.5 1.5M6 14l-1.5 1.5m11 0L14 14M6 6 4.5 4.5"/></svg>Settings</div>
+  </aside>
+
+  <div class="appmain">
+    <div class="appbar"><span class="logo">&#9670;</span><span class="name">StackBack Subscriptions &amp; More</span><span class="more">&ctdot;</span></div>
+
+    <style>
+      /* ==========================================================================
+         v4, built from the 2026-08-05 grill. The premise finally has a written
+         answer: the BACKEND owns the reminder sequence and the auto-pause, and the
+         HUMAN owns the phone call. Everything on this screen is arranged around
+         that division, which no earlier version had stated.
+
+         Seven changes carried in from the grill:
+         1. Pips count the AUTOMATIC sequence only. Manual sends sit outside the cap,
+            so they are counted separately instead of being folded into "2 of 4".
+         2. A Last contact column, stamped auto or manual, so two people cannot chase
+            the same customer on the same afternoon without seeing it.
+         3. Non-payment paused rows can be chased. v3 gave them Call only.
+         4. An INTENT segment: has this customer ever paid past the first delivery.
+            Derived from deliveries_completed, no Shopify lookup needed.
+         5. The invented "Recovered, 30d" tile is gone. PAYG continuation replaces it,
+            and it is labelled store-level so it does not pretend to derive from the view.
+         6. The phone number is the point of the screen, so Call opens it directly.
+         7. Built for a merchant operator first: who to call today reads top to bottom
+            without touching a control.
+         ========================================================================== */
+      .lwrap{padding:0 0 26px}
+      .tabs{display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin:0 0 4px}
+      .tabs button{appearance:none;border:1px solid transparent;background:transparent;font:inherit;font-size:13px;font-weight:600;color:var(--p-muted);height:32px;padding:0 12px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+      .tabs button.on{background:#fff;color:var(--p-ink);border-color:var(--p-line);box-shadow:0 1px 0 rgba(0,0,0,.04)}
+      .tabs button .n{font-size:11px;font-weight:700;opacity:.7}
+      .tabhint{font-size:12px;color:var(--p-faint);margin:0 0 14px}
+      .subtabs{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+      .subtabs button{appearance:none;height:28px;padding:0 11px;border-radius:99px;border:1px solid var(--p-line);background:#fff;font:inherit;font-size:12.5px;font-weight:600;color:var(--p-muted);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+      .subtabs button.on{background:var(--p-ink);color:#fff;border-color:var(--p-ink)}
+      .subtabs button .n{font-size:11px;font-weight:700;opacity:.75}
+
+      .chiprow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+      .skuchip{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--p-line);
+        border-radius:99px;padding:3px 6px 3px 12px;font-size:12px;color:var(--p-ink);font-weight:600}
+      .skuchip .x{border:0;background:#ededed;color:var(--p-muted);border-radius:50%;width:18px;height:18px;
+        cursor:pointer;font:inherit;font-size:12px;line-height:1;display:grid;place-items:center;padding:0}
+      .skuchip .x:hover{background:#e0e0e0;color:var(--p-ink)}
+      .chipnote{font-size:12px;color:var(--p-faint)}
+
+      .frow{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin:0 0 14px}
+      .fq{flex:1 1 260px;min-width:200px}
+      .fw{flex:none;min-width:158px}
+
+      .bulk{display:none;align-items:center;gap:10px;background:#eaf1fb;border:1px solid #bcd4f2;
+        border-radius:10px;padding:9px 12px;margin:0 0 12px;flex-wrap:wrap}
+      .bulk.on{display:flex}
+      .bulk .cnt{font-size:12.5px;font-weight:650;color:#1f3f7a;margin-right:2px}
+      .bulk .sp{flex:1}
+
+      .c1{font:700 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+      .c2{color:var(--p-muted);font-size:12px;margin-top:2px;line-height:1.45}
+      .c2mono{font:600 11.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;margin-top:2px}
+      .lnk{color:var(--p-link);font-weight:600;font-size:12.5px;cursor:pointer;text-decoration:none;background:none;border:0;padding:0;font-family:inherit;text-align:left}
+      .lnk:hover{text-decoration:underline}
+      .money{font-variant-numeric:tabular-nums;font-weight:600;font-size:12.5px;white-space:nowrap}
+      .rowacts{display:flex;align-items:center;gap:6px;justify-content:flex-end}
+      .acts2{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+      .acts2 .r{display:flex;align-items:center;gap:6px}
+      .late .n{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+      .late .u{font-size:11.5px;color:var(--p-muted);margin-left:3px}
+      .late.crit .n{color:#8e1f0b}
+      .duetoday{font-size:12.5px;font-weight:600;color:var(--p-muted)}
+      .segline{margin-top:3px}
+
+      /* Reminder progress. The pips are the AUTOMATIC sequence, because that is the only
+         thing that moves the customer toward an auto-pause. Manual outreach is counted on the
+         line below rather than inside the pips: folding them together would make the row claim
+         the customer is closer to being paused than they actually are. */
+      .seq{display:flex;flex-direction:column;gap:2px;align-items:flex-start}
+      .seq .pips{display:flex;gap:3px;margin-bottom:1px}
+      .seq .pip{width:7px;height:7px;border-radius:50%;background:#e0e0e0}
+      .seq .pip.on{background:#c8952a}
+      .seq .pip.last{background:#8e1f0b}
+      .seq .txt{font-size:11.5px;font-weight:650;color:var(--p-muted);white-space:nowrap}
+      .seq .man{font-size:11px;color:var(--p-faint);white-space:nowrap;font-weight:500}
+
+      /* Last contact. Shares the Contact-so-far cell with the pips, and exists so a second
+         person can see the first one already called. */
+      .lastc{display:flex;gap:5px;align-items:center;margin-top:4px;flex-wrap:wrap}
+      .lastc .w{font-size:11px;font-weight:600;white-space:nowrap;color:var(--p-muted)}
+      .lastc .by{font-size:9.5px;font-weight:700;letter-spacing:.2px;text-transform:uppercase;
+        border-radius:4px;padding:1px 4px;white-space:nowrap}
+      .lastc .by.auto{background:#f1f1f1;color:var(--p-muted)}
+      .lastc .by.man{background:#d6ecff;color:#00527c}
+
+      .thumbline{display:inline-flex;flex-direction:column;align-items:flex-start;gap:4px;
+        border:0;background:none;cursor:pointer;padding:0;white-space:nowrap;font:inherit;text-align:left}
+      .thumbline .trow{display:inline-flex;align-items:center}
+      .thumbline .tchip{width:26px;height:26px;border-radius:7px;background:#f1f1f1;
+        display:inline-flex;align-items:center;justify-content:center;color:#9a9a9a;
+        margin-left:-6px;position:relative;box-shadow:0 0 0 1px var(--p-line),0 0 0 3px #fff}
+      .thumbline .tchip:first-child{margin-left:0}
+      .thumbline .tchip.hit{box-shadow:0 0 0 1px #1f3f7a,0 0 0 3px #fff}
+      .thumbline .tmore{margin-left:8px;font-size:12px;font-weight:700;color:var(--p-muted)}
+      .thumbline .tcount{font-size:12.5px;color:var(--p-link);font-weight:600}
+      .thumbline:hover .tcount{text-decoration:underline}
+
+      .b{height:28px;padding:0 11px;border-radius:8px;border:1px solid var(--p-line);background:#fff;font:inherit;font-size:12.5px;font-weight:600;color:var(--p-ink);cursor:pointer;white-space:nowrap}
+      .b.pri{background:var(--p-ink);color:#fff;border-color:var(--p-ink)}
+      .b:disabled{opacity:.45;cursor:default}
+      .kebab{border-color:transparent;background:none;padding:0 7px;font-size:15px;line-height:1;color:var(--p-muted)}
+      .kebab:hover{background:#f1f1f1;border-color:var(--p-line)}
+
+      .pop{position:fixed;inset:0;background:rgba(0,0,0,.28);z-index:90;display:none;align-items:center;justify-content:center}
+      .pop.on{display:flex}
+      .popbox{background:#fff;border-radius:12px;width:min(560px,94vw);max-height:86vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+      .pophd{padding:14px 18px;border-bottom:1px solid var(--p-line);display:flex;align-items:flex-start;gap:10px}
+      .pophd .t{font-size:14.5px;font-weight:650}
+      .pophd .x{margin-left:auto;appearance:none;border:0;background:none;font-size:17px;color:var(--p-muted);cursor:pointer;line-height:1;padding:2px 4px}
+      .popbody{padding:16px 18px;overflow:auto}
+      .popfoot{padding:13px 18px;border-top:1px solid var(--p-line);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+      .popbody>.dsec{margin-bottom:16px}
+      .popbody>.dsec:last-child{margin-bottom:0}
+      .dsec .h{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--p-faint);margin-bottom:9px}
+      .metarow{display:flex;gap:0;flex-wrap:wrap;background:#fafafa;border:1px solid var(--p-line2);
+        border-radius:10px;padding:12px 4px;align-items:flex-start}
+      .metaitem{flex:1 1 auto;min-width:92px;padding:0 12px;position:relative}
+      .metaitem+.metaitem::before{content:"";position:absolute;left:0;top:1px;bottom:1px;width:1px;background:var(--p-line2)}
+      .metaitem .k{font-size:10.5px;letter-spacing:.3px;text-transform:uppercase;color:var(--p-faint);font-weight:700;margin-bottom:3px}
+      .metaitem .v{font-size:12.5px;font-weight:600;line-height:1.35}
+      .iline{display:flex;align-items:baseline;gap:12px;padding:9px 0;border-bottom:1px solid var(--p-line2)}
+      .iline:last-of-type{border-bottom:0}
+      .iline .g{flex:1;min-width:0}
+      .iline .qty{display:inline-block;font-weight:700;font-variant-numeric:tabular-nums;font-size:11.5px;
+        color:var(--p-muted);background:#f1f1f1;border-radius:5px;padding:1px 5px;margin-left:4px;vertical-align:1px}
+      .iline .amt{flex:none;font-weight:600;font-variant-numeric:tabular-nums;font-size:12.5px}
+      .iline.tot{border-top:1px solid var(--p-line);border-bottom:0;margin-top:4px;padding-top:11px}
+      .iline.tot .amt{font-size:13.5px;font-weight:700}
+      .iline .sk{color:var(--p-faint);font-size:11.5px;font-family:ui-monospace,Menlo,monospace}
+      .iline .hit{font-weight:700;color:var(--p-ink)}
+      .tline{display:flex;gap:10px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--p-line2);font-size:12.5px}
+      .tline:last-child{border-bottom:0}
+      .tline .w{flex:none;width:78px;color:var(--p-faint);font-size:11.5px}
+      .tline .g{flex:1;min-width:0}
+      .tline .tag{flex:none;font-size:10.5px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;border-radius:5px;padding:1px 6px}
+      .tline .tag.auto{background:#f1f1f1;color:var(--p-muted)}
+      .tline .tag.man{background:#d6ecff;color:#00527c}
+
+      /* Contact block. The whole reason a human is on this screen, so the number is set large
+         and copyable rather than buried in a customer record two clicks away. */
+      .callbox{background:#fafafa;border:1px solid var(--p-line2);border-radius:10px;padding:14px}
+      .callbox .num{font-size:22px;font-weight:700;letter-spacing:-.2px;font-variant-numeric:tabular-nums}
+      .callbox .em{font-size:12.5px;color:var(--p-muted);margin-top:2px}
+      .callbox .cta{margin-top:11px;display:flex;gap:8px;flex-wrap:wrap}
+
+      .wstrip{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:0 0 14px;align-items:stretch}
+      .wtile{background:#fff;border:1px solid var(--p-line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:3px}
+      .wtile .k{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--p-faint);display:flex;align-items:center;gap:6px}
+      .wtile .v{font-size:21px;font-weight:650;letter-spacing:-.3px}
+      .wtile .d{font-size:12px;color:var(--p-muted);margin-top:auto}
+      /* marks a tile that is store-level rather than derived from the rows on screen, so the
+         "every count derives from the view" rule is not silently broken */
+      .wtile .sl{font-size:9.5px;font-weight:700;letter-spacing:.3px;color:var(--p-faint);
+        border:1px solid var(--p-line);border-radius:4px;padding:0 4px;text-transform:uppercase}
+      .note{background:#eaf4ff;border:1px solid #b9dcf5;color:#00527c;border-radius:10px;padding:11px 13px;font-size:12.5px;margin:14px 0 0}
+      .notewarn{background:#ffefcf;border:1px solid #f0d9a8;color:#8a6116;border-radius:10px;padding:11px 13px;font-size:12.5px;margin:14px 0 0}
+      .note b,.notewarn b{font-weight:650}
+      .emptyRow{padding:34px 16px;text-align:center;color:var(--p-faint);font-size:12.5px}
+      .hide{display:none !important}
+    </style>
+
+    <s-page heading="Payment reminders" inline-size="large">
+      <s-button slot="secondary-actions">Export</s-button>
+      <s-button slot="primary-action" variant="primary" id="sendSel" disabled>Send selected</s-button>
+
+      <div class="lwrap">
+
+        <div class="tabs" id="tabs">
+          <button data-tab="ongoing" class="on">Ongoing reminders <span class="n"></span></button>
+          <button data-tab="paused">Paused <span class="n"></span></button>
+        </div>
+        <p class="tabhint" id="tabhint">Subscriptions still live, with an invoice outstanding and a reminder sequence running. StackBack sends the sequence on its own. This list is who is worth a call.</p>
+
+        <div class="chiprow hide" id="skuRow"></div>
+
+        <!-- ===== ONGOING ===== -->
+        <div id="paneOngoing">
+          <div class="wstrip">
+            <div class="wtile"><div class="k">Awaiting payment</div><div class="v" id="wCount">0</div><div class="d" id="wCountD">all still active subscriptions</div></div>
+            <div class="wtile"><div class="k">Outstanding</div><div class="v" id="wOut">0</div><div class="d" id="wOutD">across 0 invoices</div></div>
+            <div class="wtile"><div class="k">Never renewed</div><div class="v" id="wNever">0</div><div class="d">have not paid past the first delivery</div></div>
+            <!-- v4: replaces the invented "Recovered, 30d". Continuation is unambiguous and
+                 derivable, and it does not claim the calling caused it. Marked store-level so it
+                 is not read as deriving from the rows below. -->
+            <div class="wtile"><div class="k">PAYG continued <span class="sl">Store</span></div><div class="v" id="wCont">0%</div><div class="d" id="wContD">still running, last 30 days</div></div>
+          </div>
+
+          <div class="frow">
+            <div class="fq">
+              <s-search-field id="q" label="Search reminders" labelAccessibilityVisibility="exclusive"
+                placeholder="Search customer, order, subscription, product or SKU"></s-search-field>
+            </div>
+            <div class="fw"><s-select id="fSeg" label="Payment history">
+              <s-option value="all">Everyone</s-option>
+              <s-option value="never">Never renewed</s-option>
+              <s-option value="repeat">Has renewed before</s-option>
+            </s-select></div>
+            <div class="fw"><s-select id="fStage" label="Stage">
+              <s-option value="all">All unpaid</s-option>
+              <s-option value="first">First reminder</s-option>
+              <s-option value="mid">Chasing</s-option>
+              <s-option value="final">Final reminder</s-option>
+            </s-select></div>
+            <div class="fw"><s-select id="fSort" label="Sort by">
+              <s-option value="urgency">Closest to auto-pause</s-option>
+              <s-option value="overdue">Days overdue</s-option>
+              <s-option value="amount">Amount outstanding</s-option>
+              <s-option value="uncontacted">Longest since contact</s-option>
+              <s-option value="customer">Customer name</s-option>
+            </s-select></div>
+          </div>
+
+          <div class="bulk" id="bulkBar">
+            <span class="cnt" id="bulkCnt">0 selected</span>
+            <span class="sp"></span>
+            <button class="b pri" id="bulkSend">Send reminder</button>
+            <button class="b" id="bulkClear">Clear</button>
+          </div>
+
+          <!-- The overflow-x wrapper is not decoration. Without it s-table measures itself against
+               the 966px container, decides it does not fit, and silently drops into its list
+               variant of stacked label/value pairs, which is unusable as a work queue. Orders v5
+               hit the same trap and solved it the same way. Its other lesson is taken too: do NOT
+               add a min-width floor, because a floor wider than the container clips the right-hand
+               columns and the row actions are the first thing to go off screen. -->
+          <s-section padding="none">
+            <div style="overflow-x:auto"><div id="tblOngoing"></div></div>
+          </s-section>
+
+          <div class="note">
+            <b>StackBack already sends the sequence. This screen is for the calls it cannot make.</b>
+            The pips count the automatic reminders only, because those are what move a customer toward an auto-pause at 4 of 4. A reminder you send by hand goes out on top of the sequence, does not consume the cap, and is counted separately so the row never understates what the customer actually received.
+          </div>
+        </div>
+
+        <!-- ===== PAUSED ===== -->
+        <div id="panePaused" class="hide">
+          <div class="subtabs" id="subtabs">
+            <button data-sub="nonpay" class="on">Paused for non-payment <span class="n"></span></button>
+            <button data-sub="customer">Paused by customer <span class="n"></span></button>
+          </div>
+
+          <s-section padding="none">
+            <div style="overflow-x:auto"><div id="tblPaused"></div></div>
+          </s-section>
+
+          <div class="notewarn" id="pausedNote">
+            <b>These are the churn risk, and most of them do not know they stopped.</b> The subscription paused itself when the reminder sequence ran out, so the customer took no action and got no decision point. The sequence is finished here, but manual outreach is not capped, so both a call and a reminder are still available on every row.
+          </div>
+        </div>
+
+      </div>
+    </s-page>
+  </div>
+</div>
+
+<div class="pop" id="pop">
+  <div class="popbox">
+    <div class="pophd"><div><div class="t" id="popT">Detail</div><div class="c2" id="popS"></div></div>
+      <button class="x" id="popX" aria-label="Close">&#10005;</button></div>
+    <div class="popbody" id="popB"></div>
+    <div class="popfoot" id="popF"></div>
+  </div>
+</div>
+
+<script>
+  var $ = function(id){ return document.getElementById(id); };
+  var CAP = 4;   /* from Settings, Payments, Retry failed payments */
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function INR(n){ return n.toLocaleString('en-IN'); }
+
+  /* Store-level PAYG health. Deliberately NOT derived from the rows below: it describes the
+     store, not the current view, and the tile is badged Store so the difference is visible. */
+  var PAYG = {continued:43, discontinued:12};
+
+  /* `renewed` is the intent signal from the grill: how many deliveries this customer has paid
+     for BEYOND the first. It comes from deliveries_completed on the contract, so no Shopify
+     lookup is needed. 0 means they have never once paid a renewal, which is the Glow Glossary
+     pattern: 50 of 61 subscriptions there had never produced a renewal order, and months of
+     emailing had not changed it. Those customers need a call or nothing.
+     `autoSent` counts the automatic sequence and drives the cap. `manualSent` is out-of-band
+     and uncapped. They are never added together. */
+  var ONGOING = [
+    {cust:'Sneha Kulkarni', sb:'SB-8794', pc:'PC-1021', autoSent:4, manualSent:1, renewed:3,
+      amt:2250, over:9, stage:'final', plan:'Quarterly Wellness Box', lastAgo:2, lastBy:'manual',
+      phone:'+91 98204 41127', email:'sneha.kulkarni@example.com',
+      items:[['Cold Pressed Coffee 500g','CPC-500',2,675],['Herbal Tea Sampler','HTS-01',1,900]]},
+    {cust:'Deepak Rao',     sb:'SB-8799', pc:'PC-1025', autoSent:4, manualSent:0, renewed:0,
+      amt:1180, over:7, stage:'final', plan:'Monthly Essentials', lastAgo:3, lastBy:'auto',
+      phone:'+91 99872 30514', email:'deepak.rao@example.com',
+      items:[['Collagen Peptides 500g','COL-500',1,1180]]},
+    {cust:'Kabir Shah',     sb:'SB-8801', pc:'PC-1028', autoSent:2, manualSent:0, renewed:5,
+      amt:1499, over:4, stage:'mid', plan:'Monthly Essentials', lastAgo:1, lastBy:'auto',
+      phone:'+91 98115 66302', email:'kabir.shah@example.com',
+      items:[['Cold Pressed Coffee 500g','CPC-500',1,675],['Ashwagandha Gummies 60ct','ASH-060',2,412]]},
+    {cust:'Nisha Verma',    sb:'SB-8806', pc:'PC-1031', autoSent:2, manualSent:2, renewed:0,
+      amt:899,  over:3, stage:'mid', plan:'Coffee Club', lastAgo:0, lastBy:'manual',
+      phone:'+91 90045 78219', email:'nisha.verma@example.com',
+      items:[['Wellness Powder 250g','WLP-250',1,899]]},
+    {cust:'Vikram Patel',   sb:'SB-8788', pc:'PC-1014', autoSent:1, manualSent:0, renewed:2,
+      amt:899,  over:1, stage:'first', plan:'Coffee Club', lastAgo:0, lastBy:'auto',
+      phone:'+91 97690 12483', email:'vikram.patel@example.com',
+      items:[['Herbal Tea Sampler','HTS-01',3,300]]},
+    {cust:'Ritu Malhotra',  sb:'SB-8812', pc:'PC-1036', autoSent:1, manualSent:0, renewed:0,
+      amt:2100, over:0, stage:'first', plan:'Build Your Box', lastAgo:0, lastBy:'auto',
+      phone:'+91 98330 45178', email:'ritu.malhotra@example.com',
+      items:[['Cold Pressed Coffee 500g','CPC-500',1,675],['Magnesium Glycinate 90ct','MAG-090',1,1425]]}
+  ];
+
+  var PAUSED_NONPAY = [
+    {cust:'Farah Sheikh',  pc:'PC-1009', amt:1499, days:12, plan:'Monthly Essentials', renewed:4,
+      phone:'+91 98700 21134', email:'farah.sheikh@example.com', manualSent:0},
+    {cust:'Amit Joshi',    pc:'PC-1012', amt:2250, days:8,  plan:'Quarterly Wellness Box', renewed:0,
+      phone:'+91 99301 88472', email:'amit.joshi@example.com', manualSent:1},
+    {cust:'Leena George',  pc:'PC-1017', amt:899,  days:5,  plan:'Coffee Club', renewed:2,
+      phone:'+91 98455 60093', email:'leena.george@example.com', manualSent:0}
+  ];
+
+  var PAUSED_CUSTOMER = [
+    {cust:'Ananya Rao',  pc:'PC-1032', resume:'1 Sep',  plan:'Monthly Essentials', reason:'Travelling',
+      phone:'+91 98191 22045', email:'ananya.rao@example.com'},
+    {cust:'Sameer Khan', pc:'PC-1040', resume:'15 Aug', plan:'Coffee Club', reason:'Too much stock',
+      phone:'+91 99000 71264', email:'sameer.khan@example.com'},
+    {cust:'Divya Menon', pc:'PC-1043', resume:'',       plan:'Build Your Box', reason:'Not given',
+      phone:'+91 98860 33517', email:'divya.menon@example.com'}
+  ];
+
+  /* ---------- SKU arrival ---------- */
+  function readSkuHash(){
+    var m = /[#&]sku=([^&]+)/.exec(location.hash);
+    if (!m) return null;
+    try { return decodeURIComponent(m[1]); } catch(e){ return m[1]; }
+  }
+  var skuFilter = readSkuHash();
+  window.addEventListener('hashchange', function(){
+    var next = readSkuHash();
+    if(next === skuFilter) return;
+    skuFilter = next; sel = {};
+    /* land on the tab the filter applies to, or the chip contradicts the list under it */
+    if(next) showTab('ongoing');
+    render();
+  });
+  function skuOK(r){
+    if (!skuFilter) return true;
+    return (r.items||[]).some(function(l){ return l[1]===skuFilter; });
+  }
+  function skuName(){
+    for (var i=0;i<ONGOING.length;i++){
+      var hit=(ONGOING[i].items||[]).filter(function(l){ return l[1]===skuFilter; })[0];
+      if (hit) return hit[0];
+    }
+    return skuFilter;
+  }
+
+  /* ---------- state ---------- */
+  var stage='all', seg='all', sortBy='urgency', sub='nonpay', query='', sel={}, tab='ongoing';
+
+  function baseOngoing(){ return ONGOING.filter(skuOK); }
+
+  function visibleOngoing(){
+    var rows = baseOngoing().filter(function(r){
+      if(stage!=='all' && r.stage!==stage) return false;
+      if(seg==='never'  && r.renewed>0)  return false;
+      if(seg==='repeat' && r.renewed===0) return false;
+      return true;
+    });
+    if(query){
+      var q=query.toLowerCase();
+      rows = rows.filter(function(r){
+        var hay = [r.cust,r.sb,r.pc,r.plan].join(' ').toLowerCase()
+          + ' ' + (r.items||[]).map(function(l){ return l[0]+' '+l[1]; }).join(' ').toLowerCase();
+        return hay.indexOf(q)>-1;
+      });
+    }
+    var s = rows.slice();
+    /* Default sort is the call list: closest to auto-pause, then longest overdue. A merchant
+       operator should be able to work top to bottom without touching a control. */
+    if(sortBy==='urgency')     s.sort(function(a,b){ return (b.autoSent-a.autoSent) || (b.over-a.over); });
+    if(sortBy==='overdue')     s.sort(function(a,b){ return b.over-a.over; });
+    if(sortBy==='amount')      s.sort(function(a,b){ return b.amt-a.amt; });
+    if(sortBy==='uncontacted') s.sort(function(a,b){ return b.lastAgo-a.lastAgo; });
+    if(sortBy==='customer')    s.sort(function(a,b){ return a.cust.localeCompare(b.cust); });
+    return s;
+  }
+
+  /* The primary action is decided per row, not fixed. Email demonstrably does not work on
+     customers who have never paid: Seal emailed the Glow Glossary list for months and 50 of 61
+     never renewed once. So a never-renewed row gets a call, and so does anyone about to pause.
+     A proven payer who has simply missed one gets the cheap nudge first. */
+  function primaryFor(r){
+    if(r.autoSent>=CAP)  return 'call';
+    if(r.renewed===0)    return 'call';
+    return 'send';
+  }
+
+  /* ---------- cells ---------- */
+  function pips(r){
+    var out='';
+    for(var i=1;i<=CAP;i++){
+      var cls = i<=r.autoSent ? (i===CAP?'pip on last':'pip on') : 'pip';
+      out += '<span class="'+cls+'"></span>';
+    }
+    /* Each fact on its OWN short line. Run together on one nowrap line these three read fine at
+       2200px and force the whole table into s-table's stacked fallback at any real width, which
+       is the width trap Orders v5 documented at 919px usable. Short lines, narrow column. */
+    return '<div class="seq"><span class="pips">'+out+'</span>'
+      + '<span class="txt">'+r.autoSent+'/'+CAP+' auto</span>'
+      + (r.manualSent>0 ? '<span class="man">+'+r.manualSent+' by hand</span>' : '')
+      + '</div>';
+  }
+
+  function ago(n){ return n===0 ? 'today' : (n===1 ? 'yesterday' : n+'d ago'); }
+  /* Sits under the pips in the same cell. "Last" is spelled out because a bare date beneath a
+     progress mark reads as the date of the last automatic send, which is only sometimes true. */
+  function lastCell(r){
+    return '<div class="lastc"><span class="w">Last '+ago(r.lastAgo)+'</span>'
+      + '<span class="by '+(r.lastBy==='manual'?'man':'auto')+'">'
+      + (r.lastBy==='manual'?'Hand':'Auto')+'</span></div>';
+  }
+
+  function segBadge(r){
+    return r.renewed===0
+      ? '<s-badge tone="warning">Never renewed</s-badge>'
+      : '<s-badge tone="success">Paid '+r.renewed+' before</s-badge>';
+  }
+
+  function picIcon(){
+    return '<svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor"'
+      +' stroke-width="1.8"><rect x="3" y="4" width="14" height="12" rx="2"/>'
+      +'<circle cx="7.5" cy="8.5" r="1.3"/><path d="M4 14l4-4 3 3 2-2 3 3"/></svg>';
+  }
+  function owedCell(r){
+    var max=3, shown=r.items.slice(0,max), extra=r.items.length-shown.length;
+    var units=0; r.items.forEach(function(l){ units+=l[2]; });
+    var chips=shown.map(function(l){
+      var on = skuFilter && l[1]===skuFilter;
+      return '<span class="tchip'+(on?' hit':'')+'" title="'+esc(l[0])+' '+esc(l[1])+' &times;'+l[2]+'">'+picIcon()+'</span>';
+    }).join('');
+    var more = extra>0 ? '<span class="tmore">+'+extra+'</span>' : '';
+    return '<button class="thumbline" data-open="'+esc(r.sb)+'" title="View what '+esc(r.cust)+' owes for">'
+      +'<span class="trow">'+chips+more+'</span>'
+      +'<span class="trow"><span class="tcount">'+units+' unit'+(units===1?'':'s')+'</span></span>'
+      +'</button>';
+  }
+
+  function overdueCell(r){
+    if(r.over===0) return '<span class="duetoday">Due today</span>';
+    return '<span class="late'+(r.over>=7?' crit':'')+'"><span class="n">'+r.over+'</span>'
+      + '<span class="u">day'+(r.over===1?'':'s')+'</span></span>';
+  }
+
+  /* ---------- ongoing table ---------- */
+  /* SEVEN columns, not nine. Nine rendered beautifully at 2200px and fell back to s-table's
+     stacked label/value mode at 1680, which means it would have stacked permanently inside the
+     real embedded app: Orders v5 measured the true budget at 919px after the 966px content cap
+     and the scrollbar. Reference folded into Customer because codes are lookup data, not scan
+     data, and Last contact folded into Reminders because both describe the same thing, what has
+     been done to this customer so far. */
+  var OHEADS = [[''],['Customer'],['Reference'],['Overdue'],['Contact so far'],['Owed for'],['Amount'],['']];
+
+  function ongoingRow(r){
+    var prim = primaryFor(r);
+    var atCap = r.autoSent>=CAP;
+    return '<s-table-row>'
+      +'<s-table-cell><s-checkbox '+(sel[r.sb]?'checked':'')+' data-ck="'+esc(r.sb)+'"'
+        +' accessibilityLabel="Select '+esc(r.cust)+'"></s-checkbox></s-table-cell>'
+      /* Two lines, not four. Orders v5 fits eight columns in the same 966px only because every
+         cell was trimmed to the minimum, and its notes record the customer cell losing its second
+         line as part of that. The plan name moved to the popup: it is context for a call, not a
+         thing anyone scans a queue by. */
+      +'<s-table-cell><button class="lnk" data-cust="'+esc(r.sb)+'">'+esc(r.cust)+'</button>'
+        +'<div class="segline">'+segBadge(r)+'</div></s-table-cell>'
+      +'<s-table-cell><div class="c1">'+esc(r.sb)+'</div>'
+        +'<div class="c2mono">'+esc(r.pc)+'</div></s-table-cell>'
+      +'<s-table-cell>'+overdueCell(r)
+        +(atCap?'<div class="c2"><s-badge tone="critical">Pauses next</s-badge></div>':'')+'</s-table-cell>'
+      +'<s-table-cell>'+pips(r)+lastCell(r)+'</s-table-cell>'
+      +'<s-table-cell>'+owedCell(r)+'</s-table-cell>'
+      +'<s-table-cell><span class="money">'+INR(r.amt)+'</span></s-table-cell>'
+      +'<s-table-cell><div class="rowacts">'
+        +(prim==='call'
+          ? '<button class="b pri" data-call="'+esc(r.sb)+'">Call customer</button>'
+          : '<button class="b pri" data-send="'+esc(r.sb)+'">Send reminder</button>')
+        +'<button class="b kebab" commandfor="m-'+esc(r.sb)+'" command="--show"'
+          +' aria-label="More actions for '+esc(r.cust)+'">&#8943;</button>'
+        +'<s-menu id="m-'+esc(r.sb)+'" accessibilityLabel="More actions for '+esc(r.cust)+'">'
+          +(prim==='call'
+            ? '<s-button data-msend="'+esc(r.sb)+'">Send a reminder anyway</s-button>'
+            : '<s-button data-mcall="'+esc(r.sb)+'">Call customer</s-button>')
+          +'<s-button data-mopen="'+esc(r.sb)+'">View what they owe for</s-button>'
+          +'<s-button data-msub="'+esc(r.pc)+'">View subscription</s-button>'
+          +'<s-button tone="critical" data-mpause="'+esc(r.sb)+'">Pause now</s-button>'
+        +'</s-menu>'
+      +'</div></s-table-cell>'
+      +'</s-table-row>';
+  }
+
+  function headerRow(heads, withSelect, allOn, someOn){
+    var cells = heads.map(function(h,i){
+      if(withSelect && i===0){
+        return '<s-table-header accessibilityLabel="Select all reminders">'
+          +'<s-checkbox id="ckAll" '+(allOn?'checked':'')+' '+(!allOn&&someOn?'indeterminate':'')
+          +' accessibilityLabel="Select all reminders"></s-checkbox></s-table-header>';
+      }
+      return '<s-table-header>'+(h[0]||'')+'</s-table-header>';
+    }).join('');
+    return '<s-table-header-row slot="headings">'+cells+'</s-table-header-row>';
+  }
+
+  function renderOngoing(){
+    var rows = visibleOngoing();
+    if(!rows.length){
+      $('tblOngoing').innerHTML = '<div class="emptyRow">'
+        + (skuFilter ? 'No unpaid reminder contains '+esc(skuFilter)+'.'
+           : query ? 'Nothing matches that search.' : 'Nobody matches these filters.')+'</div>';
+      return;
+    }
+    var ids = rows.map(function(r){ return r.sb; });
+    var on  = ids.filter(function(i){ return sel[i]; }).length;
+    $('tblOngoing').innerHTML = '<s-table variant="table">'
+      + headerRow(OHEADS, true, on===ids.length, on>0)
+      + '<s-table-body>' + rows.map(ongoingRow).join('') + '</s-table-body></s-table>';
+  }
+
+  /* ---------- paused tables ---------- */
+  /* v4: non-payment rows get BOTH actions. The automatic sequence is finished here, but manual
+     outreach is uncapped, so a reminder is still a legitimate thing to send. Call stays the
+     primary because these customers stopped without choosing to and mostly do not know. */
+  function nonpayRow(r){
+    return '<s-table-row>'
+      +'<s-table-cell><button class="lnk" data-pcust="'+esc(r.pc)+'">'+esc(r.cust)+'</button>'
+        +'<div class="c2">'+esc(r.plan)+'</div>'
+        +'<div class="segline">'+(r.renewed===0
+            ? '<s-badge tone="warning">Never renewed</s-badge>'
+            : '<s-badge tone="success">Paid '+r.renewed+' before</s-badge>')+'</div></s-table-cell>'
+      +'<s-table-cell><div class="c1">'+esc(r.pc)+'</div></s-table-cell>'
+      +'<s-table-cell><span class="late crit"><span class="n">'+r.days+'</span>'
+        +'<span class="u">day'+(r.days===1?'':'s')+'</span></span>'
+        +'<div class="c2">after '+CAP+' of '+CAP+' reminders</div></s-table-cell>'
+      +'<s-table-cell>'+(r.manualSent>0
+          ? '<div class="lastc"><span class="w">'+r.manualSent+' since pausing</span>'
+            +'<span class="by man">By hand</span></div>'
+          : '<span class="c2">Nothing since it paused</span>')+'</s-table-cell>'
+      +'<s-table-cell><span class="money">'+INR(r.amt)+'</span></s-table-cell>'
+      +'<s-table-cell><div class="acts2">'
+        +'<div class="r"><button class="b" data-psend="'+esc(r.pc)+'">Send reminder</button></div>'
+        +'<div class="r"><button class="b pri" data-pcall="'+esc(r.pc)+'">Call customer</button>'
+        +'<button class="b kebab" commandfor="p-'+esc(r.pc)+'" command="--show"'
+          +' aria-label="More actions for '+esc(r.cust)+'">&#8943;</button>'
+        +'<s-menu id="p-'+esc(r.pc)+'" accessibilityLabel="More actions for '+esc(r.cust)+'">'
+          +'<s-button data-msub="'+esc(r.pc)+'">View subscription</s-button>'
+          +'<s-button data-mresume="'+esc(r.pc)+'">Resume subscription</s-button>'
+        +'</s-menu></div>'
+      +'</div></s-table-cell>'
+      +'</s-table-row>';
+  }
+
+  function custRow(r){
+    var noDate = !r.resume;
+    return '<s-table-row>'
+      +'<s-table-cell><button class="lnk" data-ccust="'+esc(r.pc)+'">'+esc(r.cust)+'</button>'
+        +'<div class="c2">'+esc(r.plan)+'</div></s-table-cell>'
+      +'<s-table-cell><div class="c1">'+esc(r.pc)+'</div></s-table-cell>'
+      +'<s-table-cell>'+(noDate
+          ? '<span class="c2">No date set</span>'
+          : '<span class="duetoday">Resumes '+esc(r.resume)+'</span>')+'</s-table-cell>'
+      +'<s-table-cell>'+(noDate
+          ? '<s-badge tone="warning">Open ended</s-badge>'
+          : '<s-badge tone="info">Paused by choice</s-badge>')+'</s-table-cell>'
+      +'<s-table-cell>'+esc(r.reason)+'</s-table-cell>'
+      +'<s-table-cell><div class="rowacts">'
+        /* Still no chase action. They chose this, so the row is a record, not a task. */
+        +'<button class="b kebab" commandfor="c-'+esc(r.pc)+'" command="--show"'
+          +' aria-label="More actions for '+esc(r.cust)+'">&#8943;</button>'
+        +'<s-menu id="c-'+esc(r.pc)+'" accessibilityLabel="More actions for '+esc(r.cust)+'">'
+          +'<s-button data-ccust2="'+esc(r.pc)+'">View contact details</s-button>'
+          +'<s-button data-msub="'+esc(r.pc)+'">View subscription</s-button>'
+        +'</s-menu>'
+      +'</div></s-table-cell>'
+      +'</s-table-row>';
+  }
+
+  var NHEADS=[['Customer'],['Subscription'],['Paused'],['Since pausing'],['Outstanding'],['']];
+  var CHEADS=[['Customer'],['Subscription'],['Resumes'],['Status'],['Reason'],['']];
+
+  function renderPaused(){
+    var heads = sub==='nonpay' ? NHEADS : CHEADS;
+    var rows  = sub==='nonpay' ? PAUSED_NONPAY.map(nonpayRow) : PAUSED_CUSTOMER.map(custRow);
+    $('tblPaused').innerHTML = '<s-table variant="table">'
+      + headerRow(heads,false)
+      + '<s-table-body>' + rows.join('') + '</s-table-body></s-table>';
+    $('pausedNote').classList.toggle('hide', sub!=='nonpay');
+  }
+
+  /* ---------- popups ---------- */
+  function closePop(){ $('pop').classList.remove('on'); }
+  $('popX').onclick = closePop;
+  $('pop').addEventListener('click', function(e){ if(e.target===$('pop')) closePop(); });
+  function footClose(extra){
+    $('popF').innerHTML = '<button class="b" id="popClose2">Close</button>'+(extra||'');
+    $('popClose2').onclick = closePop;
+  }
+
+  function findAny(key){
+    var r = ONGOING.filter(function(x){ return x.sb===key; })[0]; if(r) return r;
+    r = PAUSED_NONPAY.filter(function(x){ return x.pc===key; })[0]; if(r) return r;
+    return PAUSED_CUSTOMER.filter(function(x){ return x.pc===key; })[0];
+  }
+
+  /* The call surface. This is the act the automation cannot perform, so the number is the
+     largest thing in the box rather than a field in a record. */
+  function openCall(key){
+    var r = findAny(key); if(!r) return;
+    $('popT').textContent = 'Call '+r.cust;
+    $('popS').textContent = r.plan + (r.amt!==undefined ? ' · ' + INR(r.amt) + ' outstanding' : '');
+    var why = r.renewed===0
+      ? 'This customer has never paid past the first delivery. Reminders have not worked on them, which is why the call is the primary action.'
+      : 'This customer has paid '+r.renewed+' deliveries before, so a missed invoice is out of character. Likely a lapsed card or a missed message.';
+    $('popB').innerHTML =
+      '<div class="dsec"><div class="callbox">'
+        +'<div class="num">'+esc(r.phone)+'</div>'
+        +'<div class="em">'+esc(r.email)+'</div>'
+        +'<div class="cta"><button class="b pri" id="cCall">Call now</button>'
+        +'<button class="b" id="cCopy">Copy number</button>'
+        +'<button class="b" id="cWa">WhatsApp</button></div>'
+      +'</div></div>'
+      +'<div class="dsec"><div class="h">Before you dial</div><div class="c2">'+esc(why)+'</div></div>'
+      +'<div class="dsec"><div class="h">Log the outcome</div>'
+        +'<div class="c2">Whatever is recorded here becomes the Last contact stamp on the row, so the next person can see the call happened. Not wired in this mock.</div></div>';
+    footClose('<button class="b pri">Log call</button>');
+    var cp=$('cCopy'); if(cp) cp.onclick=function(){ cp.textContent='Copied'; };
+    $('pop').classList.add('on');
+  }
+
+  function openOwed(sb){
+    var r = ONGOING.filter(function(x){ return x.sb===sb; })[0]; if(!r) return;
+    var atCap = r.autoSent>=CAP;
+    $('popT').textContent = r.cust;
+    $('popS').innerHTML = esc(r.sb)+' &middot; '+esc(r.pc)+' &middot; '+esc(r.plan);
+    var tot=0; r.items.forEach(function(l){ tot += l[2]*l[3]; });
+    var lines = r.items.map(function(l){
+      var on = skuFilter && l[1]===skuFilter;
+      return '<div class="iline"><div class="g'+(on?' hit':'')+'">'+esc(l[0])
+        +' <span class="sk">'+esc(l[1])+'</span><span class="qty">&times;'+l[2]+'</span></div>'
+        +'<div class="amt">'+INR(l[2]*l[3])+'</div></div>';
+    }).join('');
+    /* History separates the two kinds explicitly. A row that says 4 of 4 automatic plus 1 by
+       hand has to be able to show which was which, or the count is just a bigger number. */
+    var hist='';
+    for(var i=1;i<=r.autoSent;i++){
+      var label = i===1 ? 'First reminder' : (i===CAP ? 'Final reminder' : 'Reminder '+i);
+      hist += '<div class="tline"><span class="w">'+(i===r.autoSent&&r.lastBy==='auto'?ago(r.lastAgo):'earlier')+'</span>'
+        +'<span class="g">'+label+', email and WhatsApp</span>'
+        +'<span class="tag auto">Automatic</span></div>';
+    }
+    for(var j=1;j<=r.manualSent;j++){
+      hist += '<div class="tline"><span class="w">'+(j===r.manualSent&&r.lastBy==='manual'?ago(r.lastAgo):'earlier')+'</span>'
+        +'<span class="g">Reminder sent by a person, outside the sequence</span>'
+        +'<span class="tag man">By hand</span></div>';
+    }
+    $('popB').innerHTML =
+      '<div class="dsec"><div class="metarow">'
+        +'<div class="metaitem"><div class="k">Overdue</div><div class="v">'
+          +(r.over===0?'Due today':r.over+' day'+(r.over===1?'':'s'))+'</div></div>'
+        +'<div class="metaitem"><div class="k">Automatic</div><div class="v">'+r.autoSent+' of '+CAP+'</div></div>'
+        +'<div class="metaitem"><div class="k">By hand</div><div class="v">'+r.manualSent+'</div></div>'
+        +'<div class="metaitem"><div class="k">Next event</div><div class="v">'
+          +(atCap?'Auto-pause':'Reminder '+(r.autoSent+1))+'</div></div>'
+      +'</div></div>'
+      +'<div class="dsec"><div class="h">What this invoice covers</div>'+lines
+        +'<div class="iline tot"><div class="g">Total</div><div class="amt">'+INR(tot)+'</div></div></div>'
+      +'<div class="dsec"><div class="h">Contact history</div>'+hist+'</div>';
+    footClose('<button class="b pri" data-call="'+esc(r.sb)+'">Call customer</button>');
+    $('pop').classList.add('on');
+  }
+
+  /* ---------- derived counts ---------- */
+  function counts(){
+    var set=function(q2,n){ var e=document.querySelector(q2); if(e) e.textContent=n; };
+    var B=baseOngoing();
+    set('#tabs button[data-tab="ongoing"] .n', B.length);
+    set('#tabs button[data-tab="paused"] .n',  PAUSED_NONPAY.length + PAUSED_CUSTOMER.length);
+    set('#subtabs button[data-sub="nonpay"] .n',   PAUSED_NONPAY.length);
+    set('#subtabs button[data-sub="customer"] .n', PAUSED_CUSTOMER.length);
+
+    var out=0; B.forEach(function(r){ out += r.amt; });
+    $('wCount').textContent = B.length;
+    $('wOut').textContent   = INR(out);
+    $('wNever').textContent = B.filter(function(r){ return r.renewed===0; }).length;
+    $('wOutD').textContent  = 'across '+B.length+' invoice'+(B.length===1?'':'s');
+    $('wCountD').textContent = skuFilter
+      ? 'active subscriptions containing '+skuFilter
+      : 'all still active subscriptions';
+    /* store-level, so it does not move with the filters, and it says so */
+    var tot = PAYG.continued + PAYG.discontinued;
+    $('wCont').textContent  = Math.round(PAYG.continued/tot*100)+'%';
+    $('wContD').textContent = PAYG.continued+' continued, '+PAYG.discontinued+' discontinued, last 30 days';
+  }
+
+  function renderSkuChip(){
+    var row = $('skuRow');
+    if(!skuFilter){ row.classList.add('hide'); row.innerHTML=''; return; }
+    row.classList.remove('hide');
+    row.innerHTML = '<span class="skuchip">From Inventory, SKU: '+esc(skuFilter)+' ('+esc(skuName())+')'
+      + '<button class="x" id="skuX" aria-label="Clear the SKU filter and show every unpaid reminder">&#10005;</button></span>'
+      + '<span class="chipnote">Applies to the reminder queue. The Paused tab is not scoped by SKU.</span>';
+    $('skuX').onclick = function(){
+      skuFilter = null; sel = {};
+      if(window.history && history.replaceState) history.replaceState(null,'',location.pathname);
+      render();
+    };
+  }
+
+  function renderBulk(){
+    var ids = visibleOngoing().map(function(r){ return r.sb; });
+    var n = ids.filter(function(i){ return sel[i]; }).length;
+    $('bulkBar').classList.toggle('on', n>0);
+    $('bulkCnt').textContent = n+' selected';
+    var live = tab==='ongoing' && n>0;
+    var b=$('sendSel');
+    if(b){ b.textContent = live ? 'Send '+n+' reminder'+(n===1?'':'s') : 'Send selected';
+           if(live) b.removeAttribute('disabled'); else b.setAttribute('disabled',''); }
+  }
+
+  function render(){ renderSkuChip(); renderOngoing(); renderPaused(); counts(); renderBulk(); }
+
+  /* ---------- events ---------- */
+  function showTab(which){
+    tab = which;
+    var b = $('tabs').querySelector('button[data-tab="'+which+'"]');
+    $('tabs').querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x===b); });
+    var on = which==='ongoing';
+    $('paneOngoing').classList.toggle('hide', !on);
+    $('panePaused').classList.toggle('hide', on);
+    $('tabhint').textContent = on
+      ? 'Subscriptions still live, with an invoice outstanding and a reminder sequence running. StackBack sends the sequence on its own. This list is who is worth a call.'
+      : 'Secondary priority. Subscriptions that have already stopped, split by whether the customer chose it or the reminder sequence ran out.';
+    renderBulk();
+  }
+
+  $('tabs').addEventListener('click', function(e){
+    var b=e.target.closest('button[data-tab]'); if(!b) return;
+    showTab(b.dataset.tab);
+  });
+
+  $('subtabs').addEventListener('click', function(e){
+    var b=e.target.closest('button[data-sub]'); if(!b) return;
+    sub=b.dataset.sub;
+    $('subtabs').querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x===b); });
+    renderPaused();
+  });
+
+  $('fStage').addEventListener('change', function(e){ stage=e.target.value; sel={}; render(); });
+  $('fSeg').addEventListener('change',   function(e){ seg=e.target.value;   sel={}; render(); });
+  $('fSort').addEventListener('change',  function(e){ sortBy=e.target.value; renderOngoing(); });
+  $('q').addEventListener('input', function(e){ query=e.target.value||''; sel={}; render(); });
+
+  document.addEventListener('click', function(e){
+    var t=e.target; if(!t.closest) return;
+    var g=function(a){ var el=t.closest('['+a+']'); return el && el.getAttribute(a); };
+    var v;
+    if((v=g('data-call'))||(v=g('data-mcall'))){ openCall(v); return; }
+    if((v=g('data-pcall'))||(v=g('data-pcust'))){ openCall(v); return; }
+    if((v=g('data-ccust'))||(v=g('data-ccust2'))){ openCall(v); return; }
+    if((v=g('data-open'))||(v=g('data-mopen'))||(v=g('data-cust'))){ openOwed(v); return; }
+  });
+
+  document.addEventListener('change', function(e){
+    var t=e.target;
+    if(t.id==='ckAll'){
+      var ids=visibleOngoing().map(function(r){ return r.sb; });
+      var all=ids.every(function(i){ return sel[i]; });
+      ids.forEach(function(i){ if(all) delete sel[i]; else sel[i]=true; });
+      renderOngoing(); renderBulk(); return;
+    }
+    var ck=t.getAttribute&&t.getAttribute('data-ck');
+    if(ck){ if(sel[ck]) delete sel[ck]; else sel[ck]=true; renderBulk();
+      var head=document.getElementById('ckAll');
+      if(head){ var ids2=visibleOngoing().map(function(r){ return r.sb; });
+        var on=ids2.filter(function(i){ return sel[i]; }).length;
+        head.checked = on===ids2.length && on>0;
+        head.indeterminate = on>0 && on<ids2.length; }
+    }
+  });
+
+  $('bulkClear').onclick = function(){ sel={}; renderOngoing(); renderBulk(); };
+
+  render();
+
+  /* ---------- why this re-renders itself once ----------
+     s-table picks between its real table layout and a stacked label/value fallback by MEASURING
+     its container, and it makes that choice once, when it upgrades. This script runs before the
+     Polaris CDN has defined the elements, so the first render hands s-table an unlaid-out
+     container, it measures roughly nothing, concludes it cannot fit, and locks into the stacked
+     variant permanently. The screen then looks like a phone list at every width.
+
+     This cost a while to find because it presents exactly like a width problem: it "fixed itself"
+     at 2200px, which sent me trimming columns that were never too wide. The tell was that calling
+     renderOngoing() by hand in the console produced a correct table with the same markup.
+
+     So: paint immediately for a fast first frame, then re-render once the components are actually
+     defined and one frame has been laid out. Also re-render on resize, debounced, because the same
+     measurement has to be redone when the window changes materially. */
+  function reflowTables(){ renderOngoing(); renderPaused(); }
+  if (window.customElements && customElements.whenDefined){
+    Promise.all(['s-table','s-table-row','s-badge'].map(function(n){
+      return customElements.whenDefined(n);
+    })).then(function(){
+      requestAnimationFrame(function(){ requestAnimationFrame(reflowTables); });
+    });
+  } else {
+    setTimeout(reflowTables, 300);
+  }
+  var rzT;
+  window.addEventListener('resize', function(){
+    clearTimeout(rzT); rzT = setTimeout(reflowTables, 180);
+  });
+</script>
+</body>
+</html>

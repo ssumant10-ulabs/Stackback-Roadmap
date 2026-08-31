@@ -1,0 +1,1718 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" href="data:," />
+<title>StackBack merchant admin: module tracker on the locked IA</title>
+<style>
+  :root{
+    --p-ink:#303030; --p-muted:#616161; --p-faint:#8a8a8a;
+    --p-line:#e3e3e3; --p-line2:#ebebeb; --p-surface:#fff;
+    --p-primary:#303030; --p-success:#29845a; --p-success-bg:#cdfee1;
+    --p-link:#005bd3; --p-attn-bg:#ffefcf; --p-attn:#8a6116;
+    --p-crit:#8e1f0b; --p-crit-bg:#fedad1;
+    --p-info-bg:#eaf4ff; --p-info:#00527c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#f7f7f7;font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--p-ink)}
+
+  /* ---------- spec chrome (not part of the product) ---------- */
+  .spec{max-width:1360px;margin:0 auto;padding:0 20px 60px}
+  .specbar{background:#1a1a1a;color:#fff;padding:14px 20px;position:sticky;top:0;z-index:200;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+  .specbar h1{margin:0;font-size:14px;font-weight:650;letter-spacing:.1px}
+  .specbar .sub{font-size:12px;color:#b5b5b5}
+  .seg{margin-left:auto;display:flex;background:#2b2b2b;border-radius:9px;padding:3px;gap:2px}
+  .seg button{appearance:none;border:0;background:transparent;color:#c9c9c9;font:inherit;font-size:12px;font-weight:600;padding:6px 13px;border-radius:7px;cursor:pointer;white-space:nowrap}
+  .seg button.on{background:#fff;color:#1a1a1a}
+  .seg button:hover:not(.on){color:#fff}
+  .rollup{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:#b5b5b5;width:100%;border-top:1px solid #2f2f2f;padding-top:11px;margin-top:2px}
+  .rollup b{color:#fff;font-weight:650}
+  .rollup span.sw{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:1px}
+
+  .specH{font-size:19px;font-weight:650;margin:44px 0 6px;letter-spacing:-.2px}
+  .specP{color:var(--p-muted);margin:0 0 18px;max-width:76ch}
+  .specNote{background:var(--p-info-bg);border:1px solid #b9dcf5;color:var(--p-info);border-radius:10px;padding:12px 14px;margin:0 0 18px;max-width:96ch;font-size:12.5px}
+  .specWarn{background:var(--p-attn-bg);border:1px solid #f0d9a8;color:var(--p-attn);border-radius:10px;padding:12px 14px;margin:0 0 18px;max-width:96ch;font-size:12.5px}
+  .specWarn b,.specNote b{font-weight:650}
+
+  /* ---------- the admin mock ---------- */
+  .mockWrap{border:1px solid var(--p-line);border-radius:14px;overflow:hidden;background:#f1f1f1;box-shadow:0 1px 2px rgba(0,0,0,.05);margin-top:22px}
+  .admin{display:flex;min-height:700px}
+
+  .navL{flex:none;width:250px;background:#ebebeb;border-right:1px solid var(--p-line);padding:10px 8px;display:flex;flex-direction:column;gap:1px}
+  .navItem{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;color:var(--p-ink);font-size:13px;font-weight:500;white-space:nowrap}
+  .navItem.ghost{color:#9b9b9b}
+  .navItem .ico{width:16px;height:16px;flex:none;color:#5a5a5a}
+  .navItem.ghost .ico{color:#a8a8a8}
+  .navSec{color:var(--p-muted);font-size:13px;font-weight:500;display:flex;align-items:center;height:30px;padding:0 8px;margin-top:6px}
+  .navSec .chev{margin-left:auto;color:var(--p-faint);font-size:11px}
+  .navApp{display:flex;align-items:center;gap:9px;min-height:32px;padding:4px 8px;border-radius:8px;font-weight:600;background:#fff;box-shadow:0 1px 0 rgba(0,0,0,.04);margin-top:2px;cursor:pointer;border:0;font-family:inherit;font-size:13px;width:100%;text-align:left}
+  .navApp.sel{box-shadow:0 0 0 1px var(--p-primary)}
+  .navApp .logo{width:20px;height:20px;border-radius:5px;background:var(--p-primary);display:grid;place-items:center;color:#fff;font-size:10px;font-weight:700;flex:none}
+  .navSub{display:flex;align-items:center;gap:8px;min-height:30px;padding:4px 8px 4px 30px;border-radius:8px;color:var(--p-muted);font-size:13px;cursor:pointer;text-align:left;border:0;background:transparent;font-family:inherit;width:100%}
+  .navSub:hover{background:#dedede;color:var(--p-ink)}
+  .navSub.sel{color:var(--p-ink);font-weight:600;background:#fff;box-shadow:0 1px 0 rgba(0,0,0,.04)}
+  .navSub .ico{width:15px;height:15px;flex:none;opacity:.75}
+  .navSub .rt{margin-left:auto;display:flex;align-items:center;gap:3px;flex:none}
+  .navSub .nu{font-size:10px;font-weight:700;letter-spacing:.3px;color:var(--p-success);background:var(--p-success-bg);border-radius:6px;padding:1px 5px}
+  .navFold{font-size:12px;color:var(--p-muted);padding:6px 8px 2px 30px}
+  .navGap{flex:1;min-height:14px}
+  .navHint{font-size:11px;color:var(--p-faint);padding:8px 8px 2px;line-height:1.45}
+
+  .appmain{flex:1;min-width:0;display:flex;flex-direction:column;background:#f1f1f1}
+  .appbar{height:52px;background:#fff;border-bottom:1px solid var(--p-line);display:flex;align-items:center;gap:10px;padding:0 18px;flex:none}
+  .appbar .logo{width:24px;height:24px;border-radius:6px;background:var(--p-primary);display:grid;place-items:center;color:#fff;font-size:11px;font-weight:700}
+  .appbar .name{font-weight:650;font-size:14px}
+  .bell{margin-left:auto;position:relative;width:30px;height:30px;border-radius:8px;display:grid;place-items:center;color:#4a4a4a;background:#f6f6f6;border:1px solid var(--p-line);cursor:pointer}
+  .bell.sel{box-shadow:0 0 0 1px var(--p-primary)}
+  .bell .badge{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;border-radius:8px;background:var(--p-crit);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;padding:0 4px;border:2px solid #fff}
+  .bellTag{font-size:10px;font-weight:700;color:var(--p-attn);background:var(--p-attn-bg);border-radius:6px;padding:2px 6px;margin-left:8px;letter-spacing:.2px}
+
+  .page{padding:20px 22px 30px;overflow:auto}
+  .pgHead{display:flex;align-items:flex-start;gap:14px;margin-bottom:4px}
+  .pgTitle{font-size:19px;font-weight:650;letter-spacing:-.2px;margin:0;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .pgSub{color:var(--p-muted);margin:3px 0 0;font-size:12.5px;max-width:70ch}
+  .pgMeta{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:none}
+  .btn{height:30px;padding:0 12px;border-radius:8px;border:1px solid var(--p-line);background:#fff;font:inherit;font-size:12.5px;font-weight:600;color:var(--p-ink);display:inline-flex;align-items:center;gap:6px}
+  .btn.pri{background:var(--p-primary);color:#fff;border-color:var(--p-primary)}
+  .kebab{width:30px;justify-content:center;letter-spacing:1px;padding:0}
+
+  .chrome{display:flex;align-items:center;gap:6px;margin:16px 0 0;flex-wrap:wrap}
+  .chrome .lbl{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--p-faint);margin-right:4px}
+  .tab{height:30px;padding:0 12px;border-radius:8px;background:transparent;border:1px solid transparent;font-size:12.5px;font-weight:600;color:var(--p-muted);display:inline-flex;align-items:center;gap:6px}
+  .tab.on{background:#fff;color:var(--p-ink);border-color:var(--p-line);box-shadow:0 1px 0 rgba(0,0,0,.04)}
+  .pill{height:26px;padding:0 10px;border-radius:99px;border:1px solid var(--p-line);background:#fff;font-size:12px;font-weight:600;color:var(--p-muted);display:inline-flex;align-items:center;gap:6px}
+  .pill.on{background:var(--p-primary);color:#fff;border-color:var(--p-primary)}
+  .pill.attn{border-color:#f0d9a8;background:var(--p-attn-bg);color:var(--p-attn)}
+  .pill .n{font-size:11px;opacity:.75;font-weight:700}
+  .future{border-style:dashed;color:var(--p-faint)}
+
+  .card{background:#fff;border:1px solid var(--p-line);border-radius:12px;margin-top:14px;overflow:hidden}
+  .cardHd{padding:12px 14px;border-bottom:1px solid var(--p-line2);font-weight:650;font-size:13px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .cardHd .hint{margin-left:auto;font-weight:500;font-size:12px;color:var(--p-faint)}
+  .row{display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid var(--p-line2)}
+  .row:last-child{border-bottom:0}
+  .row .grow{flex:1;min-width:0}
+  .row .t{font-weight:600;font-size:12.5px}
+  .row .s{color:var(--p-muted);font-size:12px;margin-top:2px;line-height:1.5}
+  .row.empty{color:var(--p-faint);font-size:12.5px;justify-content:center;padding:18px 14px}
+  .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .dot.ok{background:var(--p-success)}
+  .dot.warn{background:#c8952a}
+  .dot.part{background:#4a89c0}
+  .dot.crit{background:var(--p-crit)}
+  .dot.off{background:#b5b5b5}
+  .chip{font-size:11px;font-weight:650;border-radius:6px;padding:2px 7px;white-space:nowrap;border:1px solid transparent}
+  .chip.ok{background:var(--p-success-bg);color:var(--p-success)}
+  .chip.warn{background:var(--p-attn-bg);color:var(--p-attn)}
+  .chip.crit{background:var(--p-crit-bg);color:var(--p-crit)}
+  .chip.neu{background:#f1f1f1;color:var(--p-muted)}
+  .chip.info{background:var(--p-info-bg);color:var(--p-info)}
+  .chip.dash{background:#fff;color:var(--p-faint);border:1px dashed var(--p-line)}
+  code.rte{font:600 11.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#f6f6f6;border:1px solid var(--p-line2);border-radius:5px;padding:1px 5px;color:#444;white-space:nowrap}
+  .stack2{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:none}
+  .stack2 .r1,.stack2 .r2{display:flex;align-items:center;gap:6px}
+
+  .thumb{width:34px;height:34px;border-radius:8px;background:#f1f1f1;border:1px solid var(--p-line);flex:none}
+
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-top:14px;align-items:stretch}
+  .mini{background:#fff;border:1px solid var(--p-line);border-radius:12px;padding:13px 14px;display:flex;flex-direction:column;gap:4px}
+  .mini .k{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--p-faint)}
+  .mini .v{font-size:22px;font-weight:650;letter-spacing:-.4px}
+  .mini .d{font-size:12px;color:var(--p-muted);margin-top:auto}
+  .bars{display:flex;align-items:flex-end;gap:5px;height:52px;margin-top:8px}
+  .bars i{flex:1;background:#d7e8dd;border-radius:3px 3px 0 0;display:block}
+  .bars i.hot{background:#f0d9a8}
+
+  /* settings group rail */
+  .setWrap{display:flex;gap:0;background:#fff;border:1px solid var(--p-line);border-radius:12px;margin-top:14px;overflow:hidden;min-height:330px}
+  .setRail{width:230px;flex:none;border-right:1px solid var(--p-line2);padding:10px;background:#fbfbfb}
+  .setSearch{height:30px;border:1px solid var(--p-line);border-radius:8px;display:flex;align-items:center;gap:7px;padding:0 9px;color:var(--p-faint);font-size:12.5px;background:#fff;margin-bottom:8px}
+  .setItem{min-height:30px;border-radius:8px;padding:6px 9px;font-size:12.5px;color:var(--p-muted);font-weight:500;display:flex;align-items:center;gap:8px}
+  .setItem.sel{background:#f1f1f1;color:var(--p-ink);font-weight:650}
+  .setItem .nu{margin-left:auto;font-size:10px;font-weight:700;color:var(--p-success);background:var(--p-success-bg);border-radius:6px;padding:1px 5px}
+  .setBody{flex:1;min-width:0;padding:16px 18px}
+
+  /* why panel */
+  .why{margin-top:16px;background:#fff;border:1px solid var(--p-line);border-left:3px solid var(--p-primary);border-radius:10px;padding:14px 16px}
+  .why h4{margin:0 0 7px;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--p-faint)}
+  .why p{margin:0 0 8px;font-size:13px;line-height:1.6;max-width:82ch}
+  .why p:last-child{margin-bottom:0}
+  .why .abs{margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .why .abs .al{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--p-faint);margin-right:2px}
+  .fold{font-size:11px;font-weight:650;color:var(--p-muted);background:#f1f1f1;border:1px dashed var(--p-line);border-radius:6px;padding:2px 7px}
+
+  /* tables */
+  table.cmp{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--p-line);border-radius:12px;overflow:hidden;font-size:12.5px;margin-top:8px}
+  table.cmp th{text-align:left;padding:11px 13px;background:#fbfbfb;border-bottom:1px solid var(--p-line);font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:var(--p-faint);font-weight:700;vertical-align:bottom}
+  table.cmp td{padding:10px 13px;border-bottom:1px solid var(--p-line2);vertical-align:top}
+  table.cmp tr:last-child td{border-bottom:0}
+  table.cmp td.n{color:var(--p-faint);width:34px;font-weight:700}
+  table.cmp td.mid{vertical-align:middle}
+  .tblWrap{overflow-x:auto;border-radius:12px}
+  .gone{color:var(--p-faint);text-decoration:line-through}
+  .into{color:var(--p-muted);font-size:12px}
+  .newt{font-size:10px;font-weight:700;color:var(--p-success);background:var(--p-success-bg);border-radius:5px;padding:1px 5px;margin-left:5px;letter-spacing:.3px}
+
+  .cols3{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px;margin-top:8px;align-items:stretch}
+  .vcard{background:#fff;border:1px solid var(--p-line);border-radius:12px;padding:16px;display:flex;flex-direction:column}
+  .vcard.rec{border-color:var(--p-success);box-shadow:0 0 0 1px var(--p-success)}
+  .vcard h3{margin:0;font-size:14px;font-weight:650;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .vcard .cnt{font-size:11px;font-weight:700;color:var(--p-muted);background:#f1f1f1;border-radius:6px;padding:2px 7px}
+  .vcard ol,.vcard ul{margin:12px 0 0;padding-left:22px;font-size:12.5px;line-height:1.85}
+  .vcard ol li.hl{font-weight:650}
+  .vcard .tail{margin-top:auto;padding-top:12px;font-size:12px;color:var(--p-muted);line-height:1.6}
+  .recTag{font-size:10px;font-weight:700;color:#fff;background:var(--p-success);border-radius:5px;padding:2px 6px;letter-spacing:.3px}
+
+  .prin{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:8px;align-items:stretch}
+  .prin .p{background:#fff;border:1px solid var(--p-line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:7px}
+  .prin .p .num{width:22px;height:22px;border-radius:6px;background:var(--p-primary);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center}
+  .prin .p h4{margin:0;font-size:13px;font-weight:650}
+  .prin .p p{margin:0;font-size:12.5px;color:var(--p-muted);line-height:1.6}
+  .lineage{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid var(--p-line);border-radius:12px;padding:16px;margin-top:14px}
+  .lineage .n{border:1px solid var(--p-line);border-radius:9px;padding:9px 12px;min-width:150px}
+  .lineage .n .t{font-weight:650;font-size:13px}
+  .lineage .n .s{font-size:11.5px;color:var(--p-muted);margin-top:2px}
+  .lineage .ar{color:var(--p-faint);font-weight:700}
+
+  .legend{display:flex;gap:16px;flex-wrap:wrap;background:#fff;border:1px solid var(--p-line);border-radius:12px;padding:14px 16px;margin-top:14px;font-size:12.5px}
+  .legend .g{display:flex;flex-direction:column;gap:7px;min-width:190px}
+  .legend .g .gl{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--p-faint)}
+  .legend .g .li{display:flex;align-items:center;gap:8px;color:var(--p-muted)}
+  .legend .g .li b{color:var(--p-ink);font-weight:650}
+
+  /* file rows + inline screen preview */
+  .fRow{display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid var(--p-line2);flex-wrap:wrap}
+  .fRow:last-of-type{border-bottom:0}
+  .fRow .grow{flex:1;min-width:220px}
+  .fRow .t{font-weight:600;font-size:12.5px}
+  .fRow .s{color:var(--p-muted);font-size:12px;margin-top:2px;line-height:1.5}
+  .fRow .pth{font:600 11px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--p-faint);margin-top:3px;word-break:break-all}
+  .fActs{display:flex;gap:6px;align-items:center;flex:none}
+  a.btn{text-decoration:none}
+  a.btn:hover{background:#f6f6f6}
+  .btn.on{background:var(--p-primary);color:#fff;border-color:var(--p-primary)}
+  .fPrev{border-top:1px solid var(--p-line2);background:#fbfbfb;padding:12px 14px;display:none}
+  .fPrev.open{display:block}
+  .fPrev iframe{width:100%;height:640px;border:1px solid var(--p-line);border-radius:10px;background:#fff;display:block}
+  .fPrev .cap{font-size:11.5px;color:var(--p-faint);margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .type{font-size:10px;font-weight:700;letter-spacing:.3px;border-radius:5px;padding:2px 6px;background:#f1f1f1;color:var(--p-muted);text-transform:uppercase}
+  .type.html{background:#e6f4ea;color:#1c6b3f}
+  .type.jsx{background:#eaf1ff;color:#274b8f}
+  .type.md{background:#f4f0ff;color:#54399b}
+  .type.xlsx{background:#fff2e0;color:#8a5116}
+  .type.mermaid{background:#fdeef7;color:#8a2d63}
+
+  .owner{font-size:11px;font-weight:650;border-radius:6px;padding:2px 7px;white-space:nowrap;background:#f1f1f1;color:var(--p-muted);border:1px solid var(--p-line2)}
+  .owner.cs{background:#eaf4ff;color:#00527c;border-color:#c7e2f7}
+  .owner.ops{background:#f0eaff;color:#4c3b8f;border-color:#ddd2f7}
+  .owner.mkt{background:#fdeef7;color:#8a2d63;border-color:#f7d3e7}
+  .owner.fnd{background:#fff2e0;color:#8a5116;border-color:#f5dcba}
+  .owner.plat{background:#eef1ee;color:#4a5a4f;border-color:#dbe1dc}
+
+  @media (max-width:900px){
+    .admin{flex-direction:column}
+    .navL{width:100%;height:auto}
+    .setWrap{flex-direction:column}
+    .setRail{width:100%;border-right:0;border-bottom:1px solid var(--p-line2)}
+  }
+</style>
+</head>
+<body>
+
+<div class="specbar">
+  <div>
+    <h1>StackBack merchant admin: module tracker</h1>
+    <div class="sub">Spec IA-02 v1 &nbsp;&middot;&nbsp; 2026-07-28, revised 2026-08-04 (Inventory v4, Orders v5, Payment Reminders v2) &nbsp;&middot;&nbsp; built on the locked version A architecture (IA-01, D2026-0727) &nbsp;&middot;&nbsp; Polaris-native palette</div>
+  </div>
+  <div class="seg" id="fSeg">
+    <button data-f="live" class="on">Closed &amp; WIP</button>
+    <button data-f="all">Everything</button>
+    <button data-f="queue">Backlog &amp; future</button>
+  </div>
+  <div class="rollup" id="rollup"></div>
+</div>
+
+<div class="spec">
+
+  <h2 class="specH">1. How to read this</h2>
+  <p class="specP">This is the same IA surface as IA-01, repurposed as the tracker. The nav on the left is the locked eleven-item architecture, and every item now carries a status light and a route count. Click any item to see the routes inside it, each one marked shipped, WIP, partial, open or retiring, with its provenance: whether the route exists in shipped code, exists only as a locked design, or is net-new and unbuilt.</p>
+  <p class="specP">The filter in the bar above scopes the route lists. It opens on <b>Closed and WIP</b>, which is what this round was asked to populate first. Two modules sit outside the eleven nav slots and are reachable from the mock chrome: <b>Home</b> is the app-name row at the top of the sidebar, and <b>Notifications</b> is the header bell.</p>
+  <p class="specP">Each module leads with <b>Screens and files</b>, the real artifacts on disk, locked ones first. Anything the browser can render carries a <b>Preview</b> button that opens the actual screen inline, so the locked create-plan screen is one click from its status rather than a filename you have to go hunting for. <b>Open</b> sends it to its own tab. Below that sits that module's <b>Backlog</b>, and the Backlog and docs tab gathers every backlog item in one table. Section 8 says where to edit when something changes.</p>
+
+  <div class="legend">
+    <div class="g">
+      <div class="gl">Route status</div>
+      <div class="li"><span class="dot ok"></span><b>Shipped</b> running in pilot</div>
+      <div class="li"><span class="dot warn"></span><b>WIP</b> design locked, dev queued</div>
+      <div class="li"><span class="dot part"></span><b>Partial</b> backend exists, no screen</div>
+    </div>
+    <div class="g">
+      <div class="gl">&nbsp;</div>
+      <div class="li"><span class="dot off"></span><b>Open</b> not started</div>
+      <div class="li"><span class="dot off"></span><b>Retiring</b> alias or legacy, to remove</div>
+      <div class="li"><span class="dot crit"></span><b>Bug open</b> shipped but failing</div>
+    </div>
+    <div class="g">
+      <div class="gl">Provenance</div>
+      <div class="li"><span class="chip neu">In code</span> verified in the shipped build</div>
+      <div class="li"><span class="chip info">Design locked</span> spec or prototype approved</div>
+      <div class="li"><span class="chip dash">Net-new</span> proposed here, unconfirmed</div>
+    </div>
+    <div class="g">
+      <div class="gl">Owner</div>
+      <div class="li"><span class="owner cs">CS</span> Customer Success</div>
+      <div class="li"><span class="owner ops">Ops</span> Operations</div>
+      <div class="li"><span class="owner mkt">Mktg</span> Marketing</div>
+      <div class="li"><span class="owner fnd">Founder</span> founder and brand</div>
+      <div class="li"><span class="owner plat">Platform</span> engineering and config</div>
+    </div>
+  </div>
+
+  <div class="mockWrap">
+    <div class="admin">
+      <div class="navL" id="navL"></div>
+      <div class="appmain">
+        <div class="appbar">
+          <div class="logo">SB</div>
+          <div class="name">StackBack Subscriptions</div>
+          <button class="bell" id="bellBtn" title="Admin alerts, click to open the Notifications module">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+            <span class="badge">3</span>
+          </button>
+          <span class="bellTag">ADMIN ALERTS, ALL SCREENS</span>
+        </div>
+        <div class="page" id="page"></div>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="specH">2. Status of every module</h2>
+  <p class="specP">Thirteen tracked modules: the eleven nav items plus Home and Notifications, which carry no nav slot. Sorted shipped and WIP first, then what is still open, which is the order this round was asked for. The next-action column is what unblocks each one.</p>
+
+  <div class="tblWrap">
+    <table class="cmp">
+      <thead><tr>
+        <th class="n">#</th><th style="width:15%">Module</th><th>Owner</th><th>Status</th>
+        <th>Routes</th><th style="width:34%">Next action</th>
+      </tr></thead>
+      <tbody id="rollBody"></tbody>
+    </table>
+  </div>
+
+  <div class="specNote" style="margin-top:16px">
+    <b>Home has no nav slot and that is a finding, not an oversight.</b> IA-01 locked eleven items and none of them is Home, because in an embedded app the app-name row at the top of the sidebar is the Home link. That is correct behaviour, but it means the module with the most design work parked against it (an onboarding revamp and a post-onboarding dashboard, both prototyped) is invisible in the item list. It is tracked here as module 0 so the work does not go missing.
+  </div>
+
+  <h2 class="specH">Every backlog item in one place</h2>
+  <p class="specP">The same items that appear per module, gathered so nothing hides. Sorted bugs first, then gated (waiting on somebody), then open, then parked. This is the list to work from, and the per-module cards are the same data in context.</p>
+
+  <div class="grid2" id="bkStats"></div>
+
+  <div class="chrome" style="margin-top:16px"><span class="lbl">Show</span><span id="bkFilters"></span></div>
+
+  <div class="tblWrap" style="margin-top:8px">
+    <table class="cmp">
+      <thead><tr><th class="n">#</th><th style="width:15%">Module</th><th>Item</th><th style="width:10%">State</th><th style="width:32%">Note</th></tr></thead>
+      <tbody id="bkBody"></tbody>
+    </table>
+  </div>
+
+  <div class="specNote" style="margin-top:16px">
+    <b>Gated is the column to watch.</b> Those items are not waiting on design or on a decision anyone in this file can make, they are waiting on somebody else: a dev confirmation, an App Bridge check, a data audit, payment-mandate support. They will sit still by default, so they need chasing rather than scheduling.
+  </div>
+
+  <h2 class="specH">3. The Orders split</h2>
+  <p class="specP">Orders was one nav item doing three jobs. The split follows team ownership rather than data shape, which is what the 2026-07-27 pivot settled: Customer Success works deliveries, Operations works supply, and chasing money keeps its own owner. Three destinations, one lineage.</p>
+
+  <div class="lineage">
+    <div class="n"><div class="t">Subscriptions</div><div class="s">the agreement, PC-1041</div></div>
+    <span class="ar">&rarr;</span>
+    <div class="n"><div class="t">Orders</div><div class="s">each delivery, SB-8842</div></div>
+    <span class="ar">&rarr;</span>
+    <div class="n"><div class="t">Payment Reminders</div><div class="s">orders filtered to unpaid</div></div>
+    <div class="n"><div class="t">Inventory</div><div class="s">orders summed by SKU and date</div></div>
+  </div>
+
+  <div class="cols3" style="margin-top:14px">
+    <div class="vcard">
+      <h3>Orders <span class="owner cs">CS</span></h3>
+      <div class="tail" style="margin-top:10px;padding-top:0">Every individual delivery, recurring and one-time. Three tabs replace the current single flat list: <b>Upcoming</b>, <b>Delivered</b>, <b>Needs attention</b>. One-Time Orders folds in as a filter rather than a sibling item. This is the only screen where a delivery is rescheduled.</div>
+      <ul>
+        <li>Absorbs <code class="rte">/one-time-orders</code></li>
+        <li>Owns the reschedule action outright</li>
+        <li>Carries a contract-state chip per row</li>
+      </ul>
+    </div>
+    <div class="vcard">
+      <h3>Payment Reminders <span class="owner cs">CS</span></h3>
+      <div class="tail" style="margin-top:10px;padding-top:0">Structurally a filter on Orders, kept as a screen by explicit decision twice over, because chasing money is a distinct job. The change needed is of kind, not position: it is a reminder-job log today and has to become a work queue sorted by urgency with a send action on the row.</div>
+      <ul>
+        <li>Route unchanged, screen rebuilt</li>
+        <li>Reminder counts as a fraction of the dunning cap</li>
+        <li>Cap read from Settings, Payments</li>
+      </ul>
+    </div>
+    <div class="vcard">
+      <h3>Inventory <span class="owner ops">Ops</span></h3>
+      <div class="tail" style="margin-top:10px;padding-top:0">Forward demand built from contracts and dates StackBack already holds. Dashboard first, not a flat table, because the question is whether a shortfall is coming. Renamed from Forecast so the label matches the word a merchant reaches for.</div>
+      <ul>
+        <li>Entirely net-new, nothing in code</li>
+        <li>Replaces the Holds screen</li>
+        <li>Owns the out-of-stock policy config</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="specWarn" style="margin-top:16px">
+    <b>The split leaves one boundary undefined, and it decides two screens.</b> Orders is scoped paid-only for Customer Success, but a PAYG delivery awaiting payment is not yet paid. Either it appears in Orders as an unpaid upcoming row, in which case Orders and Payment Reminders overlap and the paid-only rule is not real, or it lives only in Payment Reminders until payment clears, in which case a rep looking at Orders cannot see a delivery that is about to happen. Both readings are defensible and they build different screens, so this is the first thing to settle next round.
+  </div>
+
+  <div class="specWarn">
+    <b>Holds was locked and then superseded inside the same day, and the tracker follows the later call.</b> The morning of 2026-07-27 locked an out-of-stock spine with a Holds screen and Hold-until-stock-is-back behaviour. IA-01, written that evening, removed Holds on the grounds that StackBack cannot read Shopify stock levels and only discovers a shortage when a push fails, so a hold state it cannot detect is not implementable. This tracker follows IA-01 and shows no Holds screen. Worth confirming rather than inheriting, because six wireframe iterations were built on the earlier reading.
+  </div>
+
+  <h2 class="specH">4. Notifications, two lanes</h2>
+  <p class="specP">Notifications is one word covering two unrelated systems with different audiences, different delivery paths and different homes in the nav. The repo already separates them: the Linear QA label set carries <b>Admin Notification</b> and <b>Customer Notification</b> as distinct labels, so the tracker adopts that vocabulary instead of inventing a third name.</p>
+
+  <div class="cols3">
+    <div class="vcard">
+      <h3>Admin Notification <span class="owner ops">Ops</span> <span class="chip warn">Partial</span></h3>
+      <div class="tail" style="margin-top:10px;padding-top:0">Alerts to the merchant. A daily glance, not a destination, so it lives in the header bell on every screen rather than taking a nav slot. The route exists in the backend with no designed screen. INT-01 is in review.</div>
+      <ul>
+        <li><code class="rte">/notifications</code> centre, backend only</li>
+        <li>Delivery config to Settings, Admin alert delivery</li>
+        <li>Severity tag and action-required flag already in code</li>
+      </ul>
+    </div>
+    <div class="vcard">
+      <h3>Customer Notification <span class="owner plat">Platform</span> <span class="chip warn">WIP</span></h3>
+      <div class="tail" style="margin-top:10px;padding-top:0">Messages to the customer, on email and WhatsApp in parallel. Set at onboarding and rarely touched after, so it moves inside Settings. The editor still opens as a full page because it carries an editor, a live preview and a test send.</div>
+      <ul>
+        <li>Ten canonical templates, down from fourteen</li>
+        <li>Email via SES, WhatsApp via Meta Cloud API</li>
+        <li>Content phase is the open work</li>
+      </ul>
+    </div>
+    <div class="vcard">
+      <h3>The bell itself <span class="chip crit">Open call</span></h3>
+      <div class="tail" style="margin-top:10px;padding-top:0">An embedded app cannot add anything to Shopify's own top bar, so a bell needs StackBack's own header row inside the content frame. That is persistent chrome on every screen and it costs vertical space everywhere.</div>
+      <ul>
+        <li>Option A, keep the bell, pay the chrome</li>
+        <li>Option B, no bell: a Home card plus a banner on the screen each alert concerns</li>
+        <li>Needs an App Bridge check before either is committed</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2 class="specH">5. Open questions this tracker cannot answer</h2>
+  <p class="specP">Carried forward as the agenda for the next round. Each one changes a screen, so none of them is safe to default.</p>
+
+  <div class="tblWrap">
+    <table class="cmp">
+      <thead><tr><th class="n">#</th><th style="width:19%">Module</th><th>Question</th><th style="width:23%">What it blocks</th></tr></thead>
+      <tbody id="qBody"></tbody>
+    </table>
+  </div>
+
+  <h2 class="specH">6. What is new since IA-01</h2>
+  <p class="specP">IA-01 settled the shape of the nav. This revision does not move any of the eleven items. It adds the tracking layer, the route trees inside each module, and the ownership column.</p>
+
+  <div class="prin">
+    <div class="p">
+      <div class="num">1</div>
+      <h4>Routes, not just items</h4>
+      <p>Every module now lists the routes inside it, taken from the shipped build where they exist rather than described from memory. <span id="cntRoutes">A route count</span> is tracked, and each one carries a provenance mark so a net-new proposal never reads as an existing screen.</p>
+    </div>
+    <div class="p">
+      <div class="num">2</div>
+      <h4>Ownership as a first-class column</h4>
+      <p>The Orders split was decided by team ownership, so ownership is recorded per module and per route. It is what makes the Orders, Payment Reminders and Inventory boundary reviewable instead of a matter of taste.</p>
+    </div>
+    <div class="p">
+      <div class="num">3</div>
+      <h4>Status that cannot drift silently</h4>
+      <p>Counts in the bar and in the rollup table are computed from the route data, not typed. Change a route status and every total moves with it, so the tracker cannot claim a coverage it does not have.</p>
+    </div>
+  </div>
+
+  <div class="specNote" style="margin-top:16px">
+    <b>Provenance is marked because two of these modules are mostly invention.</b> Inventory has nothing in code at all and Payment Reminders has a route but no designed screen, so most of what those two sections show is proposed rather than observed. Everything drawn from the shipped build is marked "In code", everything from an approved spec is marked "Design locked", and everything proposed here is marked "Net-new". Read the net-new rows as questions.
+  </div>
+
+  <h2 class="specH">7. Reference shelf</h2>
+  <p class="specP">The cross-cutting documents that do not belong to any single module. The IA decision record, the code-grounded screen map, and the codebase analysis every route in this tracker was checked against.</p>
+  <div class="card" id="shelf"></div>
+
+  <h2 class="specH">8. Keeping this current</h2>
+  <p class="specP">Everything on this page renders from two maps near the top of the script, under a comment banner that reads EDIT HERE. Nothing else needs touching, and no counts need updating by hand because every total on the page is computed.</p>
+
+  <div class="prin">
+    <div class="p">
+      <div class="num">1</div>
+      <h4>To add a backlog item</h4>
+      <p>Find <code class="rte">BACKLOG</code>, find the module key, add one line: <code class="rte">B('what to do','open','why or who blocks it')</code>. State is one of open, gated, parked or bug. It appears on the module card and in section 3 at once, and the counts move themselves.</p>
+    </div>
+    <div class="p">
+      <div class="num">2</div>
+      <h4>To add or relock a file</h4>
+      <p>Find <code class="rte">FILES</code>, add <code class="rte">F('/Design/…','Label','locked','note')</code>. Paths start from the stackback folder. When a new version supersedes an old one, change the old entry from locked to ref rather than deleting it, so the lineage survives.</p>
+    </div>
+    <div class="p">
+      <div class="num">3</div>
+      <h4>To change a status</h4>
+      <p>Route statuses live in each module's <code class="rte">routes</code> array as the third argument. Module-level status is the <code class="rte">status</code> field. Change either and the sidebar lights, the rollup bar and the section 2 table all follow.</p>
+    </div>
+  </div>
+
+  <div class="specWarn" style="margin-top:16px">
+    <b>This page has to be served over HTTP, not opened as a file.</b> Two reasons. The Polaris screens load their components from a CDN and render as dead static snapshots under a file path, which is already written down in the Polaris README. And the inline previews here are iframes pointing at sibling folders, which a browser blocks under file access. Serve the stackback folder and open this at <code class="rte">/merchant/IA_MerchantAdmin_v2.html</code>.
+  </div>
+
+</div>
+
+<script>
+/* ============================ icons ============================ */
+const ICO = {
+  home:'<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z"/><path d="M9 21v-7h6v7"/>',
+  plans:'<path d="M4 5h16M4 12h16M4 19h10"/>',
+  subs:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 10h8M8 14h5"/>',
+  orders:'<path d="M3 6h18l-1.5 11a2 2 0 0 1-2 1.8H6.5a2 2 0 0 1-2-1.8Z"/><path d="M9 10v6M15 10v6"/>',
+  pay:'<rect x="2.5" y="5.5" width="19" height="13" rx="2"/><path d="M2.5 10h19"/>',
+  inv:'<path d="M3 20V9l9-5 9 5v11"/><path d="M8 20v-6h8v6"/>',
+  cust:'<circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.6 3.1-5.6 7-5.6s7 2 7 5.6"/>',
+  widget:'<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16"/>',
+  portal:'<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.6 2.5 14.4 0 17"/>',
+  land:'<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M3.5 9h17M7.5 13h6"/>',
+  notif:'<path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
+  chart:'<path d="M4 20V4"/><path d="M4 20h16"/><path d="M8 20v-6M13 20v-9M18 20v-4"/>',
+  gear:'<circle cx="12" cy="12" r="3.1"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.4 5.4l2.1 2.1M16.5 16.5l2.1 2.1M18.6 5.4l-2.1 2.1M7.5 16.5l-2.1 2.1"/>'
+};
+const svg = k => '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+(ICO[k]||'')+'</svg>';
+
+/* ==================================================================
+   EDIT HERE. These two maps are the only things you need to touch
+   to keep this tracker current. Everything else renders itself.
+
+   FILES[module]   the real artifacts. F(path, label, state, note)
+                   state: locked | proto | spec | ref | data
+                   path is from the stackback folder root, so it
+                   starts with /Design or /Specs or /Reference.
+
+   BACKLOG[module] what is still to do. B(item, state, note)
+                   state: open | gated | parked | bug
+                   gated means it is waiting on somebody else. Put
+                   who or what in the note.
+
+   Module keys: home plans subs orders pay inv cust widget portal
+                land chart notif gear
+   ================================================================== */
+
+const F = (path,label,state,note) => ({path,label,state,note:note||''});
+const B = (item,state,note) => ({item,state,note:note||''});
+
+const FILES = {
+
+home:[
+  F('/Specs/AdminHome/StackBack_Spec_AdminHome_PostOnboarding_Dashboard_Prototype.jsx','Post-onboarding dashboard prototype','locked','Prototype locked 2026-07-06, reviewed 2026-07-16. The steady-state Home.'),
+  F('/Specs/AdminHome/StackBack_Spec_AdminHome_Onboarding_v1.md','Onboarding revamp spec v1.1','spec','Judged finalized and sound, then parked 2026-07-16 pending a rework in a different fashion.'),
+  F('/Specs/AdminHome/StackBack_Spec_AdminHome_Onboarding_Prototype.jsx','Onboarding revamp prototype','proto','Finalized and unchanged. Parked with the spec above.'),
+  F('/Specs/AdminHome/StackBack_Spec_AdminHome_Dashboard_Prototype.jsx','Standalone analytics dashboard','ref','Parked. The analytics-only cut, superseded on Home by the post-onboarding prototype.')
+],
+
+plans:[
+  F('/merchant/Polaris/PlanSetup_Polaris_v2.html','Create subscription plan, Polaris','locked','CANONICAL. Approved 2026-07-24. Real Polaris web components, accordion steps, drag-reorder buying options, single per-plan shipping override.'),
+  F('/merchant/Polaris/BundleSetup_Polaris_v2.html','Create bundle, Polaris','locked','CANONICAL. Approved in principle 2026-07-24. Bundle type is Step 1 with five first-class formats.'),
+  F('/merchant/PurchaseOptions_Listing_v12.html','Purchase Options listing v12','locked','CANONICAL. Locked 2026-07-21. The list the two create-screens sit under.'),
+  F('/merchant/Polaris/README.md','Polaris build notes','spec','Important infra fact: these render only over a local HTTP server. Opening them as a file gives a static snapshot.'),
+  F('/Specs/MixMatch/StackBack_Spec_MixMatch_CategoryBundle_Config_Model.md','Mix and Match config model v1.2','locked','Backend config locked 2026-05-26. Per-category products, per-category min or max, four pricing modes.'),
+  F('/Specs/MixMatch/StackBack_Spec_MixMatch_CategoryBundle_Widget_Prototype_v2.jsx','Mix and Match widget v2','locked','Frontend widget design locked 2026-05-28.'),
+  F('/Specs/MixMatch/StackBack_Spec_MixMatch_AdminConfig_v1.jsx','Mix and Match admin config','proto','Admin config prototype. Dev queued post-pilot.'),
+  F('/Specs/INT/StackBack_Spec_INT03_TBYB.md','Try Before You Buy','spec','INT-03. In dev per the Linear project board. Becomes a fourth plan type tab.'),
+  F('/Specs/INT/StackBack_Spec_INT07_CollectionPlanConfig.md','Collection plan config','spec','Applying plans at collection level rather than per product.'),
+  F('/Specs/MR/StackBack_Spec_MR07_DefaultPlanOption.md','Default plan option','spec','Which buying option is preselected on the widget.'),
+  F('/merchant/Polaris/PlanSetup_Polaris_v1.html','Create plan, Polaris v1','ref','First Polaris pilot, kept deliberately.'),
+  F('/merchant/Polaris/BundleSetup_Polaris_v1.html','Create bundle, Polaris v1','ref','First Polaris pilot, kept deliberately.'),
+  F('/merchant/PlanSetup_Guided_v1.html','Create plan, hand-rolled v1','ref','Was canonical until the Polaris rebuild superseded it for this screen.'),
+  F('/merchant/PlanSetup_Guided_v2.html','Create plan, hand-rolled v2','ref','The prior v6, kept.'),
+  F('/merchant/PlanSetup_Guided_Future_v1.html','Create plan, future-proof','proto','Parked. Adds an Auto-Debit method selector and a prepaid-to-PAYG hybrid toggle. Promote when payment mandates are ready.'),
+  F('/merchant/BundleSetup_Guided_v1.html','Create bundle, hand-rolled','ref','Pre-Polaris bundle screen.'),
+  F('/Specs/Later/StackBack_Spec_Later_Memberships.md','Memberships','spec','Deferred. A future plan type.'),
+  F('/Specs/Later/StackBack_Spec_Later_CoursesSequences.md','Courses and sequences','spec','Deferred. A future plan type.')
+],
+
+subs:[
+  F('/Specs/INT/StackBack_Spec_INT_PaygToPrepaid.md','PAYG to prepaid conversion','spec','Converting a live contract between payment models.')
+],
+
+orders:[
+  F('/merchant/Polaris/Orders_Polaris_v5.html','Orders, Polaris v5','locked','CANONICAL, 2026-08-04. Accepts #sku= from Inventory: opens on All orders with the window at all dates, filters on any matching line item, states it as a clearable chip, and re-filters on hashchange so the second arrival works too. Nav brought onto the locked IA (v4 still showed Manage Purchase Options, Purchase Contracts, One-Time Orders).'),
+  F('/merchant/Polaris/Orders_Polaris_v4.html','Orders, Polaris v4','ref','Superseded by v5 on 2026-08-04, previously canonical from 2026-08-03. Identity follows the lifecycle: subscription (PC-####) before the push, order code after. What-to-pick is a product-preview capsule stack with a Details popup, which replaced the v3 drawer. Customer record is its own popup. New Deliveries column. Status is per tab. Failure reason and owner REMOVED, since StackBack cannot reliably learn why Shopify refused a push. Value merged with Payment. Custom date range replaced "Any date". OPEN: does not yet read a #sku= filter, which the Inventory row links now depend on.'),
+  F('/merchant/Polaris/Orders_Polaris_v3_baseline_screenshot.png','Orders, Polaris v3 (screenshot only)','ref','NO HTML FILE SURVIVES. The locked v3 was edited in place before being committed, so its byte-exact baseline is unrecoverable and this screenshot is all that is left. Superseded by v4 on 2026-08-03. Its kebab never rendered at all for four days (s-menu has no trigger slot), so four row actions were unreachable. No byte-exact baseline survives, only a screenshot, because the locked file was edited in place. Adds bulk select with Place / Reschedule / Pause deliveries, a calendar view, pagination, a clickable customer, and columns Ops actually needs: Shopify order number, destination city and pin, order value, transaction status, and the product list with SKU and quantity. Row opens a detail drawer rather than an inline expansion, because s-table has no colspan.'),
+  F('/merchant/Polaris/Orders_Polaris_v2.html','Orders, Polaris v2','ref','Superseded by v3. Real Polaris table with search and filters, but no bulk actions, no calendar, thin columns, and an inline expanded row that rendered broken in a single cell.'),
+  F('/merchant/InventoryHub_v6.html','Orders and Holds, hub v6','ref','The latest of six iterations. The unified-hub direction is superseded, but its row patterns carry forward: primary action beside the kebab, contract-state chip, reminder fractions.'),
+  F('/merchant/InventoryHub_v5.html','Orders and Holds, hub v5','ref','Carries the awaiting-payment UI that has now moved to Payment Reminders.')
+],
+
+pay:[
+  F('/merchant/Polaris/PaymentReminders_Polaris_v6.html','Payment Reminders, Polaris v6','locked','CANONICAL, 2026-08-05. Carries the v5 dunning-model correction and settles the action model on review. ONE row button, Contact customer, on every row: v5 swapped the primary between Contact and Send reminder by payment history, which moved the most important control and changed its meaning as you scanned down the list. Sending now lives INSIDE the contact popup, on the email row beside the address it uses, plus the kebab. A manual send bumps the manual count and flips Last contact to today by-hand, but deliberately does NOT touch the automatic count, so helping a customer can never pull them closer to their own pause. The intent signal did not disappear with the button: it is still the badge under the name and the Payment history filter, which is where a judgement belongs. Also: PAYG continuation is now the FIRST tile, being the outcome the module exists to protect; the Pausing-within-2-days tile is dropped; "Owed for" becomes "Order details"; and the "+N by hand" line leaves the row, since the Last contact HAND badge directly below already carries that fact and the running total is still in the popup history.'),
+  F('/merchant/Polaris/PaymentReminders_Polaris_v5.html','Payment Reminders, Polaris v5','ref','Superseded by v6 the same day, on the action model. WHERE THE DUNNING MODEL WAS CORRECTED, which every version from v1 had drawn wrong. The merchant sets both the number of reminders (editable, five to ten, not a fixed four) and a pause rule expressed as N days before the delivery date. It follows that NOTHING ON THE ONGOING TAB IS OVERDUE: the invoice is due with a deadline, and the useful number counts DOWN to the pause, not up from a date nothing was late for. Overdue is a real state that belongs entirely to the Paused-for-non-payment tab, where the subscription has actually stopped, and that is now the only place the word appears. The default sort, closest to auto-pause, finally means what it says. Also in v5: Call customer becomes CONTACT customer throughout, because an admin screen cannot reliably place a call; phone and email are peers at the same size with a Copy control on each, replacing a 22px number with the email as grey subtext, which had quietly decided that calling was the only real contact; Call now and WhatsApp are removed as actions the screen cannot honestly perform; and the pre-call prose paragraph becomes a numbers breakdown (deliveries paid, reminders sent, when it pauses, outstanding), since this Polaris build has no progress-bar primitive. New tile: Pausing within 2 days.'),
+  F('/merchant/Polaris/PaymentReminders_Polaris_v4.html','Payment Reminders, Polaris v4','ref','Superseded by v5 the same day, on the dunning model. v3 did the Polaris rebuild; v4 answered WHY THE SCREEN EXISTS, which no version had stated. The grill established the division of labour: the backend owns the reminder sequence and the auto-pause, the human owns the phone call, and everything here is arranged around that. Seven changes. Pips count the AUTOMATIC sequence only, since manual sends sit outside the cap and are counted separately, so the row can no longer understate what the customer received. A Last contact column stamped auto or by-hand stops two people chasing the same customer the same afternoon. Non-payment paused rows can now be chased, because the cap only binds the automatic sequence. An INTENT segment, derived from deliveries_completed with no Shopify lookup, splits customers who have never paid past the first delivery from proven payers, and the PRIMARY ACTION follows it: never-renewed and at-cap rows get Call, proven payers get the cheap nudge first. The invented "Recovered, 30d" tile is replaced by PAYG continuation, badged Store so it is not read as deriving from the view. Contact details open from the row, since calling is the point. THE BUG WORTH REMEMBERING: s-table chooses its table-versus-stacked layout ONCE, when it upgrades, so rendering before the Polaris CDN defines the elements permanently locks it into the stacked phone-list variant. It presents exactly like a width problem and is not one. Fix is a re-render after customElements.whenDefined plus two frames, and on debounced resize.'),
+  F('/merchant/Polaris/PaymentReminders_Polaris_v3.html','Payment Reminders, Polaris v3','ref','Superseded by v4 the same day. THE POLARIS REBUILD the module had owed since v1, closing the last hand-rolled screen: real s-table family, s-badge for stage, the s-thumbnail capsule stack shared with Orders v5 and Purchase Options v12, a real s-menu kebab wired by commandfor (the activator sits OUTSIDE the menu, which is what Orders v3 got wrong), and s-select filters. THREE FIXES beyond the port: bulk select now exists and drives the header send action, which was a dead button in v2; a detail popup shows the invoice line items with a reconciling total plus the reminder history, neither of which v2 had; and arriving from Inventory now snaps to the Ongoing tab, because a #sku= landing on Paused showed a list the chip itself says is not scoped by SKU. Adds Sort by, search, and an Open ended badge for a customer pause with no resume date.'),
+  F('/merchant/Polaris/PaymentReminders_Polaris_v2.html','Payment Reminders, Polaris v2','ref','Superseded by v3 on 2026-08-05. Rows first carried LINE ITEMS here, which v1 had none of, so this is where SKU filtering from Inventory became possible. Fixed the v1 defect where the .warn notice-box class collided with the .sdot warn status modifier and painted every mid-stage dot as a 36x32 amber blob. Still hand-rolled rows, which is what v3 replaced.'),
+  F('/merchant/Polaris/PaymentReminders_Polaris_v1.html','Payment Reminders, Polaris v1','ref','Superseded by v2. Built 2026-07-28 off the grill. CS-owned work queue. Tab 1 is the live reminder queue with sent-of-cap pips; tab 2 is Paused, split into paused-for-non-payment (churn risk, call them) and paused-by-customer (leave alone).'),
+  F('/merchant/InventoryHub_v5.html','Reminder UI inside hub v5','ref','Where the reminder count as a fraction of the dunning cap was first drawn.')
+],
+
+inv:[
+  F('/merchant/Polaris/Inventory_Polaris_v4.html','Inventory, Polaris v4','locked','CANONICAL, 2026-08-04. "Not live" replaces "Not in store" for draft or archived, reason still on hover. Exactly TWO row actions, View paid orders and View unpaid orders, the second going to Payment Reminders because Orders is paid-only. SKU vocabulary aligned with Orders so every link lands on real rows.'),
+  F('/merchant/Polaris/Inventory_Polaris_v3.html','Inventory, Polaris v3','ref','Superseded by v4. Had a third kebab item duplicating the first destination, its own invented SKUs that matched nothing in Orders, and the "Not in store" wording. Two tabs: Summary and By product. Demand-only. Paid / Not paid yet split with a dormant auto-debit tier. Delivery window with a custom From-To range and weekly bucketing past 45 days. Row links route Paid to Orders and Not-paid-yet to Payment Reminders, because Orders is paid-only. Single "Not in store" label for draft or archived, reason on hover. Read-only, CSV export.'),
+  F('/merchant/Polaris/Inventory_Polaris_v2.html','Inventory, Polaris v2','ref','Superseded by v3. Had the renames and the custom range, but routed every deliveries count to Orders, which is wrong for the unpaid half since Orders never lists unpaid work.'),
+  F('/merchant/Polaris/Inventory_Polaris_v1.html','Inventory, Polaris v1','ref','First build. Committed / Probable naming, Horizon label, no custom range, draft and archived shown as two separate labels.'),
+  F('/merchant/InventoryHub_v6.html','Inventory hub v6','ref','Latest iteration. Four tabs: Forecast, Orders, Holds, Settings. Superseded as an IA by the split. Still the best reference for the out-of-stock policy wording, and the source of the cross-screen drill-down idea (viewDeliveries) that v3 adopted. Its On hand, Surplus/shortfall, Lowest on hand, stock filter and the Covered / running tight ladder are all dead under demand-only.'),
+  F('/merchant/InventoryHub_v4.html','Inventory hub v4','ref','Mid-course iteration.'),
+  F('/merchant/InventoryHub_v3.html','Inventory hub v3','ref','Mid-course iteration.'),
+  F('/merchant/InventoryHub_v2.html','Inventory hub v2','ref','Early iteration.'),
+  F('/merchant/InventoryHub_v1.html','Inventory hub v1','ref','First pass off the competitor references.')
+],
+
+cust:[],
+
+widget:[
+  F('/Specs/Widget/StackBack_Spec_SubscriptionWidget_v1.jsx','Subscription widget v1, full card','locked','THE locked widget version. Figma parity, prepaid and PAYG toggle in the body, full-width CTA.'),
+  F('/Reference/StackBack_Widget_Admin_Roadmap.md','Widget and admin working checklist','locked','CANONICAL working checklist, WIP and Review and Approve per item. The list to reconcile against.'),
+  F('/Specs/Widget/StackBack_Spec_SubscriptionWidget_v2_Form.html','Widget v2, form (rendered)','proto','Pending internal review. Dependent dropdowns, subscribe-only, for form and B2B. This one previews in the browser.'),
+  F('/Specs/Widget/StackBack_Spec_SubscriptionWidget_v3_Quiz.html','Widget v3, quiz (rendered)','proto','Pending internal review. Three-question guided flow. This one previews in the browser.'),
+  F('/Specs/Widget/StackBack_Spec_SubscriptionWidget_v4.jsx','Widget v4, payment popover','proto','Pending internal review. Payment popover left of the CTA, plans payment-locked.'),
+  F('/Specs/Widget/StackBack_Spec_SubscriptionWidget_v2_Form.jsx','Widget v2 source','proto','JSX for v2.'),
+  F('/Specs/Widget/StackBack_Spec_SubscriptionWidget_v2_Form_Spec.md','Widget v2 spec','spec','Written spec for v2.'),
+  F('/Specs/Widget/StackBack_Spec_SubscriptionWidget_v3_Quiz.jsx','Widget v3 source','proto','JSX for v3.'),
+  F('/Specs/Widget/StackBack_Spec_SubscriptionWidget_v3_Quiz_Spec.md','Widget v3 spec','spec','Written spec for v3. Auto-advance versus Continue is unresolved.'),
+  F('/Specs/Widget/StackBack_Module_LocationShipping_v1.jsx','Location and shipping module','proto','Carved out of the widget as a standalone module.'),
+  F('/Specs/Widget/StackBack_Module_OrderSummary_v1.jsx','Order summary module','proto','Carved out of the widget as a standalone module.'),
+  F('/Specs/Widget/StackBack_Spec_SubscriptionWidget_Simplified_v1.jsx','Simplified widget','ref','REFERENCE ONLY, not to be used. The compressed single-dropdown lineage.'),
+  F('/Specs/Widget/StackBack_Spec_SubscriptionWidget_SubscribeOnly_v1.1.jsx','Subscribe-only widget v1.1','ref','REFERENCE ONLY, not to be used. Same lineage as above.')
+],
+
+portal:[],
+
+land:[],
+
+chart:[
+  F('/Specs/INT/StackBack_Spec_INT05_Analytics_v1.md','Analytics spec INT05','spec','The only analytics spec. Section 13.4 describes six cards and disagrees with the shipped three-metric prototype.'),
+  F('/Specs/AdminHome/StackBack_Spec_AdminHome_Dashboard_Prototype.jsx','Standalone analytics prototype','proto','Parked. The nearest thing to an Analytics screen that exists.')
+],
+
+notif:[
+  F('/Specs/INT/StackBack_Spec_INT06v2_EmailTemplate_Consolidated_Dashboard.jsx','INT06v2 consolidated dashboard','locked','Admin-replica dashboard for the ten canonical templates. Locked 2026-06-02.'),
+  F('/Specs/INT/StackBack_Spec_INT06v2_EmailTemplate_Consolidated_List.xlsx','INT06v2 template list','data','Three sheets: Templates, Mapping fourteen to ten, Bug Log.'),
+  F('/Specs/INT/StackBack_Spec_INT06v2_WhatsApp_Templates.xlsx','WhatsApp template list','data','The WhatsApp side of the same ten.'),
+  F('/Specs/INT/StackBack_Spec_INT01_AdminNotifications.md','INT01 admin notifications','spec','The admin alert route. In review per the Linear board.'),
+  F('/Specs/PT/StackBack_Spec_PT01_WhatsApp.md','PT01 WhatsApp','spec','Provider integration. Note the code shipped Meta Cloud API, not Wati or Interakt.'),
+  F('/Specs/INT/StackBack_Spec_INT04_EmailRework.md','INT04 email rework','ref','SUPERSEDED by INT06v2.'),
+  F('/Specs/INT/StackBack_Spec_INT06_EmailConsolidation.md','INT06 email consolidation','ref','SUPERSEDED by INT06v2.'),
+  F('/Specs/Later/StackBack_Spec_Later_SMS.md','SMS channel','spec','Deferred to Stage 6. Twilio stub exists in code.')
+],
+
+bill:[],
+
+gear:[
+  F('/Specs/PT/StackBack_Spec_PT03_GoKwik.md','PT03 GoKwik','spec','Checkout compatibility. External order creation is not in the code.'),
+  F('/Specs/PT/StackBack_Spec_PT02_Shopflo.md','PT02 Shopflo','spec','Checkout compatibility.'),
+  F('/Specs/StackBack_PurchaseSurfaceMatrix_CustomCheckout.xlsx','Purchase surface matrix','data','Which purchase surfaces work under which checkout.'),
+  F('/Specs/Later/StackBack_Spec_Later_Loyalty.md','Loyalty','spec','Deferred.')
+]
+};
+
+const BACKLOG = {
+
+home:[
+  B('Decide whether the onboarding revamp stays parked','open','Spec and prototype are both finalized. Parked 2026-07-16 for a rework in a different fashion, which was never scoped.'),
+  B('Should a churn or retention KPI sit on the glance layer','open','The main open risk on the dashboard. Shipping a subscriptions home with no top-line retention metric.'),
+  B('Add dismiss or snooze to the Health banner','open','Non-dismissable on a screen seen daily is different from onboarding, where an interrupt is fine.'),
+  B('Delivery schedule defaults render in minutes','bug','Prototype nit for dev handoff. Should be days or hours.'),
+  B('Status-card horizontal scroll is not implemented','bug','grid-cols-3 crushes on mobile. The scroll behaviour was described but never built.'),
+  B('Remove dead code from the prototype','bug','Unused Warning and Info icons, and a no-op line-through-on-done class.')
+],
+
+plans:[
+  B('DEV confirm a flat per-plan shipping override','gated','Waiting on dev. One rate plus min or max value plus ZIP conditions. The shipped model is per-named-rate, so if this cannot be driven, targeting moves back to named rates.'),
+  B('DEV confirm the bundle listing loader returns the product array','gated','Waiting on dev. Count-only today, and the listing design needs the array.'),
+  B('Fix the stale tiered bundle_type mapping','open','Present in the live listing code.'),
+  B('Mirror Flexible Payments onto the bundle screen','open','Prepaid plus PAYG with endless default, and the single-override shipping, for consistency with the plan screen.'),
+  B('Promote Auto-Debit and the hybrid toggle','gated','Waiting on payment-mandate support. Parked in PlanSetup_Guided_Future_v1.html.'),
+  B('Decide the route rename to /plans','open','Reads far better than purchase-options but breaks bookmarks and support macros. Needs a redirect plan.'),
+  B('Deepen Pick-from-each per-category build','open','Mix and Match per-category product and pricing detail.'),
+  B('Polaris Switch is missing an accessibility label','bug','Found 2026-07-28 by previewing PlanSetup_Polaris_v2.html in this tracker. Polaris logs "Switch requires a label or accessibilityLabel prop" twice. A real a11y gap in a locked screen, so it ships unless fixed.')
+],
+
+subs:[
+  B('Retire the two order aliases','open','subscribe-orders and bundle-orders both redirect to purchase-contracts, and they block the /subscriptions rename.'),
+  B('Rename the misnamed contract-detail routes','open','subscribe-order/:id and bundle-order/:id hold contracts, not orders. Exactly the confusion the naming convention exists to prevent.')
+],
+
+orders:[
+  B('DEV confirm Shopify returns a usable push-failure code','gated','The single highest-value open question on Orders. The whole failure-reason column was removed on the assumption it does not. If it does, the FAIL and FIXOWNER maps are retained unused in the file and can be restored in one edit.'),
+  B('DEV confirm the to-be-placed window is queryable','gated','Waiting on dev. The screen distinguishes paid-and-scheduled from pushed-to-Shopify, which assumes the 3 to 5 day pre-push state is readable as a status.'),
+  B('DEV confirm delivery SEQUENCE is real data','gated','The "4 of 6" Deliveries column is computed from the order code in the mock. Need to know whether StackBack can report which delivery of a run an order is, and what the number means after a reschedule or a skip.'),
+  B('DEV confirm lifetime order count is available here','gated','The customer popup shows it beside the orders-in-view count. Only the latter is derivable from what Orders already loads.'),
+  B('Nobody tells the CUSTOMER their delivery slipped','open','A push can fail and sit nine days late. The merchant now sees it, the customer still does not. Needs a customer-facing notification decision, which touches the INT06v2 template set.'),
+  B('Decide the add or swap PRICE DIFFERENCE','open','If a swap changes the delivery value, is the customer charged, refunded, or is it absorbed? Undecided, and it blocks building the add and swap popup for real.'),
+  B('Raise a failed push on the admin-alerts bell','open','INT-01 is already severity-tagged with an action-required flag. Designed but not wired, so a stale failure relies on somebody looking at the tab.'),
+  B('Reschedule assumes Ops knows the restock date','open','True for a merchant\'s own warehouse, weak on 3PL or supplier stock, where the new date is a guess and the delivery can fail again.'),
+  B('Decide the PC- prefix against the word Subscription','open','The nav, the column header and the kebab all say Subscription; the code says PC for Purchase Contract. Either the prefix becomes SUB-, a data-model change needing Shubham, or the split is accepted permanently.'),
+  B('Cards do not scope to the view','open','"Orders to be placed 22" sits above a 7-day list of 8. Total orders carries an "N in this view" sub-line, the other two cards do not, which sits against the locked rule that every count derives from the rows on screen.'),
+  B('Decide the "Order or subscription" header on mixed tabs','open','Honest but clumsy. The alternative, a fixed "Reference", is vaguer. No good answer yet.'),
+  B('Decide the amber edit dot','open','Assistant-added. Edits were asked to live in View details, but a plain dot was kept on the row because otherwise a changed pick list is indistinguishable among 47. Easily removed if unwanted.'),
+  B('Retire Delivery Timeline V2','open','Two timeline versions are routed in production.'),
+  B('Add an export route','open','Named in the screen header as an action, but no route exists.')
+],
+
+pay:[
+  B('DEV confirm the reminder count and pause rule are merchant-set','gated','v5 assumes Settings > Payments exposes BOTH the number of reminders (editable, five to ten) and a pause rule of N days before the delivery date. The whole Pauses-in column and the default sort derive from the second one. Stated as intended behaviour 2026-08-05; needs confirming as built behaviour.'),
+  B('DEV confirm the manual-send data model','gated','v4 depends on three fields the backend may not keep: a manual send that does NOT consume the dunning cap, a total that includes manual sends, and a last-contact timestamp flagged auto or manual. Confirmed as the intended behaviour on 2026-08-05; needs confirming as the built behaviour.'),
+  B('DEV confirm paused-reason is stored','gated','Waiting on dev. The Paused tab splits customer-initiated from auto-paused-for-non-payment, which needs a stored reason rather than an inferred one.'),
+  B('Surface a resume date that has already passed','open','v4 flags the no-date case as Open ended, which is half the problem. A contract whose resume date has gone by still looks identical to one resuming next month, and it needs a real date comparison plus a decision on whose job it is.'),
+  B('Confirm Call customer is genuinely staffed','open','It is the primary on every never-renewed and at-cap row, which assumes a reachable number on the record and somebody at the MERCHANT staffed to dial it. Merchant staff work this queue, not ULABS, so at a seven-store pilot that is an observation to make rather than an assumption to build on.'),
+  B('Attribution of the calling is deliberately not measured','parked','DECIDED 2026-08-05: not needed at pilot stage. PAYG continuation is displayed as store health instead, and it does not claim the calls caused it. Revisit if the question comes up post-GTM.'),
+  B('~~Define Recovered, 30d~~','parked','RESOLVED 2026-08-05 by deleting it. The 61% was invented and implied an attribution it could not support.'),
+  B('~~Rebuild on real Polaris components~~','parked','DONE 2026-08-05 in v3. Real s-table, s-badge, s-thumbnail and s-menu. Kept here as the record of the longest-outstanding defect on this module.'),
+  B('~~v1 paints status dots as 36 by 32 blobs~~','parked','Fixed in v2 on 2026-08-04, carried into v3. v1 remains unpatched and is reference-only.')
+],
+
+inv:[
+  B('Freebies and Nth-order gifts are absent from the forecast','open','The highest-value gap. Plans already support Nth-order gifts via freebies2. If delivery 3 of a run triggers a free sachet the warehouse must pick that SKU too, and it is invisible on the screen even though StackBack knows it from plan config plus delivery sequence.'),
+  B('Confirm skips and pauses are netted out','open','The portal lets a customer skip a delivery and a paused subscription rolls its schedule forward. If either is unhandled the forecast OVERSTATES demand. The mock models neither.'),
+  B('"All pay-per-delivery equals not paid yet" is a simplification','open','True for FUTURE deliveries, which is what a forecast shows, but a pay-per-delivery order already paid does live in Orders. Used outside a forward window the split needs a real paid flag.'),
+  B('A not-live SKU appears unmarked in Busiest SKUs','open','The archived Wellness Powder sits in that chart with no indication it will be refused. The attention block below catches it, but a reader scanning the chart reads it as real demand.'),
+  B('Decide whether zero renders as blank or 0','open','Zero currently renders BLANK in the Paid and Not-paid-yet columns. Quieter, but a blank in a numeric column is ambiguous against "no data".'),
+  B('Decide the default tab','open','It opens on Summary. If Ops lands here to pull a list, By product may be the better default.'),
+  B('Split the forecast by location','open','inventoryQuantity is aggregate across locations and read_locations is granted. Irrelevant while demand-only, but a two-warehouse merchant would want it.'),
+  B('Confirm the Holds screen is genuinely removed','open','Locked on the morning of 2026-07-27 and superseded that evening. Six wireframes were built on the earlier reading.')
+],
+
+cust:[],
+
+widget:[
+  B('Lock the Arusha savings-liner copy','open','Shortlist is set: Exclusive cart savings inside, Savings waiting inside your cart, More savings inside your cart, Savings unlocked inside your cart.'),
+  B('Decide v2, v3 and v4','open','All three are built and pending internal review. A decision backlog, not a design backlog.'),
+  B('Resolve v3 auto-advance versus Continue','open','Also the prepaid rate model on the quiz result.'),
+  B('Widget nomenclature pass','open','Rename widget labels and terms.'),
+  B('Payment type placement','open','Inside the Choose your plan dropdown, or a separate chip. Leaning to a label per row.'),
+  B('Decide if the UPTO percent header is merchant-overridable','open','Auto-derived from the max option discount today.'),
+  B('Per-config liner targeting','parked','Needs the liner field moved from widget scope to per-purchase-option scope. Not in Linear yet.'),
+  B('Design an admin screen for the widget template editor','open','The template system shipped with no designed screen, so merchants assign widgets through an interface nobody designed.')
+],
+
+portal:[
+  B('Wire the PAYG Pay Now button','open','Draft order creation and the invoice route both work. The customer-facing button is not connected.'),
+  B('Build or remove the portal preview stub','open','Routed as a placeholder in production.'),
+  B('Data audit on the duplicated brand fields','gated','Waiting on the audit. Brand fields exist in both Settings and Portal Settings, and which is authoritative today is unknown.')
+],
+
+land:[
+  B('Retire the landing-pages alias','open','Redirects to landing-pages/templates.')
+],
+
+chart:[
+  B('Reconcile spec 13.4 with the shipped prototype','open','Spec says six cards including MRR, new and churn. The prototype shipped three metrics.'),
+  B('Decide the at-risk haircut on the Expected PAYG tile','open','Some of that forward revenue will churn or fail.'),
+  B('Auto-suppress PAYG blocks for prepaid-only merchants','open','Default-on for everyone today.'),
+  B('Decide if churn links to a pauses breakdown','open','Also whether Custom Blocks should collapse like the analytics blocks.'),
+  B('Revisit PAYG pause counting as churn','open','Stricter than most tools. May want a separate paused or at-risk state rather than hard churn.')
+],
+
+notif:[
+  B('BUG-001 Delivery Updated does not fire on customer edits','bug','P2. Owner Shubham. Logged to the tracker.'),
+  B('Bell or no bell','gated','Waiting on an App Bridge check. An embedded app cannot add to Shopify top bar, so a bell means persistent chrome on every screen.'),
+  B('Draft the canonical content for all ten templates','open','Email and WhatsApp shape, drawn from EMAIL_COMPONENTS_DETAILED_SPEC and the codebase Handlebars source.'),
+  B('Per-merchant refund and credit copy for Cancellation Confirmed','open','Feeds the billing_model content branches, PAYG versus prepaid.')
+],
+
+bill:[
+  B('Move Billing out of Settings in the nav','open','Positional change only, decided 2026-07-28. No new screen, and the shipped screen needs no edit.')
+],
+
+gear:[
+  B('Decide where the Jobs dashboard belongs','open','Shipped, and has no place in the locked twelve. Settings is an assignment made in this tracker, not a decision anyone took.'),
+  B('Shipping sync removal','open','Stage 1 direction is documented, work not started.'),
+  B('Region visibility overrides','open','Documentation only so far.'),
+  B('Mitigate checkout status sitting two levels deep','open','It is what Ops needs under pressure. Mitigations are a setup-health warning on Home and making Settings search match checkout.')
+]
+};
+
+/* ============================ status + owner vocab ============================ */
+const ST = {
+  ship  :{d:'ok'  , c:'ok'  , t:'Shipped' , grp:'live' },
+  wip   :{d:'warn', c:'warn', t:'WIP'     , grp:'live' },
+  part  :{d:'part', c:'info', t:'Partial' , grp:'live' },
+  bug   :{d:'crit', c:'crit', t:'Bug open', grp:'live' },
+  open  :{d:'off' , c:'neu' , t:'Open'    , grp:'queue'},
+  retire:{d:'off' , c:'neu' , t:'Retiring', grp:'queue'},
+  def   :{d:'off' , c:'dash', t:'Deferred', grp:'queue'}
+};
+const SRC = { code:{c:'neu',t:'In code'}, design:{c:'info',t:'Design locked'}, new:{c:'dash',t:'Net-new'} };
+const OWN = { cs:['cs','CS'], ops:['ops','Ops'], mkt:['mkt','Mktg'], fnd:['fnd','Founder'], plat:['plat','Platform'] };
+
+/* file state + backlog state vocab */
+const FST = {
+  locked:{d:'ok'  , c:'ok'  , t:'Locked'         , rank:0},
+  proto :{d:'warn', c:'warn', t:'Prototype'      , rank:1},
+  spec  :{d:'part', c:'info', t:'Spec'           , rank:2},
+  data  :{d:'part', c:'info', t:'Data'           , rank:3},
+  ref   :{d:'off' , c:'neu' , t:'Reference only' , rank:4}
+};
+const BST = {
+  bug   :{d:'crit', c:'crit', t:'Bug'    , rank:0},
+  gated :{d:'warn', c:'warn', t:'Gated'  , rank:1},
+  open  :{d:'off' , c:'neu' , t:'Open'   , rank:2},
+  parked:{d:'off' , c:'dash', t:'Parked' , rank:3}
+};
+const ext = p => (p.split('.').pop()||'').toLowerCase();
+/* A screen is something that was actually designed and can be looked at. Specs, sheets
+   and PDFs are supporting documents, not screens, so they are kept out of the Screens
+   card and live on the Backlog and docs tab instead. (Sumant 2026-07-28) */
+const isScreen = fx => ['html','jsx'].includes(ext(fx.path));
+const screensOf = id => (FILES[id]||[]).filter(isScreen).sort((a,b)=>FST[a.state].rank-FST[b.state].rank);
+const docsOf    = id => (FILES[id]||[]).filter(x=>!isScreen(x)).sort((a,b)=>FST[a.state].rank-FST[b.state].rank);
+
+/* ============================ module + route data ============================ */
+/* r(route, name, status, source, note) */
+const r = (rt,name,st,src,note) => ({rt,name,st,src,note:note||''});
+
+const M = {
+
+home:{
+  label:'Home', icon:'home', slot:false, owner:'plat', status:'wip',
+  title:'Home', sub:'The app-name row at the top of the sidebar, not an item in the list. Onboarding for a new store, a working dashboard after that.',
+  next:'Unpark the onboarding revamp, or confirm it stays parked while the post-onboarding dashboard ships first.',
+  absorbed:[],
+  routes:[
+    r('/','Dashboard (Home)','ship','code','Live today: setup guide steps, order processing mode, stats and nav tiles.'),
+    r('/  onboarding state','Onboarding revamp','wip','design','Spec v1.1 and prototype approved, then parked 2026-07-16 pending a rework in a different fashion. Health banner, status cards, three quick actions, mandatory setup, store setup.'),
+    r('/  steady state','Post-onboarding dashboard','wip','design','Prototype locked 2026-07-06, reviewed 2026-07-16. Three metrics and three quick actions, optional analytics blocks behind Customize.'),
+    r('/  setup health','Setup health warning','part','code','Service can detect and heal cart transform, dummy product and metafield sync, and writes settings.setup_health. No background loop, on-demand only.'),
+    r('/billing','Billing','ship','code','Moves into Settings, Billing. Tracked under Settings, listed here only because Home links to it today.')
+  ],
+  why:[
+    'Home is the one module with no nav slot, because the app-name row is the Home link in an embedded app. That is correct, and it is also why this module is easy to lose: it does not appear in the item list that everything else is tracked against.',
+    'It carries two screens, not one. A store with nothing set up needs onboarding; a store three months in needs a dashboard. The two prototypes exist separately and both are approved, so the open work is sequencing rather than design.',
+    'Three review risks are still open on the dashboard and none is closed by this IA revision: churn and retention are absent from the glance layer, the PAYG-weighted analytics blocks are default-on with no prepaid-only suppression, and the health banner cannot be dismissed on a screen a merchant sees every day.'
+  ],
+  render(){ return `
+    ${chromeRow('State',[tab('New store, onboarding',1),tab('Steady state, dashboard',0)])}
+    <div class="grid2">
+      <div class="mini"><div class="k">Total subscriptions</div><div class="v">312</div><div class="d">248 active</div></div>
+      <div class="mini"><div class="k">Active subscriptions</div><div class="v">248</div><div class="d">12 paused</div></div>
+      <div class="mini"><div class="k">Upcoming deliveries, 7d</div><div class="v">64</div><div class="d">across 18 SKUs</div></div>
+    </div>
+    <div class="card">
+      <div class="cardHd">Setup health <span class="hint">On-demand check, no background loop yet</span></div>
+      ${tokRow('Cart transform','Installed and active','ok')}
+      ${tokRow('Dummy product sync','Not required on Shopify checkout','ok')}
+      ${tokRow('Metafield sync','Last run 2 hours ago','ok')}
+    </div>`;
+  }
+},
+
+plans:{
+  label:'Plans', icon:'plans', slot:true, owner:'mkt', status:'wip',
+  title:'Plans', sub:'Everything you sell through StackBack. One plan can generate many subscriptions.',
+  next:'Two dev confirmations gate the build: a flat per-plan shipping override carrying min or max and ZIP conditions, and the bundle listing loader returning the product array.',
+  absorbed:[],
+  routes:[
+    r('/purchase-options','Plans listing','wip','design','Live as Manage Purchase Options. Redesigned to v12 and locked 2026-07-21, then ported to Polaris web components. Renaming the route to /plans is proposed, not confirmed.'),
+    r('/subscribe/new  +  /subscribe/:id','Create or edit plan','wip','design','Shipped and in daily use. Polaris rebuild APPROVED 2026-07-24: accordion steps, drag-reorder buying options, amount-off discount, single per-plan shipping override.'),
+    r('/bundle/new  +  /bundle/:id','Create or edit bundle','wip','design','Shipped. Polaris rebuild approved in principle 2026-07-24. Bundle type is now Step 1 with five first-class formats, Buy X Get Y and Tiered promoted out of buried pricing sub-modes.'),
+    r('/bundle/:id  mix-and-match','Mix and Match category bundle','wip','design','Third bundle type. Config model locked v1.2, widget locked v2. Per-category products, per-category min or max, four pricing modes. Dev queued post-pilot.'),
+    r('/widget-preview','Widget preview','ship','code','Sits in this module in code but reads as a Widget-module screen. Placement worth revisiting.'),
+    r('/subscriptions','Subscriptions alias','retire','code','Redirects to /purchase-options?tab=subscriptions. Remove once the rename lands.'),
+    r('/bundles','Bundles alias','retire','code','Redirects to /purchase-options?tab=bundles. Remove once the rename lands.'),
+    r('/plans?type=tbyb','Try before you buy','open','design','INT-03, in dev per the Linear project board. Becomes a fourth type tab rather than a new nav item.'),
+    r('/plans?type=membership','Memberships','def','new','Spec parked in Specs/Later. Named here only to show the type selector has to hold five or six entries.'),
+    r('/plans?type=course','Courses','def','new','Spec parked in Specs/Later. Same reason as Memberships.')
+  ],
+  why:[
+    'This is the origin of every other record in the app, so it sits first. Nothing downstream exists until something here does.',
+    'Renamed from Manage Purchase Options. That label was Shopify API language, it was the longest item in a sidebar that truncates, and it never told anyone that plans get created here. It also sat next to Subscriptions, so two adjacent items both read as the subscription thing.',
+    'Named Plans, not Plans and Bundles. More purchase option types are coming and a two-noun label would be obsolete the moment the third one ships. The plan files already use the word, with a Single Plans sheet and a Bundle Plans sheet, and Recharge, Loop and Skio all use Plans for creation, so merchants arriving from another app already know which screen this is.',
+    'The route rename to /plans is proposed here and not confirmed. Renaming a live route breaks bookmarks and any deep link in a support macro, so it needs a redirect plan before it is worth doing.'
+  ],
+  render(){ return `
+    ${chromeRow('Plan type',[
+      tab('Subscription plans',1,'12'), tab('Bundles',0,'7'),
+      tab('Try before you buy',0,'',1), tab('Memberships',0,'',1), tab('Courses',0,'',1)
+    ])}
+    ${chromeRow('View',[pill('By plan',1),pill('By product',0)])}
+    <div class="card">
+      <div class="cardHd">Subscription plans <span class="hint">12 plans &middot; 4 drafts</span></div>
+      ${planRow('Monthly Essentials','Prepaid, PAYG','3 products','ok','Published')}
+      ${planRow('Quarterly Wellness Box','Prepaid 5x','6 products','ok','Published')}
+      ${planRow('Coffee Club','PAYG','1 product','warn','Draft')}
+      ${planRow('Festive Flash Sale','Prepaid 5x, bi-weekly','4 products','off','Scheduled')}
+    </div>`;
+  }
+},
+
+subs:{
+  label:'Subscriptions', icon:'subs', slot:true, owner:'cs', status:'ship',
+  title:'Subscriptions', sub:'The agreements customers hold. Each one carries a contract code and generates orders over time.',
+  next:'Rename the module and retire the two order aliases. No new screen work needed.',
+  absorbed:[],
+  routes:[
+    r('/purchase-contracts','Subscriptions listing','ship','code','Live. Tabs for product subscriptions, bundle subscriptions, and all, active or paused. Renaming to /subscriptions is proposed, and collides with the existing alias below, which has to go first.'),
+    r('/subscribe-order/:id','Contract detail, subscription','ship','code','Cancel subscription, direct refund, issue store credit. Named "Subscription Order Details" in code, which is misleading: it is the contract, not one delivery.'),
+    r('/bundle-order/:id','Contract detail, bundle','ship','code','Cancel, pause and resume. Same misnaming as above.'),
+    r('/subscribe-order/create','Create manual subscription','ship','code','Staff-created contract, used during onboarding and support.'),
+    r('/subscribe-orders','Subscribe Orders alias','retire','code','Redirects to /purchase-contracts. Blocks the /subscriptions rename, so remove it first.'),
+    r('/bundle-orders','Bundle Orders alias','retire','code','Redirects to /purchase-contracts. Same.'),
+    r('/subscriptions?view=customer','By customer view','def','new','Was version B of IA-01 and was not selected, because Customers keeps its own nav item. Recorded so it is not re-proposed as new.')
+  ],
+  why:[
+    'A subscription is what exists after someone buys a plan, so it sits directly below Plans and above the orders it throws off. Contract codes stay PC-1041 internally; only the merchant-facing label changed from Purchase Contracts, because merchants say subscriptions and contract is Shopify API vocabulary.',
+    'The two detail routes are named for orders and hold contracts. That is the exact confusion the Contract versus Order convention exists to prevent, so the routes are shipped and correct in behaviour but wrong in name. Worth fixing while the aliases are being cleared, since both jobs touch the same files.',
+    'Order state appears here as read-only status with a link through. The reschedule action lives only in Orders. One place to act, one place to see, so two people never fix the same failed delivery and let the records drift.'
+  ],
+  render(){ return `
+    ${chromeRow('View',[pill('By subscription',1),pill('By customer',0,'',1)])}
+    <div class="card">
+      <div class="cardHd">Active subscriptions <span class="hint">248 active &middot; 12 paused &middot; 4 cancellation requests</span></div>
+      ${subRow('PC-1041','Priya Menon','Monthly Essentials','Active','ok','Next delivery 12 Aug')}
+      ${subRow('PC-1039','Rahul Iyer','Quarterly Wellness Box','Active','ok','Delivery 3 of 6')}
+      ${subRow('PC-1032','Ananya Rao','Monthly Essentials','Paused','warn','Resumes 1 Sep')}
+      ${subRow('PC-1028','Kabir Shah','Coffee Club','Cancellation requested','crit','Awaiting review')}
+    </div>`;
+  }
+},
+
+orders:{
+  label:'Orders', icon:'orders', slot:true, owner:'ops', status:'wip',
+  title:'Orders', sub:'Every individual delivery StackBack pushes to Shopify, recurring and one-time. Paid orders only. Worked by Operations.',
+  next:'Locked at v5, 2026-08-04. Four dev confirmations remain: the pre-push to-be-placed state, whether Shopify returns a usable push-failure code, whether delivery sequence is real data, and retiring Timeline V2.',
+  absorbed:['One-Time Orders','Delivery Timeline V2'],
+  routes:[
+    r('/orders','Orders listing','wip','design','LOCKED 2026-08-04 as Polaris/Orders_Polaris_v5.html. Live today as a flat list filtered by purchase option. The locked screen is real Polaris (s-table family) with cards, then tabs, then filters, and List / Calendar hard right.'),
+    r('/orders  tab=to-be-placed','To be placed','wip','design','Paid and scheduled, not yet pushed to Shopify. The 3 to 5 day window that gives the warehouse its lead time. Row identity is the SUBSCRIPTION (PC-####), because no order code exists yet.'),
+    r('/orders  tab=failed','Push failed','wip','design','Shopify refused the order. Covers every cause. The failure REASON and OWNER columns were REMOVED on 2026-08-03 (D2026-0803-02), because StackBack cannot reliably learn why Shopify refused. The tab shows Days late; the action is Reschedule, with bulk retry on the header Sync now.'),
+    r('/orders  tab=placed','Order placed','wip','design','The push succeeded and the order exists in Shopify. There is NO Delivered state, because StackBack\'s job ends at order creation. Identity here is the StackBack order code, with the Shopify number in the details popup.'),
+    r('/orders  #sku=','SKU filter from Inventory','wip','design','NEW in v5. Accepts a #sku= hash from an Inventory row, opens on All orders with the window at all dates, filters on any matching line item, states it as a clearable chip, and re-filters on hashchange so a second arrival works too.'),
+    r('/orders  filter=one-time','One-time filter','wip','design','Absorbs /one-time-orders. Same table, same columns, same actions, so a top-level sibling was an inconsistency rather than a structure.'),
+    r('/one-time-orders','One-Time Orders, standalone','retire','code','Shipped as a backend-only log. Retires into the filter above.'),
+    r('/timeline-order-v3/:type/:id/:index','Delivery detail and timeline','ship','code','The real per-delivery screen. Reschedule delivery, issue store credit. Renaming to /orders/:type/:id/:index is proposed, not confirmed.'),
+    r('/timeline-order-v2/:type/:id/:index','Delivery Timeline V2','retire','code','Legacy and still routed. Two timeline versions in production is a live inconsistency, and V2 should retire.'),
+    r('/orders/export','Export','open','new','Named in the screen header as an action. No route exists yet.')
+  ],
+  why:[
+    'An order is one delivery a subscription generates, so it sits directly beneath Subscriptions. A six-delivery prepaid contract appears once above and six times here.',
+    'The split is by team ownership, not by data shape. OPERATIONS owns this screen, reversing the Customer Success assignment made on 2026-07-27. Money has its own owner on Payment Reminders, so one screen carrying both is how the earlier unified hub became unreadable.',
+    'Paid orders only. An unpaid pay-per-delivery invoice never appears here and lives on Payment Reminders until it clears. Prepaid is already paid, so it shows.',
+    'Out-of-stock lands here as a failed push, not as a hold. The scheduler does not check stock before pushing, so StackBack finds out only when Shopify refuses, and the only remedy is to reschedule, which happens here and nowhere else. NOTE: the older claim that StackBack cannot READ stock at all is factually wrong and was corrected on 2026-08-04; see Inventory.',
+    'Identity follows the lifecycle. Before the push there is no order, so the row is identified by the subscription; after the push it is identified by the StackBack order code, with the Shopify number in the details popup.',
+    'Priority is DELAY DAYS, not a failure count. A push that has sat nine days late is the problem, whether it failed once or four times.',
+    'What to pick is a product-preview capsule stack, one capsule for a subscription and a stack for a bundle, with names, SKUs, per-item prices and edits inside a Details POPUP. The v3 right-hand drawer is gone.',
+    'Row actions follow the locked rule: exactly one primary action sits beside the kebab, and any secondary action stacks in a row above it. Rows with a single action stay on one line.'
+  ],
+  render(){ return `
+    ${chromeRow('Tab',[tab('To be placed',1,'22'),tab('Push failed',0,'6'),tab('Order placed',0,'1,012')])}
+    ${chromeRow('Filter',[pill('All',1,'1,204'),pill('Subscription',0,'1,061'),pill('One-time',0,'143'),pill('Custom date range',0)])}
+    <div class="card">
+      <div class="cardHd">Orders <span class="hint">Push failed sorted by days late, worst first</span></div>
+      ${ordRowSplit('SB-8842','Priya Menon &middot; PC-1041','9 days late &middot; 2 items','crit','Rs 1,499 &middot; Prepaid','Reschedule')}
+      ${ordRowSplit('SB-8839','Rahul Iyer &middot; PC-1039','4 days late &middot; 1 item','crit','Rs 899 &middot; Prepaid','Reschedule')}
+      ${ordRow('PC-1035','Meera Nair &middot; delivery 3 of 6','To be placed 12 Aug','off','Rs 1,250 &middot; Prepaid')}
+      ${ordRow('PC-1028','Kabir Shah &middot; delivery 2 of 4','To be placed 14 Aug','off','Rs 1,499 &middot; Paid')}
+      ${ordRow('SB-8836','Arjun Das &middot; one-time bundle','Order placed 24 Jul','ok','Rs 2,100 &middot; Paid')}
+    </div>
+    <div class="specNote" style="margin-top:14px"><b>Three states, and deliberately no Delivered.</b> StackBack\'s job ends when the order reaches Shopify, so fulfilment status is Shopify\'s to report. The earlier Unpaid PAYG pill drawn here as a question is resolved: Orders is paid-only, and those rows belong to Payment Reminders.</div>`;
+  }
+},
+
+pay:{
+  label:'Payment Reminders', icon:'pay', slot:true, owner:'cs', status:'wip',
+  title:'Payment Reminders', sub:'Customers with money outstanding, and how far through the reminder sequence each one is.',
+  next:'Locked at v6, 2026-08-05. Polaris rebuild done, premise written down, and the dunning model corrected: reminders and the pause rule are merchant-set, so the Ongoing tab counts DOWN to a pause deadline and overdue exists only after a subscription has stopped. Open: dev confirmation on the manual-send fields and the stored paused reason, and whether contacting is genuinely staffed at a pilot store.',
+  absorbed:[],
+  routes:[
+    r('/payment-reminders','Reminder log, current','part','code','Shipped as a log of which payg_email and payg_reminder jobs fired, pending, sent or failed. Backend only. Useful to an engineer, not to a rep.'),
+    r('/payment-reminders','Work queue, designed','wip','design','LOCKED 2026-08-04 as Polaris/PaymentReminders_Polaris_v2.html. Same route, rebuilt: who owes, sorted closest-to-auto-pause, with a send action on the row and sent-of-cap pips. Rows now carry LINE ITEMS, which v1 had none of.'),
+    r('/payment-reminders  tab=paused','Paused','wip','design','Deliberately the SECONDARY tab, split two ways. Paused for non-payment is churn risk: the customer never chose it and may not know they stopped, so call them. Paused by customer offers no chase action. Non-payment pauses do not re-enter the queue.'),
+    r('/payment-reminders  #sku=','SKU filter from Inventory','wip','design','NEW in v2. Accepts a #sku= hash from an Inventory Not-paid-yet row. Every count and tile narrows with the filter. Impossible in v1, which had no line items at all.'),
+    r('/payment-reminders  filter','Sequence filters','wip','design','All unpaid, first reminder, final reminder, overdue. Net-new, no filters exist today.'),
+    r('/payment-reminders  bulk send','Send selected','open','new','Bulk action in the page header. Net-new.'),
+    r('Settings &rsaquo; Payments','Dunning cap source','ship','code','The denominator in "2 of 4 reminders sent" comes from the store\'s existing Retry failed payments setting, not a number invented for this screen.')
+  ],
+  why:[
+    'Structurally this is Orders filtered to unpaid, so it could have been a filter. It stays a screen by explicit decision, twice, because chasing money is a distinct job with a distinct owner. That is recorded plainly so a future reader does not merge it as an apparent oversight.',
+    'It sits directly under Orders because it is derived from Orders, not because it is more important than Inventory.',
+    'The screen needs a change of kind, not of position. Everything behind it works, and the PAYG cycle end to end was confirmed firing. What is missing is a surface a non-engineer can act on.',
+    'It owns the reminder workflow OUTRIGHT, with no split, because Orders is paid-only so an unpaid delivery never appears there.',
+    'Reminder counts show as a fraction against the store\'s existing dunning cap, so 2 of 4 rather than a bare count. The 4 comes from the store\'s own Retry failed payments setting rather than a number invented for this screen. At the cap the primary action flips from Send reminder to Call customer.',
+    'Rows carry LINE ITEMS as of v2. Without them the queue could not be filtered by SKU at all, which broke the Inventory drill-down, since a Not-paid-yet count has to land on the customers who owe for that SKU.',
+    'Paused is a secondary tab on purpose, and split by who caused it. A customer who paused deliberately needs nothing. A customer auto-paused by the reminder sequence running out is churn risk who may not know they stopped.'
+  ],
+  render(){ return `
+    ${chromeRow('Tab',[tab('Ongoing reminders',1,'23'),tab('Paused',0,'12')])}
+    ${chromeRow('Filter',[pill('All unpaid',1,'23'),pill('First reminder',0,'9'),pill('Final reminder',0,'4'),pill('Overdue',0,'10')])}
+    <div class="card">
+      <div class="cardHd">Awaiting payment <span class="hint">Sorted closest-to-auto-pause &middot; Total outstanding: 48,200</span></div>
+      ${payRow('Sneha Kulkarni','SB-8794 &middot; PC-1021 &middot; Cold Pressed Coffee 500g x2','4 of 4 reminders sent, at cap','crit','2,250')}
+      ${payRow('Kabir Shah','SB-8801 &middot; PC-1028 &middot; Herbal Tea Sampler x1','2 of 4 reminders sent','warn','1,499')}
+      ${payRow('Vikram Patel','SB-8788 &middot; PC-1014 &middot; Wellness Powder 250g x1','1 of 4 reminders sent','ok','899')}
+    </div>
+    <div class="specWarn" style="margin-top:14px"><b>Locked at v2, but the Polaris rebuild is still owed.</b> Both v1 and v2 use hand-rolled rows rather than s-table, s-badge and s-thumbnail, which is the same defect Orders v2 carried. v1 additionally has a live CSS collision, the .warn notice-box class against the .sdot warn modifier, which paints every mid-stage dot as a 36 by 32 amber blob. Fixed in v2, unpatched in v1.</div>`;
+  }
+},
+
+inv:{
+  label:'Inventory', icon:'inv', slot:true, owner:'ops', status:'wip',
+  title:'Inventory', sub:'What StackBack will need from your warehouse over a chosen delivery window. Owned by Operations.',
+  next:'Locked at v4, 2026-08-04, and the cross-screen links are now live on both ends: Orders v5 and Payment Reminders v2 both accept #sku=. Highest-value open gap is freebies and Nth-order gifts, which the forecast does not count at all.',
+  absorbed:['Forecast (renamed)','Holds (removed)'],
+  routes:[
+    r('/inventory','Summary tab','wip','design','LOCKED 2026-08-04 as Polaris/Inventory_Polaris_v4.html. Four derived tiles, units-to-ship bars stacked with Paid on the baseline, busiest SKUs, and a not-live block for products the store will refuse. Delivery window is 7 / 14 / 30 or a custom From-To range; past 45 days the bars bucket weekly.'),
+    r('/inventory/forecast','By product tab','wip','design','LOCKED 2026-08-04. Nine columns, product-grouped with variant and SKU. The flat forward table six hub iterations were built around, minus On hand and Surplus/shortfall, which both died with the supply column.'),
+    r('/inventory/sku/:id','Per-SKU detail','def','new','SUPERSEDED as a screen. The drill-down is a cross-screen link instead: the Paid count opens Orders and the Not-paid-yet count opens Payment Reminders, both filtered to the SKU. Inventory stays read-only and owns no action.'),
+    r('/inventory/export','Export forecast','wip','design','BUILT. CSV of exactly the rows on screen, in the same order, honouring the same filters. An action, not a screen.'),
+    r('Settings &rsaquo; Orders and scheduling','Out-of-stock policy','open','new','Hold until stock is back, conditional and only offered to stores not set to continue selling when out of stock. Config lives in Settings, the work surfaces here.'),
+    r('/inventory/holds','Holds','def','new','Removed by IA-01. Holds assumed StackBack could detect a stock level and hold a delivery until it returned, which it cannot. Kept in the tracker so the removal is a recorded decision.')
+  ],
+  why:[
+    'This is a forward demand forecast, not stock tracking. CORRECTED 2026-08-04: the earlier claim here and in D2026-0728-05, that StackBack cannot read available stock, is factually wrong. read_inventory and read_locations are granted scopes and portal-products.server.ts already reads inventoryQuantity and inventoryPolicy per variant in production. The true, narrower fact is that the delivery scheduler does not check stock before pushing. Demand-only was then chosen anyway, on two stated grounds: per-SKU inventory checks are not feasible at scale, and most pilot stores run continue-selling so a push rarely fails on stock in the first place. The consequence accepted with it is that a shortfall on a continue-selling store stays permanently invisible.',
+    'Certainty is split rather than totalled. A prepaid delivery is already paid for; a pay-per-delivery one only ships if the customer pays, and of 61 Glow Glossary subscriptions imported this month only 11 had ever produced a renewal. A single demand number would therefore be confidently wrong in the direction that costs the merchant money. The split is Paid / Not paid yet, with a third auto-debit-mandate tier rendered dormant because payment mandates are scoped but entirely unbuilt in the backend.',
+    'Draft and archived products are surfaced as a guaranteed failure, not a probable one. A contract pointing at a product the store has unpublished will be refused whatever the stock is, and product.status is already read in shipped code. Both cases collapse to one NOT LIVE label, renamed from "Not in store" in v4, since the consequence and the remedy are identical, with the specific reason on hover.',
+    'The label stays Inventory even though the content is a forecast, because that is the word a merchant reaches for when they want to know whether they can fulfil what is coming. The label serves the mental model and the content serves the job.',
+    'It sits under Orders because it is Orders summed by SKU and date. Dashboard first, not a flat table, since the question is "am I about to run short" rather than "show me every line".',
+    'Nothing in this module exists in code. Every route here is net-new, which makes it the largest single piece of unbuilt work in the tracker and the one most exposed to a wrong assumption.',
+    'The screen is READ-ONLY and owns no action. There are exactly two row actions and both are links out: the Paid count opens Orders, and the Not-paid-yet count opens Payment Reminders, because Orders is paid-only so an unpaid delivery is not there to be found.',
+    'The dashboard views are CLOSED as of 2026-08-04: four derived tiles, units-to-ship stacked bars, busiest SKUs, and the not-live block. The earlier candidate list, stock trend and shortfall history and restock lead time, died with the supply column, because all three needed a supply number the screen no longer carries.'
+  ],
+  render(){ return `
+    ${chromeRow('Tab',[tab('Summary',1),tab('By product',0)])}
+    ${chromeRow('Window',[pill('7 days',0),pill('14 days',1),pill('30 days',0),pill('Custom From-To',0)])}
+    <div class="grid2">
+      <div class="mini"><div class="k">Units to ship</div><div class="v">867</div><div class="d">next 14 days, 23 SKUs</div></div>
+      <div class="mini"><div class="k">Paid</div><div class="v">431</div><div class="d">prepaid, already collected</div></div>
+      <div class="mini"><div class="k">Not paid yet</div><div class="v">436</div><div class="d">pay-per-delivery, ships only if paid</div></div>
+      <div class="mini"><div class="k">Not live</div><div class="v">2</div><div class="d">draft or archived, will be refused</div></div>
+    </div>
+    <div class="card">
+      <div class="cardHd">Units to ship by day <span class="hint">Paid on the baseline, Not paid yet stacked above</span></div>
+      <div style="padding:14px">
+        <div class="bars">
+          <i style="height:38%"></i><i style="height:52%"></i><i style="height:44%"></i><i class="hot" style="height:88%"></i>
+          <i style="height:40%"></i><i style="height:33%"></i><i style="height:56%"></i><i style="height:61%"></i>
+          <i class="hot" style="height:94%"></i><i style="height:47%"></i><i style="height:39%"></i><i style="height:52%"></i>
+          <i style="height:58%"></i><i style="height:43%"></i>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="cardHd">Busiest SKUs <span class="hint">Next 14 days &middot; each count links out, Paid to Orders and Not paid yet to Payment Reminders</span></div>
+      ${invRow('Cold Pressed Coffee 500g','92 paid &middot; 92 not paid yet','184 units','warn')}
+      ${invRow('Wellness Powder 250g','0 paid &middot; 142 not paid yet','142 units','ok')}
+      ${invRow('Herbal Tea Sampler','61 paid &middot; 35 not paid yet','96 units','ok')}
+    </div>
+    <div class="specWarn" style="margin-top:14px"><b>Two known gaps in the locked screen.</b> Freebies and Nth-order gifts are absent from the forecast, so a plan that ships a free sachet on delivery three leaves that SKU invisible to the warehouse even though StackBack knows it exactly. And it is unconfirmed whether skips and pauses are netted out; if they are not, the forecast overstates demand, in the direction that costs the merchant money.</div>`;
+  }
+},
+
+cust:{
+  label:'Customers', icon:'cust', slot:true, owner:'cs', status:'ship',
+  title:'Customers', sub:'Everyone with StackBack activity, subscribers and one-time buyers.',
+  next:'Nothing. This module is complete and needs no work in this cycle.',
+  absorbed:[],
+  routes:[
+    r('/customers','Customers listing','ship','code','Live. Tabs for all, active subscriptions, paused subscriptions and no subscriptions.'),
+    r('/customer/:id','Customer detail','ship','code','Subscription and bundle history for one person.')
+  ],
+  why:[
+    'This screen keeps its own nav item in the locked version A. In versions B and C it became a By customer view inside Subscriptions, which was not selected.',
+    'The argument for keeping it separate: Customer Success reps often start from a person rather than an order, and a rep who searches a name and finds nothing concludes there is no record. That is a real support failure mode.',
+    'It also closes a coverage gap. A one-time bundle buyer has an order but no contract, so a pivot sourced only from contracts would make them invisible. The existing screen already has a "no subscriptions" tab, so the coverage is there in code, not just in the plan.'
+  ],
+  render(){ return `
+    ${chromeRow('Filter',[pill('All',1,'1,880'),pill('Subscribers',0,'248'),pill('One-time only',0,'1,632')])}
+    <div class="card">
+      <div class="cardHd">Customers</div>
+      ${custRow('Priya Menon','2 subscriptions &middot; 14 orders','ok','Active')}
+      ${custRow('Arjun Das','1 bundle purchase','neu','One-time only')}
+      ${custRow('Ananya Rao','1 subscription &middot; 6 orders','warn','Paused')}
+    </div>`;
+  }
+},
+
+widget:{
+  label:'Widget', icon:'widget', slot:true, owner:'mkt', status:'wip',
+  title:'Widget', sub:'The purchase option card on your product pages.',
+  next:'Close the savings-liner copy for Arusha, and take v2, v3 and v4 through internal review or mark them reference-only.',
+  absorbed:[],
+  routes:[
+    r('/widgets  +  /widgets/:templateKey','Widget template editor','part','code','Shipped backend: widget_templates, shop_widgets and shop_widget_entities, plus Liquid blocks per purchase type. Create an instance, assign to products, plans or bundles, reorder. No designed admin screen, and custom_settings is not schema-validated.'),
+    r('/widget-preview','Widget preview','ship','code','Lives under the Plans module in code. Reads as a Widget screen, so placement is worth revisiting.'),
+    r('storefront  v1','Widget v1, full card','wip','design','The locked widget version. Figma parity, prepaid and PAYG toggle in the body.'),
+    r('storefront  v2','Widget v2, form','open','design','Dependent dropdowns, subscribe-only, for form and B2B. Pending internal review.'),
+    r('storefront  v3','Widget v3, quiz','open','design','Three-question guided flow. Pending internal review, and auto-advance versus Continue is unresolved.'),
+    r('storefront  v4','Widget v4, payment popover','open','design','Full card with payment popover and payment-locked plans. Pending internal review.'),
+    r('storefront  liner','Savings liner','wip','design','Merchant free-text promo strip. Widget-level, so it renders on every purchase option and the copy has to be tab-agnostic, with no fixed percentage and no option-specific claim. Blank hides the row. Arusha copy still open.'),
+    r('storefront  simplified','Simplified and SubscribeOnly','def','design','Compressed single-dropdown lineage. Reference-only, not to be used, kept for recall.')
+  ],
+  why:[
+    'Its own nav item in the locked version A, so performance marketing reaches it in one click. Brand tokens come from Settings and Branding, which all three storefront surfaces read from.',
+    'Version B made this a tab inside a Storefront parent alongside Portal and Landing pages, on the grounds that the three already share one token pipeline in code. Documented as the alternative, not selected.',
+    'The admin side of this module is the weak point. The template system shipped and works, but there is no designed screen for it, so a merchant assigning a widget to a product is using an interface nobody designed.',
+    'Four widget versions exist with one locked and three pending review. That is a decision backlog rather than a design backlog: the work is done, the choice is not made.'
+  ],
+  render(){ return `
+    ${chromeRow('Surface',[tab('Templates',1,'5'),tab('Assignments',0),tab('Preview',0)])}
+    <div class="card">
+      <div class="cardHd">Widget settings</div>
+      ${tokRow('Template','Purchase options v1','ok')}
+      ${tokRow('Active on','All products','ok')}
+      ${tokRow('Savings liner','Blank, row hidden','off')}
+      ${tokRow('Brand tokens','Inherited from Settings, Branding','ok')}
+    </div>
+    <div class="specNote" style="margin-top:14px">Storefront previews inside this module use the real storefront tokens, cream, amber and purple, because the palette is decided by what is being shown rather than which screen it sits on. The admin chrome around them stays Polaris-neutral.</div>`;
+  }
+},
+
+portal:{
+  label:'Portal', icon:'portal', slot:true, owner:'cs', status:'wip',
+  title:'Customer portal', sub:'Where customers manage their own subscriptions.',
+  next:'Run the data audit that decides whether Settings or Portal Settings is authoritative for brand fields today, then move them once.',
+  absorbed:[],
+  routes:[
+    r('/portal-settings','Portal layout','ship','code','Container for the sub-screens below.'),
+    r('/portal-settings/templates','Portal templates','ship','code','Select a template.'),
+    r('/portal-settings/customize','Customize portal','ship','code','Tabs for global, shop, widget, advanced and templates. Banner slides, logo, colours and layout.'),
+    r('/portal-settings/advanced','Advanced settings','ship','code','Custom CSS and JS, domain and API.'),
+    r('/portal-settings/preview','Portal preview','open','code','Routed but a placeholder. A stub in production.'),
+    r('/portal-settings  brand fields','Brand fields, moving out','wip','design','Duplicated today between Settings and Portal Settings. They consolidate into Settings, Branding as the single source, which needs a data audit first to establish which of the two is authoritative.'),
+    r('/apps/stackback-portal  pay now','PAYG Pay Now button','part','code','Draft order creation is built and the invoice route works. The portal button is not wired, so the customer-facing half is missing.')
+  ],
+  why:[
+    'Its own nav item in the locked version A. Renamed from Portal Settings to just Portal, because the brand tokens it used to own move to Settings and Branding as the single source, so it is no longer a settings screen.',
+    'Version B made this a tab inside a Storefront parent. Documented as the alternative, not selected.',
+    'Two shipped-but-incomplete items sit here and both are customer-facing. The preview route is a placeholder, and the PAYG Pay Now button is unwired even though everything behind it works. Neither is an IA problem, and both are easy to lose in a nav discussion.'
+  ],
+  render(){ return `
+    ${chromeRow('Section',[tab('Templates',1),tab('Customize',0),tab('Advanced',0),tab('Preview',0,'',1)])}
+    <div class="card">
+      <div class="cardHd">Portal settings</div>
+      ${tokRow('Template','Classic','ok')}
+      ${tokRow('Featured products','3 selected','ok')}
+      ${tokRow('Advanced CSS','None','off')}
+      ${tokRow('Brand fields','Moving to Settings, Branding','warn')}
+    </div>`;
+  }
+},
+
+land:{
+  label:'Landing Pages', icon:'land', slot:true, owner:'mkt', status:'ship',
+  title:'Landing pages', sub:'Standalone pages per product, bundle or flash sale.',
+  next:'Retire the alias route. No design work outstanding.',
+  absorbed:[],
+  routes:[
+    r('/landing-pages/templates','Landing templates','ship','code','Template list with a customize action.'),
+    r('/landing-pages/customize/:id','Customize picker','ship','code','Routes into the three editors below, plus a new flash sale action.'),
+    r('/landing-pages/customize/:id/product/:gid','Product landing editor','ship','code','Content and design tabs, product picker, image upload and replace.'),
+    r('/landing-pages/customize/:id/bundle/:code','Bundle landing editor','ship','code','Content and design tabs, bundle picker.'),
+    r('/landing-pages/customize/:id/flash-sale/:saleId','Flash sale editor','ship','code','Sale windows, date and time pickers, bundle selector.'),
+    r('/landing-pages','Landing Pages alias','retire','code','Redirects to /landing-pages/templates.')
+  ],
+  why:[
+    'Its own nav item in the locked version A, so performance marketing reaches it directly rather than through a parent.',
+    'Version B made this a tab inside Storefront. Documented as the alternative, not selected.',
+    'This is the most complete module in the tracker. Five shipped routes, one alias to remove, and nothing designed but unbuilt. It is also confirmed available under third-party checkout, which was corrected once already.'
+  ],
+  render(){ return `
+    <div class="card">
+      <div class="cardHd">Landing pages <span class="hint">4 published</span></div>
+      ${tokRow('/pages/monthly-essentials','Published','ok')}
+      ${tokRow('/pages/wellness-box','Published','ok')}
+      ${tokRow('/pages/festive-flash','Scheduled','warn')}
+      ${tokRow('/pages/byob-box','Draft','off')}
+    </div>`;
+  }
+},
+
+chart:{
+  label:'Analytics', icon:'chart', slot:true, owner:'fnd', status:'open',
+  title:'Analytics', sub:'Revenue, retention and churn across subscriptions and bundles.',
+  next:'Reconcile the spec against the shipped dashboard prototype, then decide whether churn belongs on the Home glance layer or only here.',
+  absorbed:[],
+  routes:[
+    r('/analytics','Analytics','open','design','Spec exists at INT05 and a standalone prototype is parked. Not in the nav today and no route in code, so this whole module is a proposal.'),
+    r('/analytics  metrics','Metric definitions','wip','design','Grill-locked on a cash-collected basis. Cash Collected splits by new, recurring and reactivated and by prepaid or PAYG. Churn covers mid-term prepaid cancels plus PAYG pause and cancel. PAYG payment health splits at-risk from recovered.'),
+    r('/analytics  forward','Expected PAYG forward tile','wip','design','PAYG only. An at-risk haircut on the forecast is proposed and not decided, because some of that forward revenue will churn or fail.'),
+    r('/analytics  blocks','Optional analytics blocks','wip','design','Surfaced on Home behind Customize. Whether to auto-suppress the two PAYG blocks for prepaid-only merchants is open.')
+  ],
+  why:[
+    'A reading surface, not configuration, which is why it stays out of Settings even though it is opened rarely. Settings is where you change how the app behaves; this is where you find out how it is performing.',
+    'It is not in the nav at all today, though the spec exists at INT05. Adding it is part of what this refactor pays for by merging elsewhere.',
+    'This is the founder and brand manager screen, one of the two in-and-out personas. It sits low because they are in and out, not because it matters less.',
+    'The spec and the shipped prototype disagree. The spec describes six cards including MRR, new and churn; the prototype shipped three metrics. That is a documentation gap rather than a design one, and it should be closed before either is built from.'
+  ],
+  render(){ return `
+    <div class="grid2">
+      <div class="mini"><div class="k">MRR</div><div class="v">4.2L</div><div class="d">up 8 percent month on month</div></div>
+      <div class="mini"><div class="k">Active subscribers</div><div class="v">248</div><div class="d">12 paused</div></div>
+      <div class="mini"><div class="k">Churn, 30d</div><div class="v">3.1%</div><div class="d">4 cancellation requests open</div></div>
+      <div class="mini"><div class="k">Avg contract value</div><div class="v">6,840</div><div class="d">prepaid runs 2.3x PAYG</div></div>
+    </div>
+    <div class="card"><div class="cardHd">Revenue by month</div><div style="padding:14px"><div class="bars">
+      <i style="height:41%"></i><i style="height:48%"></i><i style="height:44%"></i><i style="height:57%"></i><i style="height:63%"></i>
+      <i style="height:59%"></i><i style="height:71%"></i><i style="height:78%"></i><i style="height:74%"></i><i style="height:86%"></i>
+      <i style="height:92%"></i><i style="height:97%"></i></div></div></div>
+    <div class="specNote" style="margin-top:14px">No route exists for this module. Every tile above is drawn from the INT05 spec and the parked prototype, not from a shipped screen.</div>`;
+  }
+},
+
+notif:{
+  label:'Notifications', icon:'notif', slot:false, owner:'ops', status:'wip',
+  title:'Notifications', sub:'Two unrelated systems sharing one word. Merchant alerts in the header bell, customer messages inside Settings.',
+  next:'Confirm against App Bridge whether a custom header row is worth its vertical cost, then draft the ten template contents.',
+  absorbed:['Notification Templates'],
+  routes:[
+    r('/notifications','Admin notification centre','part','code','Shipped backend: severity tags, action-required flag, read and unread. No designed screen. Surfaces as the header bell on every screen rather than a nav item. INT-01 is in review.'),
+    r('Settings &rsaquo; Admin alert delivery','Admin alert delivery config','open','design','Where the merchant chooses which alerts reach them and by which channel. Configuration, so it sinks into Settings.'),
+    r('/email-template','Customer template list','ship','code','Tabs for all, setup, payments, scheduling, and pause and cancel. Moves under Settings, Customer notifications.'),
+    r('/email-template/:id','Template editor','ship','code','Handlebars editor with save and delete. Still opens as a full page from Settings, because it carries an editor, a preview and a test send.'),
+    r('/email-template/:id/preview','Template preview','ship','code','Live render with brand auto-population.'),
+    r('/email-template/:id/test','Template test send','ship','code','Send a test to a real address.'),
+    r('/email-template/new','New template','ship','code','Create from blank.'),
+    r('/whatsapp-template/:id/copy','Copy WhatsApp template','part','code','Clones a global template to the shop. Backend only.'),
+    r('INT06v2  content','Ten canonical templates','wip','design','Fourteen consolidated to ten and locked at 90 percent confidence. Four merges and one rename. All ten fire email and WhatsApp in parallel. The content phase is the open work.'),
+    r('Delivery Updated','Customer-edit trigger','bug','code','BUG-001. The Delivery Updated message does not fire on a customer-initiated edit. P2, logged to the tracker.'),
+    r('Notification Templates','Standalone nav item','retire','code','Retires into Settings, Customer notifications.')
+  ],
+  why:[
+    'Notifications is two systems, not one. Admin Notification alerts the merchant; Customer Notification messages the customer. They have different audiences, different delivery paths and different homes, and the only thing they share is the word.',
+    'The repo already made this split. The Linear QA label set carries Admin Notification and Customer Notification as separate labels, so the tracker adopts vocabulary already in use rather than inventing a third name. An earlier attempt to call the customer lane "Customer messages" was dropped for exactly this reason.',
+    'Neither lane takes a nav slot. Merchant alerts are a daily glance so they live in the bell, and customer templates are set at onboarding and rarely touched so they sink into Settings. That is the same rule applied twice with opposite results.',
+    'The bell is the one genuinely open structural call in the whole IA. An embedded app cannot add to Shopify\'s top bar, so a bell means StackBack\'s own header row inside the content frame, which is persistent chrome on every screen. The alternative is a Home card plus a banner on whichever screen an alert concerns: less discoverable, zero chrome cost.',
+    'WhatsApp is further along than the older notes suggest. Meta Cloud API is built and shipped, with send and webhook workers, credential encryption and opt-out handling. Wati, Interakt and Gupshup are named in the provider type and not implemented, so the earlier "Wati plus Interakt in progress" reading is wrong.'
+  ],
+  render(){ return `
+    ${chromeRow('Lane',[tab('Admin Notification',1,'3'),tab('Customer Notification',0,'10')])}
+    <div class="card">
+      <div class="cardHd">Admin alerts <span class="hint">Severity tagged, action-required flagged</span></div>
+      ${intRow('Delivery push failed','SB-8842 &middot; out of stock','crit','Action required','Banners the Orders screen under the no-bell option.')}
+      ${intRow('Payment retry exhausted','SB-8794 &middot; 4 of 4 sent','warn','Action required','')}
+      ${intRow('Metafield sync completed','Ran 2 hours ago','ok','Informational','')}
+    </div>
+    <div class="card">
+      <div class="cardHd">Customer notifications <span class="hint">10 canonical templates &middot; email and WhatsApp in parallel</span></div>
+      ${intRow('Subscription Setup Confirmation','Setup &middot; merged from 2 templates','warn','Content pending','')}
+      ${intRow('PAYG Payment Due','Payments &middot; merged from 2 templates','warn','Content pending','')}
+      ${intRow('Delivery Updated','Scheduling &middot; renamed','crit','BUG-001 open','Does not fire on a customer-initiated edit.')}
+      ${intRow('Subscription Paused','Pause and cancel','ok','Shipped','')}
+    </div>`;
+  }
+},
+
+bill:{
+  label:'Billing', icon:'pay', slot:true, owner:'fnd', status:'ship',
+  title:'Billing', sub:'Your StackBack plan, usage against it, and overage. Sits directly below Settings.',
+  next:'Nothing to build. The change is positional: pull it back out of Settings and place it below.',
+  absorbed:[],
+  routes:[
+    r('/billing','Billing','ship','code','Live. Four tiers, usage tracking, overage, seven-day trial, Shopify AppSubscription, dev store exemption.'),
+    r('/billing  plan comparison','Plan comparison','ship','code','Tier comparison with an Activate plan action.')
+  ],
+  why:[
+    'Pulled back out of Settings on 2026-07-28. IA-01 moved it in on the argument that Shopify puts plan and billing under Settings and that search inside Settings covers the findability cost. That is reversed, and this is the only change to the locked architecture.',
+    'The reason it holds up: billing is not configuration. Settings is where a merchant changes how the app behaves, and every other resident there is set once and revisited rarely. Billing is a commercial surface a merchant checks against usage, and burying the upgrade path two levels deep costs revenue rather than clicks. That was the original objection to moving it in, and search does not actually answer it.',
+    'Directly below Settings rather than higher up, because it is still not daily work. It falls below the View more fold, which is the correct place for something opened monthly. Position communicates cadence; nesting communicated category, and the category was wrong.'
+  ],
+  render(){ return `
+    ${chromeRow('View',[tab('Current plan',1),tab('Usage',0),tab('Compare plans',0)])}
+    <div class="grid2">
+      <div class="mini"><div class="k">Current plan</div><div class="v">Growth</div><div class="d">$250 per month</div></div>
+      <div class="mini"><div class="k">New subscriptions</div><div class="v">28 / 40</div><div class="d">this billing cycle</div></div>
+      <div class="mini"><div class="k">Overage</div><div class="v">0</div><div class="d">$6 each beyond 40, $750 cap</div></div>
+      <div class="mini"><div class="k">Next charge</div><div class="v">12 Aug</div><div class="d">via Shopify AppSubscription</div></div>
+    </div>
+    <div class="card">
+      <div class="cardHd">Plan comparison <span class="hint">Pricing is per new subscription, not per transaction</span></div>
+      ${tokRow('Starter','$100 &middot; 10 included &middot; $8 overage &middot; $500 cap','off')}
+      ${tokRow('Growth','$250 &middot; 40 included &middot; $6 overage &middot; $750 cap','ok')}
+      ${tokRow('Professional','$400 &middot; 150 included &middot; $5 overage &middot; $1k cap','off')}
+      ${tokRow('Enterprise','$650 &middot; 250 included &middot; $5 overage &middot; $1.5k cap','off')}
+    </div>
+    <div class="specNote" style="margin-top:14px">Shopify takes 20 percent of gross billing, so net ARPU is gross times 0.80. Dev stores are exempt and the trial is seven days.</div>`;
+  }
+},
+
+gear:{
+  label:'Settings', icon:'gear', slot:true, owner:'plat', status:'wip',
+  title:'Settings', sub:'Everything configured once and revisited rarely. Grouped, and searchable.',
+  next:'Build the grouped rail and search. A flat list of this length reproduces the exact problem this refactor exists to solve, one level down.',
+  absorbed:['Integrations','Custom Checkout Adapt','Notification Templates','Brand settings'],
+  routes:[
+    r('/settings','Settings, current','ship','code','Live with tabs for order placement, timing, cancellation policy, brand settings and shipping zones. Flat, no search.'),
+    r('/settings','Grouped rail and search','wip','design','Nine groups plus search, matching Shopify\'s own Settings pattern. Net structure, existing content.'),
+    r('/settings  branding','Branding','wip','design','Moved in. Single source for the tokens currently duplicated between Settings and Portal Settings. Needs a data audit to establish which is authoritative today.'),
+    r('/settings  orders','Orders and scheduling','ship','code','Order timing, placement mode, PAYG timing. Also the home of the net-new out-of-stock policy.'),
+    r('/settings  payments','Payments','ship','code','Includes the Retry failed payments dunning cap that Payment Reminders reads its denominator from.'),
+    r('/settings  shipping','Shipping','part','code','New shipping-matcher, shipping-estimator, RateConditionsEditor and shipping-countries are in code. Removing the live sync mode has not started, and region overrides are documentation only.'),
+    r('/settings  policies','Policies','ship','code','Cancellation policy, read by the widget policy modal.'),
+    r('/settings  notifications','Customer notifications','wip','design','Moved in. Tracked in full under the Notifications module.'),
+    r('/settings  alerts','Admin alert delivery','open','design','Moved in. Which alerts reach the merchant and by which channel.'),
+    r('/integrations','Integrations','part','code','Moved in. Shipped backend, no designed screen.'),
+    r('/integrations/whatsapp/cloud-api','WhatsApp Cloud API','ship','code','Connect the WABA, phone number id, default language and country. Credentials and opt-ins only; template content lives in Customer notifications.'),
+    r('/custom-checkout-adapt','Checkout compatibility','part','code','Loses its name and becomes a status row inside each relevant integration. Dummy product and native discount plumbing is built; external GoKwik order creation is not in the code.'),
+    r('/custom-checkout-adapt/:id','Plan adapt detail','part','code','Create discount, recreate, delete. Folds into the integration row.'),
+    r('/custom-checkout-adapt/bundle/:id','Bundle adapt detail','part','code','Same, for bundles.'),
+    r('/settings  jobs','Jobs dashboard','ship','code','BullMQ job tracking, real-time status counts, failure inspector, queue cleanup. Shipped and not placed in the IA, so it is recorded here as the nearest fit.')
+  ],
+  why:[
+    'Brand tokens live here in the locked version A. Because Widget, Portal and Landing Pages each keep their own nav item, there is no Storefront parent to hold the tokens all three read from, so they consolidate under Settings and Branding, which is also where Shopify puts brand assets.',
+    'A grouped left rail plus search, matching Shopify\'s own Settings pattern. A flat list of this length would reproduce the exact problem this refactor exists to solve, one level down.',
+    'Integrations moved in because Shopify already puts payment providers and shipping carriers under Settings, so this follows platform muscle memory instead of fighting it. Billing did NOT move in. IA-01 had it sinking into Settings alongside Integrations; that was reversed on 2026-07-28 and Billing now sits directly below Settings as its own item. It is the only change to the locked eleven, which is why the nav is twelve.',
+    'Custom Checkout Adapt loses its name. It exists so StackBack works when a store uses GoKwik or Shopflo instead of Shopify checkout, which makes it a property of that connection rather than a product of its own. One risk worth naming: that checkout status is what Operations needs under pressure during an incident, and it now sits two levels deep. Mitigations are a setup-health warning on Home and making Settings search match "checkout".',
+    'The Jobs dashboard is shipped and has no place in the locked eleven. It is an engineering surface rather than a merchant one, so Settings is the nearest fit, but that is an assignment made here and not a decision anyone took.',
+    'Search has a limit worth stating. It helps someone who already thought to open Settings. It does nothing for someone who does not know a feature exists, so it is a reason to be less afraid of nesting, not a licence to nest anything.'
+  ],
+  render(){ return `
+    <div class="setWrap">
+      <div class="setRail">
+        <div class="setSearch"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg> Search settings</div>
+        <div class="setItem"><span class="dot warn"></span>Branding <span class="nu">MOVED IN</span></div>
+        <div class="setItem"><span class="dot ok"></span>Orders and scheduling</div>
+        <div class="setItem"><span class="dot ok"></span>Payments</div>
+        <div class="setItem"><span class="dot part"></span>Shipping</div>
+        <div class="setItem"><span class="dot ok"></span>Policies</div>
+        <div class="setItem"><span class="dot warn"></span>Customer notifications <span class="nu">MOVED IN</span></div>
+        <div class="setItem"><span class="dot off"></span>Admin alert delivery <span class="nu">MOVED IN</span></div>
+        <div class="setItem sel"><span class="dot part"></span>Integrations <span class="nu">MOVED IN</span></div>
+        <div class="setItem"><span class="dot ok"></span>Billing <span class="nu">MOVED IN</span></div>
+      </div>
+      <div class="setBody">
+        <div style="font-weight:650;font-size:15px">Integrations</div>
+        <div style="color:var(--p-muted);font-size:12.5px;margin-top:3px">Connections to channels and checkouts outside Shopify.</div>
+        <div class="card" style="margin-top:14px">
+          ${intRow('WhatsApp','Meta Cloud API &middot; +91 98xxx xxxxx','ok','Connected','Credentials and opt-ins only. Template content lives in Customer notifications.')}
+          ${intRow('GoKwik','Checkout compatibility','warn','Needs resync','Was called Custom Checkout Adapt. External order creation is not in the code.')}
+          ${intRow('Shopflo','Checkout compatibility','off','Not set up','')}
+          ${intRow('Email','AWS SES ap-south-1','ok','Connected','')}
+        </div>
+      </div>
+    </div>`;
+  }
+}
+};
+
+/* nav order. Twelve items as of 2026-07-28: Billing was pulled back out of Settings
+   and sits directly below it, the single IA change to the locked version A. */
+const NAV = ['plans','subs','orders','pay','inv','cust','widget','portal','land','chart','gear','bill'];
+const FOLD_AFTER = 9;
+const ORDER = ['home','plans','subs','orders','pay','inv','cust','widget','portal','land','chart','notif','gear','bill'];
+
+/* ============================ row helpers ============================ */
+const chromeRow=(lbl,items)=>`<div class="chrome"><span class="lbl">${lbl}</span>${items.join('')}</div>`;
+const tab=(t,on,n,fut)=>`<span class="tab ${on?'on':''} ${fut?'future':''}">${t}${n?` <span class="n">${n}</span>`:''}</span>`;
+const pill=(t,on,n,fut)=>`<span class="pill ${on?'on':''} ${fut?'future':''}">${t}${n?` <span class="n">${n}</span>`:''}</span>`;
+const pillAttn=(t,n)=>`<span class="pill attn">${t} <span class="n">${n}</span></span>`;
+
+const planRow=(t,s,p,d,st)=>`<div class="row"><span class="dot ${d}"></span><div class="thumb"></div><div class="grow"><div class="t">${t}</div><div class="s">${s} &middot; ${p}</div></div><span class="chip neu">${st}</span><span class="btn kebab">&#8943;</span></div>`;
+const subRow=(c,n,p,st,d,s)=>`<div class="row"><span class="dot ${d}"></span><div class="grow"><div class="t">${n} <span style="color:var(--p-faint);font-weight:500">${c}</span></div><div class="s">${p} &middot; ${s}</div></div><span class="chip ${d}">${st}</span><span class="btn kebab">&#8943;</span></div>`;
+const ordRow=(c,n,s,d,chip)=>`<div class="row"><span class="dot ${d}"></span><div class="grow"><div class="t">${c}</div><div class="s">${n} &middot; ${s}</div></div><span class="chip ${d==='crit'?'crit':'neu'}">${chip}</span><span class="btn">View order</span><span class="btn kebab">&#8943;</span></div>`;
+const ordRowSplit=(c,n,s,d,chip,act)=>`<div class="row"><span class="dot ${d}"></span><div class="grow"><div class="t">${c}</div><div class="s">${n} &middot; ${s}</div></div><span class="chip ${d}">${chip}</span><div class="stack2"><div class="r1"><span class="btn">View order</span></div><div class="r2"><span class="btn pri">${act}</span><span class="btn kebab">&#8943;</span></div></div></div>`;
+const payRow=(n,r2,c,d,amt)=>`<div class="row"><span class="dot ${d}"></span><div class="grow"><div class="t">${n}</div><div class="s">${r2} &middot; ${c}</div></div><span class="chip neu">${amt}</span><span class="btn pri">Send reminder</span><span class="btn kebab">&#8943;</span></div>`;
+const invRow=(t,s,u,d)=>`<div class="row"><span class="dot ${d}"></span><div class="thumb"></div><div class="grow"><div class="t">${t}</div><div class="s">${s}</div></div><span class="chip ${d==='warn'?'warn':'neu'}">${u}</span></div>`;
+const custRow=(n,s,c,chip)=>`<div class="row"><span class="dot ${c==='neu'?'off':c}"></span><div class="grow"><div class="t">${n}</div><div class="s">${s}</div></div><span class="chip ${c}">${chip}</span><span class="btn kebab">&#8943;</span></div>`;
+const tokRow=(t,s,d)=>`<div class="row"><span class="dot ${d}"></span><div class="grow"><div class="t">${t}</div><div class="s">${s}</div></div><span class="btn">Edit</span></div>`;
+const intRow=(t,s,d,st,note)=>`<div class="row"><span class="dot ${d}"></span><div class="grow"><div class="t">${t}</div><div class="s">${s}${note?`<br><span style="color:var(--p-faint)">${note}</span>`:''}</div></div><span class="chip ${d}">${st}</span><span class="btn">Manage</span></div>`;
+
+/* file row, with an inline preview for anything the browser can render */
+let PID=0;
+const fileRow=(fx)=>{
+  const s=FST[fx.state], e=ext(fx.path);
+  const canPreview = (e==='html');
+  const id='prev'+(PID++);
+  return `<div class="fRow">
+    <span class="dot ${s.d}" title="${s.t}"></span>
+    <div class="grow">
+      <div class="t">${fx.label} <span class="type ${e}">${e}</span></div>
+      ${fx.note?`<div class="s">${fx.note}</div>`:''}
+      <div class="pth">${fx.path}</div>
+    </div>
+    <div class="fActs">
+      <span class="chip ${s.c}">${s.t}</span>
+      ${canPreview?`<button class="btn" data-prev="${id}">Preview</button>`:''}
+      <a class="btn" href="${fx.path}" target="_blank" rel="noopener">Open &#8599;</a>
+    </div>
+  </div>
+  ${canPreview?`<div class="fPrev" id="${id}">
+      <div class="cap"><b>${fx.label}</b><span>rendered live from ${fx.path}</span></div>
+      <iframe data-src="${fx.path}" title="${fx.label}" loading="lazy"></iframe>
+    </div>`:''}`;
+};
+
+/* backlog row */
+const bkRow=(bx)=>{
+  const s=BST[bx.state];
+  return `<div class="row">
+    <span class="dot ${s.d}" title="${s.t}"></span>
+    <div class="grow">
+      <div class="t">${bx.item}</div>
+      ${bx.note?`<div class="s">${bx.note}</div>`:''}
+    </div>
+    <span class="chip ${s.c}">${s.t}</span>
+  </div>`;
+};
+
+/* wire the preview toggles after each page render */
+function wirePreviews(){
+  document.querySelectorAll('#page [data-prev]').forEach(b=>{
+    b.onclick=()=>{
+      const box=document.getElementById(b.dataset.prev);
+      const open=box.classList.toggle('open');
+      b.classList.toggle('on',open);
+      b.textContent = open?'Hide':'Preview';
+      const fr=box.querySelector('iframe');
+      if(open && !fr.src) fr.src=fr.dataset.src;   /* load only on demand */
+    };
+  });
+}
+
+/* route row inside the tracker table */
+const routeRow=(rt)=>{
+  const s=ST[rt.st], sr=SRC[rt.src];
+  return `<div class="row">
+    <span class="dot ${s.d}" title="${s.t}"></span>
+    <div class="grow">
+      <div class="t"><code class="rte">${rt.rt}</code> &nbsp;${rt.name}</div>
+      ${rt.note?`<div class="s">${rt.note}</div>`:''}
+    </div>
+    <div class="stack2">
+      <div class="r1"><span class="chip ${s.c}">${s.t}</span></div>
+      <div class="r2"><span class="chip ${sr.c}">${sr.t}</span></div>
+    </div>
+  </div>`;
+};
+
+/* ============================ counting ============================ */
+const inFilter=(st,f)=> f==='all' ? true : ST[st].grp===f;
+const countBy=(mod,f)=> mod.routes.filter(x=>inFilter(x.st,f)).length;
+const modDot=(mod)=> ST[mod.status].d;
+
+function totals(){
+  const t={ship:0,wip:0,part:0,bug:0,open:0,retire:0,def:0,routes:0};
+  ORDER.forEach(id=>M[id].routes.forEach(rt=>{ t[rt.st]++; t.routes++; }));
+  return t;
+}
+function srcTotals(){
+  const t={code:0,design:0,new:0};
+  ORDER.forEach(id=>M[id].routes.forEach(rt=>t[rt.src]++));
+  return t;
+}
+
+/* ============================ render ============================ */
+let f='live', sel='orders';
+
+function shopifyChrome(){
+  const items=[['Home','home'],['Orders','orders'],['Products','plans'],['Customers','cust'],['Marketing','chart'],['Discounts','pay'],['Content','land'],['Analytics','chart']];
+  return items.map(([t,i])=>`<div class="navItem ghost">${svg(i)}${t}</div>`).join('')
+    + `<div class="navSec">Sales channels <span class="chev">&rsaquo;</span></div><div class="navSec">Apps <span class="chev">&rsaquo;</span></div>`;
+}
+
+function renderNav(){
+  const home=M.home;
+  let out = shopifyChrome();
+  out += `<button class="navApp ${sel==='home'?'sel':''}" data-id="home"><span class="logo">SB</span>StackBack Subs<span class="rt"><span class="dot ${modDot(home)}"></span></span></button>`;
+  out += NAV.map((id,idx)=>{
+    const m=M[id], n=countBy(m,f);
+    const isNew = (id==='inv'||id==='chart');
+    const dim = n===0 ? ' style="opacity:.72"' : '';
+    let s=`<button class="navSub ${id===sel?'sel':''}" data-id="${id}" title="${m.routes.length} routes tracked, ${n} match the current filter">${svg(m.icon)}${m.label}<span class="rt">${isNew?'<span class="nu">NEW</span>':''}<span class="chip neu"${dim}>${m.routes.length}</span><span class="dot ${modDot(m)}"></span></span></button>`;
+    if(idx===FOLD_AFTER-1) s += `<div class="navFold">View more</div>`;
+    return s;
+  }).join('');
+  out += `<div class="navGap"></div>`;
+  out += `<div class="navHint">Home is the app-name row above. Notifications is the header bell, top right. Neither takes a nav slot.</div>`;
+  out += `<div class="navItem ghost">${svg('gear')}Settings</div>`;
+  document.getElementById('navL').innerHTML = out;
+
+  document.querySelectorAll('#navL [data-id]').forEach(b=>{
+    b.onclick=()=>{ sel=b.dataset.id; renderAll(); };
+  });
+  document.getElementById('bellBtn').classList.toggle('sel', sel==='notif');
+}
+
+function renderPage(){
+  const m=M[sel];
+  let shown=m.routes.filter(x=>inFilter(x.st,f));
+  /* never show an empty module: if nothing matches the filter, fall back to every
+     route and say so, rather than rendering a blank card that reads as broken */
+  const fellBack = shown.length===0 && m.routes.length>0;
+  if(fellBack) shown=m.routes;
+  const own=OWN[m.owner];
+  const st=ST[m.status];
+  document.getElementById('page').innerHTML = `
+    <div class="pgHead">
+      <div>
+        <h2 class="pgTitle">${m.title}
+          <span class="chip ${st.c}">${st.t}</span>
+          <span class="owner ${own[0]}">${own[1]}</span>
+          ${m.slot?'':'<span class="chip dash">No nav slot</span>'}
+        </h2>
+        <p class="pgSub">${m.sub}</p>
+      </div>
+      <div class="pgMeta">
+        <span class="chip neu">${m.routes.length} routes tracked</span>
+        ${fellBack?'<span class="chip warn">none closed or WIP yet</span>':`<span class="chip neu">${shown.length} in view</span>`}
+      </div>
+    </div>
+
+    ${(()=>{ const fx=screensOf(sel), docs=docsOf(sel).length;
+      const locked=fx.filter(x=>x.state==='locked').length;
+      const tail = docs?` &middot; ${docs} supporting ${docs===1?'document':'documents'} on the Backlog and docs tab`:'';
+      if(!fx.length) return `<div class="card"><div class="cardHd">Screens <span class="hint">None designed yet${tail}</span></div><div class="row empty">No screen has been designed for this module. It is shipped code only, or still ahead of the build.</div></div>`;
+      return `<div class="card">
+        <div class="cardHd">Screens
+          <span class="chip ok">${locked} locked</span>
+          <span class="hint">${fx.length} designed &middot; locked first${tail} &middot; Preview renders it inline, Open sends it to a new tab</span>
+        </div>
+        ${fx.map(fileRow).join('')}
+      </div>`; })()}
+
+    <div class="card">
+      <div class="cardHd">Routes
+        <span class="hint">${fellBack?'Showing all routes':f==='live'?'Closed and WIP only':f==='queue'?'Backlog and future only':'Everything'}</span>
+      </div>
+      ${fellBack?`<div class="row" style="background:var(--p-attn-bg)"><span class="dot warn"></span><div class="grow"><div class="s" style="margin-top:0;color:var(--p-attn)">Nothing in this module is closed or WIP yet, so all ${m.routes.length} routes are shown instead of an empty list. This module is entirely ahead of the build.</div></div></div>`:''}
+      ${shown.map(routeRow).join('')}
+    </div>
+
+    <div class="card">
+      <div class="cardHd">Next action <span class="hint">What unblocks this module</span></div>
+      <div class="row"><span class="dot ${st.d}"></span><div class="grow"><div class="s" style="margin-top:0">${m.next}</div></div></div>
+    </div>
+
+    <div class="chrome" style="margin-top:22px"><span class="lbl">Screen sketch</span><span class="pill">Illustrative, not a locked design</span></div>
+    ${m.render()}
+
+    <div class="why">
+      <h4>Why it sits here</h4>
+      ${m.why.map(p=>`<p>${p}</p>`).join('')}
+      ${m.absorbed.length?`<div class="abs"><span class="al">Absorbed</span>${m.absorbed.map(a=>`<span class="fold">${a}</span>`).join('')}</div>`:''}
+    </div>`;
+  wirePreviews();
+}
+
+function renderRollup(){
+  const t=totals(), s=srcTotals();
+  document.getElementById('rollup').innerHTML =
+    `<div><b>${ORDER.length}</b> modules &nbsp;&middot;&nbsp; <b>${t.routes}</b> routes tracked</div>`+
+    `<div><span class="sw" style="background:#29845a"></span><b>${t.ship}</b> shipped</div>`+
+    `<div><span class="sw" style="background:#c8952a"></span><b>${t.wip}</b> WIP</div>`+
+    `<div><span class="sw" style="background:#4a89c0"></span><b>${t.part}</b> partial</div>`+
+    `<div><span class="sw" style="background:#8e1f0b"></span><b>${t.bug}</b> bug open</div>`+
+    `<div><span class="sw" style="background:#b5b5b5"></span><b>${t.open}</b> open &nbsp;&middot;&nbsp; <b>${t.retire}</b> retiring &nbsp;&middot;&nbsp; <b>${t.def}</b> deferred</div>`+
+    `<div>Provenance: <b>${s.code}</b> in code &nbsp;&middot;&nbsp; <b>${s.design}</b> design locked &nbsp;&middot;&nbsp; <b>${s.new}</b> net-new</div>`;
+}
+
+function renderRollTable(){
+  const rank={ship:0,wip:1,part:2,bug:3,open:4,retire:5,def:6};
+  const rows=ORDER.map(id=>({id,m:M[id]}))
+    .sort((a,b)=> rank[a.m.status]-rank[b.m.status] || ORDER.indexOf(a.id)-ORDER.indexOf(b.id));
+  document.getElementById('rollBody').innerHTML = rows.map((x,i)=>{
+    const m=x.m, st=ST[m.status], own=OWN[m.owner];
+    const c={ship:0,wip:0,part:0,bug:0,open:0,retire:0,def:0};
+    m.routes.forEach(rt=>c[rt.st]++);
+    const bits=[];
+    if(c.ship)   bits.push(`<span class="chip ok">${c.ship} shipped</span>`);
+    if(c.wip)    bits.push(`<span class="chip warn">${c.wip} WIP</span>`);
+    if(c.part)   bits.push(`<span class="chip info">${c.part} partial</span>`);
+    if(c.bug)    bits.push(`<span class="chip crit">${c.bug} bug</span>`);
+    if(c.open)   bits.push(`<span class="chip neu">${c.open} open</span>`);
+    if(c.retire) bits.push(`<span class="chip neu">${c.retire} retiring</span>`);
+    if(c.def)    bits.push(`<span class="chip dash">${c.def} deferred</span>`);
+    return `<tr>
+      <td class="n mid">${i+1}</td>
+      <td class="mid"><b>${m.label}</b>${m.slot?'':'<br><span style="color:var(--p-faint);font-size:11.5px">no nav slot</span>'}</td>
+      <td class="mid"><span class="owner ${own[0]}">${own[1]}</span></td>
+      <td class="mid"><span class="dot ${st.d}" style="display:inline-block;margin-right:6px"></span><span class="chip ${st.c}">${st.t}</span></td>
+      <td class="mid"><div style="display:flex;gap:5px;flex-wrap:wrap">${bits.join('')}</div></td>
+      <td style="color:var(--p-muted)">${m.next}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* open questions carried into the next round */
+const Q=[
+ ['Inventory','Which graphs and views belong on the Operations landing dashboard? Stock trend, shortfall history, restock lead time and demand concentration are candidates and none is locked.','The whole Inventory module. Nothing can be built until this is chosen.'],
+ ['Inventory','Is the Holds screen genuinely removed? It was locked in the morning of 2026-07-27 and superseded that evening on the grounds that StackBack cannot detect stock. Six wireframe iterations were built on the earlier reading.','Whether the out-of-stock policy config has a work surface at all.'],
+ ['Notifications','Bell or no bell? An embedded app cannot add to Shopify\'s top bar, so a bell needs StackBack\'s own header row and persistent chrome on every screen.','Vertical space on all thirteen modules. Needs an App Bridge check first.'],
+ ['Plans, Subscriptions, Orders','Are the route renames worth doing? Plans, Subscriptions and Orders all read better than purchase-options, purchase-contracts and timeline-order-v3, but renaming a live route breaks bookmarks and support macros.','Whether this refactor touches routing at all, or only labels and structure.'],
+ ['Settings','Where does the shipped Jobs dashboard belong? It is an engineering surface with no place in the locked eleven, and Settings is an assignment made here rather than a decision taken.','One route with no confirmed home.'],
+ ['Home','Should a churn or retention KPI sit on the Home glance layer? Shipping a subscriptions home with no top-line retention metric is the main open risk on that prototype.','The Home dashboard and, indirectly, what Analytics has to carry alone.']
+];
+document.getElementById('qBody').innerHTML = Q.map(([m,q,b],i)=>
+  `<tr><td class="n">${i+1}</td><td><b>${m}</b></td><td>${q}</td><td style="color:var(--p-muted)">${b}</td></tr>`
+).join('');
+
+/* ---------- section 3: consolidated backlog ---------- */
+const ALLBK = ORDER.flatMap(id => (BACKLOG[id]||[]).map(b=>({...b, mod:M[id].label, modId:id})))
+                   .sort((a,b)=> BST[a.state].rank-BST[b.state].rank);
+let bkF='all';
+
+function renderBacklog(){
+  const c={bug:0,gated:0,open:0,parked:0};
+  ALLBK.forEach(b=>c[b.state]++);
+  document.getElementById('bkStats').innerHTML =
+    `<div class="mini"><div class="k">Total open items</div><div class="v">${ALLBK.length}</div><div class="d">across ${ORDER.filter(id=>(BACKLOG[id]||[]).length).length} modules</div></div>`+
+    `<div class="mini"><div class="k">Bugs</div><div class="v">${c.bug}</div><div class="d">shipped but failing</div></div>`+
+    `<div class="mini"><div class="k">Gated</div><div class="v">${c.gated}</div><div class="d">waiting on someone else</div></div>`+
+    `<div class="mini"><div class="k">Open</div><div class="v">${c.open}</div><div class="d">${c.parked} more parked</div></div>`;
+
+  document.getElementById('bkFilters').innerHTML =
+    [['all','Everything',ALLBK.length],['bug','Bugs',c.bug],['gated','Gated',c.gated],['open','Open',c.open],['parked','Parked',c.parked]]
+    .map(([k,t,n])=>`<button class="pill ${bkF===k?'on':''}" data-bk="${k}" style="cursor:pointer;font-family:inherit">${t} <span class="n">${n}</span></button>`).join(' ');
+
+  const rows=ALLBK.filter(b=> bkF==='all'||b.state===bkF);
+  document.getElementById('bkBody').innerHTML = rows.length? rows.map((b,i)=>{
+    const s=BST[b.state];
+    return `<tr>
+      <td class="n mid">${i+1}</td>
+      <td class="mid"><b>${b.mod}</b></td>
+      <td class="mid">${b.item}</td>
+      <td class="mid"><span class="dot ${s.d}" style="display:inline-block;margin-right:6px"></span><span class="chip ${s.c}">${s.t}</span></td>
+      <td style="color:var(--p-muted)">${b.note}</td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="5" style="text-align:center;color:var(--p-faint);padding:18px">Nothing in this state.</td></tr>`;
+
+  document.querySelectorAll('#bkFilters [data-bk]').forEach(b=>{
+    b.onclick=()=>{ bkF=b.dataset.bk; renderBacklog(); };
+  });
+}
+
+/* ---------- section 8: reference shelf ---------- */
+const SHELF=[
+  F('/merchant/IA_MerchantAdmin_v1.html','IA-01, the architecture decision record','locked','Where the eleven items were chosen. Carries the three versions A, B and C, the mapping of the old fourteen items, and the reasoning this tracker is built on.'),
+  F('/Specs/IA/StackBack_Spec_IA_01_MerchantAdmin_v1.md','IA-01 written spec','spec','The prose version of the above.'),
+  F('/Design/StackBack_MerchantAdmin_ScreenMap.html','Merchant admin screen map','locked','Forty routable screens across twelve modules, read out of the code. Every route in this tracker was checked against this.'),
+  F('/Design/StackBack_MerchantAdmin_Flow.mermaid','Merchant admin flow diagram','ref','The same map as a flowchart.'),
+  F('/Reference/StackBack_Codebase_Analysis_2026-07-07.md','Codebase analysis, July 2026','locked','The source for what is shipped versus partial. Twenty-one new migrations, WhatsApp Cloud API, widget template system, checkout adapter, plan suggestor, setup health, shipping rework.'),
+  F('/Reference/StackBack_Widget_Admin_Roadmap.md','Widget and admin working checklist','locked','Canonical per-item WIP, Review and Approve state.'),
+  F('/Reference/STACKBACK_PROJECT_STATUS.md','Project status','spec','Broader than this tracker: pilot, GTM and QA as well as design.'),
+  F('/Reference/StackBack_Module_Map_v4.pdf','Module map v4','ref','The older module map, kept for lineage.'),
+  F('/merchant/IA_MerchantAdmin_Artifact.html','IA-01 shareable artifact','ref','A standalone copy of IA-01 for sharing.'),
+  F('/Migrations/GlowGlossary_Seal_to_StackBack_BulkImport_v3.xlsx','Glow Glossary migration, Seal to StackBack','data','Built and verified against the live store 2026-08-04. 61 rows, 3 sheets. Only 11 of the 61 subscriptions have EVER produced a renewal order, the first invoice a median of 65 days overdue, because Seal bills by emailed invoice so ACTIVE persists whether or not anyone pays. BLOCKED on plan_option_code from Shubham. Evidence behind the Inventory Paid / Not-paid-yet split.'),
+  F('/Skills/stackback-bulk-import.skill','Bulk-import skill v1.0.2','spec','The migration productised. reQA verdict CONDITIONAL PASS. Locks the method that the first build got wrong: anchor next_delivery_date to the customer\'s last real renewal order recovered via source_name:shopify_draft_order, then roll forward to the first future date, rather than rolling forward from signup.'),
+  F('/StackBack_Roadmap_Dashboard.html','Roadmap dashboard, static prototype','ref','SUPERSEDED 2026-08-03 and carries an in-file banner saying so. The live app at stackback-roadmap.vercel.app is canonical: 11 milestones, 118 tasks, four states Now / Next / Future / Done, generated from the sheet rather than hand-seeded.')
+];
+function renderShelf(){
+  document.getElementById('shelf').innerHTML =
+    `<div class="cardHd">Cross-cutting documents <span class="hint">${SHELF.length} items &middot; not owned by any single module</span></div>`
+    + SHELF.map(fileRow).join('');
+  document.querySelectorAll('#shelf [data-prev]').forEach(b=>{
+    b.onclick=()=>{
+      const box=document.getElementById(b.dataset.prev);
+      const open=box.classList.toggle('open');
+      b.classList.toggle('on',open);
+      b.textContent = open?'Hide':'Preview';
+      const fr=box.querySelector('iframe');
+      if(open && !fr.src) fr.src=fr.dataset.src;
+    };
+  });
+}
+
+/* ---------- top-level tabs: Screens and IA / Backlog and docs ----------
+   Sections are grouped by their h2 and moved into one of two containers, so the
+   backlog lives on a genuinely separate tab rather than further down one long page. */
+function buildTabs(){
+  const spec=document.querySelector('.spec');
+  const groups=[]; let cur=null;
+  [...spec.children].forEach(k=>{
+    if(k.matches('h2.specH')){ cur={title:k.textContent,nodes:[k]}; groups.push(cur); }
+    else if(cur){ cur.nodes.push(k); }
+  });
+  const A=document.createElement('div'); A.id='tabScreens';
+  const Bx=document.createElement('div'); Bx.id='tabBacklog'; Bx.style.display='none';
+  spec.appendChild(A); spec.appendChild(Bx);
+  groups.forEach(g=>{
+    const toBacklog = /backlog item/i.test(g.title);
+    g.nodes.forEach(n=>(toBacklog?Bx:A).appendChild(n));
+  });
+
+  const bar=document.createElement('div');
+  bar.className='chrome';
+  bar.style.cssText='margin:22px 0 0;position:sticky;top:0;z-index:150;background:#f7f7f7;padding:10px 0';
+  bar.innerHTML='<span class="lbl">View</span>'+
+    `<button class="tab on" data-tab="tabScreens" style="cursor:pointer;font-family:inherit">Screens and IA</button>`+
+    `<button class="tab" data-tab="tabBacklog" style="cursor:pointer;font-family:inherit">Backlog and docs <span class="n" id="tabBkN"></span></button>`;
+  spec.insertBefore(bar,A);
+  bar.querySelectorAll('[data-tab]').forEach(b=>{
+    b.onclick=()=>{
+      bar.querySelectorAll('[data-tab]').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on');
+      A.style.display  = b.dataset.tab==='tabScreens'?'':'none';
+      Bx.style.display = b.dataset.tab==='tabBacklog'?'':'none';
+      window.scrollTo({top:0});
+    };
+  });
+}
+
+/* module-wise backlog + supporting docs, rendered onto the backlog tab */
+function renderModuleBacklog(){
+  const host=document.createElement('div');
+  host.innerHTML='<h2 class="specH">Module by module</h2>'+
+    '<p class="specP">The same items again, grouped by module instead of flattened, with each module\'s supporting documents beside them. Specs, sheets and PDFs live here rather than on the Screens tab, because they are not screens.</p>';
+  ORDER.forEach(id=>{
+    const m=M[id];
+    const bx=(BACKLOG[id]||[]).slice().sort((a,b)=>BST[a.state].rank-BST[b.state].rank);
+    const dx=docsOf(id);
+    if(!bx.length && !dx.length) return;
+    const own=OWN[m.owner];
+    const c={bug:0,gated:0,open:0,parked:0}; bx.forEach(b=>c[b.state]++);
+    const bits=[];
+    if(c.bug)    bits.push(`<span class="chip crit">${c.bug} bug</span>`);
+    if(c.gated)  bits.push(`<span class="chip warn">${c.gated} gated</span>`);
+    if(c.open)   bits.push(`<span class="chip neu">${c.open} open</span>`);
+    if(c.parked) bits.push(`<span class="chip dash">${c.parked} parked</span>`);
+    host.insertAdjacentHTML('beforeend', `
+      <div class="card" style="margin-top:18px">
+        <div class="cardHd">${svg(m.icon)} ${m.label}
+          <span class="owner ${own[0]}">${own[1]}</span>
+          ${bits.join('')}
+          ${m.slot?'':'<span class="chip dash">no nav slot</span>'}
+        </div>
+        ${bx.length?bx.map(bkRow).join(''):'<div class="row empty">No backlog items.</div>'}
+        ${dx.length?`<div class="cardHd" style="border-top:1px solid var(--p-line2)">Supporting documents <span class="hint">${dx.length} ${dx.length===1?'file':'files'} &middot; not screens</span></div>${dx.map(fileRow).join('')}`:''}
+      </div>`);
+  });
+  document.getElementById('tabBacklog').appendChild(host);
+  const n=ORDER.reduce((a,id)=>a+(BACKLOG[id]||[]).length,0);
+  const el=document.getElementById('tabBkN'); if(el) el.textContent=n;
+}
+
+function renderAll(){ renderNav(); renderPage(); renderRollup(); }
+
+document.querySelectorAll('#fSeg button').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('#fSeg button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    f=b.dataset.f;
+    renderAll();
+  };
+});
+document.getElementById('bellBtn').onclick=()=>{ sel='notif'; renderAll(); };
+
+/* keep the prose count honest: computed, never typed */
+(()=>{ const t=totals(), s=srcTotals();
+  document.getElementById('cntRoutes').textContent =
+    `${t.routes} routes across ${ORDER.length} modules are tracked, ${s.code} of them verified in the shipped build`;
+})();
+
+renderAll();
+renderRollTable();
+renderBacklog();
+renderShelf();
+buildTabs();
+renderModuleBacklog();
+</script>
+</body>
+</html>

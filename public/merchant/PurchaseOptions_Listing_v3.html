@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Purchase Options — Listing (v3, Polaris shell)</title>
+<style>
+  :root{
+    --p-bg:#f1f1f1; --p-surface:#ffffff; --p-nav:#ebebeb;
+    --ink:#303030; --muted:#616161; --faint:#8a8a8a;
+    --line:#e3e3e3; --line2:#ebebeb;
+    --primary:#303030; --primary-h:#1a1a1a;
+    --link:#005bd3; --success:#29845a; --success-bg:#cdfee1;
+    --critical:#e51c00;
+    --infoInk:#00527c; --infoBg:#e0f0ff;
+    --amberInk:#8a6116; --amberBg:#ffefcf;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--p-bg);color:var(--ink);
+    font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+
+  .admin{display:flex;min-height:100vh}
+
+  /* Left Shopify nav */
+  .navL{flex:none;width:232px;background:var(--p-nav);border-right:1px solid var(--line);
+    padding:10px 8px;display:flex;flex-direction:column;gap:1px;position:sticky;top:0;align-self:flex-start;height:100vh;overflow:auto}
+  .navItem{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;
+    color:var(--ink);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
+  .navItem:hover{background:#dedede}
+  .navItem .ico{width:18px;height:18px;flex:none;color:#4a4a4a}
+  .navItem .ct{margin-left:auto;font-size:12px;color:var(--muted);background:#e0e0e0;border-radius:8px;padding:0 7px;line-height:18px}
+  .navSec{color:var(--muted);font-size:13px;font-weight:500;display:flex;align-items:center;height:30px;padding:0 8px;margin-top:6px}
+  .navSec .chev{margin-left:auto;color:var(--faint)}
+  .navSub{display:flex;align-items:center;height:30px;padding:0 8px 0 34px;border-radius:8px;color:var(--muted);font-size:13px;cursor:pointer}
+  .navSub:hover{background:#dedede;color:var(--ink)}
+  .navSub.sel{color:var(--ink);font-weight:600;background:var(--p-surface);box-shadow:0 1px 0 rgba(0,0,0,.04)}
+  .navApp{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;font-weight:600;background:var(--p-surface);box-shadow:0 1px 0 rgba(0,0,0,.04);margin-top:2px}
+  .navApp .logo{width:20px;height:20px;border-radius:5px;background:var(--primary);display:grid;place-items:center;color:#fff;font-size:11px;flex:none}
+  .navApp .dot{margin-left:auto;width:6px;height:6px;border-radius:50%;background:#8a8a8a}
+  .navGap{flex:1}
+
+  .appmain{flex:1;min-width:0;display:flex;flex-direction:column}
+  .appbar{height:52px;background:var(--p-surface);border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:10px;padding:0 18px}
+  .appbar .logo{width:24px;height:24px;border-radius:6px;background:var(--primary);display:grid;place-items:center;color:#fff;font-size:12px}
+  .appbar .name{font-weight:650;font-size:14px}
+  .appbar .more{margin-left:auto;color:var(--muted);font-size:20px;cursor:pointer;letter-spacing:1px}
+
+  .pagehdr{display:flex;align-items:center;gap:14px;padding:18px 24px 4px;max-width:1000px}
+  .pagehdr .back{width:28px;height:28px;border:1px solid var(--line);border-radius:8px;background:#fff;display:grid;place-items:center;color:var(--muted);cursor:pointer}
+  .pagehdr h1{font-size:19px;margin:0;font-weight:650}
+  .pagehdr .acts{margin-left:auto;display:flex;gap:8px}
+
+  .wrap{padding:6px 24px 90px;max-width:1000px}
+
+  .btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 13px;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;box-shadow:0 1px 0 rgba(0,0,0,.04);display:inline-flex;align-items:center;gap:6px}
+  .btn:hover{background:#fafafa}
+  .btn.primary{background:var(--primary);color:#fff;border-color:var(--primary);box-shadow:0 1px 0 rgba(0,0,0,.12)}
+  .btn.primary:hover{background:var(--primary-h)}
+  .btn.sm{padding:4px 10px;font-size:12px}
+  .btn.plain{border:0;background:none;box-shadow:none;color:var(--link);font-weight:600;padding:4px 6px}
+
+  /* summary line replacing the 4 stat cards */
+  .summary{display:flex;align-items:center;color:var(--muted);font-size:13px;flex-wrap:wrap;margin:2px 0 14px}
+  .summary b{color:var(--ink);font-weight:650}
+  .summary .dot{width:3px;height:3px;border-radius:50%;background:#c4c4c4;margin:0 10px;display:inline-block}
+  .summary .warn{color:var(--amberInk);font-weight:600}
+
+  /* Polaris-accurate segmented control (light) */
+  .pseg{display:inline-flex;background:#f1f1f1;border:1px solid var(--line);border-radius:9px;padding:3px}
+  .pseg button{border:0;background:transparent;color:var(--muted);font-size:13px;font-weight:600;padding:6px 13px;border-radius:7px;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+  .pseg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.1)}
+  .pseg .c{font-size:11px;font-weight:700;color:var(--faint)}
+  .pseg button.on .c{color:var(--muted)}
+  .pseg.sm button{padding:5px 11px;font-size:12px}
+
+  /* type row + dropdown variant */
+  .typerow{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;min-height:38px}
+  .typehint{color:var(--faint);font-size:12px}
+  .typedd{position:relative}
+  .typedd .ddbtn{border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 14px;font-size:13.5px;font-weight:650;display:inline-flex;align-items:center;gap:10px;cursor:pointer;box-shadow:0 1px 0 rgba(0,0,0,.04)}
+  .typedd .ddbtn .c{background:#eef0f2;color:var(--muted);border-radius:20px;font-size:11px;padding:1px 8px;font-weight:700}
+  .typedd .menu{position:absolute;top:calc(100% + 6px);left:0;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.16);padding:6px;min-width:270px;z-index:20}
+  .typedd .menu .mi{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 11px;border-radius:8px;cursor:pointer;font-weight:600}
+  .typedd .menu .mi:hover{background:#f6f6f7}
+  .typedd .menu .mi.on{background:#f1f1f1}
+  .typedd .menu .mi .c{background:#e7e9eb;color:var(--muted);border-radius:20px;font-size:11px;padding:1px 8px;font-weight:700}
+
+  .card{background:var(--p-surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 1px 0 rgba(0,0,0,.04);overflow:hidden}
+  .toolbar{display:flex;align-items:center;gap:10px;padding:12px 14px;flex-wrap:wrap}
+  .search{flex:1 1 240px;min-width:190px;position:relative}
+  .search input{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 12px 8px 32px;font-size:13px;background:#fff;color:var(--ink)}
+  .search input:focus{outline:2px solid #cfe0ff;border-color:#7aa6f0}
+  .search svg{position:absolute;left:10px;top:9px;color:var(--faint)}
+  .lens{margin-left:auto}
+  .select{border:1px solid var(--line);border-radius:8px;padding:8px 28px 8px 11px;font-size:12.5px;
+    background:#fff url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23616161' stroke-width='1.6'><path d='M2 4l4 4 4-4'/></svg>") no-repeat right 10px center;
+    -webkit-appearance:none;appearance:none;color:var(--ink);font-weight:600;cursor:pointer}
+
+  table{width:100%;border-collapse:collapse}
+  thead th{text-align:left;font-size:11px;font-weight:650;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;padding:11px 14px;border-top:1px solid var(--line);background:#fafafa}
+  tbody td{padding:12px 14px;border-top:1px solid var(--line);vertical-align:middle}
+  tbody tr:hover{background:#fafafa}
+  .pname{font-weight:600;color:var(--link);cursor:pointer}.pname:hover{text-decoration:underline}
+  .badge{display:inline-flex;align-items:center;gap:5px;border-radius:8px;padding:2px 9px;font-size:12px;font-weight:600}
+  .b-active{background:var(--success-bg);color:#0f5132}
+  .b-inactive{background:#e3e3e3;color:#4a4a4a}
+  .b-info{background:var(--infoBg);color:var(--infoInk)}
+  .b-dot{width:6px;height:6px;border-radius:50%}
+  .b-active .b-dot{background:var(--success)}.b-inactive .b-dot{background:var(--faint)}
+
+  .pile{display:flex;align-items:center}
+  .pile .av{width:26px;height:26px;border-radius:6px;border:1.5px solid #fff;margin-left:-6px;background:#e7e9eb;color:#5a5f63;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 1px var(--line)}
+  .pile .av:first-child{margin-left:0}
+  .pile .more{width:26px;height:26px;border-radius:6px;border:1.5px solid #fff;margin-left:-6px;background:#eef0f2;color:var(--muted);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 1px var(--line)}
+  .pile-names{color:var(--muted);font-size:12.5px;margin-left:10px}
+  .rowact{display:flex;align-items:center;gap:6px;justify-content:flex-end}
+  .kebab{border:1px solid var(--line);background:#fff;border-radius:7px;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);box-shadow:0 1px 0 rgba(0,0,0,.04)}
+  .kebab:hover{background:#fafafa}
+  .warnflag{color:var(--amberInk);display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:#f6f6f7;border:1px solid var(--line);border-radius:7px;padding:4px 9px;font-size:12px;font-weight:600;color:var(--ink);margin:2px 4px 2px 0;cursor:pointer;text-decoration:none}
+  .chip:hover{background:#fff;border-color:#c9c9c9}.chip .mini{width:5px;height:5px;border-radius:50%}
+  .exp{cursor:pointer;color:var(--muted);display:inline-flex;align-items:center;gap:6px;font-weight:600}
+  .subrow td{background:#fafbfb;padding:0 14px 12px 52px;border-top:0}.subrow .inner{padding-top:2px}
+  .kv{color:var(--muted);font-size:11.5px;margin-bottom:6px}
+  .tfoot{padding:11px 14px;color:var(--faint);font-size:12px;text-align:center;border-top:1px solid var(--line)}
+  .hide{display:none !important}
+
+  /* preview chrome */
+  .preview{position:fixed;top:12px;right:14px;z-index:60;background:#111;color:#fff;border-radius:10px;padding:6px;display:flex;gap:4px;align-items:center;box-shadow:0 6px 24px rgba(0,0,0,.28)}
+  .preview .lbl{color:#8b8b8b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:0 6px}
+  .preview button{background:transparent;color:#cfcfcf;border:0;padding:6px 10px;border-radius:7px;font-size:11.5px;font-weight:600;cursor:pointer;white-space:nowrap}
+  .preview button.on{background:#fff;color:#111}
+</style>
+</head>
+<body>
+
+<div class="preview">
+  <span class="lbl">Preview scaling</span>
+  <button id="pv2" class="on" onclick="setTypes(2)">2 types → segmented</button>
+  <button id="pv6" onclick="setTypes(6)">6 types → dropdown</button>
+</div>
+
+<div class="admin">
+  <!-- LEFT SHOPIFY NAV -->
+  <aside class="navL">
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8.5 10 3l7 5.5V16a1 1 0 0 1-1 1h-3v-5H7v5H4a1 1 0 0 1-1-1z"/></svg>Home</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="13" rx="2"/><path d="M7 8h6M7 11h6"/></svg>Orders<span class="ct">127</span></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h12v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M7 6V5a3 3 0 0 1 6 0v1"/></svg>Products</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="7" r="3"/><path d="M4 16c0-3 2.7-5 6-5s6 2 6 5"/></svg>Customers</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 15V9m4 6V5m4 10v-4m4 4V7"/></svg>Growth</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="3"/><path d="M12 12l4 4M13.5 6.5 16 4"/></svg>Discounts</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="12" rx="2"/><path d="M7 8h6M7 11h4"/></svg>Content</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="6"/><path d="M4 10h12M10 4c2 2 2 10 0 12M10 4c-2 2-2 10 0 12"/></svg>Markets</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 16h12M6 16V9m4 7V5m4 11v-4"/></svg>Analytics</div>
+
+    <div class="navSec">Sales channels<span class="chev">›</span></div>
+    <div class="navSec">Apps<span class="chev">›</span></div>
+
+    <div class="navApp"><span class="logo">◆</span>StackBack Subscrip…<span class="dot"></span></div>
+    <div class="navSub sel">Manage Purchase Options</div>
+    <div class="navSub">Purchase Contracts</div>
+    <div class="navSub">One-Time Orders</div>
+    <div class="navSub">Orders</div>
+    <div class="navSub">Payment Reminders</div>
+    <div class="navSub">Customers</div>
+    <div class="navSub">View more</div>
+
+    <div class="navGap"></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m7-7h-2M5 10H3m12.5-5-1.5 1.5M6 14l-1.5 1.5m11 0L14 14M6 6 4.5 4.5"/></svg>Settings</div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="appmain">
+    <div class="appbar">
+      <span class="logo">◆</span><span class="name">StackBack Subscriptions &amp; More</span>
+      <span class="more">⋯</span>
+    </div>
+
+    <div class="pagehdr">
+      <div class="back">‹</div>
+      <div><h1>Purchase Options</h1></div>
+      <div class="acts"><span class="btn primary" id="createBtn">+ Create Plan</span></div>
+    </div>
+
+    <div class="wrap">
+      <div class="summary">
+        <span><b>5</b> plans</span><span class="dot"></span>
+        <span><b>4</b> active</span><span class="dot"></span>
+        <span><b>36</b> products across plans</span><span class="dot"></span>
+        <span class="warn">1 not synced to theme</span>
+      </div>
+
+      <!-- hybrid type selector -->
+      <div class="typerow" id="typerow"></div>
+
+      <div class="card">
+        <div class="toolbar">
+          <div class="search">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg>
+            <input placeholder="Search plans">
+          </div>
+          <div class="pseg sm" id="statusfilter">
+            <button class="on">All <span class="c">5</span></button>
+            <button>Active <span class="c">4</span></button>
+            <button>Inactive <span class="c">1</span></button>
+            <button>Deleted <span class="c">0</span></button>
+          </div>
+          <div class="lens pseg sm">
+            <button class="on" onclick="setLens('plan')">By Plan</button>
+            <button onclick="setLens('product')">By Product</button>
+          </div>
+          <select class="select"><option>Newest</option><option>Oldest</option><option>Name A–Z</option><option>Name Z–A</option></select>
+        </div>
+        <div id="plan"></div>
+        <div id="product" class="hide"></div>
+      </div>
+
+      <p class="typehint" style="margin-top:14px">
+        Product facepile shows product titles; thumbnails appear once <code>featuredImage.url</code> is added to the
+        purchase-options list loader.
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+var PLANS = [
+  {id:'p1', title:'Coffee Ritual Plan', active:true, synced:true, products:['Cold Brew Concentrate','House Espresso','Single Origin Ethiopia','Decaf Blend','Coffee Filters','Oat Milk','Ceramic Mug','Grinder Beans','Travel Tumbler']},
+  {id:'p2', title:'Farm Fresh A2 Milk Plan', active:true, synced:true, products:['A2 Milk 1L','A2 Milk 500ml','A2 Ghee']},
+  {id:'p3', title:'Performance Protein Plan', active:true, synced:true, products:['Whey Isolate','Casein','Plant Protein','Creatine','Shaker','BCAA','Pre-Workout','Protein Bars','Electrolytes','Glutamine','Multivitamin','Collagen']},
+  {id:'p4', title:'Daily Dairy', active:true, synced:true, products:['A2 Milk 1L','Paneer','Curd 400g']},
+  {id:'p5', title:'Coffee Subscription', active:false, synced:false, products:['Cold Brew Concentrate','House Espresso','Single Origin Ethiopia','Decaf Blend','Coffee Filters','Oat Milk','Ceramic Mug','Grinder Beans','Travel Tumbler']}
+];
+var TYPES_FEW=[{label:'Product Subscriptions',count:5},{label:'Bundle Subscriptions',count:8}];
+var TYPES_MANY=[{label:'Product Subscriptions',count:5},{label:'Bundle Subscriptions',count:8},{label:'Prepaid Packs',count:3},{label:'Trials',count:2},{label:'Gift Subscriptions',count:1},{label:'Memberships',count:4}];
+var SEG_MAX=4, activeType=0, CURTYPES=TYPES_FEW;
+
+function initials(n){return n.split(' ').slice(0,2).map(function(w){return w[0]}).join('').toUpperCase();}
+var HUES=['#dfe3e8','#e6dfee','#dfeee4','#eee8df','#dfe9ee','#eedfe0'];
+function hue(n){var s=0;for(var i=0;i<n.length;i++)s+=n.charCodeAt(i);return HUES[s%HUES.length];}
+function statusBadge(a){return a?'<span class="badge b-active"><span class="b-dot"></span>Active</span>':'<span class="badge b-inactive"><span class="b-dot"></span>Inactive</span>';}
+function pile(products){
+  var shown=products.slice(0,4), extra=products.length-shown.length, html='<div class="pile">';
+  shown.forEach(function(p){html+='<span class="av" style="background-color:'+hue(p)+'" title="'+p+'">'+initials(p)+'</span>';});
+  if(extra>0) html+='<span class="more">+'+extra+'</span>';
+  return html+'<span class="pile-names">'+products.length+' products</span></div>';
+}
+function actions(synced){
+  var flag=synced?'':'<span class="warnflag" title="Not synced to theme">⚠ not synced</span>';
+  return '<div class="rowact">'+flag+'<button class="btn sm">Edit</button><button class="kebab" title="More">⋯</button></div>';
+}
+function planTable(){
+  var rows=PLANS.map(function(p){return '<tr><td><span class="pname">'+p.title+'</span></td><td>'+statusBadge(p.active)+'</td><td>'+pile(p.products)+'</td><td>'+actions(p.synced)+'</td></tr>';}).join('');
+  return '<table><thead><tr><th style="width:30%">Plan</th><th style="width:14%">Status</th><th style="width:34%">Products</th><th style="width:22%;text-align:right">Actions</th></tr></thead><tbody>'+rows+'</tbody></table><div class="tfoot">Showing 5 of 5 plans</div>';
+}
+function productIndex(){
+  var idx={};
+  PLANS.forEach(function(p){p.products.forEach(function(prod){if(!idx[prod])idx[prod]={name:prod,plans:[]};idx[prod].plans.push(p);});});
+  return Object.keys(idx).map(function(k){return idx[k]}).sort(function(a,b){return b.plans.length-a.plans.length||a.name.localeCompare(b.name)});
+}
+function productTable(){
+  var items=productIndex();
+  var rows=items.map(function(it,i){
+    var multi=it.plans.length>1, rid='pr-'+i;
+    var chips=it.plans.map(function(p){return '<a class="chip" href="#"><span class="mini" style="background:'+(p.active?'var(--success)':'var(--faint)')+'"></span>'+p.title+'</a>';}).join('');
+    var main='<tr><td><span class="exp" onclick="toggle(\''+rid+'\')"><span class="av" style="background-color:'+hue(it.name)+';width:26px;height:26px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#5a5f63">'+initials(it.name)+'</span><b style="color:var(--ink)">'+it.name+'</b></span></td>'
+      +'<td>'+(multi?'<span class="badge b-info">in '+it.plans.length+' plans</span>':'<span class="badge b-inactive">in 1 plan</span>')+'</td>'
+      +'<td>'+chips+'</td><td><div class="rowact"><span class="exp" onclick="toggle(\''+rid+'\')">View plans ▾</span></div></td></tr>';
+    var sub='<tr class="subrow hide" id="'+rid+'"><td colspan="4"><div class="inner"><div class="kv">Plans containing “'+it.name+'” — open a plan to edit it</div>'
+      +it.plans.map(function(p){return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-top:1px solid var(--line2)"><span class="pname">'+p.title+'</span><span style="display:flex;gap:10px;align-items:center">'+statusBadge(p.active)+'<button class="btn sm">Edit plan</button></span></div>';}).join('')
+      +'</div></td></tr>';
+    return main+sub;
+  }).join('');
+  return '<table><thead><tr><th style="width:30%">Product</th><th style="width:16%">Appears in</th><th style="width:38%">Plans</th><th style="width:16%;text-align:right"></th></tr></thead><tbody>'+rows+'</tbody></table><div class="tfoot">'+items.length+' distinct products · expand a product to jump to its plans</div>';
+}
+function toggle(id){var el=document.getElementById(id);if(el)el.classList.toggle('hide');}
+
+function renderTypes(types){
+  var row=document.getElementById('typerow');
+  if(types.length<=SEG_MAX){
+    row.innerHTML='<div class="pseg">'+types.map(function(t,i){return '<button class="'+(i===activeType?'on':'')+'" onclick="pickType('+i+')">'+t.label+' <span class="c">'+t.count+'</span></button>';}).join('')+'</div><span class="typehint">More purchase-option types can be added here</span>';
+  }else{
+    var cur=types[activeType]||types[0];
+    row.innerHTML='<div class="typedd"><button class="ddbtn" onclick="toggleMenu(event)">'+cur.label+' <span class="c">'+cur.count+'</span> <span style="color:var(--faint)">▾</span></button><div class="menu hide" id="typemenu">'
+      +types.map(function(t,i){return '<div class="mi '+(i===activeType?'on':'')+'" onclick="pickType('+i+');closeMenu()">'+t.label+'<span class="c">'+t.count+'</span></div>';}).join('')
+      +'</div></div><span class="typehint">'+types.length+' purchase-option types — selector switched to a dropdown automatically</span>';
+  }
+}
+function toggleMenu(e){e.stopPropagation();var m=document.getElementById('typemenu');if(m)m.classList.toggle('hide');}
+function closeMenu(){var m=document.getElementById('typemenu');if(m)m.classList.add('hide');}
+document.addEventListener('click',closeMenu);
+function pickType(i){activeType=i;renderTypes(CURTYPES);}
+function setTypes(n){CURTYPES=(n===2?TYPES_FEW:TYPES_MANY);activeType=0;renderTypes(CURTYPES);
+  document.getElementById('pv2').classList.toggle('on',n===2);document.getElementById('pv6').classList.toggle('on',n===6);}
+function setLens(lens){
+  document.getElementById('plan').classList.toggle('hide',lens!=='plan');
+  document.getElementById('product').classList.toggle('hide',lens!=='product');
+  document.querySelectorAll('.lens button').forEach(function(b){b.classList.toggle('on',b.textContent.trim()===(lens==='plan'?'By Plan':'By Product'));});
+}
+document.getElementById('plan').innerHTML=planTable();
+document.getElementById('product').innerHTML=productTable();
+renderTypes(CURTYPES);
+</script>
+</body>
+</html>

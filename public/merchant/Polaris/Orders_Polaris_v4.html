@@ -1,0 +1,1568 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Orders (Polaris web components v3)</title>
+<script src="https://cdn.shopify.com/shopifycloud/polaris.js"></script>
+<style>
+  :root{
+    --p-ink:#303030; --p-muted:#616161; --p-faint:#8a8a8a;
+    --p-line:#e3e3e3; --p-line2:#ebebeb; --p-surface:#fff;
+    --p-primary:#303030; --p-success:#29845a; --p-success-bg:#cdfee1;
+    --p-link:#005bd3; --p-attn-bg:#ffefcf; --p-attn:#8a6116;
+  }
+  body{margin:0;background:#f1f1f1;font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--p-ink)}
+
+  /* Shopify admin shell */
+  .admin{display:flex;min-height:100vh}
+  .navL{flex:none;width:232px;background:#ebebeb;border-right:1px solid var(--p-line);
+    padding:10px 8px;display:flex;flex-direction:column;gap:1px;position:sticky;top:0;align-self:flex-start;height:100vh;overflow:auto}
+  .navItem{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;color:var(--p-ink);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
+  .navItem:hover{background:#dedede}
+  .navItem .ico{width:18px;height:18px;flex:none;color:#4a4a4a}
+  .navItem .ct{margin-left:auto;font-size:12px;color:var(--p-muted);background:#e0e0e0;border-radius:8px;padding:0 7px;line-height:18px}
+  .navSec{color:var(--p-muted);font-size:13px;font-weight:500;display:flex;align-items:center;height:30px;padding:0 8px;margin-top:6px}
+  .navSec .chev{margin-left:auto;color:var(--p-faint)}
+  .navApp{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;font-weight:600;background:#fff;box-shadow:0 1px 0 rgba(0,0,0,.04);margin-top:2px}
+  .navApp .logo{width:20px;height:20px;border-radius:5px;background:var(--p-primary);display:grid;place-items:center;color:#fff;font-size:11px;flex:none}
+  .navApp .dot{margin-left:auto;width:6px;height:6px;border-radius:50%;background:#8a8a8a}
+  .navSub{display:flex;align-items:center;height:30px;padding:0 8px 0 34px;border-radius:8px;color:var(--p-muted);font-size:13px;cursor:pointer}
+  .navSub:hover{background:#dedede;color:var(--p-ink)}
+  .navSub.sel{color:var(--p-ink);font-weight:500}
+  .navGap{flex:1}
+  /* scrollbar-gutter keeps the content column the same width whether or not the list is long
+     enough to scroll. Without it the table silently loses ~47px on the busy tabs, so columns jump
+     as you move between them and the row actions clip only on the tabs with the most rows. */
+  html{scrollbar-gutter:stable}
+  .appmain{flex:1;min-width:0;display:flex;flex-direction:column}
+  .appbar{height:52px;background:#fff;border-bottom:1px solid var(--p-line);display:flex;align-items:center;gap:10px;padding:0 18px}
+  .appbar .logo{width:24px;height:24px;border-radius:6px;background:var(--p-primary);display:grid;place-items:center;color:#fff;font-size:12px}
+  .appbar .name{font-weight:650;font-size:14px}
+  .appbar .more{margin-left:auto;color:var(--p-muted);font-size:20px;cursor:pointer;letter-spacing:1px}
+
+  .savebar{position:sticky;top:0;z-index:60;min-height:52px;background:#1a1a1a;color:#fff;display:flex;align-items:center;gap:12px;padding:8px 16px}
+  .savebar .sbtxt{font-weight:600;font-size:13px}
+  .savebar .sbacts{margin-left:auto;display:flex;gap:8px}
+  .savebar button{font:inherit;font-size:13px;font-weight:600;border-radius:8px;padding:6px 13px;cursor:pointer}
+  .savebar .discard{background:transparent;border:1px solid #4a4a4a;color:#fff}
+  .savebar .discard:hover{background:#2a2a2a}
+  .savebar .save{background:#fff;border:1px solid #fff;color:#1a1a1a}
+
+  /* full-width two-column layout (reduces the base-width side margins) */
+  .pcols{display:flex;gap:16px;align-items:flex-start}
+  .maincol{flex:1;min-width:0}
+  .sidecol{flex:none;width:326px}
+
+  /* card wrapper (used for every step + sidebar block; matches Polaris section chrome) */
+  .card{background:#fff;border:1px solid var(--p-line);border-radius:12px;box-shadow:0 1px 0 rgba(0,0,0,.04);margin-bottom:14px;overflow:hidden}
+  .cardpad{padding:16px 18px}
+
+  /* collapsible step */
+  .step .stephdr{display:flex;gap:12px;align-items:flex-start;padding:15px 18px;cursor:pointer;user-select:none}
+  .step .num{flex:none;width:26px;height:26px;border-radius:50%;background:var(--p-primary);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:600}
+  .step.done .num{background:var(--p-success)}
+  .step .sttl{flex:1;min-width:0}
+  .step h2{margin:0;font-size:15px;font-weight:650}
+  .step .stephdr p{margin:2px 0 0;color:var(--p-muted);font-size:12.5px}
+  .step .stepchev{color:var(--p-faint);font-size:18px;transition:transform .15s;align-self:center}
+  .step.open .stepchev{transform:rotate(90deg)}
+  .stepbody{padding:16px 18px 18px;border-top:1px solid var(--p-line2)}
+  .stepbody.collapsed{display:none}
+  .step .collsum{margin:2px 0 0;color:var(--p-muted);font-size:12.5px}
+  .opt{font-size:10px;font-weight:600;color:var(--p-faint);border:1px solid var(--p-line);border-radius:5px;padding:1px 6px;text-transform:uppercase;letter-spacing:.03em;margin-left:8px;vertical-align:middle}
+
+  /* locked segmented control */
+  .seg{display:inline-flex;border:1px solid var(--p-line);border-radius:8px;overflow:hidden;background:#fff}
+  .seg button{border:0;background:#fff;padding:6px 12px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--p-muted)}
+  .seg button.on{background:var(--p-primary);color:#fff}
+
+  /* payment chips */
+  .chkchip{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border:1px solid var(--p-line);border-radius:20px;font-size:12.5px;font-weight:600;color:var(--p-muted);cursor:pointer;background:#fff}
+  .chkchip::before{content:"";width:14px;height:14px;border-radius:50%;border:1.5px solid var(--p-faint);flex:none}
+  .chkchip.on{border-color:var(--p-success);color:#0f5132;background:var(--p-success-bg)}
+  .chkchip.on::before{content:"\2713";border:0;color:#0f5132;font-size:11px;line-height:14px;text-align:center}
+
+  .disc{display:inline-flex;align-items:center;gap:7px;cursor:pointer;color:var(--p-link);font-weight:600;font-size:12.5px;background:none;border:0;padding:4px 0}
+  .disc .chev{transition:transform .15s}
+  .disc.open .chev{transform:rotate(90deg)}
+
+  .prow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--p-line2)}
+  .prow .x{margin-left:auto;color:var(--p-muted);font-size:12px;cursor:pointer;background:none;border:0}
+  .rowline{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .field{border:1px solid var(--p-line);border-radius:8px;padding:6px 10px;background:#fff;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--p-muted)}
+  .divv{width:1px;height:22px;background:var(--p-line)}
+  .help{font-size:12px;color:var(--p-muted)}
+  .calc{border:1px solid var(--p-line);background:#f7f7f7;border-radius:9px;padding:11px 13px;font-size:12.5px;color:var(--p-muted)}
+  .calc b{color:var(--p-ink)}
+
+  .optlist{margin-bottom:10px}
+  .optcard{border:1px solid var(--p-line);border-radius:10px;margin-bottom:10px;background:#fff}
+  .optcard.dragging{opacity:.45}
+  .optcard.dragover{border-color:var(--p-primary);box-shadow:inset 0 0 0 1px var(--p-primary)}
+  .optsum{display:flex;align-items:center;gap:10px;padding:11px 14px}
+  .draghandle{cursor:grab;color:var(--p-faint);font-size:15px;padding:0 2px;flex:none;line-height:1}
+  .optsum .title{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;min-width:0}
+  .optsum .chips{display:flex;gap:6px;flex-wrap:nowrap;margin-left:6px;flex:none}
+  .optsum .chips .pill,.optsum .chips .tagchip{white-space:nowrap}
+  .optsum .act{flex:none}
+  .optsum .act{margin-left:auto;display:flex;gap:6px}
+  .pill{border:1px solid var(--p-line);border-radius:20px;padding:2px 10px;font-size:12px;color:var(--p-muted);background:#fafafa}
+  .tagchip{display:inline-flex;align-items:center;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600;color:#fff}
+  .opteditor{border-top:1px solid var(--p-line2);padding:15px;background:#fbfbfb}
+  .q{font-weight:600;margin:0 0 8px;font-size:13.5px}
+  .qgroup{margin-bottom:16px}
+  .btnsm{border:1px solid var(--p-line);background:#fff;border-radius:8px;padding:4px 10px;font:inherit;font-size:12px;font-weight:600;color:var(--p-ink);cursor:pointer}
+  .btnsm.ico-x{padding:4px 8px;color:var(--p-muted)}
+  .btnghost{border:1px dashed var(--p-line);background:#fff;border-radius:8px;padding:6px 12px;font:inherit;font-size:12.5px;font-weight:500;color:var(--p-muted);cursor:pointer}
+
+  /* plan summary step checklist */
+  .sumrow{display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--p-line2)}
+  .sumrow:last-child{border-bottom:0}
+  /* plain status lights, not checkboxes: a solid dot, no glyph, so it never reads as checkable */
+  /* status lights: identical solid dots, only the colour differs (green = done, grey = optional-not-set) */
+  .sicon{display:inline-block;box-sizing:border-box;width:10px;height:10px;min-width:10px;border-radius:50%;flex:none;margin-top:6px;background:#c7c7c7}
+  .sicon.ok{background:var(--p-success)}
+  .sicon.opt{background:#c7c7c7}
+  .sicon.req{background:var(--p-attn)}
+  .sname{font-weight:600;font-size:12.5px;display:flex;align-items:center;gap:6px}
+  .sname .optm{font-weight:600;color:var(--p-faint);font-size:10px;border:1px solid var(--p-line);border-radius:5px;padding:0 5px;text-transform:uppercase;letter-spacing:.03em}
+  .sval{color:var(--p-muted);font-size:12px}
+  .req-star{color:#e51c00;font-weight:700}
+
+  /* sidebar detector rows */
+  .drow{padding:11px 0;border-bottom:1px solid var(--p-line2)}
+  .drow:last-child{border-bottom:0}
+  .drow .dtop{display:flex;align-items:center;gap:8px}
+  .drow .dname{font-weight:650;font-size:13px}
+  .drow .dact{margin-left:auto}
+  .lnk{background:none;border:0;color:var(--p-link);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:3px}
+  .statusdot{width:8px;height:8px;border-radius:50%;flex:none}
+  .badge2{display:inline-flex;align-items:center;gap:5px;border-radius:8px;padding:1px 8px;font-size:11.5px;font-weight:600}
+  .badge2.ok{background:var(--p-success-bg);color:#0f5132}
+  .badge2.attn{background:var(--p-attn-bg);color:var(--p-attn)}
+  .badge2.info{background:#d6ecff;color:#00527c}
+  .badge2.sub{background:#ededed;color:#5c5c5c}
+
+  /* storefront widget preview */
+  .mqgrid{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+  .mqleft{flex:1;min-width:220px}
+  .mqright{flex:none;width:280px}
+  .wprev{border:1px solid var(--p-line);border-radius:12px;overflow:hidden;transition:opacity .2s,filter .2s}
+  .wprev.off{opacity:.5;filter:grayscale(.4)}
+  .wbar{background:#16233f;color:#fff;display:flex;align-items:center;justify-content:center;gap:7px;padding:10px 12px;font-size:12px}
+  .wbar .msgwrap{position:relative;height:16px;min-width:150px;max-width:210px;overflow:hidden;text-align:center}
+  .wbar .msg{position:absolute;left:0;right:0;top:0;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:0;transition:opacity .5s}
+  .wbar .msg.show{opacity:1}
+  .wbar .arrow{color:#aeb9cf;letter-spacing:-2px}
+  .wbody{background:#F4F0E8;padding:14px}
+  .wbody .prow2{display:flex;align-items:center;gap:9px;border:0;padding:0}
+  .wbody .wradio{width:16px;height:16px;border-radius:50%;border:2px solid #16233f;position:relative;flex:none}
+  .wbody .wradio::after{content:"";position:absolute;inset:3px;border-radius:50%;background:#16233f}
+  .wbody .wtitle{font-weight:700;color:#2B2B2B;font-size:14px}
+  .wbody .wpill{margin-left:auto;background:#E3A23E;color:#5A3A0E;font-weight:700;font-size:11px;border-radius:20px;padding:3px 11px}
+  .wbody .wsel{margin-top:13px;color:#9A9486;font-size:10px;font-weight:700;letter-spacing:.06em}
+  .hide{display:none !important}
+</style>
+<!-- bare mode: when embedded in the WIP prototype shell, hide this file's own admin chrome
+so the shell is not drawn twice. Standalone viewing is unaffected. -->
+<script>if(/bare/.test(location.search+location.hash))document.documentElement.classList.add("bare");</script>
+<style>html.bare .navL,html.bare .appbar,html.bare .savebar{display:none!important}html.bare .admin{min-height:0}html.bare,html.bare body{background:#f1f1f1}</style>
+</head>
+<body>
+<div class="admin">
+
+  <aside class="navL">
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8.5 10 3l7 5.5V16a1 1 0 0 1-1 1h-3v-5H7v5H4a1 1 0 0 1-1-1z"/></svg>Home</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="13" rx="2"/><path d="M7 8h6M7 11h6"/></svg>Orders<span class="ct">127</span></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h12v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M7 6V5a3 3 0 0 1 6 0v1"/></svg>Products</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="7" r="3"/><path d="M4 16c0-3 2.7-5 6-5s6 2 6 5"/></svg>Customers</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 15V9m4 6V5m4 10v-4m4 4V7"/></svg>Growth</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="3"/><path d="M12 12l4 4M13.5 6.5 16 4"/></svg>Discounts</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="12" rx="2"/><path d="M7 8h6M7 11h4"/></svg>Content</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="6"/><path d="M4 10h12M10 4c2 2 2 10 0 12M10 4c-2 2-2 10 0 12"/></svg>Markets</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 16h12M6 16V9m4 7V5m4 11v-4"/></svg>Analytics</div>
+    <div class="navSec">Sales channels<span class="chev">&#8250;</span></div>
+    <div class="navSec">Apps<span class="chev">&#8250;</span></div>
+    <div class="navApp"><span class="logo">&#9670;</span>StackBack Subscrip&hellip;<span class="dot"></span></div>
+    <div class="navSub">Manage Purchase Options</div>
+    <div class="navSub">Purchase Contracts</div>
+    <div class="navSub">One-Time Orders</div>
+    <div class="navSub sel">Orders</div>
+    <div class="navSub">Payment Reminders</div>
+    <div class="navSub">Customers</div>
+    <div class="navSub">View more</div>
+    <div class="navGap"></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m7-7h-2M5 10H3m12.5-5-1.5 1.5M6 14l-1.5 1.5m11 0L14 14M6 6 4.5 4.5"/></svg>Settings</div>
+  </aside>
+
+  <div class="appmain">
+    <div class="appbar"><span class="logo">&#9670;</span><span class="name">StackBack Subscriptions &amp; More</span><span class="more">&ctdot;</span></div>
+
+    <style>
+      .lwrap{padding:0 0 26px}
+      .tabrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0 12px}
+      .tabs{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+      .viewsw{margin-left:auto;display:inline-flex;background:#f1f1f1;border-radius:9px;padding:3px;gap:2px;flex:none}
+      .viewsw button{appearance:none;border:0;background:transparent;font:inherit;font-size:12.5px;font-weight:600;color:var(--p-muted);padding:5px 13px;border-radius:7px;cursor:pointer}
+      .viewsw button.on{background:#fff;color:var(--p-ink);box-shadow:0 1px 2px rgba(0,0,0,.06)}
+      .tabs button{appearance:none;border:1px solid transparent;background:transparent;font:inherit;font-size:13px;font-weight:600;color:var(--p-muted);height:32px;padding:0 12px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+      .tabs button.on{background:#fff;color:var(--p-ink);border-color:var(--p-line);box-shadow:0 1px 0 rgba(0,0,0,.04)}
+      .tabs button .n{font-size:11px;font-weight:700;opacity:.7}
+      .tabs .vsep{width:1px;height:20px;background:var(--p-line);margin:0 6px}
+
+      .toolbar{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin:0 0 10px}
+      .toolbar .grow{flex:1 1 280px;min-width:230px}
+      .toolbar .fw{flex:0 0 auto;min-width:146px}
+      .chipRow{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px;align-items:center}
+      .chipf{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 6px 0 10px;border-radius:99px;border:1px solid var(--p-line);background:#fff;font-size:12px;font-weight:600;color:var(--p-muted)}
+      .chipf .x{cursor:pointer;color:var(--p-faint);font-weight:700;padding:0 3px;border-radius:50%}
+      .chipf .x:hover{background:#f1f1f1;color:var(--p-ink)}
+      .clearAll{appearance:none;border:0;background:none;font:inherit;font-size:12px;font-weight:600;color:var(--p-link);cursor:pointer;padding:0 4px}
+
+      .wstrip{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:12px;margin:0 0 14px;align-items:stretch}
+      .wtile{background:#fff;border:1px solid var(--p-line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:3px}
+      .wtile .k{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--p-faint)}
+      .wtile .v{font-size:21px;font-weight:650;letter-spacing:-.3px}
+      .wtile .d{font-size:12px;color:var(--p-muted);margin-top:auto}
+
+      /* bulk action bar, appears only with a selection */
+      .bulk{display:none;align-items:center;gap:8px;flex-wrap:wrap;background:#f1f5ff;border:1px solid #c7d9f7;border-radius:10px;padding:9px 12px;margin:0 0 12px}
+      .bulk.on{display:flex}
+      .bulk .cnt{font-size:12.5px;font-weight:650;color:#1f3f7a;margin-right:2px}
+      .bulk .sp{flex:1}
+
+      .c1{font:700 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+      .c2{color:var(--p-muted);font-size:12px;margin-top:2px;line-height:1.45}
+      .lnk{color:var(--p-link);font-weight:600;font-size:12.5px;cursor:pointer;text-decoration:none;background:none;border:0;padding:0;font-family:inherit;text-align:left}
+      .lnk:hover{text-decoration:underline}
+      .prodline{font-size:12.5px;line-height:1.45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:270px}
+      .prodline .sku{color:var(--p-faint);font-size:11.5px;font-family:ui-monospace,Menlo,monospace}
+      .money{font-variant-numeric:tabular-nums;font-weight:600;font-size:12.5px;white-space:nowrap}
+      .num{text-align:right;font-variant-numeric:tabular-nums}
+      .rowacts{display:flex;align-items:center;gap:6px;justify-content:flex-end}
+      .acts2{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+      .acts2 .r{display:flex;align-items:center;gap:6px}
+      .c2.late{color:#8e1f0b;font-weight:650}
+      .chg{margin-top:3px;font-size:11px;font-weight:650;color:#8a6116;background:#ffefcf;border:1px solid #f0d9a8;border-radius:6px;padding:1px 6px;display:inline-block}
+      .c2mono{font:600 11.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;margin-top:2px}
+      /* Plan name is capped and ellipsised: "Quarterly Wellness Box" must not be able to widen
+         the table past the point where the row actions leave the screen. */
+      .pick{white-space:nowrap}
+      .dnum{font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+      /* Days late: the number carries the weight, the unit stays quiet, and both sit on tabular
+         figures so the column reads as a scannable ladder rather than ragged text. */
+      .late .n{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+      .late .u{font-size:11.5px;color:var(--p-muted);margin-left:3px}
+      /* the money column: amount on tabular figures with the payment capsule tucked under it */
+      .valcell .money{display:block;font-variant-numeric:tabular-nums;font-weight:600}
+      .valcell .pay{margin-top:4px}
+      /* expandable customer block in the detail popup, mirroring the inline customer expansion on
+         the Inventory screens. It is a disclosure here rather than an expanded table row because
+         s-table has no colspan, which is the same constraint that made the detail a popup. */
+      /* detail-popup formatting. Tighter section rhythm than the drawer it replaced: the drawer had
+         room to breathe down a tall column, a centred popup does not.
+         Polish pass: the meta row became a tinted band so the record facts read as a header block
+         rather than four loose labels, and section spacing was put on one 16px rhythm. */
+      .metarow{display:flex;gap:0;flex-wrap:wrap;background:#fafafa;border:1px solid var(--p-line2);
+        border-radius:10px;padding:12px 4px;align-items:flex-start}
+      .metaitem{flex:1 1 auto;min-width:92px;padding:0 12px;position:relative}
+      .metaitem+.metaitem::before{content:"";position:absolute;left:0;top:1px;bottom:1px;
+        width:1px;background:var(--p-line2)}
+      .metaitem .k{font-size:10.5px;letter-spacing:.3px;text-transform:uppercase;
+        color:var(--p-faint);font-weight:700;margin-bottom:3px}
+      .metaitem .v{font-size:12.5px;font-weight:600;line-height:1.35}
+      .iline{display:flex;align-items:baseline;gap:12px;padding:9px 0;
+        border-bottom:1px solid var(--p-line2)}
+      .iline:last-of-type{border-bottom:0}
+      .iline .g{flex:1;min-width:0}
+      /* the quantity is set in a soft chip rather than loose bold text, so "×3" reads as attached
+         to the product it multiplies instead of floating after the name */
+      .iline .qty{display:inline-block;font-weight:700;font-variant-numeric:tabular-nums;
+        font-size:11.5px;color:var(--p-muted);background:#f1f1f1;border-radius:5px;
+        padding:1px 5px;margin-left:4px;vertical-align:1px}
+      .iline .amt{flex:none;font-weight:600;font-variant-numeric:tabular-nums;font-size:12.5px}
+      .iline.tot{border-top:1px solid var(--p-line);border-bottom:0;margin-top:4px;padding-top:11px}
+      .iline.tot .amt{font-size:13.5px;font-weight:700}
+      /* one rhythm for every popup section, replacing the mix of 18px margins and inline overrides */
+      .popbody>.dsec{margin-bottom:16px}
+      .popbody>.dsec:last-child{margin-bottom:0}
+      .popbody .dsec .h{margin-bottom:9px}
+      /* customer record, opened from the customer name in the row */
+      .custgrid{display:grid;grid-template-columns:1fr 1fr;gap:13px 16px}
+      /* custom date range, styled to sit level with the s-select controls beside it */
+      .rlab{display:block;font-size:12px;font-weight:600;color:var(--p-ink);margin-bottom:4px}
+      .dinput{width:100%;height:32px;box-sizing:border-box;padding:0 9px;border-radius:8px;
+        border:1px solid var(--p-line);background:#fff;font:inherit;font-size:12.5px;color:var(--p-ink)}
+      .dinput:focus{outline:2px solid var(--p-link);outline-offset:-1px}
+      /* product preview capsules, ported from the Purchase Options listing v12 chip stack so the
+         two screens share one product-preview language */
+      .thumbline{display:inline-flex;flex-direction:column;align-items:flex-start;gap:4px;
+        border:0;background:none;cursor:pointer;padding:0;white-space:nowrap;font:inherit;
+        text-align:left}
+      .thumbline .trow{display:inline-flex;align-items:center}
+      .thumbline .tchip{width:26px;height:26px;border-radius:7px;background:#f1f1f1;
+        display:inline-flex;align-items:center;justify-content:center;color:#9a9a9a;
+        margin-left:-6px;position:relative;box-shadow:0 0 0 1px var(--p-line),0 0 0 3px #fff}
+      .thumbline .tchip:first-child{margin-left:0}
+      .thumbline .tmore{margin-left:8px;font-size:12px;font-weight:700;color:var(--p-muted)}
+      /* --p-link, not --p-primary: primary is #303030 ink, so the count read as plain text and
+         gave no sign the capsule opens anything. This is the affordance. */
+      .thumbline .tcount{font-size:12.5px;color:var(--p-link);font-weight:600}
+      .thumbline:hover .tcount{text-decoration:underline}
+      /* plain colour dot, no glyph, per the standing status-indicator rule */
+      .thumbline .chgdot{width:7px;height:7px;border-radius:50%;background:#b98900;
+        margin-left:7px;flex:none}
+      /* kebab activator: borderless so it reads as a row affordance, not a second button
+         competing with the primary beside it */
+      .kebab{border-color:transparent;background:none;padding:0 7px;font-size:15px;line-height:1;color:var(--p-muted)}
+      .kebab:hover{background:#f1f1f1;border-color:var(--p-line)}
+      /* small centred popup, the pattern already used for the bundle tier simulation */
+      .pop{position:fixed;inset:0;background:rgba(0,0,0,.28);z-index:90;display:none;align-items:center;justify-content:center}
+      .pop.on{display:flex}
+      .popbox{background:#fff;border-radius:12px;width:min(520px,94vw);max-height:86vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+      /* the detail popup carries the two-column record grid the drawer used to hold, so it needs
+         more room than the reschedule and swap popups */
+      .popbox.wide{width:min(620px,94vw)}
+      .pophd{padding:14px 18px;border-bottom:1px solid var(--p-line);display:flex;align-items:flex-start;gap:10px}
+      .pophd .t{font-size:14.5px;font-weight:650}
+      .pophd .x{margin-left:auto;appearance:none;border:0;background:none;font-size:17px;color:var(--p-muted);cursor:pointer;line-height:1;padding:2px 4px}
+      .popbody{padding:16px 18px;overflow:auto}
+      .popfoot{padding:13px 18px;border-top:1px solid var(--p-line);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+      .itemrow{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--p-line2)}
+      .itemrow:last-of-type{border-bottom:0}
+      .itemrow .g{flex:1;min-width:0}
+      .dateopt{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+      .dateopt button{appearance:none;height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--p-line);background:#fff;font:inherit;font-size:12.5px;font-weight:600;color:var(--p-ink);cursor:pointer}
+      .dateopt button.on{background:var(--p-ink);color:#fff;border-color:var(--p-ink)}
+      .b{height:28px;padding:0 11px;border-radius:8px;border:1px solid var(--p-line);background:#fff;font:inherit;font-size:12.5px;font-weight:600;color:var(--p-ink);cursor:pointer;white-space:nowrap}
+      .b.pri{background:var(--p-ink);color:#fff;border-color:var(--p-ink)}
+      .b:disabled{opacity:.45;cursor:default}
+
+      /* order detail drawer. s-table has no colspan, so an inline expanded row cannot span
+         the table. A drawer is also what Shopify and Recharge do: the row opens a record. */
+      .scrim{position:fixed;inset:0;background:rgba(0,0,0,.28);z-index:80;display:none}
+      .scrim.on{display:block}
+      .drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,94vw);background:#fff;z-index:81;box-shadow:-4px 0 24px rgba(0,0,0,.14);display:none;flex-direction:column}
+      .drawer.on{display:flex}
+      .dhd{padding:15px 18px;border-bottom:1px solid var(--p-line);display:flex;align-items:flex-start;gap:10px}
+      .dhd .t{font-size:15px;font-weight:650}
+      .dhd .x{margin-left:auto;appearance:none;border:0;background:none;font-size:17px;color:var(--p-muted);cursor:pointer;line-height:1;padding:2px 4px}
+      .dbody{padding:16px 18px;overflow:auto;flex:1}
+      .dsec{margin-bottom:18px}
+      .dsec:last-child{margin-bottom:0}
+      .failbox{margin-top:10px;background:#fedad1;border:1px solid #f5b8a8;color:#8e1f0b;border-radius:9px;padding:10px 12px;font-size:12.5px;line-height:1.5}
+      .dsec .h{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--p-faint);margin-bottom:8px}
+      .dgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}
+      .df .k{font-size:11px;color:var(--p-faint);font-weight:600;margin-bottom:2px}
+      .df .v{font-size:12.5px}
+      .pline{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--p-line2)}
+      .pline:last-child{border-bottom:0}
+      .pline .g{flex:1;min-width:0}
+      .pline .q{font-variant-numeric:tabular-nums;font-weight:700;font-size:12.5px;flex:none}
+      .dfoot{padding:13px 18px;border-top:1px solid var(--p-line);display:flex;gap:8px;flex-wrap:wrap}
+
+      /* calendar view */
+      .cal{background:#fff;border:1px solid var(--p-line);border-radius:12px;overflow:hidden}
+      .calhd{padding:12px 14px;border-bottom:1px solid var(--p-line2);display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-weight:650;font-size:13px}
+      .calhd .nav{margin-left:auto;display:flex;gap:6px;align-items:center}
+      .calgrid{display:grid;grid-template-columns:repeat(7,1fr)}
+      .caldow{padding:8px 10px;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--p-faint);border-bottom:1px solid var(--p-line2);background:#fbfbfb;text-align:center}
+      .calday{min-height:88px;border-right:1px solid var(--p-line2);border-bottom:1px solid var(--p-line2);padding:7px 8px;display:flex;flex-direction:column;gap:5px;cursor:pointer;background:#fff}
+      .calday:nth-child(7n){border-right:0}
+      .calday.pad{background:#fbfbfb;cursor:default}
+      .calday:hover:not(.pad){background:#f6f9ff}
+      .calday .dnum{font-size:12px;font-weight:650;color:var(--p-muted)}
+      .calday.today .dnum{background:var(--p-ink);color:#fff;border-radius:50%;width:20px;height:20px;display:grid;place-items:center;font-size:11px}
+      .calpill{font-size:11px;font-weight:650;border-radius:6px;padding:2px 6px;line-height:1.35}
+      .calpill.load1{background:#e8f4ec;color:#1c6b3f}
+      .calpill.load2{background:#fdf2d8;color:#8a6116}
+      .calpill.load3{background:#fbe0d8;color:#8e1f0b}
+      .calfoot{padding:10px 14px;font-size:12px;color:var(--p-muted);display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+      .swatch{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:0}
+
+      .pager{display:flex;align-items:center;gap:10px;justify-content:center;padding:12px 14px;flex-wrap:wrap;font-size:12.5px;color:var(--p-muted)}
+      .pager .fw{min-width:92px}
+      .note{background:#eaf4ff;border:1px solid #b9dcf5;color:#00527c;border-radius:10px;padding:11px 13px;font-size:12.5px;margin:14px 0 0}
+      .warnNote{background:#ffefcf;border:1px solid #f0d9a8;color:#8a6116;border-radius:10px;padding:11px 13px;font-size:12.5px;margin:14px 0 0}
+      .note b,.warnNote b{font-weight:650}
+      .emptyRow{padding:34px 16px;text-align:center;color:var(--p-faint);font-size:12.5px}
+      .hide{display:none !important}
+    </style>
+
+    <s-page heading="Orders" inline-size="large">
+      <s-button slot="secondary-actions">Export</s-button>
+      <!-- Sync now is the screen-level counterpart to the per-row actions: it pulls inventory from
+           Shopify and retries every order still waiting to be placed. It replaces the per-row
+           Re-sync, which claimed to fix one named cause the screen cannot actually identify. -->
+      <s-button slot="primary-action" variant="primary" id="syncBtn">Sync now</s-button>
+
+      <div class="lwrap">
+
+
+        <div class="wstrip" id="wstrip">
+          <div class="wtile"><div class="k">Total orders</div><div class="v" id="wTotal">0</div><div class="d" id="wTotalD">all paid orders</div></div>
+          <div class="wtile"><div class="k">Orders to be placed</div><div class="v" id="wToPlace">0</div><div class="d">pushes to Shopify 3 to 5 days out</div></div>
+          <div class="wtile"><div class="k">Order value</div><div class="v" id="wValue">0</div><div class="d" id="wValueD">total in view</div></div>
+        </div>
+
+        <div class="tabrow">
+          <div class="tabs" id="tabs">
+            <button data-tab="due" class="on">To be placed <span class="n"></span></button>
+            <button data-tab="failed">Push failed <span class="n"></span></button>
+            <button data-tab="placed">Order placed <span class="n"></span></button>
+            <button data-tab="onetime">One-time <span class="n"></span></button>
+            <button data-tab="all">All orders <span class="n"></span></button>
+          </div>
+          <div class="viewsw" id="viewsw">
+            <button data-view="list" class="on" id="vList">List</button>
+            <button data-view="cal" id="vCal">Calendar</button>
+          </div>
+        </div>
+
+        <div class="toolbar" id="toolbar">
+          <div class="grow">
+            <s-search-field id="q" label="Search orders" labelAccessibilityVisibility="exclusive"
+              placeholder="Search order, Shopify number, customer, email, contract, product, SKU or city"></s-search-field>
+          </div>
+          <!-- "Any date" became "Custom range": it read as "no filter" while actually being the
+               widest filter, and there was no way to ask for a specific week. Choosing it reveals
+               two date fields; labels shortened so the control stays narrow. -->
+          <div class="fw"><s-select id="fWin" label="Delivery window">
+            <s-option value="7" selected>Next 7 days</s-option>
+            <s-option value="14">Next 14 days</s-option>
+            <s-option value="30">Next 30 days</s-option>
+            <s-option value="all">All dates</s-option>
+            <s-option value="custom">Custom range</s-option>
+          </s-select></div>
+          <div class="fw hide" id="rangeWrap">
+            <label class="rlab">From</label>
+            <input type="date" id="rFrom" class="dinput" value="2026-08-01">
+          </div>
+          <div class="fw hide" id="rangeWrap2">
+            <label class="rlab">To</label>
+            <input type="date" id="rTo" class="dinput" value="2026-08-31">
+          </div>
+          <div class="fw"><s-select id="fType" label="Type">
+            <s-option value="all" selected>All types</s-option>
+            <s-option value="subscription">Subscription</s-option>
+            <s-option value="bundle">Bundle</s-option>
+            <s-option value="onetime">One-time</s-option>
+          </s-select></div>
+          <div class="fw"><s-select id="fPay" label="Payment">
+            <s-option value="all" selected>All payments</s-option>
+            <s-option value="prepaid">Prepaid</s-option>
+            <s-option value="payg">Pay per delivery</s-option>
+          </s-select></div>
+          <div class="fw"><s-select id="fSort" label="Sort by">
+            <s-option value="date" selected>Delivery date</s-option>
+            <s-option value="plan">Plan A to Z</s-option>
+            <s-option value="units">Units, most first</s-option>
+            <s-option value="total">Order value</s-option>
+            <s-option value="customer">Customer A to Z</s-option>
+            <s-option value="delay">Delay, longest first</s-option>
+          </s-select></div>
+        </div>
+
+        <div class="chipRow" id="chipRow"></div>
+
+        <div class="bulk" id="bulk">
+          <span class="cnt" id="bulkCnt">0 selected</span>
+          <button class="b pri" id="bkPlace">Place in Shopify</button>
+          <button class="b" id="bkResched">Reschedule deliveries</button>
+          <button class="b" id="bkPause">Pause deliveries</button>
+          <button class="b" id="bkExport">Export selected</button>
+          <span class="sp"></span>
+          <button class="clearAll" id="bkClear">Clear selection</button>
+        </div>
+
+        <!-- Hierarchy, set 2026-07-30: cards first, then tabs, then filters. The List and
+             Calendar switch sits hard right so it never reads as another status tab. -->
+
+        <div id="listWrap">
+          <s-section padding="none">
+            <!-- s-table stacks into label/value pairs when its container is narrower than its
+                 columns need. Giving it a floor width and scrolling horizontally keeps it a
+                 real table at embedded-app widths.
+                 2026-07-31: the floor was 1040px inside a 966px container, so 74px was clipped
+                 and the row primary action plus the kebab sat off screen, which is the one thing
+                 Ops has to reach. The pick list is now a units count with a Details popup instead
+                 of two product lines, and the customer cell lost its second line, so the table
+                 fits without a floor. overflow-x stays as the safety net for narrow windows. -->
+            <div style="overflow-x:auto"><div id="tableHost"></div></div>
+            <div class="emptyRow hide" id="emptyRow">
+              No orders match this search or filter.
+              <div style="margin-top:10px"><button class="b" id="clearBtn">Clear search and filters</button></div>
+            </div>
+            <div class="pager" id="pager"></div>
+          </s-section>
+        </div>
+
+        <div id="calWrap" class="hide">
+          <div class="cal">
+            <div class="calhd">
+              <span id="calTitle">August 2026</span>
+              <span class="nav">
+                <button class="b" id="calPrev">&#8592;</button>
+                <button class="b" id="calToday">Today</button>
+                <button class="b" id="calNext">&#8594;</button>
+              </span>
+            </div>
+            <div class="calgrid" id="calDow"></div>
+            <div class="calgrid" id="calBody"></div>
+            <div class="calfoot">
+              <span>Click a day to see its orders in the list.</span>
+              <span><span class="swatch" style="background:#e8f4ec"></span>light day</span>
+              <span><span class="swatch" style="background:#fdf2d8"></span>above average</span>
+              <span><span class="swatch" style="background:#fbe0d8"></span>heavy, check stock</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="note">
+          <b>Two things are absent by design.</b> A pay-per-delivery order whose invoice is unpaid is not here, because the warehouse only prepares what has been paid for; it sits in Payment Reminders until payment clears. A paused subscription's delivery is not here either, because pausing rolls the schedule forward, so there is nothing to pick. Both are Customer Success work.
+        </div>
+
+        <div class="warnNote">
+          <b>One boundary worth naming.</b> "Pause deliveries" here pauses the individual delivery, it does not pause the customer's subscription. Pausing a contract is a Customer Success action and lives with the contract, per the rule that exactly one screen owns an action. If Operations needs to stop a whole subscription rather than one shipment, that hands off to CS rather than happening here.
+        </div>
+
+      </div>
+    </s-page>
+  </div>
+</div>
+
+<!-- order detail drawer -->
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="Order details"></aside>
+
+<!-- reschedule / add-and-swap popups. Kept as popups rather than a separate screen so Ops
+     stays in the list while fixing a shortfall, which is the whole point of this screen. -->
+<div class="pop" id="pop"><div class="popbox" id="popbox"></div></div>
+
+<script>
+  var $ = function(id){ return document.getElementById(id); };
+  var esc = function(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+
+  /* Two states only: StackBack's job ends when the order reaches Shopify. */
+  var ST = {
+    toplace:{ tone:'caution',  label:'To be placed', act:'Push to Shopify' },
+    placed: { tone:'success',  label:'Order placed', act:'View in Shopify' },
+    /* Push failed is a third state because StackBack is the only thing that knows a push
+       failed. Every cause surfaces here, not just stock: Ops may not be able to fix an
+       archived product or an expired card, but they are the only ones watching this screen,
+       so they route what they cannot fix. No failure count, by decision 2026-07-30. Delay
+       days carries priority instead: it measures how long a paying customer has waited, and
+       a repeatedly-rescheduled delivery shows up in it without a second number. */
+    failed: { tone:'critical', label:'Push failed',  act:'Retry push' }
+  };
+
+  /* RETAINED BUT NO LONGER DISPLAYED (2026-07-31). The screen used to name the cause of a failed push
+     and route it to an owner. It does not any more, because StackBack cannot reliably learn why
+     Shopify refused an order, and a guessed cause sends Ops to the wrong team. Left in place because
+     if dev confirms a usable error code comes back, this is the mapping to restore, and `fail` is
+     still stamped on the mock rows. Until then the failed tab shows only how late the delivery is.
+     fix: 'ops' means Ops can resolve it on this screen; anything else routes out. */
+  var FAIL = {
+    stock:   {t:'Out of stock',     fix:'ops',   hint:'The variant is out of stock and the store does not allow overselling. Reschedule to a date you expect stock by.'},
+    handle:  {t:'Handle mismatch',  fix:'ops',   hint:'The product handle changed, so StackBack and Shopify are out of sync. Re-sync, then retry the push.'},
+    archived:{t:'Product archived', fix:'plans', hint:'The product was archived in Shopify after this plan was built. It has to be restored, or the plan changed, before this can ship.'},
+    deleted: {t:'Product deleted',  fix:'plans', hint:'The product no longer exists in Shopify. The plan has to be edited before this can ship.'},
+    card:    {t:'Card expired',     fix:'cs',    hint:'The saved card on this prepaid contract has expired. Customer Success has to get a new one, which is a Payment Reminders job.'},
+    address: {t:'Address invalid',  fix:'cs',    hint:'Shopify rejected the shipping address. Customer Success has to confirm it with the customer.'},
+    rate:    {t:'Rate limited',     fix:'auto',  hint:'Shopify rate-limited the request. This retries itself, so no action is needed unless it persists.'}
+  };
+  var FIXOWNER = {ops:'Operations', plans:'Plans', cs:'Customer Success', auto:'Retries itself'};
+  var INR = function(n){ return '₹' + n.toLocaleString('en-IN'); };
+
+  /* p = product lines: [name, sku, qty] */
+  var ORDERS = [
+    {c:'SB-8851', shop:'#1051', cust:'Priya Menon', email:'priya.menon@gmail.com', pc:'PC-1041', plan:'Monthly Essentials', opt:'Monthly, prepaid 6x', date:'29 Jul', iso:'2026-07-29', win:7, kind:'subscription', pay:'prepaid', st:'placed', placedOn:'26 Jul', txn:'Success, Shopify Payments', city:'Mumbai', pin:'400001', total:1899, p:[['Cold Pressed Coffee 500g','CPC-500',3]]},
+    {c:'SB-8850', shop:'#1050', cust:'Rahul Iyer', email:'rahul.iyer@outlook.com', pc:'PC-1039', plan:'Quarterly Wellness Box', opt:'Quarterly, prepaid 4x', date:'29 Jul', iso:'2026-07-29', win:7, kind:'bundle', pay:'prepaid', st:'placed', placedOn:'26 Jul', txn:'Success, Shopify Payments', city:'Bengaluru', pin:'560034', total:3450, p:[['Herbal Tea Sampler','HTS-01',2],['Collagen Peptides 500g','COL-500',2],['Magnesium Glycinate 90ct','MAG-090',2]]},
+    {c:'SB-8849', shop:'#1049', cust:'Meera Nair', email:'meera.nair@gmail.com', pc:'PC-1035', plan:'Coffee Club', opt:'Bi-weekly, pay per delivery', date:'30 Jul', iso:'2026-07-30', win:7, kind:'subscription', pay:'payg', st:'placed', placedOn:'27 Jul', txn:'Success, Razorpay', city:'Kochi', pin:'682016', total:1200, p:[['Cold Pressed Coffee 500g','CPC-500',2]]},
+    {c:'SB-8848', shop:'#1048', cust:'Arjun Das', email:'arjun.das@gmail.com', pc:null, plan:'Festive Trio bundle', opt:'One-time purchase', date:'30 Jul', iso:'2026-07-30', win:7, kind:'onetime', pay:'prepaid', st:'placed', placedOn:'27 Jul', txn:'Success, Shopify Payments', city:'Kolkata', pin:'700019', total:2100, p:[['Herbal Tea Sampler','HTS-01',1],['Ashwagandha Gummies 60ct','ASH-060',1],['Cold Pressed Coffee 500g','CPC-500',1]]},
+    {c:'SB-8847', shop:null, cust:'Kabir Shah', email:'kabir.shah@gmail.com', pc:'PC-1044', plan:'Monthly Essentials', opt:'Monthly, prepaid 6x', date:'01 Aug', iso:'2026-08-01', win:7, kind:'subscription', pay:'prepaid', st:'toplace', placedOn:null, txn:null, city:'Mumbai', pin:'400058', total:1899, p:[['Cold Pressed Coffee 500g','CPC-500',3]]},
+    {c:'SB-8846', shop:null, cust:'Sneha Kulkarni', email:'sneha.k@yahoo.in', pc:'PC-1046', plan:'Coffee Club', opt:'Bi-weekly, pay per delivery', date:'02 Aug', iso:'2026-08-02', win:7, kind:'subscription', pay:'payg', st:'toplace', placedOn:null, txn:null, city:'Pune', pin:'411004', total:1200, p:[['Cold Pressed Coffee 500g','CPC-500',2]]},
+    {c:'SB-8845', shop:null, cust:'Vikram Patel', email:'vikram.patel@gmail.com', pc:'PC-1048', plan:'Quarterly Wellness Box', opt:'Quarterly, prepaid 4x', date:'03 Aug', iso:'2026-08-03', win:7, kind:'bundle', pay:'prepaid', st:'toplace', placedOn:null, txn:null, city:'Ahmedabad', pin:'380015', total:3450, p:[['Herbal Tea Sampler','HTS-01',2],['Collagen Peptides 500g','COL-500',2],['Magnesium Glycinate 90ct','MAG-090',2]]},
+    {c:'SB-8844', shop:null, cust:'Anita Desai', email:'anita.desai@gmail.com', pc:'PC-1050', plan:'Monthly Essentials', opt:'Monthly, prepaid 6x', date:'03 Aug', iso:'2026-08-03', win:7, kind:'subscription', pay:'prepaid', st:'toplace', placedOn:null, txn:null, city:'Mumbai', pin:'400020', total:1899, p:[['Cold Pressed Coffee 500g','CPC-500',3]]},
+    {c:'SB-8843', shop:null, cust:'Rohan Mehta', email:'rohan.mehta@gmail.com', pc:'PC-1052', plan:'Coffee Club', opt:'Bi-weekly, pay per delivery', date:'09 Aug', iso:'2026-08-09', win:14, kind:'subscription', pay:'payg', st:'toplace', placedOn:null, txn:null, city:'Delhi', pin:'110016', total:1200, p:[['Cold Pressed Coffee 500g','CPC-500',2]]},
+    {c:'SB-8842', shop:null, cust:'Divya Menon', email:'divya.menon@gmail.com', pc:'PC-1055', plan:'Build Your Box', opt:'Monthly, prepaid 3x', date:'12 Aug', iso:'2026-08-12', win:14, kind:'bundle', pay:'prepaid', st:'toplace', placedOn:null, txn:null, city:'Chennai', pin:'600020', total:2600, p:[['Ashwagandha Gummies 60ct','ASH-060',2],['Collagen Peptides 500g','COL-500',2]]},
+    {c:'SB-8841', shop:null, cust:'Farah Sheikh', email:'farah.s@gmail.com', pc:'PC-1058', plan:'Monthly Essentials', opt:'Monthly, prepaid 6x', date:'12 Aug', iso:'2026-08-12', win:14, kind:'subscription', pay:'prepaid', st:'toplace', placedOn:null, txn:null, city:'Hyderabad', pin:'500034', total:1899, p:[['Cold Pressed Coffee 500g','CPC-500',3]]},
+    {c:'SB-8840', shop:null, cust:'Nikhil Rao', email:'nikhil.rao@gmail.com', pc:'PC-1060', plan:'Coffee Club', opt:'Bi-weekly, pay per delivery', date:'20 Aug', iso:'2026-08-20', win:30, kind:'subscription', pay:'payg', st:'toplace', placedOn:null, txn:null, city:'Bengaluru', pin:'560001', total:1200, p:[['Cold Pressed Coffee 500g','CPC-500',2]]},
+    {c:'SB-8836', shop:'#1036', cust:'Meera Nair', email:'meera.nair@gmail.com', pc:'PC-1035', plan:'Coffee Club', opt:'Bi-weekly, pay per delivery', date:'24 Jul', iso:'2026-07-24', win:0, kind:'subscription', pay:'payg', st:'placed', placedOn:'21 Jul', txn:'Success, Razorpay', city:'Kochi', pin:'682016', total:1200, p:[['Cold Pressed Coffee 500g','CPC-500',2]]},
+    {c:'SB-8835', shop:'#1035', cust:'Arjun Das', email:'arjun.das@gmail.com', pc:null, plan:'Build Your Box', opt:'One-time purchase', date:'24 Jul', iso:'2026-07-24', win:0, kind:'onetime', pay:'prepaid', st:'placed', placedOn:'21 Jul', txn:'Success, Shopify Payments', city:'Kolkata', pin:'700019', total:2600, p:[['Herbal Tea Sampler','HTS-01',2],['Wellness Powder 250g','WLP-250',2]]},
+    {c:'SB-8834', shop:'#1034', cust:'Priya Menon', email:'priya.menon@gmail.com', pc:'PC-1041', plan:'Monthly Essentials', opt:'Monthly, prepaid 6x', date:'22 Jul', iso:'2026-07-22', win:0, kind:'subscription', pay:'prepaid', st:'placed', placedOn:'19 Jul', txn:'Success, Shopify Payments', city:'Mumbai', pin:'400001', total:1899, p:[['Cold Pressed Coffee 500g','CPC-500',3]]}
+  ];
+  /* One-time purchases that have NOT been placed yet. Every one-time row used to be already in
+     Shopify, so the One-time tab could never be seen in its to-be-placed state and the Push action
+     never appeared there. A one-time order still waits for the 3-to-5-day push like any other. */
+  ORDERS.push(
+    {c:'SB-8852', shop:null, cust:'Tanvi Bhatt', email:'tanvi.bhatt@gmail.com', pc:null, plan:'Festive Trio bundle', opt:'One-time purchase', date:'05 Aug', iso:'2026-08-05', win:7, kind:'onetime', pay:'prepaid', st:'toplace', placedOn:null, txn:null, city:'Surat', pin:'395007', p:[['Herbal Tea Sampler','HTS-01',1],['Ashwagandha Gummies 60ct','ASH-060',1],['Cold Pressed Coffee 500g','CPC-500',1]]},
+    {c:'SB-8853', shop:null, cust:'Omkar Naik', email:'omkar.naik@outlook.com', pc:null, plan:'Build Your Box', opt:'One-time purchase', date:'11 Aug', iso:'2026-08-11', win:14, kind:'onetime', pay:'prepaid', st:'toplace', placedOn:null, txn:null, city:'Nagpur', pin:'440010', p:[['Wellness Powder 250g','WLP-250',2]]}
+  );
+  /* failed pushes: the delivery date passed and the order never reached Shopify */
+  ORDERS.push(
+    {c:'SB-8830', shop:null, cust:'Ritu Malhotra', email:'ritu.m@gmail.com', pc:'PC-1030', plan:'Monthly Essentials', opt:'Monthly, prepaid 6x', date:'20 Jul', iso:'2026-07-20', win:0, kind:'subscription', pay:'prepaid', st:'failed', fail:'stock', placedOn:null, txn:null, city:'Mumbai', pin:'400013', total:1899, p:[['Cold Pressed Coffee 500g','CPC-500',3]]},
+    {c:'SB-8828', shop:null, cust:'Deepak Rao', email:'deepak.rao@gmail.com', pc:'PC-1028', plan:'Coffee Club', opt:'Bi-weekly, prepaid 5x', date:'24 Jul', iso:'2026-07-24', win:0, kind:'subscription', pay:'prepaid', st:'failed', fail:'handle', placedOn:null, txn:null, city:'Pune', pin:'411001', total:1200, p:[['Cold Pressed Coffee 500g','CPC-500',2]]},
+    {c:'SB-8826', shop:null, cust:'Leena George', email:'leena.g@gmail.com', pc:'PC-1026', plan:'Quarterly Wellness Box', opt:'Quarterly, prepaid 4x', date:'26 Jul', iso:'2026-07-26', win:0, kind:'bundle', pay:'prepaid', st:'failed', fail:'archived', placedOn:null, txn:null, city:'Chennai', pin:'600028', total:3450, p:[['Herbal Tea Sampler','HTS-01',2],['Collagen Peptides 500g','COL-500',2],['Magnesium Glycinate 90ct','MAG-090',2]]},
+    {c:'SB-8824', shop:null, cust:'Amit Joshi', email:'amit.joshi@gmail.com', pc:'PC-1024', plan:'Monthly Essentials', opt:'Monthly, prepaid 6x', date:'28 Jul', iso:'2026-07-28', win:0, kind:'subscription', pay:'prepaid', st:'failed', fail:'card', placedOn:null, txn:null, city:'Delhi', pin:'110024', total:1899, p:[['Cold Pressed Coffee 500g','CPC-500',3]]}
+  );
+  /* Unit prices by SKU. The order total is DERIVED from these rather than stored, so the Value
+     column and the popup's line prices can never disagree. A stored total that contradicted the
+     lines beneath it is the same fault as the hardcoded tab counts (D2026-0730-08). */
+  var PRICE = {
+    'CPC-500':633, 'WLP-250':549, 'HTS-01':425,
+    'COL-500':899, 'MAG-090':649, 'ASH-060':499
+  };
+  var lineTotal = function(l){ return l[2] * (PRICE[l[1]]||0); };
+
+  /* street lines for the customer popup. A city and a PIN are not a shippable address, and the
+     address is one of the two things Customer Success opens this popup for. */
+  var STREETS = [
+    'Sunder Nagar, Linking Road', 'Koramangala 5th Block', 'Jubilee Hills Road 36',
+    'Salt Lake Sector 2', 'Panampilly Nagar', 'Vasant Kunj Sector B',
+    'Besant Nagar, 2nd Avenue', 'Kalyani Nagar Lane 6', 'Satellite Road, Jodhpur Cross',
+    'Malviya Nagar, Tonk Road'
+  ];
+
+  /* Volume so the 7 / 14 / 30-day windows and every tab have something to filter. Built by
+     expanding a few seeds across a date range rather than hand-writing 25 more literals: the rows
+     stay deterministic, so screenshots and counts are stable between runs. */
+  (function(){
+    var SEED = [
+      {plan:'Monthly Essentials',     opt:'Monthly, prepaid 6x',          kind:'subscription', pay:'prepaid', p:[['Cold Pressed Coffee 500g','CPC-500',3]]},
+      {plan:'Coffee Club',            opt:'Bi-weekly, pay per delivery',  kind:'subscription', pay:'payg',    p:[['Cold Pressed Coffee 500g','CPC-500',2]]},
+      {plan:'Daily Greens',           opt:'Monthly, pay per delivery',    kind:'subscription', pay:'payg',    p:[['Wellness Powder 250g','WLP-250',2]]},
+      {plan:'Sleep Support',          opt:'Monthly, prepaid 3x',          kind:'subscription', pay:'prepaid', p:[['Magnesium Glycinate 90ct','MAG-090',1]]},
+      {plan:'Quarterly Wellness Box', opt:'Quarterly, prepaid 4x',        kind:'bundle',       pay:'prepaid', p:[['Herbal Tea Sampler','HTS-01',2],['Collagen Peptides 500g','COL-500',2],['Magnesium Glycinate 90ct','MAG-090',2]]},
+      {plan:'Build Your Box',         opt:'Monthly, prepaid 3x',          kind:'bundle',       pay:'prepaid', p:[['Ashwagandha Gummies 60ct','ASH-060',2],['Collagen Peptides 500g','COL-500',2]]},
+      {plan:'Festive Trio bundle',    opt:'One-time purchase',            kind:'onetime',      pay:'prepaid', p:[['Herbal Tea Sampler','HTS-01',1],['Ashwagandha Gummies 60ct','ASH-060',1],['Cold Pressed Coffee 500g','CPC-500',1]]}
+    ];
+    var WHO = [
+      ['Ishaan Verma','ishaan.verma@gmail.com','Mumbai','400072'],
+      ['Tara Krishnan','tara.k@outlook.com','Bengaluru','560095'],
+      ['Zoya Ahmed','zoya.ahmed@gmail.com','Hyderabad','500081'],
+      ['Kunal Bose','kunal.bose@gmail.com','Kolkata','700091'],
+      ['Ananya Pillai','ananya.p@gmail.com','Kochi','682030'],
+      ['Devansh Gupta','devansh.g@yahoo.in','Delhi','110092'],
+      ['Nisha Reddy','nisha.reddy@gmail.com','Chennai','600096'],
+      ['Aarav Shetty','aarav.shetty@gmail.com','Pune','411045'],
+      ['Ira Chatterjee','ira.c@gmail.com','Ahmedabad','380054'],
+      ['Rehan Qureshi','rehan.q@outlook.com','Jaipur','302020']
+    ];
+    var MON = {7:'Jul', 8:'Aug', 9:'Sep'};
+    /* [month, day, state, windowBucket] — spread deliberately across the window buckets so the
+       7 / 14 / 30 filters each return a different, non-empty set */
+    var WHEN = [
+      [8, 4,'toplace', 7], [8, 5,'toplace', 7], [8, 6,'toplace', 7], [8, 7,'toplace', 7],
+      [8,10,'toplace',14], [8,11,'toplace',14], [8,13,'toplace',14], [8,14,'toplace',14],
+      [8,18,'toplace',30], [8,22,'toplace',30], [8,25,'toplace',30], [8,28,'toplace',30],
+      [9, 2,'toplace',30], [9, 8,'toplace',30],
+      [7, 8,'placed',  0], [7,11,'placed',  0], [7,14,'placed',  0], [7,16,'placed',  0],
+      [7,18,'placed',  0], [7,21,'placed',  0], [7,25,'placed',  0], [7,27,'placed',  0],
+      [7, 6,'failed',  0], [7,10,'failed',  0], [7,15,'failed',  0], [7,23,'failed',  0]
+    ];
+    var FAILKEYS = ['stock','handle','archived','deleted','card','address','rate'];
+    var n = 8700;
+    WHEN.forEach(function(w, i){
+      var s = SEED[i % SEED.length], who = WHO[i % WHO.length];
+      var code = 'SB-' + (n + i);
+      var iso = '2026-' + String(w[0]).padStart(2,'0') + '-' + String(w[1]).padStart(2,'0');
+      var isOne = s.kind === 'onetime';
+      ORDERS.push({
+        c: code,
+        shop: w[2]==='placed' ? '#' + (900 + i) : null,
+        cust: who[0], email: who[1], city: who[2], pin: who[3],
+        pc: isOne ? null : 'PC-' + (1100 + i),
+        plan: s.plan, opt: s.opt, kind: s.kind, pay: s.pay,
+        date: String(w[1]).padStart(2,'0') + ' ' + MON[w[0]],
+        iso: iso, win: w[3], st: w[2],
+        fail: w[2]==='failed' ? FAILKEYS[i % FAILKEYS.length] : undefined,
+        placedOn: w[2]==='placed' ? String(Math.max(1, w[1]-3)).padStart(2,'0') + ' ' + MON[w[0]] : null,
+        txn: w[2]==='placed' ? 'Success, Shopify Payments' : null,
+        p: s.p.map(function(l){ return l.slice(); })
+      });
+    });
+  })();
+
+  ORDERS.forEach(function(o){
+    o.units = o.p.reduce(function(a,l){ return a+l[2]; },0);
+    o.total = o.p.reduce(function(a,l){ return a+lineTotal(l); },0);
+    /* Deliveries: prepaid contracts are a fixed run ("3 of 6"), pay-per-delivery is open-ended so
+       only the number reached is known, and a one-time purchase has no run at all. dTot is read
+       off the buying option so it can never contradict it. */
+    var m = /prepaid (\d+)x/.exec(o.opt||'');
+    o.dTot = m ? parseInt(m[1],10) : null;
+    o.dNum = o.kind==='onetime' ? null
+      : (o.dTot ? (parseInt(o.c.slice(3),10) % o.dTot) + 1 : (parseInt(o.c.slice(3),10) % 9) + 2);
+    /* mock phone and a full street address for the customer popup */
+    var seed = parseInt(o.c.slice(3),10);
+    o.phone = '+91 ' + (70000 + (seed % 29999)) + ' ' + (10000 + (seed % 89999));
+    o.street = (101 + (seed % 780)) + ', ' + STREETS[seed % STREETS.length];
+  });
+
+  /* Lifetime order count per customer, which is NOT the same as the number of their orders on this
+     screen: this screen is paid orders inside a delivery window, so a long-standing subscriber shows
+     one row and twenty orders of history. The customer popup states both so neither is mistaken for
+     the other. */
+  var CUST_TOTAL = {};
+  ORDERS.forEach(function(o){
+    if(CUST_TOTAL[o.cust]==null){
+      var seed = parseInt(o.c.slice(3),10);
+      CUST_TOTAL[o.cust] = 3 + (seed % 22);
+    }
+  });
+
+  /* Changes made outside this screen show up on the row. A customer swapping an item in the
+     portal, or an admin editing it from the contract, both land here: Ops has to know the
+     pick list moved after they last looked at it. */
+  ORDERS.forEach(function(o){ o.changed=null; });
+  (function(){
+    var byCode={}; ORDERS.forEach(function(o){ byCode[o.c]=o; });
+    if(byCode['SB-8846']) byCode['SB-8846'].changed={by:'customer', what:'swapped 1 item', when:'2 hours ago'};
+    if(byCode['SB-8845']) byCode['SB-8845'].changed={by:'admin',    what:'added 1 item',   when:'yesterday'};
+  })();
+
+  var TODAY='2026-07-29';
+  function delayDays(o){
+    if(o.st!=='failed') return 0;
+    return Math.max(0, Math.round((new Date(TODAY)-new Date(o.iso))/86400000));
+  }
+
+  var tab='due', view='list', q='', fWin='7', fType='all', fPay='all', fSort='date';
+  var rFrom='2026-08-01', rTo='2026-08-31';
+  var sel={}, page=1, perPage=25, calMonth='2026-08', dayFilter=null;
+
+  var payLabel  = function(p){ return p==='payg' ? 'Pay per delivery' : 'Prepaid'; };
+  var kindLabel = function(k){ return k==='onetime' ? 'One-time' : (k==='bundle' ? 'Bundle' : 'Subscription'); };
+
+  function matchesQuery(o){
+    if(!q) return true;
+    var hay=[o.c,o.shop||'',o.cust,o.email,o.pc||'',o.plan,o.opt,kindLabel(o.kind),payLabel(o.pay),
+             ST[o.st].label,o.date,o.city,o.pin,o.txn||'']
+            .concat(o.p.map(function(l){return l[0]+' '+l[1];})).join(' ').toLowerCase();
+    return hay.indexOf(q)>=0;
+  }
+
+  /* forCal skips the two DATE scopings only. The calendar is itself a date view over a whole
+     month, so pinning it to a single day or to a rolling 7/14/30-day window would fight the grid.
+     Tab, type, payment and search all still apply, which is the fix for the calendar previously
+     reading straight off ORDERS and so showing all 19 no matter which tab was active. */
+  function filtered(forCal){
+    var rows=ORDERS.filter(function(o){
+      if(tab==='due'     && o.st!=='toplace')  return false;
+      if(tab==='failed'  && o.st!=='failed')   return false;
+      if(tab==='placed'  && o.st!=='placed')   return false;
+      if(tab==='onetime' && o.kind!=='onetime')return false;
+      /* custom range applies to EVERY state, not just to-be-placed: asking for "1 to 15 August"
+         should answer for failed and placed deliveries too, which a forward-looking rolling window
+         cannot express. */
+      if(!forCal && fWin==='custom'){
+        if(rFrom && o.iso < rFrom) return false;
+        if(rTo   && o.iso > rTo)   return false;
+      }
+      if(!forCal && fWin!=='all' && fWin!=='custom' && o.st==='toplace' && o.win>parseInt(fWin,10)) return false;
+      if(fType!=='all' && o.kind!==fType) return false;
+      if(fPay!=='all'  && o.pay!==fPay)   return false;
+      if(!forCal && dayFilter && o.iso!==dayFilter)  return false;
+      return matchesQuery(o);
+    });
+    rows.sort(function(a,b){
+      /* longest-waiting first on the failed tab: the sort IS the triage */
+      if(tab==='failed' && fSort==='date') return delayDays(b)-delayDays(a);
+      if(fSort==='delay')    return delayDays(b)-delayDays(a);
+      /* Plan groups the same plan together, so a picker can pull one plan's stock in one pass
+         instead of walking the list twice. Delivery date breaks ties inside a plan. */
+      if(fSort==='plan')     return a.plan.localeCompare(b.plan) || (a.iso<b.iso?-1:a.iso>b.iso?1:0);
+      if(fSort==='units')    return b.units-a.units;
+      if(fSort==='total')    return b.total-a.total;
+      if(fSort==='customer') return a.cust.localeCompare(b.cust);
+      return a.iso<b.iso?-1:a.iso>b.iso?1:0;
+    });
+    return rows;
+  }
+  function paged(rows){ var s=(page-1)*perPage; return rows.slice(s,s+perPage); }
+
+  /* Product preview capsules, matching the chip stack locked on the Purchase Options listing
+     (v12) so the two screens read as one system. This reverses the v2 note that thumbnails here
+     were "decorative and rendered as empty placeholders": the reason they read as broken was an
+     empty s-thumbnail with no source, not the idea. Each chip carries a product glyph, a border
+     and a hover title, so it reads as a preview even without real imagery.
+
+     One chip for a subscription, a stack for a bundle. Most subscriptions carry a single product,
+     so a multi-product stack was showing complexity that is only real for bundles. Product NAMES,
+     SKUs and any customer or admin edits live in View details, which is what the whole capsule
+     opens. */
+  function picIcon(){
+    return '<svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor"'
+      +' stroke-width="1.8"><rect x="3" y="4" width="14" height="12" rx="2"/>'
+      +'<circle cx="7.5" cy="8.5" r="1.3"/><path d="M4 14l4-4 3 3 2-2 3 3"/></svg>';
+  }
+  function pickCell(o){
+    var max=3, shown=o.p.slice(0,max), extra=o.p.length-shown.length;
+    var chips=shown.map(function(l){
+      return '<span class="tchip" title="'+esc(l[0])+' '+esc(l[1])+' &times;'+l[2]+'">'+picIcon()+'</span>';
+    }).join('');
+    var more = extra>0 ? '<span class="tmore">+'+extra+'</span>' : '';
+    /* The edit DETAIL moved into the popup, but a bare dot stays on the capsule. Without it a
+       changed pick list looks identical to an untouched one and Ops would have to open all 19 rows
+       to find the one the customer edited, which defeats the reason the marker was locked in. */
+    var flag = o.changed
+      ? '<span class="chgdot" title="Changed after it was created. Open View details before picking."></span>'
+      : '';
+    /* count sits UNDER the capsules rather than beside them. Side by side the cell needs ~120px
+       and the row actions went off screen again; stacked it needs ~70px, which leaves real
+       headroom instead of a one-pixel margin. */
+    return '<button class="thumbline" data-open="'+esc(o.c)+'"'
+      +' title="View details for '+esc(o.c)+'">'
+      +'<span class="trow">'+chips+more+'</span>'
+      +'<span class="trow"><span class="tcount">'+o.units+' unit'+(o.units===1?'':'s')+'</span>'+flag+'</span>'
+      +'</button>';
+  }
+
+  /* Reference column, 2026-07-31. Before a delivery is pushed there IS no order, so leading with
+     an order code named something that did not exist. On the upcoming tabs the row is identified
+     by the subscription it came from; the order code appears once the order is real. A one-time
+     purchase has no contract, so it falls back to its own code. */
+  function refCell(o){
+    /* Placed rows show ONE identifier, the StackBack order code, which is what "order id" means in
+       this product's vocabulary (SB-#### is the delivery, PC-#### is the agreement, D2026-0727-02).
+       The Shopify number was a second stacked line saying the same thing in another system's terms;
+       it moved into the popup, and "View in Shopify" is the row action that actually goes there. */
+    if(o.st==='placed'){
+      return '<button class="lnk c1" data-open="'+esc(o.c)+'">'+esc(o.c)+'</button>';
+    }
+    /* no "not in Shopify yet" second line: the tab already says To be placed or Push failed, and
+       the Status column repeats it a third time. One statement of the same fact is enough. */
+    if(o.pc) return '<button class="lnk c1" data-contract="'+esc(o.pc)+'">'+esc(o.pc)+'</button>';
+    return '<button class="lnk c1" data-open="'+esc(o.c)+'">'+esc(o.c)+'</button>'
+      +'<div class="c2">one-time</div>';
+  }
+
+  /* The header over refCell changes with the tab, because the column's meaning does. */
+  function refHead(){
+    if(tab==='due'||tab==='failed') return 'Subscription';
+    if(tab==='placed') return 'Order';
+    return 'Order or subscription';
+  }
+
+  /* Nine columns, not eleven. Units folded into Products (it is a property of the pick list)
+     and order value folded into Payment (it is a property of the payment). Eleven columns
+     overflowed the embedded-app width, and variant="auto" responds to that by silently
+     switching to a stacked list, which reads as a broken table. */
+  /* Destination removed 2026-07-29: dispatch address is not something Ops decides from this
+     screen, and it cost a column. It stays in the drawer where it is available without
+     crowding the list. Order value and Payment are separate columns, not merged. */
+  /* 2026-07-31: Plan added as its own column (plan name + type capsule), the type having been
+     plain text under the payment capsule. The reference column's header is computed per tab.
+     Net width is flat despite the extra column, because What-to-pick collapsed to a units count
+     and the customer cell dropped its contract line. */
+  /* Plan is no longer a column: the plan name and the subscription type moved into View details,
+     because neither drives what Ops does with the row. That frees the width the fuller action
+     labels needed, so the primary reads "Push to Shopify" again rather than "Push". */
+
+  /* Status is only worth a column where rows actually differ in status. On To be placed and Order
+     placed every row carries the same value, so the column repeated the tab name 25 times. It
+     stays on All orders and One-time, which mix states. Push failed is the special case: the badge
+     there is equally redundant but the REASON is not, so that tab swaps the column for "Why it
+     failed" instead of dropping it. */
+  function statusMode(){
+    if(tab==='failed') return 'reason';
+    if(tab==='all' || tab==='onetime') return 'badge';
+    return 'none';
+  }
+
+  /* A one-time purchase has no delivery run and only ever one payment shape, so on the One-time tab
+     both columns held a dash and the same capsule on every row. They stay everywhere else,
+     including All orders, where one-time rows sit beside subscriptions and the dash is meaningful
+     by contrast. */
+  function showRun(){ return tab!=='onetime'; }
+
+  function headSpec(){
+    var h=[
+      ['',''],[refHead(),'primary'],['Delivery date','']
+    ];
+    if(showRun()) h.push(['Deliveries','']);
+    h.push(['Customer','']);
+    /* "Value", not "Order value": inside a table of orders the word order is already given, and
+       the shorter header is ~25px of the width the row actions need. The card above still reads
+       Order value, where there is no row context to supply it. */
+    /* Value and Payment merged into one column, capsule under the amount. Two separate columns cost
+       ~76px in gutters and header width, which is exactly what "Push to Shopify" needed to stay on
+       screen at 919px. They are both facts about the money, so stacking them loses nothing, and
+       stacked capsules are already the pattern on the Inventory screens. This reverses the
+       "Order value and Payment are separate columns, not merged" note from v3. */
+    h.push(['What to pick',''],['Value','']);
+    var m=statusMode();
+    if(m==='badge')  h.push(['Status','']);
+    /* "Days late", not "Why it failed": StackBack cannot report the CAUSE of a failed push, so a
+       reason column would have been invented information. What it does know is how long a paying
+       customer has been waiting, which is also the number that drives the triage order. This
+       reverses the reason-and-owner part of D2026-0730-03. */
+    if(m==='reason') h.push(['Days late','']);
+    h.push(['','']);
+    return h;
+  }
+
+  /* Deliveries: "3 of 6" on a fixed prepaid run, a bare number on open-ended pay-per-delivery,
+     and a dash on a one-time purchase, which has no run to be part of. */
+  function deliveryCell(o){
+    if(o.dNum==null) return '<span class="c2">&mdash;</span>';
+    if(o.dTot) return '<span class="dnum">'+o.dNum+' of '+o.dTot+'</span>';
+    return '<span class="dnum">'+o.dNum+'</span><div class="c2">ongoing</div>';
+  }
+
+  function buildTable(rowsHtml){
+    var heads=headSpec().map(function(h,i){
+      var a=h[1]?' listSlot="'+h[1]+'"':''; if(h[2]) a+=' format="'+h[2]+'"';
+      /* select-all lives in the first header cell */
+      if(i===0){
+        var pg=paged(filtered()), on=pg.length>0 && pg.every(function(o){return sel[o.c];});
+        var some=pg.some(function(o){return sel[o.c];});
+        return '<s-table-header accessibilityLabel="Select all orders on this page">'
+          +'<s-checkbox id="ckAll" '+(on?'checked':'')+' '+(!on&&some?'indeterminate':'')
+          +' accessibilityLabel="Select all orders on this page"></s-checkbox></s-table-header>';
+      }
+      var acc=h[0]?'':' accessibilityLabel="Row actions"';
+      return '<s-table-header'+a+acc+'>'+(h[0]||'')+'</s-table-header>';
+    }).join('');
+    /* variant="table" pins the grid layout. s-table brings its own horizontal scroll. */
+    return '<s-table variant="table">'
+      +'<s-table-header-row slot="headings">'+heads+'</s-table-header-row>'
+      +'<s-table-body>'+rowsHtml+'</s-table-body></s-table>';
+  }
+
+  function rowHtml(o){
+    var s=ST[o.st];
+    return '<s-table-row>'
+      +'<s-table-cell><s-checkbox '+(sel[o.c]?'checked':'')+' data-ck="'+esc(o.c)+'" accessibilityLabel="Select '+esc(o.c)+'"></s-checkbox></s-table-cell>'
+      +'<s-table-cell>'+refCell(o)+'</s-table-cell>'
+      +'<s-table-cell>'+esc(o.date)+'</s-table-cell>'
+      +(showRun() ? '<s-table-cell>'+deliveryCell(o)+'</s-table-cell>' : '')
+      /* Customer is the name alone. The bare PC-#### that used to sit under it read as an
+         unlabelled code, and it is now the reference column's own value on the upcoming tabs
+         where it identifies the row, so repeating it here was noise costing width. */
+      +'<s-table-cell><button class="lnk" data-cust="'+esc(o.cust)+'">'+esc(o.cust)+'</button></s-table-cell>'
+      /* the "changed by customer/admin" note moved into View details along with the product names:
+         it is one of the two things the popup exists to answer. A small dot on the capsule keeps
+         the row honest, so Ops still knows there is something to read before opening it. */
+      +'<s-table-cell>'+pickCell(o)+'</s-table-cell>'
+      +'<s-table-cell><div class="valcell"><span class="money">'+INR(o.total)+'</span>'
+        +(showRun() ? '<div class="pay"><s-badge>'+payLabel(o.pay)+'</s-badge></div>' : '')
+        +'</div></s-table-cell>'
+      /* must stay in lockstep with headSpec: same statusMode, same three branches */
+      +(statusMode()==='badge'
+        ? '<s-table-cell><s-badge tone="'+s.tone+'">'+s.label+'</s-badge></s-table-cell>'
+        : statusMode()==='reason'
+          ? '<s-table-cell><div class="late"><span class="n">'+delayDays(o)+'</span>'
+            +'<span class="u">day'+(delayDays(o)===1?'':'s')+'</span></div></s-table-cell>'
+          : '')
+      /* Locked rule: one primary beside the kebab, secondary stacks above. Reschedule is a
+         visible button because it is the action Ops takes most on a shortfall. */
+      /* One primary beside the kebab, nothing stacked: Status was being pushed out of view.
+         Reschedule moves into the kebab, where the rest of the row actions already live. */
+      +'<s-table-cell><div class="rowacts">'
+        /* Full "Push to Shopify" restored. It costs 119px against the verb's 54px, paid for by
+           merging Value and Payment into one column.
+           A failed push offers RESCHEDULE, not Retry or Re-sync: a bare retry repeats whatever
+           already failed, and re-sync only ever made sense for a cause the screen can no longer
+           claim to know. Moving the delivery to a date the problem can be fixed by is the one
+           action that is always valid. Retrying in bulk lives on Sync now in the header. */
+        +(o.st==='toplace'
+          ? '<button class="b pri" data-push="'+esc(o.c)+'">Push to Shopify</button>'
+          : o.st==='failed'
+            ? '<button class="b pri" data-resched="'+esc(o.c)+'">Reschedule</button>'
+            : '<button class="b pri" data-act="'+esc(o.c)+'">View in Shopify</button>')
+        /* 2026-07-31 FIX: the trigger used to be the s-menu's first CHILD, and s-menu turns every
+           child into a menu item with no trigger slot at all, so the kebab was swallowed into the
+           list and no ⋯ ever rendered. Reschedule, Add or swap, View details and View contract
+           were therefore unreachable from the row. s-menu is a bare popover: the activator lives
+           OUTSIDE it and is wired with commandfor + command="--show" (verified against this
+           Polaris build, the popover reports :popover-open on click). */
+        /* the activator is a NATIVE button, not an s-button: commandfor/command is a platform
+           invoker feature and Polaris's popover responds to it either way, but s-button adds a
+           disclosure chevron (wrong for a kebab) and measures ~48px against this one's 36px,
+           which matters when the shell caps the table at 966px. */
+        +'<button class="b kebab" commandfor="m-'+esc(o.c)+'" command="--show"'
+          +' aria-label="More actions for '+esc(o.c)+'">&#8943;</button>'
+        +'<s-menu id="m-'+esc(o.c)+'" accessibilityLabel="More actions for '+esc(o.c)+'">'
+        /* Once the order is in Shopify, StackBack no longer owns it: rescheduling or swapping
+           items would edit a delivery that has already been placed, so both are dropped for
+           placed rows rather than shown and then failing. */
+        /* Reschedule is a MAIN button, never a kebab item repeating a button in the same row. On a
+           failed push it IS the primary, so the kebab drops it; on a to-be-placed order the primary
+           is Push to Shopify and Reschedule stays reachable here, because two full-width buttons
+           plus the kebab do not fit the 919px the shell allows. */
+        +(o.st==='placed' ? ''
+          : (o.st==='failed' ? '' : '<s-button data-mresched="'+esc(o.c)+'">Reschedule delivery</s-button>')
+           +'<s-button data-mitems="'+esc(o.c)+'">Add or swap items</s-button>')
+        +'<s-button data-mopen="'+esc(o.c)+'">View details</s-button>'
+        /* "View subscription", not "View contract": the nav renamed Purchase Contracts to
+           Subscriptions, so the row action should use the word the merchant sees. On placed rows
+           this is the route back to the subscription, since the row itself now leads with the
+           order code rather than the PC. One-time purchases have no subscription to open. */
+        +(o.pc ? '<s-button data-mcontract="'+esc(o.pc)+'">View subscription</s-button>' : '')
+        +'</s-menu>'
+      +'</div></s-table-cell>'
+      +'</s-table-row>';
+  }
+
+  /* ---------- detail popup ----------
+     2026-07-31: this was a right-hand drawer. It is now the same centred popup the pick list
+     opens, so Details is one surface rather than two competing ones, and Ops stays over the list
+     instead of being pushed to the edge of the screen. The drawer element and its styles are
+     retained but unused, so reverting is a one-line change if the popup proves too small. */
+  function openDrawer(code){
+    var o=ORDERS.filter(function(x){return x.c===code;})[0]; if(!o) return;
+    /* the row identifier follows the same rule as the table: subscription before the push,
+       order code once the order exists */
+    var lead=(o.st!=='placed' && o.pc) ? o.pc : o.c;
+    $('popbox').className='popbox wide';
+    /* Plan name stays in the header; type moved down into the meta row beside Deliveries, so it is
+       stated once rather than in both places. The delivery date that used to sit here is gone,
+       because that one IS on the row. */
+    $('popbox').innerHTML=
+      '<div class="pophd"><div><div class="t">'+esc(lead)+'</div>'
+        +'<div class="c2">'+esc(o.plan)+'</div></div>'
+        +'<button class="x" id="dClose" aria-label="Close">&#10005;</button></div>'
+      /* Stripped to what the row does NOT already say. Plan name, type, status, delivery date,
+         order value, payment and customer name are all on the row or in the header line above, so
+         repeating them here made the popup a second, longer version of the same record. What is
+         left is the reason to open it: the items, their prices, any edit, and the failure detail. */
+      +'<div class="popbody">'
+        /* No cause named here either. StackBack knows the push did not succeed and how long ago it
+           should have gone out; it does not get a reliable reason back, so the popup states the delay
+           and the action rather than inventing a diagnosis. */
+        +(o.st==='failed'
+          ? '<div class="dsec"><div class="failbox"><b>Not placed in Shopify.</b> '
+            +'This delivery was due '+delayDays(o)+' days ago and has not reached Shopify.'
+            +'<div style="margin-top:5px">Reschedule it to a date you expect it to go out, or run '
+            +'Sync now to retry every outstanding push at once.</div></div></div>'
+          : '')
+        +(o.changed
+          ? '<div class="dsec"><div class="h">Changed since it was created</div>'
+            +'<div class="chg" style="font-size:12px">'+esc(o.changed.what)+' by '+esc(o.changed.by)+', '+esc(o.changed.when)+'</div>'
+            +'<div class="c2" style="margin-top:6px">Edits made in the customer portal or against the contract land here automatically. Re-check the pick list before this ships.</div></div>'
+          : '')
+        /* Deliveries and payment type. They are columns on most tabs but not on One-time, and this
+           popup is the whole record, so it states both rather than depending on which tab you
+           happened to open it from. */
+        +'<div class="dsec"><div class="metarow">'
+          +'<div class="metaitem"><div class="k">Type</div><div class="v">'+kindLabel(o.kind)+'</div></div>'
+          +'<div class="metaitem"><div class="k">Deliveries</div><div class="v">'
+            +(o.dNum==null ? 'One-time purchase'
+              : o.dTot ? o.dNum+' of '+o.dTot+' on this plan'
+                       : 'Delivery '+o.dNum+', ongoing')+'</div></div>'
+          +'<div class="metaitem"><div class="k">Payment</div><div class="v">'+payLabel(o.pay)+'</div></div>'
+          /* the Shopify number lives here now that the row shows only the StackBack order code */
+          +(o.shop
+            ? '<div class="metaitem"><div class="k">Shopify order</div><div class="v">'
+              +'<button class="lnk" data-shop="'+esc(o.shop)+'">'+esc(o.shop)+'</button></div></div>'
+            : '')
+        +'</div></div>'
+        +'<div class="dsec"><div class="h">'
+          +o.p.length+(o.p.length===1?' item':' items')+', '+o.units+' unit'+(o.units===1?'':'s')+'</div>'
+          /* one line per item: name and quantity together on the left, money right-aligned. The
+             quantity used to sit above the line total in the right column, which read as two
+             unrelated figures stacked rather than "3 at 633". */
+          + o.p.map(function(l){
+              return '<div class="iline">'
+                +'<div class="g"><div class="prodline">'+esc(l[0])+' <span class="qty">&times;'+l[2]+'</span></div>'
+                +'<div class="c2"><span class="sku">'+esc(l[1])+'</span> &middot; '+INR(PRICE[l[1]]||0)+' each</div></div>'
+                +'<div class="amt money">'+INR(lineTotal(l))+'</div></div>';
+            }).join('')
+          +'<div class="iline tot"><div class="g"><b>Total</b></div>'
+            +'<div class="amt money">'+INR(o.total)+'</div></div>'
+        +'</div>'
+      +'</div>'
+      /* Footer actions mirror the row exactly, and nothing offered here is invalid for the state.
+         A placed order cannot be rescheduled or have items swapped (it is Shopify's now). A FAILED
+         order has no Shopify order to view, so its primary is Reschedule, which is also why it is
+         not repeated as a secondary above. */
+      +'<div class="popfoot">'
+        +(o.st==='placed' ? ''
+          : '<button class="b" id="dItems">Add or swap items</button>')
+        +(o.st==='toplace' ? '<button class="b" id="dResched">Reschedule</button>' : '')
+        +(o.pc ? '<button class="b" data-contract="'+esc(o.pc)+'">View subscription</button>' : '')
+        +(o.st==='toplace'
+          ? '<button class="b pri" id="dPush">Push to Shopify</button>'
+          : o.st==='failed'
+            ? '<button class="b pri" id="dResched">Reschedule</button>'
+            : '<button class="b pri" data-shop="'+esc(o.shop||'')+'">View in Shopify</button>')
+      +'</div>';
+    $('pop').classList.add('on');
+    bindShop($('popbox'));
+    $('dClose').onclick=closeDrawer;
+    if($('dResched')) $('dResched').onclick=function(){ closeDrawer(); popReschedule([o.c]); };
+    if($('dItems'))   $('dItems').onclick=function(){ closeDrawer(); popItems(o.c); };
+    if($('dPush'))    $('dPush').onclick=function(){
+      closeDrawer();
+      if(confirm('Push '+o.c+' to Shopify now?')){
+        o.st='placed'; o.shop='#1099'; o.placedOn='today'; o.txn='Success, Shopify Payments'; render();
+      }
+    };
+    wireLinks($('popbox'));
+  }
+  /* the detail surface is the popup now, so closing it closes the popup. The scrim and drawer
+     lines stay so any other caller that still shows the drawer is cleaned up too. */
+  function closeDrawer(){
+    $('pop').classList.remove('on'); $('popbox').className='popbox';
+    $('scrim').classList.remove('on'); $('drawer').classList.remove('on');
+  }
+  $('scrim').onclick=closeDrawer;
+
+  /* ---------- customer popup ----------
+     The customer record is its own surface, opened from the customer name in the row. It used to be
+     a disclosure inside the order-detail popup, which put a person's contact details inside a
+     document about one delivery; they belong to the customer, not the order. Keeping them separate
+     also means Customer Success can reach a phone number in one click without reading a pick list.
+     A popup rather than an expanded table row because s-table has no colspan. */
+  function popCustomer(name){
+    var mine=ORDERS.filter(function(x){ return x.cust===name; });
+    var o=mine[0]; if(!o) return;
+    var subs={}; mine.forEach(function(x){ if(x.pc) subs[x.pc]=x.plan; });
+    var subKeys=Object.keys(subs);
+    var open=mine.filter(function(x){ return x.st!=='placed'; }).length;
+    $('popbox').className='popbox';
+    $('popbox').innerHTML=
+      '<div class="pophd"><div><div class="t">'+esc(o.cust)+'</div>'
+        +'<div class="c2">'+mine.length+' order'+(mine.length===1?'':'s')+' on this screen'
+        +(open?', '+open+' still to ship':'')+'</div></div>'
+        +'<button class="x" id="cClose" aria-label="Close">&#10005;</button></div>'
+      +'<div class="popbody">'
+        +'<div class="dsec"><div class="custgrid">'
+          +'<div class="df"><div class="k">Phone</div><div class="v">'+esc(o.phone)+'</div></div>'
+          +'<div class="df"><div class="k">Email</div><div class="v">'+esc(o.email)+'</div></div>'
+          /* full address, not just city and PIN: this popup is where Customer Success confirms
+             where a delivery is going, and a PIN alone cannot be checked against a courier */
+          +'<div class="df" style="grid-column:1/-1"><div class="k">Address</div><div class="v">'
+            +esc(o.street)+'<br>'+esc(o.city)+' '+esc(o.pin)+'</div></div>'
+          +'<div class="df"><div class="k">Subscriptions</div><div class="v">'+subKeys.length+'</div></div>'
+          /* two different numbers, deliberately both shown: lifetime orders against the ones inside
+             the current filter, so neither is read as the other */
+          +'<div class="df"><div class="k">Total orders</div><div class="v">'+(CUST_TOTAL[o.cust]||mine.length)
+            +' <span class="c2">all time</span></div></div>'
+        +'</div></div>'
+        +(subKeys.length
+          ? '<div class="dsec"><div class="h">Subscription'+(subKeys.length===1?'':'s')+'</div>'
+            + subKeys.map(function(pc){
+                return '<div class="iline"><div class="g">'
+                  +'<button class="lnk c1" data-contract="'+esc(pc)+'">'+esc(pc)+'</button>'
+                  +'<div class="c2">'+esc(subs[pc])+'</div></div></div>';
+              }).join('')
+            +'</div>'
+          : '<div class="dsec"><div class="c2">One-time purchases only, no subscription.</div></div>')
+      +'</div>'
+      +'<div class="popfoot">'
+        +'<button class="b" id="cClose2">Close</button>'
+        +'<button class="b pri" id="cFull">Open customer record</button>'
+      +'</div>';
+    $('pop').classList.add('on');
+    $('cClose').onclick=closePop;
+    $('cClose2').onclick=closePop;
+    $('cFull').onclick=function(){
+      closePop();
+      alert('Opens the full customer record for '+name+'.\n\nIn the real app this routes to /customers/:id.');
+    };
+    /* subscription links inside this popup */
+    var ks=$('popbox').querySelectorAll('[data-contract]');
+    for(var i=0;i<ks.length;i++){
+      ks[i].onclick=(function(pc){ return function(){
+        closePop();
+        alert('Opens subscription '+pc+'.\n\nIn the real app this routes to /subscriptions/'+pc+'.');
+      }; })(ks[i].getAttribute('data-contract'));
+    }
+  }
+
+  /* Point 6: the Shopify order number is a link wherever it appears, in the row and in the
+     popup. Before the push there is no number to link, which is why the upcoming tabs show the
+     subscription instead. */
+  function bindShop(root){
+    var ss=root.querySelectorAll('[data-shop]');
+    for(var i=0;i<ss.length;i++){
+      ss[i].onclick=(function(n){ return function(){
+        if(!n) return;
+        closeDrawer();
+        alert('Opens Shopify order '+n+'.\n\nIn the real app this opens the Shopify admin order page in a new tab.');
+      }; })(ss[i].getAttribute('data-shop'));
+    }
+  }
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ closeDrawer(); closePop(); } });
+
+  function wireLinks(root){
+    /* the customer name opens the customer popup, not an alert placeholder */
+    var cs=root.querySelectorAll('[data-cust]');
+    for(var i=0;i<cs.length;i++){
+      cs[i].onclick=(function(n){ return function(){ closeDrawer(); popCustomer(n); }; })(cs[i].getAttribute('data-cust'));
+    }
+    var ks=root.querySelectorAll('[data-contract]');
+    for(var j=0;j<ks.length;j++){
+      ks[j].onclick=(function(pc){ return function(){ closeDrawer(); alert('Opens subscription '+pc+'.\n\nIn the real app this routes to /subscriptions/'+pc+'.'); }; })(ks[j].getAttribute('data-contract'));
+    }
+  }
+
+  /* ---------- popups ---------- */
+  /* reset the width variant too: the detail popup sets .wide and the reschedule and swap popups
+     must not inherit it */
+  function closePop(){ $('pop').classList.remove('on'); $('popbox').className='popbox'; }
+  $('pop').addEventListener('click', function(e){ if(e.target===$('pop')) closePop(); });
+
+  function popReschedule(codes){
+    var many=codes.length>1;
+    var o=ORDERS.filter(function(x){return x.c===codes[0];})[0];
+    $('popbox').className='popbox';
+    $('popbox').innerHTML=
+      '<div class="pophd"><div><div class="t">Reschedule '+(many?codes.length+' deliveries':'delivery '+esc(o.c))+'</div>'
+      +'<div class="c2">'+(many?'All selected deliveries move by the same amount.':'Currently '+esc(o.date)+', '+esc(o.plan))+'</div></div>'
+      +'<button class="x" id="popX" aria-label="Close">&#10005;</button></div>'
+      +'<div class="popbody">'
+        +'<div class="c2" style="margin-bottom:4px">Move the delivery forward by</div>'
+        +'<div class="dateopt" id="dOpt">'
+          +'<button data-d="3" class="on">3 days</button><button data-d="7">1 week</button>'
+          +'<button data-d="14">2 weeks</button><button data-d="30">1 month</button>'
+        +'</div>'
+        +'<div style="margin-top:14px"><s-date-field label="Or pick an exact date"></s-date-field></div>'
+        +'<div class="c2" style="margin-top:14px">Rescheduling shifts this delivery only. Later deliveries on the contract keep their dates unless you choose to shift the whole schedule.</div>'
+        +'<div style="margin-top:10px"><s-checkbox label="Shift every later delivery on this contract too"></s-checkbox></div>'
+        +(many?'':'<div style="margin-top:10px"><s-checkbox label="Notify the customer by email and WhatsApp" checked></s-checkbox></div>')
+      +'</div>'
+      +'<div class="popfoot"><button class="b" id="popCancel">Cancel</button>'
+      +'<button class="b pri" id="popDo">Reschedule</button></div>';
+    $('pop').classList.add('on');
+    $('popX').onclick=closePop; $('popCancel').onclick=closePop;
+    $('dOpt').onclick=function(e){ var b=e.target.closest('button[data-d]'); if(!b) return;
+      var bs=$('dOpt').querySelectorAll('button'); for(var i=0;i<bs.length;i++) bs[i].classList.toggle('on',bs[i]===b); };
+    $('popDo').onclick=function(){ closePop(); alert('Rescheduled '+codes.length+' delivery(s). Mocked.'); };
+  }
+
+  function popItems(code){
+    var o=ORDERS.filter(function(x){return x.c===code;})[0];
+    $('popbox').className='popbox';
+    $('popbox').innerHTML=
+      '<div class="pophd"><div><div class="t">Add or swap items, '+esc(o.c)+'</div>'
+      +'<div class="c2">'+esc(o.plan)+' &middot; delivery '+esc(o.date)+'</div></div>'
+      +'<button class="x" id="popX" aria-label="Close">&#10005;</button></div>'
+      +'<div class="popbody">'
+        +'<div class="c2" style="margin-bottom:6px">In this delivery</div>'
+        + o.p.map(function(l,i){
+            return '<div class="itemrow"><div class="g"><div class="prodline">'+esc(l[0])+'</div>'
+              +'<div class="c2"><span class="sku">'+esc(l[1])+'</span> &times;'+l[2]+'</div></div>'
+              +'<button class="b" data-swap="'+i+'">Swap</button>'
+              +'<button class="b" data-rm="'+i+'">Remove</button></div>';
+          }).join('')
+        +'<div style="margin-top:14px"><s-select label="Add a product">'
+          +'<s-option value="">Choose a product</s-option>'
+          +'<s-option value="ash">Ashwagandha Gummies 60ct</s-option>'
+          +'<s-option value="col">Collagen Peptides 500g</s-option>'
+          +'<s-option value="hts">Herbal Tea Sampler</s-option>'
+        +'</s-select></div>'
+        +'<div class="c2" style="margin-top:14px">A swap keeps the delivery value the same where it can. Any difference shows as a price change the customer is told about before it ships.</div>'
+      +'</div>'
+      +'<div class="popfoot"><button class="b" id="popCancel">Cancel</button>'
+      +'<button class="b pri" id="popDo">Save changes</button></div>';
+    $('pop').classList.add('on');
+    $('popX').onclick=closePop; $('popCancel').onclick=closePop;
+    $('popDo').onclick=function(){ closePop(); alert('Item changes saved for '+code+'. Mocked.'); };
+  }
+
+  /* ---------- calendar ---------- */
+  var MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  function shiftMonth(ym,d){
+    var y=parseInt(ym.slice(0,4),10), m=parseInt(ym.slice(5),10)-1+d;
+    y += Math.floor(m/12); m=((m%12)+12)%12;
+    return y+'-'+String(m+1).padStart(2,'0');
+  }
+  function renderCal(){
+    /* Snap to a month that actually holds rows for the active tab. Push failed and Order placed
+       sit in the past while To be placed sits ahead, so keeping one fixed month meant switching
+       tabs in calendar view showed an empty grid that looked like "no orders" when it was really
+       "wrong month". Only auto-snaps when the current month is empty, so paging stays manual. */
+    var scoped=filtered(true);
+    if(scoped.length && !scoped.some(function(o){ return o.iso.slice(0,7)===calMonth; })){
+      var months=scoped.map(function(o){ return o.iso.slice(0,7); }).sort();
+      /* already-placed orders are history, so land on the most recent month; everything else is
+         work ahead, so land on the earliest */
+      calMonth = tab==='placed' ? months[months.length-1] : months[0];
+    }
+    var y=parseInt(calMonth.slice(0,4),10), m=parseInt(calMonth.slice(5),10)-1;
+    $('calTitle').textContent=MON[m]+' '+y;
+    $('calDow').innerHTML=['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
+      .map(function(d){ return '<div class="caldow">'+d+'</div>'; }).join('');
+
+    var first=new Date(Date.UTC(y,m,1)), lead=(first.getUTCDay()+6)%7;
+    var days=new Date(Date.UTC(y,m+1,0)).getUTCDate();
+    var byDay={};
+    /* filtered(true), not ORDERS: the calendar must answer the same question the active tab asks.
+       On Push failed it shows only failed deliveries, on Order placed only placed ones. */
+    filtered(true).forEach(function(o){
+      if(o.iso.slice(0,7)!==calMonth) return;
+      if(!byDay[o.iso]) byDay[o.iso]={n:0,u:0};
+      byDay[o.iso].n++; byDay[o.iso].u+=o.units;
+    });
+    var loads=Object.keys(byDay).map(function(k){return byDay[k].u;});
+    var avg=loads.length? loads.reduce(function(a,b){return a+b;},0)/loads.length : 0;
+
+    var cells='';
+    for(var i=0;i<lead;i++) cells+='<div class="calday pad"></div>';
+    for(var d=1;d<=days;d++){
+      var iso=calMonth+'-'+String(d).padStart(2,'0'), info=byDay[iso];
+      var cls='calday'+(iso==='2026-07-29'?' today':'');
+      var pill='';
+      if(info){
+        var lvl = info.u>avg*1.4 ? 3 : (info.u>avg ? 2 : 1);
+        pill='<span class="calpill load'+lvl+'">'+info.n+' order'+(info.n===1?'':'s')+'</span>'
+            +'<span class="c2">'+info.u+' units</span>';
+      }
+      cells+='<div class="'+cls+'" data-day="'+iso+'"><span class="dnum">'+d+'</span>'+pill+'</div>';
+    }
+    $('calBody').innerHTML=cells;
+    var ds=$('calBody').querySelectorAll('[data-day]');
+    for(var k=0;k<ds.length;k++){
+      ds[k].onclick=(function(iso){ return function(){
+        dayFilter=iso; view='list'; page=1;
+        $('vList').classList.add('on'); $('vCal').classList.remove('on');
+        render();
+      }; })(ds[k].getAttribute('data-day'));
+    }
+  }
+
+  /* ---------- chips ---------- */
+  function chips(){
+    var c=[];
+    if(q)             c.push(['Search: '+esc(q),'q']);
+    if(dayFilter)     c.push(['Day: '+dayFilter,'day']);
+    if(fWin!=='7')    c.push(['Window: '+(fWin==='all' ? 'all dates'
+                                        : fWin==='custom' ? rFrom+' to '+rTo
+                                        : 'next '+fWin+' days'),'win']);
+    if(fType!=='all') c.push(['Type: '+kindLabel(fType),'type']);
+    if(fPay!=='all')  c.push(['Payment: '+payLabel(fPay),'pay']);
+    if(fSort!=='date')c.push(['Sorted by '+fSort,'sort']);
+    $('chipRow').innerHTML=c.length
+      ? c.map(function(p){ return '<span class="chipf">'+p[0]+'<span class="x" data-clr="'+p[1]+'">&#10005;</span></span>'; }).join('')
+        +'<button class="clearAll" id="clearAll">Clear all</button>'
+      : '';
+    var xs=$('chipRow').querySelectorAll('[data-clr]');
+    for(var i=0;i<xs.length;i++) xs[i].onclick=(function(k){ return function(){ clearOne(k); }; })(xs[i].getAttribute('data-clr'));
+    if($('clearAll')) $('clearAll').onclick=clearAllF;
+  }
+  function clearOne(k){
+    if(k==='q'){ q=''; $('q').value=''; }
+    if(k==='day') dayFilter=null;
+    if(k==='win'){ fWin='7'; $('fWin').value='7'; syncRange(); }
+    if(k==='type'){ fType='all'; $('fType').value='all'; }
+    if(k==='pay'){ fPay='all'; $('fPay').value='all'; }
+    if(k==='sort'){ fSort='date'; $('fSort').value='date'; }
+    page=1; render();
+  }
+  function clearAllF(){
+    q=''; $('q').value=''; dayFilter=null; fWin='7'; $('fWin').value='7';
+    fType='all'; $('fType').value='all'; fPay='all'; $('fPay').value='all';
+    fSort='date'; $('fSort').value='date';
+    syncRange();
+    page=1; render();
+  }
+
+  /* ---------- render ---------- */
+  function render(){
+    var isList = view==='list';
+    $('listWrap').className = isList?'':'hide';
+    $('calWrap').className  = isList?'hide':'';
+    $('toolbar').className  = 'toolbar'+(isList?'':' hide');
+    $('chipRow').className  = 'chipRow'+(isList?'':' hide');
+
+    /* the cards use the same scope as the grid beneath them, so a count on screen always matches
+       the rows that produced it */
+    if(!isList){ renderCal(); counts(); tiles(filtered(true)); return; }
+
+    var all=filtered(), rows=paged(all);
+    $('tableHost').innerHTML = rows.length? buildTable(rows.map(rowHtml).join('')) : '';
+    $('emptyRow').className='emptyRow'+(rows.length?' hide':'');
+
+    /* pagination, because a real store has thousands of these */
+    var pages=Math.max(1,Math.ceil(all.length/perPage));
+    if(page>pages) page=pages;
+    $('pager').innerHTML = all.length
+      ? 'Showing '+((page-1)*perPage+1)+' to '+Math.min(page*perPage,all.length)+' of '+all.length
+        +' &nbsp; <button class="b" id="pPrev" '+(page<=1?'disabled':'')+'>&#8592;</button>'
+        +' <span>Page '+page+' of '+pages+'</span> '
+        +'<button class="b" id="pNext" '+(page>=pages?'disabled':'')+'>&#8594;</button>'
+      : '';
+    if($('pPrev')) $('pPrev').onclick=function(){ if(page>1){page--;render();} };
+    if($('pNext')) $('pNext').onclick=function(){ if(page<pages){page++;render();} };
+
+    tiles(all); counts(); chips(); bulkBar(); wire();
+  }
+
+  function tiles(rows){
+    /* Cards trimmed 2026-07-30 to the three Sumant kept. Orders-in-view, Units-to-pick,
+       Push-failed and Order-placed were removed: the first two duplicated what the table
+       already shows, and the last two duplicate their own tabs. */
+    var val=0,tp=0;
+    rows.forEach(function(o){ val+=o.total; if(o.st==='toplace')tp++; });
+    $('wTotal').textContent=ORDERS.length;
+    $('wTotalD').textContent=rows.length===ORDERS.length ? 'all paid orders' : rows.length+' in this view';
+    $('wToPlace').textContent=ORDERS.filter(function(o){return o.st==='toplace';}).length;
+    $('wValue').textContent=INR(val);
+    $('wValueD').textContent = rows.length===ORDERS.length ? 'across all orders' : 'total in view';
+  }
+
+  function counts(){
+    var set=function(s,n){ var e=document.querySelector(s); if(e) e.textContent=n; };
+    var inWin=function(o){ return fWin==='all'||o.win<=parseInt(fWin,10); };
+    set('#tabs button[data-tab="due"] .n',     ORDERS.filter(function(o){return o.st==='toplace'&&inWin(o);}).length);
+    set('#tabs button[data-tab="failed"] .n',  ORDERS.filter(function(o){return o.st==='failed';}).length);
+    set('#tabs button[data-tab="placed"] .n',  ORDERS.filter(function(o){return o.st==='placed';}).length);
+    set('#tabs button[data-tab="onetime"] .n', ORDERS.filter(function(o){return o.kind==='onetime';}).length);
+    set('#tabs button[data-tab="all"] .n',     ORDERS.length);
+  }
+
+  function selectedCodes(){ return Object.keys(sel).filter(function(k){return sel[k];}); }
+  function bulkBar(){
+    var n=selectedCodes().length;
+    $('bulk').className='bulk'+(n?' on':'');
+    $('bulkCnt').textContent=n+' selected';
+    /* Place in Shopify only makes sense for orders not yet placed */
+    var anyToPlace=selectedCodes().some(function(c){
+      var o=ORDERS.filter(function(x){return x.c===c;})[0]; return o && o.st==='toplace';
+    });
+    $('bkPlace').disabled=!anyToPlace;
+  }
+
+  function wire(){
+    var host=$('tableHost');
+    var cks=host.querySelectorAll('[data-ck]');
+    for(var i=0;i<cks.length;i++){
+      cks[i].addEventListener('change',(function(code,el){ return function(){
+        sel[code]=!!el.checked; bulkBar(); syncSelectAll();
+      }; })(cks[i].getAttribute('data-ck'),cks[i]));
+    }
+    /* select all applies to the current page only, which is the set the user can see */
+    var all=$('ckAll');
+    if(all) all.addEventListener('change', function(){
+      var on=!!all.checked;
+      paged(filtered()).forEach(function(o){ sel[o.c]=on; });
+      render();
+    });
+    var os=host.querySelectorAll('[data-open]');
+    for(var j=0;j<os.length;j++) os[j].onclick=(function(c){ return function(){ openDrawer(c); }; })(os[j].getAttribute('data-open'));
+    var as=host.querySelectorAll('[data-act]');
+    for(var k=0;k<as.length;k++) as[k].onclick=(function(c){ return function(){ openDrawer(c); }; })(as[k].getAttribute('data-act'));
+    var rs=host.querySelectorAll('[data-resched]');
+    for(var m=0;m<rs.length;m++) rs[m].onclick=(function(c){ return function(){ popReschedule([c]); }; })(rs[m].getAttribute('data-resched'));
+    var ps=host.querySelectorAll('[data-push]');
+    for(var n=0;n<ps.length;n++) ps[n].onclick=(function(c){ return function(){
+      if(confirm('Push '+c+' to Shopify now?\n\nThis creates the Shopify order ahead of its normal 3 to 5 day window.')){
+        var o=ORDERS.filter(function(x){return x.c===c;})[0];
+        o.st='placed'; o.shop='#'+(1060+Math.abs(c.charCodeAt(6)-48)); o.placedOn='today';
+        o.txn='Success, Shopify Payments';
+        render();
+      }
+    }; })(ps[n].getAttribute('data-push'));
+    var mr=host.querySelectorAll('[data-mresched]');
+    for(var q1=0;q1<mr.length;q1++) mr[q1].onclick=(function(c){ return function(){ popReschedule([c]); }; })(mr[q1].getAttribute('data-mresched'));
+    var mi=host.querySelectorAll('[data-mitems]');
+    for(var q2=0;q2<mi.length;q2++) mi[q2].onclick=(function(c){ return function(){ popItems(c); }; })(mi[q2].getAttribute('data-mitems'));
+    var mo=host.querySelectorAll('[data-mopen]');
+    for(var q3=0;q3<mo.length;q3++) mo[q3].onclick=(function(c){ return function(){ openDrawer(c); }; })(mo[q3].getAttribute('data-mopen'));
+    var mc=host.querySelectorAll('[data-mcontract]');
+    for(var q4=0;q4<mc.length;q4++) mc[q4].onclick=(function(pc){ return function(){ if(pc) alert('Opens subscription '+pc+'.\n\nIn the real app this routes to /subscriptions/'+pc+'.'); }; })(mc[q4].getAttribute('data-mcontract'));
+    /* the failed-row primary is now Reschedule, so it opens the same popup as the kebab item */
+    var rs=host.querySelectorAll('[data-resched]');
+    for(var p3=0;p3<rs.length;p3++) rs[p3].onclick=(function(c){ return function(){ popReschedule([c]); }; })(rs[p3].getAttribute('data-resched'));
+    /* the per-row Re-sync handler is gone with the button: the bulk equivalent is Sync now */
+    wireLinks(host);
+    bindShop(host);
+  }
+
+  function syncSelectAll(){
+    var all=$('ckAll'); if(!all) return;
+    var pg=paged(filtered());
+    var on=pg.length>0 && pg.every(function(o){return sel[o.c];});
+    var some=pg.some(function(o){return sel[o.c];});
+    all.checked=on; all.indeterminate=!on&&some;
+  }
+
+  /* ---------- events ---------- */
+  $('tabs').addEventListener('click',function(e){
+    var b=e.target.closest('button[data-tab]'); if(!b) return;
+    tab=b.getAttribute('data-tab'); page=1; sel={};
+    var bs=$('tabs').querySelectorAll('[data-tab]');
+    for(var i=0;i<bs.length;i++) bs[i].classList.toggle('on',bs[i]===b);
+    render();
+  });
+
+  /* the view switch lives outside #tabs now, so it needs its own listener */
+  $('viewsw').addEventListener('click',function(e){
+    var b=e.target.closest('button[data-view]'); if(!b) return;
+    view=b.getAttribute('data-view');
+    $('vList').classList.toggle('on',view==='list');
+    $('vCal').classList.toggle('on',view==='cal');
+    render();
+  });
+
+  $('q').addEventListener('input',function(e){ q=(e.target.value||'').toLowerCase().trim(); page=1; render(); });
+  ['fWin','fType','fPay','fSort'].forEach(function(id){
+    $(id).addEventListener('change',function(e){
+      var v=e.target.value;
+      if(id==='fWin')fWin=v; if(id==='fType')fType=v; if(id==='fPay')fPay=v;
+      if(id==='fSort')fSort=v;
+      if(id==='fWin') syncRange();
+      page=1; render();
+    });
+  });
+  /* the two date fields only exist while Custom range is selected */
+  function syncRange(){
+    var on = fWin==='custom';
+    $('rangeWrap').className  = 'fw'+(on?'':' hide');
+    $('rangeWrap2').className = 'fw'+(on?'':' hide');
+  }
+  ['rFrom','rTo'].forEach(function(id){
+    $(id).addEventListener('change',function(e){
+      if(id==='rFrom') rFrom=e.target.value; else rTo=e.target.value;
+      /* keep the range coherent rather than silently returning nothing */
+      if(rFrom && rTo && rFrom>rTo){
+        if(id==='rFrom'){ rTo=rFrom; $('rTo').value=rTo; }
+        else            { rFrom=rTo; $('rFrom').value=rFrom; }
+      }
+      page=1; render();
+    });
+  });
+  syncRange();
+  /* Sync now: inventory in from Shopify, then retry every push still outstanding. This is where the
+     bulk retry lives, now that the per-row action on a failed order is Reschedule. */
+  $('syncBtn').addEventListener('click', function(){
+    var pending=ORDERS.filter(function(o){ return o.st==='failed'; }).length;
+    if(!confirm('Sync inventory from Shopify and retry '+pending+' failed push'+(pending===1?'':'es')+'?\n\n'
+      +'Pulls current stock levels, then re-attempts every order that has not reached Shopify. '
+      +'Orders that fail again stay on the Push failed tab with their delay updated.')) return;
+    alert('Synced. Mocked: in the real app this runs the inventory pull and the retry job, then refreshes these counts.');
+  });
+  $('clearBtn').onclick=clearAllF;
+  $('bkClear').onclick=function(){ sel={}; render(); };
+  $('bkResched').onclick=function(){ var c=selectedCodes(); if(c.length) popReschedule(c); };
+  $('bkPlace').onclick=function(){
+    var c=selectedCodes().filter(function(k){
+      var o=ORDERS.filter(function(x){return x.c===k;})[0]; return o&&o.st==='toplace'; });
+    if(!c.length) return;
+    if(confirm('Push '+c.length+' order(s) to Shopify now?')){
+      c.forEach(function(k,i){ var o=ORDERS.filter(function(x){return x.c===k;})[0];
+        o.st='placed'; o.shop='#'+(1070+i); o.placedOn='today'; o.txn='Success, Shopify Payments'; });
+      sel={}; render();
+    }
+  };
+  ['bkPause','bkExport'].forEach(function(id){
+    $(id).onclick=function(){
+      var n=selectedCodes().length;
+      alert(({bkPause:'Pause '+n+' delivery(s). This pauses the delivery only, not the subscription.',
+              bkExport:'Export '+n+' order(s)'})[id]+'.\n\nMocked action.');
+    };
+  });
+  $('calPrev').onclick=function(){ calMonth=shiftMonth(calMonth,-1); renderCal(); };
+  $('calNext').onclick=function(){ calMonth=shiftMonth(calMonth, 1); renderCal(); };
+  $('calToday').onclick=function(){ calMonth='2026-07'; renderCal(); };
+
+
+  render();
+</script>
+</body>
+</html>

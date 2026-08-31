@@ -1,0 +1,758 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" href="data:," />
+<title>StackBack merchant admin: information architecture v1</title>
+<style>
+  :root{
+    --p-ink:#303030; --p-muted:#616161; --p-faint:#8a8a8a;
+    --p-line:#e3e3e3; --p-line2:#ebebeb; --p-surface:#fff;
+    --p-primary:#303030; --p-success:#29845a; --p-success-bg:#cdfee1;
+    --p-link:#005bd3; --p-attn-bg:#ffefcf; --p-attn:#8a6116;
+    --p-crit:#8e1f0b; --p-crit-bg:#fedad1;
+    --p-info-bg:#eaf4ff; --p-info:#00527c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#f7f7f7;font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--p-ink)}
+
+  /* ---------- spec chrome (not part of the product) ---------- */
+  .spec{max-width:1360px;margin:0 auto;padding:0 20px 60px}
+  .specbar{background:#1a1a1a;color:#fff;padding:14px 20px;position:sticky;top:0;z-index:200;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+  .specbar h1{margin:0;font-size:14px;font-weight:650;letter-spacing:.1px}
+  .specbar .sub{font-size:12px;color:#b5b5b5}
+  .seg{margin-left:auto;display:flex;background:#2b2b2b;border-radius:9px;padding:3px;gap:2px}
+  .seg button{appearance:none;border:0;background:transparent;color:#c9c9c9;font:inherit;font-size:12px;font-weight:600;padding:6px 13px;border-radius:7px;cursor:pointer;white-space:nowrap}
+  .seg button.on{background:#fff;color:#1a1a1a}
+  .seg button:hover:not(.on){color:#fff}
+
+  .specH{font-size:19px;font-weight:650;margin:44px 0 6px;letter-spacing:-.2px}
+  .specP{color:var(--p-muted);margin:0 0 18px;max-width:76ch}
+  .specNote{background:var(--p-info-bg);border:1px solid #b9dcf5;color:var(--p-info);border-radius:10px;padding:12px 14px;margin:0 0 18px;max-width:96ch;font-size:12.5px}
+  .specWarn{background:var(--p-attn-bg);border:1px solid #f0d9a8;color:var(--p-attn);border-radius:10px;padding:12px 14px;margin:0 0 18px;max-width:96ch;font-size:12.5px}
+  .specWarn b,.specNote b{font-weight:650}
+
+  /* ---------- the admin mock ---------- */
+  .mockWrap{border:1px solid var(--p-line);border-radius:14px;overflow:hidden;background:#f1f1f1;box-shadow:0 1px 2px rgba(0,0,0,.05);margin-top:22px}
+  .admin{display:flex;min-height:660px}
+
+  .navL{flex:none;width:232px;background:#ebebeb;border-right:1px solid var(--p-line);padding:10px 8px;display:flex;flex-direction:column;gap:1px}
+  .navItem{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;color:var(--p-ink);font-size:13px;font-weight:500;white-space:nowrap}
+  .navItem.ghost{color:#9b9b9b}
+  .navItem .ico{width:16px;height:16px;flex:none;color:#5a5a5a}
+  .navItem.ghost .ico{color:#a8a8a8}
+  .navSec{color:var(--p-muted);font-size:13px;font-weight:500;display:flex;align-items:center;height:30px;padding:0 8px;margin-top:6px}
+  .navSec .chev{margin-left:auto;color:var(--p-faint);font-size:11px}
+  .navApp{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;font-weight:600;background:#fff;box-shadow:0 1px 0 rgba(0,0,0,.04);margin-top:2px;cursor:pointer}
+  .navApp .logo{width:20px;height:20px;border-radius:5px;background:var(--p-primary);display:grid;place-items:center;color:#fff;font-size:10px;font-weight:700;flex:none}
+  .navApp .dot{margin-left:auto;width:6px;height:6px;border-radius:50%;background:#8a8a8a}
+  .navSub{display:flex;align-items:center;gap:8px;min-height:30px;padding:4px 8px 4px 30px;border-radius:8px;color:var(--p-muted);font-size:13px;cursor:pointer;text-align:left;border:0;background:transparent;font-family:inherit;width:100%}
+  .navSub:hover{background:#dedede;color:var(--p-ink)}
+  .navSub.sel{color:var(--p-ink);font-weight:600;background:#fff;box-shadow:0 1px 0 rgba(0,0,0,.04)}
+  .navSub .ico{width:15px;height:15px;flex:none;opacity:.75}
+  .navSub .nu{margin-left:auto;font-size:10px;font-weight:700;letter-spacing:.3px;color:var(--p-success);background:var(--p-success-bg);border-radius:6px;padding:1px 5px}
+  .navFold{font-size:12px;color:var(--p-muted);padding:6px 8px 2px 30px}
+  .navGap{flex:1;min-height:14px}
+
+  .appmain{flex:1;min-width:0;display:flex;flex-direction:column;background:#f1f1f1}
+  .appbar{height:52px;background:#fff;border-bottom:1px solid var(--p-line);display:flex;align-items:center;gap:10px;padding:0 18px;flex:none}
+  .appbar .logo{width:24px;height:24px;border-radius:6px;background:var(--p-primary);display:grid;place-items:center;color:#fff;font-size:11px;font-weight:700}
+  .appbar .name{font-weight:650;font-size:14px}
+  .bell{margin-left:auto;position:relative;width:30px;height:30px;border-radius:8px;display:grid;place-items:center;color:#4a4a4a;background:#f6f6f6;border:1px solid var(--p-line)}
+  .bell .badge{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;border-radius:8px;background:var(--p-crit);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;padding:0 4px;border:2px solid #fff}
+  .bellTag{font-size:10px;font-weight:700;color:var(--p-attn);background:var(--p-attn-bg);border-radius:6px;padding:2px 6px;margin-left:8px;letter-spacing:.2px}
+
+  .page{padding:20px 22px 30px;overflow:auto}
+  .pgHead{display:flex;align-items:flex-start;gap:14px;margin-bottom:4px}
+  .pgTitle{font-size:19px;font-weight:650;letter-spacing:-.2px;margin:0}
+  .pgSub{color:var(--p-muted);margin:3px 0 0;font-size:12.5px;max-width:70ch}
+  .pgActs{margin-left:auto;display:flex;gap:8px;flex:none}
+  .btn{height:30px;padding:0 12px;border-radius:8px;border:1px solid var(--p-line);background:#fff;font:inherit;font-size:12.5px;font-weight:600;color:var(--p-ink);display:inline-flex;align-items:center;gap:6px}
+  .btn.pri{background:var(--p-primary);color:#fff;border-color:var(--p-primary)}
+  .kebab{width:30px;justify-content:center;letter-spacing:1px;padding:0}
+
+  .chrome{display:flex;align-items:center;gap:6px;margin:16px 0 0;flex-wrap:wrap}
+  .chrome .lbl{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--p-faint);margin-right:4px}
+  .tab{height:30px;padding:0 12px;border-radius:8px;background:transparent;border:1px solid transparent;font-size:12.5px;font-weight:600;color:var(--p-muted);display:inline-flex;align-items:center;gap:6px}
+  .tab.on{background:#fff;color:var(--p-ink);border-color:var(--p-line);box-shadow:0 1px 0 rgba(0,0,0,.04)}
+  .pill{height:26px;padding:0 10px;border-radius:99px;border:1px solid var(--p-line);background:#fff;font-size:12px;font-weight:600;color:var(--p-muted);display:inline-flex;align-items:center;gap:6px}
+  .pill.on{background:var(--p-primary);color:#fff;border-color:var(--p-primary)}
+  .pill.attn{border-color:#f0d9a8;background:var(--p-attn-bg);color:var(--p-attn)}
+  .pill .n{font-size:11px;opacity:.75;font-weight:700}
+  .future{border-style:dashed;color:var(--p-faint)}
+
+  .card{background:#fff;border:1px solid var(--p-line);border-radius:12px;margin-top:14px;overflow:hidden}
+  .cardHd{padding:12px 14px;border-bottom:1px solid var(--p-line2);font-weight:650;font-size:13px;display:flex;align-items:center;gap:8px}
+  .cardHd .hint{margin-left:auto;font-weight:500;font-size:12px;color:var(--p-faint)}
+  .row{display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid var(--p-line2)}
+  .row:last-child{border-bottom:0}
+  .row .grow{flex:1;min-width:0}
+  .row .t{font-weight:600;font-size:12.5px}
+  .row .s{color:var(--p-muted);font-size:12px;margin-top:1px}
+  .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .dot.ok{background:var(--p-success)}
+  .dot.warn{background:#c8952a}
+  .dot.crit{background:var(--p-crit)}
+  .dot.off{background:#b5b5b5}
+  .chip{font-size:11px;font-weight:650;border-radius:6px;padding:2px 7px;white-space:nowrap;border:1px solid transparent}
+  .chip.ok{background:var(--p-success-bg);color:var(--p-success)}
+  .chip.warn{background:var(--p-attn-bg);color:var(--p-attn)}
+  .chip.crit{background:var(--p-crit-bg);color:var(--p-crit)}
+  .chip.neu{background:#f1f1f1;color:var(--p-muted)}
+  .chip.info{background:var(--p-info-bg);color:var(--p-info)}
+  .stack2{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+  .stack2 .r1,.stack2 .r2{display:flex;align-items:center;gap:6px}
+
+  .skel{height:9px;border-radius:5px;background:#eee}
+  .thumb{width:34px;height:34px;border-radius:8px;background:#f1f1f1;border:1px solid var(--p-line);flex:none}
+
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-top:14px;align-items:stretch}
+  .mini{background:#fff;border:1px solid var(--p-line);border-radius:12px;padding:13px 14px;display:flex;flex-direction:column;gap:4px}
+  .mini .k{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--p-faint)}
+  .mini .v{font-size:22px;font-weight:650;letter-spacing:-.4px}
+  .mini .d{font-size:12px;color:var(--p-muted);margin-top:auto}
+  .bars{display:flex;align-items:flex-end;gap:5px;height:52px;margin-top:8px}
+  .bars i{flex:1;background:#d7e8dd;border-radius:3px 3px 0 0;display:block}
+  .bars i.hot{background:#f0d9a8}
+
+  /* settings group rail */
+  .setWrap{display:flex;gap:0;background:#fff;border:1px solid var(--p-line);border-radius:12px;margin-top:14px;overflow:hidden;min-height:330px}
+  .setRail{width:216px;flex:none;border-right:1px solid var(--p-line2);padding:10px;background:#fbfbfb}
+  .setSearch{height:30px;border:1px solid var(--p-line);border-radius:8px;display:flex;align-items:center;gap:7px;padding:0 9px;color:var(--p-faint);font-size:12.5px;background:#fff;margin-bottom:8px}
+  .setItem{min-height:30px;border-radius:8px;padding:6px 9px;font-size:12.5px;color:var(--p-muted);font-weight:500;cursor:pointer;display:flex;align-items:center;gap:8px}
+  .setItem:hover{background:#f1f1f1;color:var(--p-ink)}
+  .setItem.sel{background:#f1f1f1;color:var(--p-ink);font-weight:650}
+  .setItem .nu{margin-left:auto;font-size:10px;font-weight:700;color:var(--p-success);background:var(--p-success-bg);border-radius:6px;padding:1px 5px}
+  .setBody{flex:1;min-width:0;padding:16px 18px}
+
+  /* why panel */
+  .why{margin-top:16px;background:#fff;border:1px solid var(--p-line);border-left:3px solid var(--p-primary);border-radius:10px;padding:14px 16px}
+  .why h4{margin:0 0 7px;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--p-faint)}
+  .why p{margin:0 0 8px;font-size:13px;line-height:1.6;max-width:82ch}
+  .why p:last-child{margin-bottom:0}
+  .why .abs{margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .why .abs .al{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--p-faint);margin-right:2px}
+  .fold{font-size:11px;font-weight:650;color:var(--p-muted);background:#f1f1f1;border:1px dashed var(--p-line);border-radius:6px;padding:2px 7px}
+
+  /* comparison tables */
+  table.cmp{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--p-line);border-radius:12px;overflow:hidden;font-size:12.5px;margin-top:8px}
+  table.cmp th{text-align:left;padding:11px 13px;background:#fbfbfb;border-bottom:1px solid var(--p-line);font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:var(--p-faint);font-weight:700;vertical-align:bottom}
+  table.cmp td{padding:10px 13px;border-bottom:1px solid var(--p-line2);vertical-align:top}
+  table.cmp tr:last-child td{border-bottom:0}
+  table.cmp td.n{color:var(--p-faint);width:34px;font-weight:700}
+  .gone{color:var(--p-faint);text-decoration:line-through}
+  .into{color:var(--p-muted);font-size:12px}
+  .newt{font-size:10px;font-weight:700;color:var(--p-success);background:var(--p-success-bg);border-radius:5px;padding:1px 5px;margin-left:5px;letter-spacing:.3px}
+
+  .cols3{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:8px;align-items:stretch}
+  .vcard{background:#fff;border:1px solid var(--p-line);border-radius:12px;padding:16px;display:flex;flex-direction:column}
+  .vcard.rec{border-color:var(--p-success);box-shadow:0 0 0 1px var(--p-success)}
+  .vcard h3{margin:0;font-size:14px;font-weight:650;display:flex;align-items:center;gap:8px}
+  .vcard .cnt{font-size:11px;font-weight:700;color:var(--p-muted);background:#f1f1f1;border-radius:6px;padding:2px 7px}
+  .vcard ol{margin:12px 0 0;padding-left:22px;font-size:12.5px;line-height:1.85}
+  .vcard ol li.hl{font-weight:650}
+  .vcard .tail{margin-top:auto;padding-top:12px;font-size:12px;color:var(--p-muted);line-height:1.6}
+  .recTag{font-size:10px;font-weight:700;color:#fff;background:var(--p-success);border-radius:5px;padding:2px 6px;letter-spacing:.3px}
+
+  .prin{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:8px;align-items:stretch}
+  .prin .p{background:#fff;border:1px solid var(--p-line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:7px}
+  .prin .p .num{width:22px;height:22px;border-radius:6px;background:var(--p-primary);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center}
+  .prin .p h4{margin:0;font-size:13px;font-weight:650}
+  .prin .p p{margin:0;font-size:12.5px;color:var(--p-muted);line-height:1.6}
+  .lineage{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid var(--p-line);border-radius:12px;padding:16px;margin-top:14px}
+  .lineage .n{border:1px solid var(--p-line);border-radius:9px;padding:9px 12px;min-width:150px}
+  .lineage .n .t{font-weight:650;font-size:13px}
+  .lineage .n .s{font-size:11.5px;color:var(--p-muted);margin-top:2px}
+  .lineage .ar{color:var(--p-faint);font-weight:700}
+
+  @media (max-width:900px){
+    .admin{flex-direction:column}
+    .navL{width:100%;height:auto}
+  }
+</style>
+</head>
+<body>
+
+<div class="specbar">
+  <div>
+    <h1>StackBack merchant admin: information architecture</h1>
+    <div class="sub">Spec IA-01 v1 &nbsp;&middot;&nbsp; 2026-07-28 &nbsp;&middot;&nbsp; embedded Shopify admin, Polaris-native palette</div>
+  </div>
+  <div class="seg" id="verSeg">
+    <button data-v="A" class="on">A. Clearest (11) &middot; LOCKED</button>
+    <button data-v="B">B. Balanced (8)</button>
+    <button data-v="C">C. Compressed (6)</button>
+    <button data-v="NOW">Current (14)</button>
+  </div>
+</div>
+
+<div class="spec">
+
+  <h2 class="specH">1. The nav, as a merchant sees it</h2>
+  <p class="specP">Switch versions in the bar above. Click any StackBack item in the sidebar to see what sits inside it and why it lives there. The sidebar is Shopify's own App Bridge nav, which renders a flat list only: no nesting, no section headers, no group labels.</p>
+
+  <div class="specNote" id="verNote"></div>
+
+  <div class="mockWrap">
+    <div class="admin">
+      <div class="navL" id="navL"></div>
+      <div class="appmain">
+        <div class="appbar">
+          <div class="logo">SB</div>
+          <div class="name" id="appName">StackBack Subscriptions</div>
+          <div class="bell" title="Admin alerts">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+            <span class="badge">3</span>
+          </div>
+          <span class="bellTag">ADMIN ALERTS, ALL SCREENS</span>
+        </div>
+        <div class="page" id="page"></div>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="specH">2. Why this order</h2>
+  <p class="specP">Three principles, applied in sequence. Because App Bridge gives a flat list with no headers, order is the only structural signal available, so it has to be derivable rather than memorised.</p>
+
+  <div class="lineage">
+    <div class="n"><div class="t">Plans</div><div class="s">what you sell</div></div>
+    <span class="ar">&rarr;</span>
+    <div class="n"><div class="t">Subscriptions</div><div class="s">the agreement, PC-1041</div></div>
+    <span class="ar">&rarr;</span>
+    <div class="n"><div class="t">Orders</div><div class="s">each delivery, SB-8842</div></div>
+    <span class="ar">&rarr;</span>
+    <div class="n"><div class="t">Payment Reminders &nbsp;/&nbsp; Inventory</div><div class="s">views derived from orders</div></div>
+  </div>
+
+  <div class="prin">
+    <div class="p">
+      <div class="num">1</div>
+      <h4>Data lineage, parent before child</h4>
+      <p>You cannot have a subscription without a plan, or an order without a subscription. A 6-delivery prepaid contract is one row in Subscriptions and six rows in Orders, so the parent sits above its children.</p>
+    </div>
+    <div class="p">
+      <div class="num">2</div>
+      <h4>Derived views sit under their source</h4>
+      <p>Payment Reminders is Orders filtered to unpaid. Inventory is Orders summed by SKU and date, looking forward. Neither exists without Orders, so both follow it instead of competing with it.</p>
+    </div>
+    <div class="p">
+      <div class="num">3</div>
+      <h4>Configuration sinks into Settings</h4>
+      <p>Anything set once and revisited rarely goes inside Settings rather than beside daily work. That covers integrations, billing, policies, and the customer notification templates.</p>
+    </div>
+  </div>
+
+  <div class="specNote" style="margin-top:16px">
+    <b>Why not order by how often a screen is opened.</b> That was the first instinct and it is wrong here. Frequency is not a property a merchant can see, so the sequence has no visible logic and has to be memorised, and every new module reshuffles it. Lineage is derivable: understand that a plan produces a subscription which produces orders, and you can predict where anything new will land. When Try Before You Buy ships it goes inside Plans, because that is what it is, and nothing moves.
+  </div>
+
+  <div class="specNote">
+    <b>The fold becomes useful.</b> App Bridge truncates the list with a "View more" control. Today that cut falls at an arbitrary point, so the hidden items are random. Under this order, whatever falls below the cut is Settings and Analytics, which nobody opens daily.
+  </div>
+
+  <h2 class="specH">3. What happened to the current 14 items</h2>
+  <p class="specP">Shown against the locked version A. Nine of the fourteen survive as top-level items, five collapse into parents, three rename, one moves to the header, and two new modules join, giving 11.</p>
+
+  <table class="cmp">
+    <thead><tr><th class="n">#</th><th style="width:26%">Today</th><th style="width:24%">Becomes</th><th>Reason</th></tr></thead>
+    <tbody id="mapBody"></tbody>
+  </table>
+
+  <h2 class="specH">4. The three versions</h2>
+  <p class="specP">Same lineage logic and the same naming in all three. They differ only in how much they collapse.</p>
+
+  <div class="cols3" id="verCards"></div>
+
+  <div class="specWarn" style="margin-top:16px">
+    <b>Version C quietly undoes two decisions already made.</b> Orders with Forecast and Unpaid tabs is structurally the unified "Orders &amp; Inventory" hub superseded in D2026-0727-04, just renamed. It also removes Payment Reminders as its own screen, which was locked twice. C is the tidiest list and that is a real advantage, but it wins on count by reversing considered decisions. Take it deliberately, not by accident.
+  </div>
+
+  <div class="specWarn">
+    <b>One open call: the bell.</b> An embedded app cannot add anything to Shopify's own top bar, so admin alerts need StackBack's own header row inside the content frame. That is persistent chrome on every screen, and it costs vertical space everywhere. The cheaper alternative is no bell: alerts surface as a card on Home, and anything urgent banners the screen it concerns, so a failed push banners Orders. Less discoverable, zero chrome cost. Needs confirming against App Bridge before it is committed.
+  </div>
+
+</div>
+
+<script>
+/* ============================ data ============================ */
+
+const ICO = {
+  plans:'<path d="M4 5h16M4 12h16M4 19h10"/>',
+  subs:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 10h8M8 14h5"/>',
+  orders:'<path d="M3 6h18l-1.5 11a2 2 0 0 1-2 1.8H6.5a2 2 0 0 1-2-1.8Z"/><path d="M9 10v6M15 10v6"/>',
+  pay:'<rect x="2.5" y="5.5" width="19" height="13" rx="2"/><path d="M2.5 10h19"/>',
+  inv:'<path d="M3 20V9l9-5 9 5v11"/><path d="M8 20v-6h8v6"/>',
+  cust:'<circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.6 3.1-5.6 7-5.6s7 2 7 5.6"/>',
+  store:'<path d="M4 9h16v11H4z"/><path d="M3 9l2-5h14l2 5"/>',
+  widget:'<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16"/>',
+  portal:'<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.6 2.5 14.4 0 17"/>',
+  land:'<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M3.5 9h17M7.5 13h6"/>',
+  notif:'<path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
+  chart:'<path d="M4 20V4"/><path d="M4 20h16"/><path d="M8 20v-6M13 20v-9M18 20v-4"/>',
+  gear:'<circle cx="12" cy="12" r="3.1"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.4 5.4l2.1 2.1M16.5 16.5l2.1 2.1M18.6 5.4l-2.1 2.1M7.5 16.5l-2.1 2.1"/>'
+};
+const svg = k => '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+(ICO[k]||'')+'</svg>';
+
+/* module definitions. `render` returns the main pane for that module. */
+const M = {
+
+plans:{
+  label:'Plans', icon:'plans',
+  title:'Plans', sub:'Everything you sell through StackBack. One plan can generate many subscriptions.',
+  acts:['Export','Create plan'],
+  absorbed:[], fold:[],
+  why:[
+    'This is the origin of every other record in the app, so it sits first. Nothing downstream exists until something here does.',
+    'Renamed from "Manage Purchase Options". That label is Shopify API language, it was the longest item in a sidebar that truncates, and it never told anyone that plans get created here. It was also sitting next to "Subscriptions", so two adjacent items both read as the subscription thing.',
+    'Named Plans, not "Plans and Bundles". More purchase option types are coming (Try Before You Buy per INT03, Memberships and Courses per the Later specs) and a two-noun label would be obsolete the moment the third one ships. Plans covers all of them, your own plan files already use the word (a Single Plans sheet and a Bundle Plans sheet), and Recharge, Loop and Skio all use Plans for creation, so merchants arriving from another app already know which screen this is.'
+  ],
+  render(){ return `
+    ${chromeRow('Plan type',[
+      tab('Subscription plans',1,'12'), tab('Bundles',0,'7'),
+      tab('Try before you buy',0,'',1), tab('Memberships',0,'',1), tab('Courses',0,'',1)
+    ])}
+    ${chromeRow('View',[pill('By plan',1),pill('By product',0)])}
+    <div class="card">
+      <div class="cardHd">Subscription plans <span class="hint">12 plans &middot; 4 drafts</span></div>
+      ${planRow('Monthly Essentials','Prepaid, PAYG','3 products','ok','Published')}
+      ${planRow('Quarterly Wellness Box','Prepaid 5x','6 products','ok','Published')}
+      ${planRow('Coffee Club','PAYG','1 product','warn','Draft')}
+      ${planRow('Festive Flash Sale','Prepaid 5x, bi-weekly','4 products','off','Scheduled')}
+    </div>
+    <div class="specNote" style="margin-top:14px">The dashed tabs are the future option types. They are why this screen keeps a generic name, and why its type selector needs to hold five or six entries rather than the two the current v12 listing has.</div>`;
+  }
+},
+
+subs:{
+  label:'Subscriptions', icon:'subs',
+  title:'Subscriptions', sub:'The agreements customers hold. Each one carries a contract code and generates orders over time.',
+  acts:['Export','⋯'],
+  absorbed:[], fold:[],
+  why:[
+    'A subscription is what exists after someone buys a plan, so it sits directly below Plans and above the orders it throws off. Contract codes stay PC-1041 internally; only the merchant-facing label changed from "Purchase Contracts", because merchants say subscriptions and "contract" is Shopify API vocabulary.',
+    'In the locked version A this screen holds contract rows only, because Customers keeps its own nav item. Version B folded Customers in here as a By customer view; that is documented as the alternative and was not selected. Keeping them apart also avoids the one-time-buyer coverage gap the pivot would have carried, since a buyer with an order but no contract is invisible to a contract-sourced pivot.',
+    'Order state appears here as read-only status with a link through. The reschedule action lives only in Orders. One place to act, one place to see, so two people never fix the same failed delivery and let the records drift.'
+  ],
+  render(){ return `
+    ${chromeRow('View',[pill('By subscription',1),pill('By customer',0)])}
+    <div class="card">
+      <div class="cardHd">Active subscriptions <span class="hint">248 active &middot; 12 paused &middot; 4 cancellation requests</span></div>
+      ${subRow('PC-1041','Priya Menon','Monthly Essentials','Active','ok','Next delivery 12 Aug')}
+      ${subRow('PC-1039','Rahul Iyer','Quarterly Wellness Box','Active','ok','Delivery 3 of 6')}
+      ${subRow('PC-1032','Ananya Rao','Monthly Essentials','Paused','warn','Resumes 1 Sep')}
+      ${subRow('PC-1028','Kabir Shah','Coffee Club','Cancellation requested','crit','Awaiting review')}
+    </div>
+    <div class="specNote" style="margin-top:14px"><b>Known caveat on the By customer view.</b> One-time bundle buyers have an order but no contract, so a pivot sourced only from contracts would make them invisible. The view has to be sourced from anyone with StackBack activity, which means a screen called Subscriptions holds a few people who never subscribed. They carry a "One-time only" chip.</div>`;
+  }
+},
+
+orders:{
+  label:'Orders', icon:'orders',
+  title:'Orders', sub:'Every individual delivery StackBack pushes to Shopify, recurring and one-time.',
+  acts:['Export','⋯'],
+  absorbed:['One-Time Orders'], fold:[],
+  why:[
+    'An order is one delivery a subscription generates, so it sits directly beneath Subscriptions. A 6-delivery prepaid contract appears once above and six times here.',
+    'It absorbs One-Time Orders, which was a WHERE clause pretending to be a module: same table, same columns, same actions, just non-recurring. Orders already had tabs, since Bundle Orders ships as a separate tab on this screen, so a top-level sibling was an inconsistency rather than a structure.',
+    'This is where out-of-stock lands. StackBack cannot read stock, it only finds out when a push fails, so there is no hold state and no Holds screen. A failed push appears under Needs attention and the only remedy is to reschedule, which happens here and nowhere else.',
+    'Every row carries a contract-state chip, so a rep answering "where is my box" sees that the subscription is paused without leaving the screen.'
+  ],
+  render(){ return `
+    ${chromeRow('Filter',[pill('All',1,'1,204'),pill('Subscription',0,'1,061'),pill('One-time',0,'143'),pillAttn('Needs attention','6')])}
+    <div class="card">
+      <div class="cardHd">Orders <span class="hint">Needs attention shown first</span></div>
+      ${ordRowSplit('SB-8842','Priya Menon &middot; PC-1041','Push failed, out of stock','crit','Paused','Reschedule delivery')}
+      ${ordRowSplit('SB-8839','Rahul Iyer &middot; PC-1039','Push failed, out of stock','crit','Active','Reschedule delivery')}
+      ${ordRow('SB-8836','Meera Nair &middot; PC-1035','Delivered 24 Jul','ok','Active')}
+      ${ordRow('SB-8835','Arjun Das &middot; one-time bundle','Delivered 24 Jul','ok','One-time only')}
+      ${ordRow('SB-8830','Ananya Rao &middot; PC-1032','Upcoming 12 Aug','off','Paused')}
+    </div>
+    <div class="specNote" style="margin-top:14px">Row actions follow the locked rule: exactly one primary action sits beside the kebab, and any secondary action stacks in a row above it. Rows with a single action stay on one line.</div>`;
+  }
+},
+
+pay:{
+  label:'Payment Reminders', icon:'pay',
+  title:'Payment Reminders', sub:'Customers with money outstanding, and how far through the reminder sequence each one is.',
+  acts:['Send selected'],
+  absorbed:[], fold:[],
+  why:[
+    'Structurally this is Orders filtered to unpaid, so it could have been a filter. It stays a screen by explicit decision, twice, because chasing money is a distinct job with a distinct owner. That is recorded plainly so a future reader does not merge it as an apparent oversight.',
+    'It sits directly under Orders because it is derived from Orders, not because it is more important than Inventory.',
+    'The screen needs a change of kind, not of position. Today it is a log of which reminder jobs fired, which is a developer artifact. For Customer Success it has to become a work queue: who owes, sorted by urgency, with a send action on the row.',
+    'Reminder counts show as a fraction against the store’s existing dunning cap, so 2 of 4 rather than a bare count. The 4 comes from the store’s own "Retry failed payments" setting rather than a number invented for this screen.'
+  ],
+  render(){ return `
+    ${chromeRow('Filter',[pill('All unpaid',1,'23'),pill('First reminder',0,'9'),pill('Final reminder',0,'4'),pill('Overdue',0,'10')])}
+    <div class="card">
+      <div class="cardHd">Awaiting payment <span class="hint">Total outstanding: 48,200</span></div>
+      ${payRow('Kabir Shah','SB-8801 &middot; PC-1028','2 of 4 reminders sent','warn','1,499')}
+      ${payRow('Sneha Kulkarni','SB-8794 &middot; PC-1021','4 of 4 reminders sent','crit','2,250')}
+      ${payRow('Vikram Patel','SB-8788 &middot; PC-1014','1 of 4 reminders sent','ok','899')}
+    </div>`;
+  }
+},
+
+inv:{
+  label:'Inventory', icon:'inv',
+  title:'Inventory', sub:'What StackBack will need from your warehouse over the next 7, 14 and 30 days.',
+  acts:['Export forecast'],
+  absorbed:[], fold:[],
+  why:[
+    'This is a forward demand forecast, not stock tracking. StackBack cannot read available stock, but it knows every delivery it is going to push, because the contracts and dates already exist. So it can tell you that 12 August needs 60 units of a SKU without knowing whether you have them.',
+    'The label stays Inventory even though the content is a forecast, because that is the word a merchant reaches for when they want to know whether they can fulfil what is coming. The label serves the mental model and the content serves the job.',
+    'It sits under Orders because it is Orders summed by SKU and date. Dashboard first, not a flat table, since the question is "am I about to run short" rather than "show me every line".',
+    'This is the module that replaced the Holds screen. Holds assumed StackBack could detect stock and hold a delivery until it returned, which it cannot. Getting ahead of the shortfall is the only real remedy, and this is the screen that does it.'
+  ],
+  render(){ return `
+    <div class="grid2">
+      <div class="mini"><div class="k">Next 7 days</div><div class="v">412</div><div class="d">units across 18 SKUs</div></div>
+      <div class="mini"><div class="k">Next 14 days</div><div class="v">867</div><div class="d">units across 23 SKUs</div></div>
+      <div class="mini"><div class="k">Next 30 days</div><div class="v">1,940</div><div class="d">units across 31 SKUs</div></div>
+      <div class="mini"><div class="k">Push failures, 30d</div><div class="v">6</div><div class="d">all resolved by reschedule</div></div>
+    </div>
+    <div class="card">
+      <div class="cardHd">Demand by day, next 14 days <span class="hint">Amber marks a day above your average throughput</span></div>
+      <div style="padding:14px">
+        <div class="bars">
+          <i style="height:38%"></i><i style="height:52%"></i><i style="height:44%"></i><i class="hot" style="height:88%"></i>
+          <i style="height:40%"></i><i style="height:33%"></i><i style="height:56%"></i><i style="height:61%"></i>
+          <i class="hot" style="height:94%"></i><i style="height:47%"></i><i style="height:39%"></i><i style="height:52%"></i>
+          <i style="height:58%"></i><i style="height:43%"></i>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="cardHd">Demand by SKU <span class="hint">Next 14 days</span></div>
+      ${invRow('Cold Pressed Coffee 500g','12 Aug peak','184 units','warn')}
+      ${invRow('Wellness Powder 250g','20 Aug peak','142 units','ok')}
+      ${invRow('Herbal Tea Sampler','16 Aug peak','96 units','ok')}
+    </div>`;
+  }
+},
+
+cust:{
+  label:'Customers', icon:'cust',
+  title:'Customers', sub:'Everyone with StackBack activity, subscribers and one-time buyers.',
+  acts:['Export'],
+  absorbed:[], fold:[],
+  why:[
+    'This screen exists as its own nav item in version A only. In versions B and C it becomes the By customer view inside Subscriptions.',
+    'The argument for keeping it separate: Customer Success reps often start from a person rather than an order, and a rep who searches a name and finds nothing concludes there is no record. That is a real support failure mode.',
+    'The argument for folding it in: it is a pivot of data already on screen, a grouping of contracts and orders by person rather than a separate object. Version A pays one nav slot to remove any doubt about where to look.'
+  ],
+  render(){ return `
+    ${chromeRow('Filter',[pill('All',1,'1,880'),pill('Subscribers',0,'248'),pill('One-time only',0,'1,632')])}
+    <div class="card">
+      <div class="cardHd">Customers</div>
+      ${custRow('Priya Menon','2 subscriptions &middot; 14 orders','ok','Active')}
+      ${custRow('Arjun Das','1 bundle purchase','neu','One-time only')}
+      ${custRow('Ananya Rao','1 subscription &middot; 6 orders','warn','Paused')}
+    </div>`;
+  }
+},
+
+store:{
+  label:'Storefront', icon:'store',
+  title:'Storefront', sub:'Every surface a customer sees, and the brand tokens all of them read from.',
+  acts:['Preview'],
+  absorbed:['Portal Settings','Landing Pages','Widgets'],
+  fold:[],
+  why:[
+    'This Storefront parent belongs to version B and was NOT selected. Version A keeps Widget, Portal and Landing Pages as separate nav items. Kept here as the documented alternative.',
+    'These three screens are already one system in the data layer and three items in the nav. The brand token flow is: portal settings populated, then Metaobject sync, then widget theming applied. Splitting them showed a division the product does not actually have, and it meant a merchant changing a brand colour had to think about two screens.',
+    'Branding is the first tab because it feeds the other three. Tokens set once, inherited everywhere.',
+    'This also removes a genuine duplication. Brand fields currently exist in both Settings and Portal Settings. They consolidate here and leave Settings entirely, which needs a data audit first to establish which of the two is authoritative today.',
+    'Independently validated: your existing CX Module QA label already groups exactly these three children, so this merge aligns the nav with a taxonomy already in use rather than inventing one.',
+    'One palette note. Everything else in the admin is Polaris-neutral, but the live previews inside these tabs show storefront surfaces, so they use the real storefront tokens (cream, amber, purple). The palette is decided by what is being shown, not by which screen it sits on.'
+  ],
+  render(){ return `
+    ${chromeRow('Surface',[tab('Branding',1),tab('Widget',0),tab('Portal',0),tab('Landing pages',0,'4')])}
+    <div class="card">
+      <div class="cardHd">Brand tokens <span class="hint">Inherited by widget, portal and landing pages</span></div>
+      ${tokRow('Logo','Uploaded, 240x60','ok')}
+      ${tokRow('Primary action','#E3A23E','ok')}
+      ${tokRow('Surface','#F0EBE2','ok')}
+      ${tokRow('Body font','Inter','ok')}
+      ${tokRow('Savings accent','#3B6D11','ok')}
+    </div>
+    <div class="specNote" style="margin-top:14px">Moved in from Settings: the brand fields that were duplicated across Settings and Portal Settings now live here as the single source.</div>`;
+  }
+},
+
+widget:{
+  label:'Widget', icon:'widget', title:'Widget', sub:'The purchase option card on your product pages.',
+  acts:['Preview'], absorbed:[], fold:[],
+  why:['Its own nav item in the locked version A, so performance marketing reaches it in one click. Brand tokens come from Settings and Branding, which all three storefront surfaces read from.','Version B made this a tab inside a Storefront parent alongside Portal and Landing pages, on the grounds that the three already share one token pipeline in code. Documented as the alternative, not selected.'],
+  render(){ return `<div class="card"><div class="cardHd">Widget settings</div>${tokRow('Template','Purchase options v1','ok')}${tokRow('Active on','All products','ok')}${tokRow('Savings liner','Blank, row hidden','off')}</div>`; }
+},
+portal:{
+  label:'Portal', icon:'portal', title:'Customer portal', sub:'Where customers manage their own subscriptions.',
+  acts:['Preview'], absorbed:[], fold:[],
+  why:['Its own nav item in the locked version A. Renamed from "Portal Settings" to just Portal, because the brand tokens it used to own have moved to Settings and Branding as the single source, so it is no longer a settings screen.','Version B made this a tab inside Storefront. Documented as the alternative, not selected.'],
+  render(){ return `<div class="card"><div class="cardHd">Portal settings</div>${tokRow('Template','Classic','ok')}${tokRow('Featured products','3 selected','ok')}${tokRow('Advanced CSS','None','off')}</div>`; }
+},
+land:{
+  label:'Landing Pages', icon:'land', title:'Landing pages', sub:'Standalone pages per product, bundle or flash sale.',
+  acts:['Create page'], absorbed:[], fold:[],
+  why:['Its own nav item in the locked version A, so performance marketing reaches it directly rather than through a parent.','Version B made this a tab inside Storefront. Documented as the alternative, not selected.'],
+  render(){ return `<div class="card"><div class="cardHd">Landing pages <span class="hint">4 published</span></div>${tokRow('/pages/monthly-essentials','Published','ok')}${tokRow('/pages/wellness-box','Published','ok')}${tokRow('/pages/festive-flash','Scheduled','warn')}</div>`; }
+},
+
+chart:{
+  label:'Analytics', icon:'chart',
+  title:'Analytics', sub:'Revenue, retention and churn across subscriptions and bundles.',
+  acts:['Export'], absorbed:[], fold:[],
+  why:[
+    'A reading surface, not configuration, which is why it stays out of Settings even though it is opened rarely. Settings is where you change how the app behaves; this is where you find out how it is performing.',
+    'It is not in the nav at all today, though the spec exists at INT05. Adding it is part of what this refactor pays for by merging elsewhere.',
+    'This is the founder and brand manager screen, one of the two in-and-out personas. It sits low because they are in and out, not because it matters less.'
+  ],
+  render(){ return `
+    <div class="grid2">
+      <div class="mini"><div class="k">MRR</div><div class="v">4.2L</div><div class="d">up 8 percent month on month</div></div>
+      <div class="mini"><div class="k">Active subscribers</div><div class="v">248</div><div class="d">12 paused</div></div>
+      <div class="mini"><div class="k">Churn, 30d</div><div class="v">3.1%</div><div class="d">4 cancellation requests open</div></div>
+      <div class="mini"><div class="k">Avg contract value</div><div class="v">6,840</div><div class="d">prepaid runs 2.3x PAYG</div></div>
+    </div>
+    <div class="card"><div class="cardHd">Revenue by month</div><div style="padding:14px"><div class="bars">
+      <i style="height:41%"></i><i style="height:48%"></i><i style="height:44%"></i><i style="height:57%"></i><i style="height:63%"></i>
+      <i style="height:59%"></i><i style="height:71%"></i><i style="height:78%"></i><i style="height:74%"></i><i style="height:86%"></i>
+      <i style="height:92%"></i><i style="height:97%"></i></div></div></div>`;
+  }
+},
+
+gear:{
+  label:'Settings', icon:'gear',
+  title:'Settings', sub:'Everything configured once and revisited rarely. Grouped, and searchable.',
+  acts:[],
+  absorbed:['Integrations','Custom Checkout Adapt','Billing','Notification Templates','brand settings'],
+  fold:[],
+  why:[
+    'Brand tokens live here in the locked version A. Because Widget, Portal and Landing Pages each keep their own nav item, there is no Storefront parent to hold the tokens all three read from, so they consolidate under Settings and Branding, which is also where Shopify puts brand assets. This still removes the real duplication, since brand fields currently exist in both Settings and Portal Settings and will now have one source.',
+    'A grouped left rail plus search, matching Shopify’s own Settings pattern. A flat list of this length would reproduce the exact problem this refactor exists to solve, one level down.',
+    'Billing and Integrations moved in because Shopify already puts Plan, Billing, payment providers and shipping carriers under Settings, so this follows platform muscle memory instead of fighting it. This reverses an earlier position that kept Billing top-level to protect the upgrade path; search inside Settings dissolves most of that objection.',
+    'Customer notifications moved in too. The templates are set at onboarding and rarely touched afterwards, and WhatsApp already lives here as a connection, so keeping the templates as a top-level item was inconsistent. The template editor still opens as a full page from here rather than squeezing into a settings panel, because it carries an editor, a live preview and a test send.',
+    'Custom Checkout Adapt loses its name. It exists so StackBack works when a store uses GoKwik or Shopflo instead of Shopify checkout, which makes it a property of that connection rather than a product of its own. It appears as a "Checkout compatibility" status row inside each relevant integration.',
+    'One risk worth naming: that checkout status is what Ops needs under pressure during an incident, and it now sits two levels deep. Mitigations are a setup-health warning on Home and making Settings search match "checkout".',
+    'Search has a limit worth stating. It helps someone who already thought to open Settings. It does nothing for someone who does not know a feature exists, so it is a reason to be less afraid of nesting, not a licence to nest anything.'
+  ],
+  render(){ return `
+    <div class="setWrap">
+      <div class="setRail">
+        <div class="setSearch"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg> Search settings</div>
+        <div class="setItem">Branding <span class="nu">MOVED IN</span></div>
+        <div class="setItem">Orders and scheduling</div>
+        <div class="setItem">Payments</div>
+        <div class="setItem">Shipping</div>
+        <div class="setItem">Policies</div>
+        <div class="setItem">Customer notifications <span class="nu">MOVED IN</span></div>
+        <div class="setItem">Admin alert delivery</div>
+        <div class="setItem sel">Integrations <span class="nu">MOVED IN</span></div>
+        <div class="setItem">Billing <span class="nu">MOVED IN</span></div>
+      </div>
+      <div class="setBody">
+        <div style="font-weight:650;font-size:15px">Integrations</div>
+        <div style="color:var(--p-muted);font-size:12.5px;margin-top:3px">Connections to channels and checkouts outside Shopify.</div>
+        <div class="card" style="margin-top:14px">
+          ${intRow('WhatsApp','Meta Cloud API &middot; +91 98xxx xxxxx','ok','Connected','Credentials and opt-ins only. Template content lives in Customer notifications.')}
+          ${intRow('GoKwik','Checkout compatibility','warn','Needs resync','Was called Custom Checkout Adapt.')}
+          ${intRow('Shopflo','Checkout compatibility','off','Not set up','')}
+          ${intRow('Email','AWS SES ap-south-1','ok','Connected','')}
+        </div>
+      </div>
+    </div>`;
+  }
+},
+
+/* version C variants */
+ordersC:{
+  label:'Orders', icon:'orders',
+  title:'Orders', sub:'Deliveries, unpaid balances and forward demand on one screen.',
+  acts:['Export','⋯'],
+  absorbed:['One-Time Orders','Payment Reminders','Inventory'],
+  fold:[],
+  why:[
+    'This is what compression costs. Orders absorbs Payment Reminders as an Unpaid filter and Inventory as a Forecast tab, taking the nav to six items with nothing hidden by the fold.',
+    'It reverses two decisions already made. This is structurally the unified "Orders and Inventory" hub that was superseded in D2026-0727-04 after six wireframe iterations, just renamed. It also removes Payment Reminders as its own screen, which was locked twice.',
+    'The case for it: one destination for everything order-shaped, and Ops and Customer Success share a screen rather than passing work between two. The case against: a single screen carrying three jobs is how the original hub became unreadable, and chasing money loses its own owner.'
+  ],
+  render(){ return `
+    ${chromeRow('Tab',[tab('Orders',1,'1,204'),tab('Unpaid',0,'23'),tab('Forecast',0)])}
+    ${chromeRow('Filter',[pill('All',1),pill('Subscription',0),pill('One-time',0),pillAttn('Needs attention','6')])}
+    <div class="card">
+      <div class="cardHd">Orders <span class="hint">Payment Reminders and Inventory are now tabs above</span></div>
+      ${ordRowSplit('SB-8842','Priya Menon &middot; PC-1041','Push failed, out of stock','crit','Paused','Reschedule delivery')}
+      ${ordRow('SB-8836','Meera Nair &middot; PC-1035','Delivered 24 Jul','ok','Active')}
+      ${ordRow('SB-8835','Arjun Das &middot; one-time bundle','Delivered 24 Jul','ok','One-time only')}
+    </div>
+    <div class="specWarn" style="margin-top:14px"><b>This screen is the version C tradeoff in one place.</b> Six nav items and no fold, bought by rebuilding the hub you rejected and dissolving a screen you locked twice.</div>`;
+  }
+}
+};
+
+/* current (14 item) nav, for the comparison view */
+const NOW = [
+ ['Manage Purchase Options','plans'],['Purchase Contracts','subs'],['One-Time Orders','orders'],['Orders','orders'],
+ ['Payment Reminders','pay'],['Customers','cust'],['Notification Templates','notif'],['Portal Settings','portal'],
+ ['Landing Pages','land'],['Widgets','widget'],['Custom Checkout Adapt','gear'],['Integrations','gear'],
+ ['Billing','pay'],['Settings','gear']
+];
+
+const VERSIONS = {
+  A:{ items:['plans','subs','orders','pay','inv','cust','widget','portal','land','chart','gear'], foldAfter:9,
+      note:'<b>Version A, clearest. LOCKED 2026-07-28.</b> Nothing nested that a merchant might go looking for. Customers stands alone and the three storefront surfaces stay separate, so marketing goes straight to Widget. Two consequences of this choice: brand tokens move to Settings &rsaquo; Branding, since there is no Storefront parent to hold them, and at 11 items the "View more" fold cuts the list, so Analytics and Settings sit below it. Clearest per item, least clear as a list, and that tradeoff was taken deliberately.' },
+  B:{ items:['plans','subs','orders','pay','inv','store','chart','gear'], foldAfter:null,
+      note:'<b>Version B, balanced. Not selected.</b> Eight items, all above the fold. Storefront is one destination for every customer-facing surface, which the data layer already unifies through the brand token pipeline. Everything a team touches daily sits in the top five.' },
+  C:{ items:['plans','subs','ordersC','store','chart','gear'], foldAfter:null,
+      note:'<b>Version C, compressed.</b> Six items, the whole nav visible, no fold at all. Orders absorbs Payment Reminders as an Unpaid filter and Inventory as a Forecast tab. Read the warning below section 4 before choosing this one: it reverses two decisions already made.' },
+  NOW:{ items:null, foldAfter:null,
+      note:'<b>Current state, 14 items.</b> Ordered by the sequence things were built in, with no grouping logic. Shopify truncates the list, so the cut falls at an arbitrary point and the hidden items are effectively random. Two adjacent items, Purchase Contracts and Manage Purchase Options, both read as the subscription thing.' }
+};
+
+/* ============================ row helpers ============================ */
+const chromeRow=(lbl,items)=>`<div class="chrome"><span class="lbl">${lbl}</span>${items.join('')}</div>`;
+const tab=(t,on,n,fut)=>`<span class="tab ${on?'on':''} ${fut?'future':''}">${t}${n?` <span class="n">${n}</span>`:''}</span>`;
+const pill=(t,on,n)=>`<span class="pill ${on?'on':''}">${t}${n?` <span class="n">${n}</span>`:''}</span>`;
+const pillAttn=(t,n)=>`<span class="pill attn">${t} <span class="n">${n}</span></span>`;
+
+const planRow=(t,s,p,d,st)=>`<div class="row"><span class="dot ${d}"></span><div class="thumb"></div><div class="grow"><div class="t">${t}</div><div class="s">${s} &middot; ${p}</div></div><span class="chip neu">${st}</span><span class="btn kebab">&#8943;</span></div>`;
+const subRow=(c,n,p,st,d,s)=>`<div class="row"><span class="dot ${d}"></span><div class="grow"><div class="t">${n} <span style="color:var(--p-faint);font-weight:500">${c}</span></div><div class="s">${p} &middot; ${s}</div></div><span class="chip ${d}">${st}</span><span class="btn kebab">&#8943;</span></div>`;
+const ordRow=(c,n,s,d,chip)=>`<div class="row"><span class="dot ${d}"></span><div class="grow"><div class="t">${c}</div><div class="s">${n} &middot; ${s}</div></div><span class="chip ${d==='crit'?'crit':'neu'}">${chip}</span><span class="btn">View order</span><span class="btn kebab">&#8943;</span></div>`;
+const ordRowSplit=(c,n,s,d,chip,act)=>`<div class="row"><span class="dot ${d}"></span><div class="grow"><div class="t">${c}</div><div class="s">${n} &middot; ${s}</div></div><span class="chip ${d}">${chip}</span><div class="stack2"><div class="r1"><span class="btn">View order</span></div><div class="r2"><span class="btn pri">${act}</span><span class="btn kebab">&#8943;</span></div></div></div>`;
+const payRow=(n,r,c,d,amt)=>`<div class="row"><span class="dot ${d}"></span><div class="grow"><div class="t">${n}</div><div class="s">${r} &middot; ${c}</div></div><span class="chip neu">${amt}</span><span class="btn pri">Send reminder</span><span class="btn kebab">&#8943;</span></div>`;
+const invRow=(t,s,u,d)=>`<div class="row"><span class="dot ${d}"></span><div class="thumb"></div><div class="grow"><div class="t">${t}</div><div class="s">${s}</div></div><span class="chip ${d==='warn'?'warn':'neu'}">${u}</span></div>`;
+const custRow=(n,s,c,chip)=>`<div class="row"><span class="dot ${c==='neu'?'off':c}"></span><div class="grow"><div class="t">${n}</div><div class="s">${s}</div></div><span class="chip ${c}">${chip}</span><span class="btn kebab">&#8943;</span></div>`;
+const tokRow=(t,s,d)=>`<div class="row"><span class="dot ${d}"></span><div class="grow"><div class="t">${t}</div><div class="s">${s}</div></div><span class="btn">Edit</span></div>`;
+const intRow=(t,s,d,st,note)=>`<div class="row"><span class="dot ${d}"></span><div class="grow"><div class="t">${t}</div><div class="s">${s}${note?`<br><span style="color:var(--p-faint)">${note}</span>`:''}</div></div><span class="chip ${d}">${st}</span><span class="btn">Manage</span></div>`;
+
+/* ============================ render ============================ */
+let ver='A', sel='plans';
+
+function shopifyChrome(){
+  const items=[['Home','plans'],['Orders','orders'],['Products','plans'],['Customers','cust'],['Marketing','chart'],['Discounts','pay'],['Content','land'],['Analytics','chart']];
+  return items.map(([t,i])=>`<div class="navItem ghost">${svg(i)}${t}</div>`).join('')
+    + `<div class="navSec">Sales channels <span class="chev">&rsaquo;</span></div><div class="navSec">Apps <span class="chev">&rsaquo;</span></div>`;
+}
+
+function renderNav(){
+  const v=VERSIONS[ver];
+  let subs='';
+  if(ver==='NOW'){
+    subs = NOW.map(([t,i],idx)=>
+      `<button class="navSub ${idx===0?'sel':''}" disabled style="cursor:default">${svg(i)}${t}</button>`
+    ).join('') + `<div class="navFold">View less</div>`;
+  } else {
+    subs = v.items.map((id,idx)=>{
+      const m=M[id];
+      const isNew = (id==='inv'||id==='chart');
+      let out=`<button class="navSub ${id===sel?'sel':''}" data-id="${id}">${svg(m.icon)}${m.label}${isNew?'<span class="nu">NEW</span>':''}</button>`;
+      if(v.foldAfter!==null && idx===v.foldAfter-1) out += `<div class="navFold">View more</div>`;
+      return out;
+    }).join('');
+  }
+  document.getElementById('navL').innerHTML =
+    shopifyChrome() +
+    `<div class="navApp"><span class="logo">SB</span>StackBack Subs<span class="dot"></span></div>` +
+    subs + `<div class="navGap"></div>` +
+    `<div class="navItem ghost">${svg('gear')}Settings</div>`;
+
+  document.querySelectorAll('.navSub[data-id]').forEach(b=>{
+    b.onclick=()=>{ sel=b.dataset.id; renderNav(); renderPage(); };
+  });
+}
+
+function renderPage(){
+  const el=document.getElementById('page');
+  if(ver==='NOW'){
+    el.innerHTML = `
+      <div class="pgHead"><div><h2 class="pgTitle">Current nav, 14 items</h2>
+      <p class="pgSub">Built in the order features shipped. Select another version above to see the restructure.</p></div></div>
+      <div class="card"><div class="cardHd">What a merchant faces today <span class="hint">Shopify truncates this list</span></div>
+      ${NOW.map(([t])=>`<div class="row"><span class="dot off"></span><div class="grow"><div class="t">${t}</div></div></div>`).join('')}
+      </div>
+      <div class="why"><h4>The three problems</h4>
+      <p><b>No grouping logic.</b> Manage Purchase Options and Billing sit as equals. Nothing tells a merchant which items belong together, so the list has to be memorised.</p>
+      <p><b>Two items read the same.</b> Purchase Contracts and Manage Purchase Options are adjacent and both sound like the subscription thing, and neither says "plans get created here".</p>
+      <p><b>The fold is arbitrary.</b> Shopify hides the tail of the list behind View more, and because the order carries no logic, what gets hidden is random rather than the things nobody opens.</p>
+      </div>`;
+    return;
+  }
+  const m=M[sel]||M[VERSIONS[ver].items[0]];
+  el.innerHTML = `
+    <div class="pgHead">
+      <div><h2 class="pgTitle">${m.title}</h2><p class="pgSub">${m.sub}</p></div>
+      ${m.acts.length?`<div class="pgActs">${m.acts.map((a,i)=>`<span class="btn ${i===m.acts.length-1&&a!=='⋯'?'pri':''} ${a==='⋯'?'kebab':''}">${a==='⋯'?'&#8943;':a}</span>`).join('')}</div>`:''}
+    </div>
+    ${m.render()}
+    <div class="why">
+      <h4>Why it sits here</h4>
+      ${m.why.map(p=>`<p>${p}</p>`).join('')}
+      ${m.absorbed.length?`<div class="abs"><span class="al">Absorbed</span>${m.absorbed.map(a=>`<span class="fold">${a}</span>`).join('')}</div>`:''}
+    </div>`;
+}
+
+/* mapping table */
+const MAP=[
+ ['Manage Purchase Options','<b>Plans</b>','Renamed. The old label was API language, the longest item in a truncating sidebar, and it never said that plans get created there. Kept generic rather than "Plans and Bundles" because more option types are coming.'],
+ ['Purchase Contracts','<b>Subscriptions</b>','Renamed. Merchants say subscriptions. Record codes stay PC-####, so the contract-versus-order convention is untouched.'],
+ ['One-Time Orders','<span class="into">filter inside Orders</span>','A WHERE clause pretending to be a module. Same table, same columns, same actions. Orders already had tabs.'],
+ ['Orders','<b>Orders</b>','Stays, and gains a Needs attention filter plus a contract-state chip on every row. This is where failed pushes are worked.'],
+ ['Payment Reminders','<b>Payment Reminders</b>','Stays by explicit decision, though structurally a filter on Orders. Needs to change from a job log into a work queue.'],
+ ['Customers','<b>Customers</b>','Keeps its own item. Paying one nav slot removes any doubt about where to look for a person, and it avoids the one-time-buyer coverage gap a By customer pivot would have carried.'],
+ ['Notification Templates','<span class="into">Settings &rsaquo; Customer notifications</span>','Set at onboarding, rarely touched after. Editor still opens full page. Named to match the existing Customer Notification QA label.'],
+ ['Portal Settings','<b>Portal</b>','Keeps its own item. Renamed to drop "Settings", because the brand tokens it used to own now live in Settings and Branding as the single source.'],
+ ['Landing Pages','<b>Landing Pages</b>','Keeps its own item, so performance marketing reaches it in one click.'],
+ ['Widgets','<b>Widget</b>','Keeps its own item, singular. Version B merged these three into a Storefront parent matching the existing CX Module QA label; documented as the alternative, not selected.'],
+ ['Custom Checkout Adapt','<span class="into">Settings &rsaquo; Integrations, as Checkout compatibility</span>','Loses its name. It is a property of the GoKwik or Shopflo connection, not a product of its own.'],
+ ['Integrations','<span class="into">Settings &rsaquo; Integrations</span>','Shopify puts payment providers and shipping carriers under Settings. This follows the same convention.'],
+ ['Billing','<span class="into">Settings &rsaquo; Billing</span>','Shopify puts Plan and Billing under Settings too. Reverses an earlier call to keep it top-level; search inside Settings covers the findability risk.'],
+ ['Settings','<b>Settings</b>','Gains a grouped left rail and search, plus Branding, Integrations, Billing and Customer notifications. Branding becomes the single source for the tokens currently duplicated between Settings and Portal Settings.']
+];
+document.getElementById('mapBody').innerHTML = MAP.map(([a,b,c],i)=>
+  `<tr><td class="n">${i+1}</td><td>${b.startsWith('<b>')?a:'<span class="gone">'+a+'</span>'}</td><td>${b}</td><td style="color:var(--p-muted)">${c}</td></tr>`
+).join('') + `
+  <tr><td class="n"></td><td><span style="color:var(--p-faint)">not in nav today</span></td><td><b>Inventory</b><span class="newt">NEW</span></td><td style="color:var(--p-muted)">A forward demand forecast built from StackBack's own contract data. Replaces the Holds screen, which assumed stock could be detected.</td></tr>
+  <tr><td class="n"></td><td><span style="color:var(--p-faint)">not in nav today</span></td><td><b>Analytics</b><span class="newt">NEW</span></td><td style="color:var(--p-muted)">Spec exists at INT05 but has never had a nav item. A reading surface, so it stays out of Settings.</td></tr>
+  <tr><td class="n"></td><td>Notifications centre</td><td><span class="into">header bell, on every screen</span></td><td style="color:var(--p-muted)">Merchant alerts are a daily glance, not a destination. Delivery config goes to Settings. This is the Admin Notification module, INT-01, already in review.</td></tr>`;
+
+/* version cards */
+const VC=[
+ {k:'A',t:'Clearest',n:11,rec:true,
+  items:['Plans','Subscriptions','Orders','Payment Reminders','Inventory','Customers','Widget','Portal','Landing Pages','Analytics','Settings'],
+  hl:[5,6,7,8],
+  tail:'Nothing nested that a merchant might go looking for. Customers standalone also removes the one-time-buyer coverage gap that a By customer pivot would have carried. Two accepted costs: brand tokens move to Settings and Branding, since there is no Storefront parent, and at 11 items the View more fold cuts the list so Analytics and Settings fall below it.'},
+ {k:'B',t:'Balanced',n:8,rec:false,
+  items:['Plans','Subscriptions','Orders','Payment Reminders','Inventory','Storefront','Analytics','Settings'],
+  hl:[5],
+  tail:'All eight above the fold. Storefront is one destination for every customer-facing surface, which the data layer already unifies. The argument that lost: separating widget, portal and landing pages shows a split the product does not actually have. Kept as the documented alternative.'},
+ {k:'C',t:'Compressed',n:6,rec:false,
+  items:['Plans','Subscriptions','Orders','Storefront','Analytics','Settings'],
+  hl:[2],
+  tail:'The tidiest list, and the whole nav is visible. But Orders absorbing Payment Reminders and Inventory rebuilds the unified hub superseded in D2026-0727-04 and dissolves a screen locked twice.'}
+];
+document.getElementById('verCards').innerHTML = VC.map(v=>`
+  <div class="vcard ${v.rec?'rec':''}">
+    <h3>${v.k}. ${v.t} <span class="cnt">${v.n} items</span> ${v.rec?'<span class="recTag">LOCKED</span>':''}</h3>
+    <ol>${v.items.map((it,i)=>`<li class="${v.hl.includes(i)?'hl':''}">${it}</li>`).join('')}</ol>
+    <div class="tail">${v.tail}</div>
+  </div>`).join('');
+
+/* version switch */
+document.querySelectorAll('#verSeg button').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('#verSeg button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    ver=b.dataset.v;
+    if(ver!=='NOW'){ const items=VERSIONS[ver].items; if(!items.includes(sel)) sel=items[0]; }
+    document.getElementById('verNote').innerHTML=VERSIONS[ver].note;
+    renderNav(); renderPage();
+  };
+});
+
+document.getElementById('verNote').innerHTML=VERSIONS[ver].note;
+renderNav(); renderPage();
+</script>
+</body>
+</html>
