@@ -109,10 +109,21 @@ function Row({ f, promoted }: { f: Feature; promoted?: boolean }) {
           <span className={`rq-dot t-${S_TONE[own] || "dash"}`} />
         </div>
       </td>
-      <td>
-        {task
-          ? <span className="rq-task" title={`${task.title} · board says ${board}`}>{task.title}<em>{board}</em></span>
-          : <span className="rq-none">Not on the board</span>}
+      <td className="rq-board">
+        {task ? (
+          <span className="rq-task" title={`${task.title} · board says ${board}`}>
+            {task.title}<em>{board}</em>
+            <button type="button" className="rq-unlink" title="Detach from this task"
+              onClick={() => s.linkFeature(f.id, null)}>×</button>
+          </span>
+        ) : (
+          <select className="pl-sel rq-link" value=""
+            title="Attach this request to a milestone already on the board"
+            onChange={(e) => { if (e.target.value) s.linkFeature(f.id, e.target.value); }}>
+            <option value="">Not on the board</option>
+            {s.tasks.map((t2) => <option key={t2.id} value={t2.id}>{t2.title}</option>)}
+          </select>
+        )}
       </td>
       <td><Shots f={f} /></td>
       <td className="wide">
@@ -152,12 +163,15 @@ export function PilotsRequests() {
     return base.filter((f) => {
       if (store && f.storeId !== store) return false;
       if (kind && (f.kind || "feature") !== kind) return false;
-      if (urg && (f.urgency || "") !== urg) return false;
+      if (urg === "__none__") { if (f.urgency) return false; }
+      else if (urg && (f.urgency || "") !== urg) return false;
       if (!t) return true;
       return [f.title, f.objective, f.storeName, f.requestedBy].some((v) => (v || "").toLowerCase().includes(t));
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s.requests, q, store, kind, urg, showMoved, version]);
+
+  const anyFilter = !!(q || store || kind || urg);
 
   const stats = useMemo(() => ({
     total: s.requests.length,
@@ -200,6 +214,7 @@ export function PilotsRequests() {
         <select className="pl-sel big" value={urg} onChange={(e) => setUrg(e.target.value)}>
           <option value="">All priorities</option>
           {URGENCY.map((u) => <option key={u} value={u}>{u}</option>)}
+          <option value="__none__">No priority set</option>
         </select>
         <label className="rq-toggle">
           <input type="checkbox" checked={showMoved} onChange={(e) => setShowMoved(e.target.checked)} />
@@ -232,7 +247,17 @@ export function PilotsRequests() {
           </thead>
           <tbody>
             {rows.map((f) => <Row key={f.id} f={f} promoted={f.band !== "merchant"} />)}
-            {!rows.length && <tr><td colSpan={9} className="pl-empty">Nothing logged yet. Add the first one above.</td></tr>}
+            {!rows.length && (
+              <tr><td colSpan={9} className="pl-empty">
+                {anyFilter ? (
+                  <>
+                    No requests match those filters.
+                    <button type="button" className="btn ghost sm" style={{ marginLeft: 10 }}
+                      onClick={() => { setQ(""); setStore(""); setKind(""); setUrg(""); }}>Clear filters</button>
+                  </>
+                ) : "Nothing logged yet. Add the first one above."}
+              </td></tr>
+            )}
           </tbody>
         </table>
       </div>
