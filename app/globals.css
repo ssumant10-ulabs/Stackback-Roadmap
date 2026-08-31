@@ -110,6 +110,15 @@
   .topbar{display:flex;flex-direction:column;gap:18px;margin-bottom:20px;}
   .title-row{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;}
   .brandmark{display:flex;align-items:center;gap:10px;}
+  /* The title is a link home, but it should not look like one: no underline, no
+     visited colour, no hover treatment. Clickable, not decorated. */
+  a.brandmark,a.brandmark:visited,a.brandmark:hover,a.brandmark:focus{
+    text-decoration:none;color:inherit;}
+  a.brandmark h1{color:inherit;}
+  .brandmark h1{font-size:18px;font-weight:800;letter-spacing:-0.02em;margin:0;line-height:1.15;}
+  .brandmark .logo{width:28px;height:18px;margin-top:0;}
+  @media (max-width:640px){ .brandmark h1{font-size:16px;} }
+
   .brand-chip{width:30px;height:30px;border-radius:8px;background:var(--brand);display:flex;align-items:center;
     justify-content:center;flex:none;}
   .brand-chip svg{width:18px;height:18px;}
@@ -1117,7 +1126,10 @@
   .bk-actions{display:flex;gap:8px;flex-wrap:wrap;}
   .bk-snaps{margin-top:12px;border-top:1px solid var(--border);padding-top:10px;}
   .bk-snaps-h{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;
-    color:var(--ink-3);margin-bottom:7px;}
+    color:var(--ink-3);margin-bottom:7px;display:flex;align-items:center;gap:10px;}
+  .bk-clear{margin-left:auto;border:0;background:transparent;color:var(--ink-3);font:inherit;
+    font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;cursor:pointer;}
+  .bk-clear:hover{color:var(--status-late);}
   .bk-snap{display:flex;align-items:center;gap:10px;font-size:12px;padding:5px 0;color:var(--ink-2);}
   .bk-snap em{font-style:normal;color:var(--ink-3);flex:1;font-size:11.5px;}
 
@@ -1174,7 +1186,10 @@
   .ft-move button:hover{border-color:var(--brand-deep);color:var(--ink);background:var(--card-2);}
 
   /* ---------- requests: promotion ---------- */
-  .rq-actions{display:flex;align-items:center;gap:6px;white-space:nowrap;}
+  /* A <td> must stay a table-cell: display:flex takes it out of the column model and
+     the whole row stops lining up. Lay the contents out instead. */
+  .rq-actions{white-space:nowrap;text-align:right;}
+  .rq-actions>*{vertical-align:middle;}
   .rq-moved{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;
     color:var(--brand-deep);border:1px solid var(--accent);border-radius:999px;padding:2px 8px;}
   .pl-table.log tr.rq-promoted td{opacity:.72;}
@@ -1192,42 +1207,37 @@
   .rq-unlink:hover{color:var(--status-late);}
 
 
-  /* ---------- colour palettes ----------
-     Only the brand and accent ramp is swapped. Surfaces, ink and the status colours
-     stay put, so contrast and the meaning of green/amber/red survive every choice.
-     Lime is the default and needs no block: it is what the tokens already are. */
-  :root[data-palette="indigo"]{--brand:#B9C8FF;--brand-ink:#0B1030;--brand-deep:#3446C4;--accent:#B9C8FF;--accent-ink:#0B1030;--accent-line:#3446C4;--primary:#141F52;--primary-ink:#EEF1FF;}
+  /* ---------- colour themes ----------
+     A theme is the whole surface treatment, not just an accent: page, cards, sunken
+     panels, borders, ink and the accent ramp all move together, in light and dark.
+     The status colours (shipped green, in-progress amber, late red) are deliberately
+     left alone so their meaning survives every theme. Lime is the default and keeps
+     the tokens already in :root. */
+  :root[data-palette="indigo"]{--page:hsl(230 24% 96%);--card:hsl(230 40% 99%);--card-2:hsl(230 26% 97%);--sunken:hsl(230 22% 93%);--ink:hsl(230 38% 11%);--ink-2:hsl(230 14% 37%);--ink-3:hsl(230 12% 55%);--border:hsl(230 30% 20% / 0.13);--border-2:hsl(230 30% 20% / 0.22);--track:hsl(230 18% 89%);--brand:#5A6BE8;--brand-deep:#3B4CC0;--brand-ink:hsl(230 38% 11%);--accent:#5A6BE8;--accent-ink:hsl(230 38% 11%);--accent-line:#3B4CC0;--primary:hsl(230 40% 14%);--primary-ink:hsl(230 30% 96%);}
   @media (prefers-color-scheme: dark){
-    :root[data-palette="indigo"]:not([data-theme="light"]){--brand:#B9C8FF;--brand-ink:#0A1405;--brand-deep:#9DB2FF;--accent:#B9C8FF;--accent-ink:#0A1405;--accent-line:#9DB2FF;--primary:#B9C8FF;--primary-ink:#0B1030;}
+  :root[data-palette="indigo"]:not([data-theme="light"]){--page:hsl(230 34% 6%);--card:hsl(230 26% 10%);--card-2:hsl(230 24% 14%);--sunken:hsl(230 32% 7%);--ink:hsl(230 26% 94%);--ink-2:hsl(230 13% 71%);--ink-3:hsl(230 11% 52%);--border:hsl(0 0% 100% / 0.11);--border-2:hsl(0 0% 100% / 0.22);--track:hsl(0 0% 100% / 0.12);--brand:#5A6BE8;--brand-deep:#A7B4FF;--brand-ink:hsl(230 38% 10%);--accent:#5A6BE8;--accent-ink:hsl(230 38% 10%);--accent-line:#A7B4FF;--primary:#5A6BE8;--primary-ink:hsl(230 38% 10%);}
   }
-  :root[data-theme="dark"][data-palette="indigo"]{--brand:#B9C8FF;--brand-ink:#0A1405;--brand-deep:#9DB2FF;--accent:#B9C8FF;--accent-ink:#0A1405;--accent-line:#9DB2FF;--primary:#B9C8FF;--primary-ink:#0B1030;}
-  :root[data-palette="amber"]{--brand:#FFD27A;--brand-ink:#2A1D05;--brand-deep:#8A5A00;--accent:#FFD27A;--accent-ink:#2A1D05;--accent-line:#8A5A00;--primary:#2A1D05;--primary-ink:#FFF3DA;}
+  :root[data-theme="dark"][data-palette="indigo"]{--page:hsl(230 34% 6%);--card:hsl(230 26% 10%);--card-2:hsl(230 24% 14%);--sunken:hsl(230 32% 7%);--ink:hsl(230 26% 94%);--ink-2:hsl(230 13% 71%);--ink-3:hsl(230 11% 52%);--border:hsl(0 0% 100% / 0.11);--border-2:hsl(0 0% 100% / 0.22);--track:hsl(0 0% 100% / 0.12);--brand:#5A6BE8;--brand-deep:#A7B4FF;--brand-ink:hsl(230 38% 10%);--accent:#5A6BE8;--accent-ink:hsl(230 38% 10%);--accent-line:#A7B4FF;--primary:#5A6BE8;--primary-ink:hsl(230 38% 10%);}
+  :root[data-palette="amber"]{--page:hsl(34 24% 96%);--card:hsl(34 40% 99%);--card-2:hsl(34 26% 97%);--sunken:hsl(34 22% 93%);--ink:hsl(34 38% 11%);--ink-2:hsl(34 14% 37%);--ink-3:hsl(34 12% 55%);--border:hsl(34 30% 20% / 0.13);--border-2:hsl(34 30% 20% / 0.22);--track:hsl(34 18% 89%);--brand:#E8A33D;--brand-deep:#9A6206;--brand-ink:hsl(34 38% 11%);--accent:#E8A33D;--accent-ink:hsl(34 38% 11%);--accent-line:#9A6206;--primary:hsl(34 40% 14%);--primary-ink:hsl(34 30% 96%);}
   @media (prefers-color-scheme: dark){
-    :root[data-palette="amber"]:not([data-theme="light"]){--brand:#FFD27A;--brand-ink:#0A1405;--brand-deep:#F0B54A;--accent:#FFD27A;--accent-ink:#0A1405;--accent-line:#F0B54A;--primary:#FFD27A;--primary-ink:#2A1D05;}
+  :root[data-palette="amber"]:not([data-theme="light"]){--page:hsl(34 34% 6%);--card:hsl(34 26% 10%);--card-2:hsl(34 24% 14%);--sunken:hsl(34 32% 7%);--ink:hsl(34 26% 94%);--ink-2:hsl(34 13% 71%);--ink-3:hsl(34 11% 52%);--border:hsl(0 0% 100% / 0.11);--border-2:hsl(0 0% 100% / 0.22);--track:hsl(0 0% 100% / 0.12);--brand:#E8A33D;--brand-deep:#F0BE68;--brand-ink:hsl(34 38% 10%);--accent:#E8A33D;--accent-ink:hsl(34 38% 10%);--accent-line:#F0BE68;--primary:#E8A33D;--primary-ink:hsl(34 38% 10%);}
   }
-  :root[data-theme="dark"][data-palette="amber"]{--brand:#FFD27A;--brand-ink:#0A1405;--brand-deep:#F0B54A;--accent:#FFD27A;--accent-ink:#0A1405;--accent-line:#F0B54A;--primary:#FFD27A;--primary-ink:#2A1D05;}
-  :root[data-palette="teal"]{--brand:#8FE3D8;--brand-ink:#052722;--brand-deep:#0F6F63;--accent:#8FE3D8;--accent-ink:#052722;--accent-line:#0F6F63;--primary:#08302B;--primary-ink:#E4FBF7;}
+  :root[data-theme="dark"][data-palette="amber"]{--page:hsl(34 34% 6%);--card:hsl(34 26% 10%);--card-2:hsl(34 24% 14%);--sunken:hsl(34 32% 7%);--ink:hsl(34 26% 94%);--ink-2:hsl(34 13% 71%);--ink-3:hsl(34 11% 52%);--border:hsl(0 0% 100% / 0.11);--border-2:hsl(0 0% 100% / 0.22);--track:hsl(0 0% 100% / 0.12);--brand:#E8A33D;--brand-deep:#F0BE68;--brand-ink:hsl(34 38% 10%);--accent:#E8A33D;--accent-ink:hsl(34 38% 10%);--accent-line:#F0BE68;--primary:#E8A33D;--primary-ink:hsl(34 38% 10%);}
+  :root[data-palette="teal"]{--page:hsl(178 22% 96%);--card:hsl(178 36% 99%);--card-2:hsl(178 23% 97%);--sunken:hsl(178 20% 93%);--ink:hsl(178 34% 11%);--ink-2:hsl(178 13% 37%);--ink-3:hsl(178 11% 55%);--border:hsl(178 27% 20% / 0.13);--border-2:hsl(178 27% 20% / 0.22);--track:hsl(178 16% 89%);--brand:#2FB3A3;--brand-deep:#0C7A6D;--brand-ink:hsl(178 34% 11%);--accent:#2FB3A3;--accent-ink:hsl(178 34% 11%);--accent-line:#0C7A6D;--primary:hsl(178 36% 14%);--primary-ink:hsl(178 27% 96%);}
   @media (prefers-color-scheme: dark){
-    :root[data-palette="teal"]:not([data-theme="light"]){--brand:#8FE3D8;--brand-ink:#0A1405;--brand-deep:#6FD3C6;--accent:#8FE3D8;--accent-ink:#0A1405;--accent-line:#6FD3C6;--primary:#8FE3D8;--primary-ink:#052722;}
+  :root[data-palette="teal"]:not([data-theme="light"]){--page:hsl(178 31% 6%);--card:hsl(178 23% 10%);--card-2:hsl(178 22% 14%);--sunken:hsl(178 29% 7%);--ink:hsl(178 23% 94%);--ink-2:hsl(178 12% 71%);--ink-3:hsl(178 10% 52%);--border:hsl(0 0% 100% / 0.11);--border-2:hsl(0 0% 100% / 0.22);--track:hsl(0 0% 100% / 0.12);--brand:#2FB3A3;--brand-deep:#66D8C8;--brand-ink:hsl(178 34% 10%);--accent:#2FB3A3;--accent-ink:hsl(178 34% 10%);--accent-line:#66D8C8;--primary:#2FB3A3;--primary-ink:hsl(178 34% 10%);}
   }
-  :root[data-theme="dark"][data-palette="teal"]{--brand:#8FE3D8;--brand-ink:#0A1405;--brand-deep:#6FD3C6;--accent:#8FE3D8;--accent-ink:#0A1405;--accent-line:#6FD3C6;--primary:#8FE3D8;--primary-ink:#052722;}
-  :root[data-palette="rose"]{--brand:#FFB3C7;--brand-ink:#3A0A1B;--brand-deep:#A82148;--accent:#FFB3C7;--accent-ink:#3A0A1B;--accent-line:#A82148;--primary:#3A0A1B;--primary-ink:#FFE9EF;}
+  :root[data-theme="dark"][data-palette="teal"]{--page:hsl(178 31% 6%);--card:hsl(178 23% 10%);--card-2:hsl(178 22% 14%);--sunken:hsl(178 29% 7%);--ink:hsl(178 23% 94%);--ink-2:hsl(178 12% 71%);--ink-3:hsl(178 10% 52%);--border:hsl(0 0% 100% / 0.11);--border-2:hsl(0 0% 100% / 0.22);--track:hsl(0 0% 100% / 0.12);--brand:#2FB3A3;--brand-deep:#66D8C8;--brand-ink:hsl(178 34% 10%);--accent:#2FB3A3;--accent-ink:hsl(178 34% 10%);--accent-line:#66D8C8;--primary:#2FB3A3;--primary-ink:hsl(178 34% 10%);}
+  :root[data-palette="rose"]{--page:hsl(342 22% 96%);--card:hsl(342 36% 99%);--card-2:hsl(342 23% 97%);--sunken:hsl(342 20% 93%);--ink:hsl(342 34% 11%);--ink-2:hsl(342 13% 37%);--ink-3:hsl(342 11% 55%);--border:hsl(342 27% 20% / 0.13);--border-2:hsl(342 27% 20% / 0.22);--track:hsl(342 16% 89%);--brand:#E36A8C;--brand-deep:#A8305A;--brand-ink:hsl(342 34% 11%);--accent:#E36A8C;--accent-ink:hsl(342 34% 11%);--accent-line:#A8305A;--primary:hsl(342 36% 14%);--primary-ink:hsl(342 27% 96%);}
   @media (prefers-color-scheme: dark){
-    :root[data-palette="rose"]:not([data-theme="light"]){--brand:#FFB3C7;--brand-ink:#0A1405;--brand-deep:#F58BA6;--accent:#FFB3C7;--accent-ink:#0A1405;--accent-line:#F58BA6;--primary:#FFB3C7;--primary-ink:#3A0A1B;}
+  :root[data-palette="rose"]:not([data-theme="light"]){--page:hsl(342 31% 6%);--card:hsl(342 23% 10%);--card-2:hsl(342 22% 14%);--sunken:hsl(342 29% 7%);--ink:hsl(342 23% 94%);--ink-2:hsl(342 12% 71%);--ink-3:hsl(342 10% 52%);--border:hsl(0 0% 100% / 0.11);--border-2:hsl(0 0% 100% / 0.22);--track:hsl(0 0% 100% / 0.12);--brand:#E36A8C;--brand-deep:#F79AB2;--brand-ink:hsl(342 34% 10%);--accent:#E36A8C;--accent-ink:hsl(342 34% 10%);--accent-line:#F79AB2;--primary:#E36A8C;--primary-ink:hsl(342 34% 10%);}
   }
-  :root[data-theme="dark"][data-palette="rose"]{--brand:#FFB3C7;--brand-ink:#0A1405;--brand-deep:#F58BA6;--accent:#FFB3C7;--accent-ink:#0A1405;--accent-line:#F58BA6;--primary:#FFB3C7;--primary-ink:#3A0A1B;}
-  :root[data-palette="slate"]{--brand:#C9D2DC;--brand-ink:#10161D;--brand-deep:#3F4C5A;--accent:#C9D2DC;--accent-ink:#10161D;--accent-line:#3F4C5A;--primary:#1B222B;--primary-ink:#EEF2F6;}
+  :root[data-theme="dark"][data-palette="rose"]{--page:hsl(342 31% 6%);--card:hsl(342 23% 10%);--card-2:hsl(342 22% 14%);--sunken:hsl(342 29% 7%);--ink:hsl(342 23% 94%);--ink-2:hsl(342 12% 71%);--ink-3:hsl(342 10% 52%);--border:hsl(0 0% 100% / 0.11);--border-2:hsl(0 0% 100% / 0.22);--track:hsl(0 0% 100% / 0.12);--brand:#E36A8C;--brand-deep:#F79AB2;--brand-ink:hsl(342 34% 10%);--accent:#E36A8C;--accent-ink:hsl(342 34% 10%);--accent-line:#F79AB2;--primary:#E36A8C;--primary-ink:hsl(342 34% 10%);}
+  :root[data-palette="slate"]{--page:hsl(215 7% 96%);--card:hsl(215 11% 99%);--card-2:hsl(215 7% 97%);--sunken:hsl(215 6% 93%);--ink:hsl(215 11% 11%);--ink-2:hsl(215 4% 37%);--ink-3:hsl(215 3% 55%);--border:hsl(215 8% 20% / 0.13);--border-2:hsl(215 8% 20% / 0.22);--track:hsl(215 5% 89%);--brand:#7B8CA0;--brand-deep:#44586E;--brand-ink:hsl(215 11% 11%);--accent:#7B8CA0;--accent-ink:hsl(215 11% 11%);--accent-line:#44586E;--primary:hsl(215 11% 14%);--primary-ink:hsl(215 8% 96%);}
   @media (prefers-color-scheme: dark){
-    :root[data-palette="slate"]:not([data-theme="light"]){--brand:#C9D2DC;--brand-ink:#0A1405;--brand-deep:#AEBBC8;--accent:#C9D2DC;--accent-ink:#0A1405;--accent-line:#AEBBC8;--primary:#C9D2DC;--primary-ink:#10161D;}
+  :root[data-palette="slate"]:not([data-theme="light"]){--page:hsl(215 10% 6%);--card:hsl(215 7% 10%);--card-2:hsl(215 7% 14%);--sunken:hsl(215 9% 7%);--ink:hsl(215 7% 94%);--ink-2:hsl(215 4% 71%);--ink-3:hsl(215 3% 52%);--border:hsl(0 0% 100% / 0.11);--border-2:hsl(0 0% 100% / 0.22);--track:hsl(0 0% 100% / 0.12);--brand:#7B8CA0;--brand-deep:#AFC0D2;--brand-ink:hsl(215 11% 10%);--accent:#7B8CA0;--accent-ink:hsl(215 11% 10%);--accent-line:#AFC0D2;--primary:#7B8CA0;--primary-ink:hsl(215 11% 10%);}
   }
-  :root[data-theme="dark"][data-palette="slate"]{--brand:#C9D2DC;--brand-ink:#0A1405;--brand-deep:#AEBBC8;--accent:#C9D2DC;--accent-ink:#0A1405;--accent-line:#AEBBC8;--primary:#C9D2DC;--primary-ink:#10161D;}
-
-  .pal-row{display:flex;gap:7px;flex-wrap:wrap;}
-  .pal{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--border-2);background:var(--card);
-    color:var(--ink-2);border-radius:999px;padding:6px 13px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;}
-  .pal:hover{color:var(--ink);border-color:var(--ink-3);}
-  .pal.on{border-color:var(--brand-deep);color:var(--ink);background:var(--sunken);}
-  .pal-dot{width:13px;height:13px;border-radius:50%;border:1px solid rgba(0,0,0,.18);flex:none;}
+  :root[data-theme="dark"][data-palette="slate"]{--page:hsl(215 10% 6%);--card:hsl(215 7% 10%);--card-2:hsl(215 7% 14%);--sunken:hsl(215 9% 7%);--ink:hsl(215 7% 94%);--ink-2:hsl(215 4% 71%);--ink-3:hsl(215 3% 52%);--border:hsl(0 0% 100% / 0.11);--border-2:hsl(0 0% 100% / 0.22);--track:hsl(0 0% 100% / 0.12);--brand:#7B8CA0;--brand-deep:#AFC0D2;--brand-ink:hsl(215 11% 10%);--accent:#7B8CA0;--accent-ink:hsl(215 11% 10%);--accent-line:#AFC0D2;--primary:#7B8CA0;--primary-ink:hsl(215 11% 10%);}
 
   @media (prefers-reduced-motion: reduce){ *{transition:none !important;animation-duration:1ms !important;} }
   @media (max-width:900px){

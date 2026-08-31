@@ -81,7 +81,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
         </div>
         <div className="settings-section">
           <div className="ss-head">Appearance</div>
-          <div className="ss-desc">Light and dark follow the theme button in the header. The colour below swaps the accent only, so contrast and the status colours stay as they are. Stored in this browser, so everyone can try one.</div>
+          <div className="ss-desc">Light and dark follow the theme button in the header. Each theme changes the whole surface treatment, not just the accent. The status colours stay put so shipped, in progress and late keep their meaning. Stored in this browser, so everyone can try one.</div>
           <div className="pal-row">
             {PALETTES.map((pl) => (
               <button type="button" key={pl.id}
@@ -104,8 +104,9 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
         <div className="settings-section">
           <div className="ss-head">Backup &amp; restore</div>
           <div className="ss-desc">
-            Until the shared backend is on, this browser holds the only copy of your edits.
-            Nothing syncs between browsers or devices.
+            {supabaseEnabled
+              ? "Your roadmap lives on the shared backend, so this is an export rather than a safety net. Restoring replaces what the whole team sees."
+              : "Until the shared backend is on, this browser holds the only copy of your edits. Nothing syncs between browsers or devices."}
           </div>
           <div className="bk-now">
             Currently holding <b>{sum.tasks}</b> tasks ({sum.done} done), <b>{sum.features}</b> features,
@@ -115,11 +116,19 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
             <button type="button" className="btn" onClick={download}>Download backup</button>
             <button type="button" className="btn ghost" onClick={() => fileRef.current?.click()}>Restore from file</button>
             <input ref={fileRef} type="file" accept="application/json" style={{ display: "none" }}
-              onChange={(e) => { const f = e.target.files?.[0]; if (f && confirm("Restore this backup? It replaces everything currently in this browser.")) upload(f); e.target.value = ""; }} />
+              onChange={(e) => { const f = e.target.files?.[0];
+                const warn = supabaseEnabled
+                  ? "Restore this backup? It replaces the roadmap for everyone on the shared backend, not just you."
+                  : "Restore this backup? It replaces everything currently in this browser.";
+                if (f && confirm(warn)) upload(f); e.target.value = ""; }} />
           </div>
-          {snaps.length > 0 && (
+          {!supabaseEnabled && snaps.length > 0 && (
             <div className="bk-snaps">
-              <div className="bk-snaps-h">Recovery points, taken before resets and imports</div>
+              <div className="bk-snaps-h">
+                Recovery points, taken before resets and imports
+                <button type="button" className="bk-clear"
+                  onClick={() => { if (confirm("Clear all recovery points on this browser?")) s.clearSnapshots(); }}>Clear</button>
+              </div>
               {snaps.map((sn) => (
                 <div className="bk-snap" key={sn.at}>
                   <span>{new Date(sn.at).toLocaleString()}</span>
