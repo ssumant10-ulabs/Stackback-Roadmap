@@ -39,4 +39,10 @@ function app(): FirebaseApp | null {
 
 export const fbAuth = (): Auth | null => { const a = app(); return a ? getAuth(a) : null; };
 export const fbDb = (): Firestore | null => { const a = app(); return a ? getFirestore(a) : null; };
+/** Firebase Storage requires the Blaze plan, so it is opt-in rather than assumed present.
+ *  Set NEXT_PUBLIC_FIREBASE_STORAGE_ENABLED=true once the project is upgraded and Storage
+ *  rules are published; until then uploads are refused and the link route is used instead. */
+export const storageConfigured = (): boolean =>
+  firebaseEnabled && process.env.NEXT_PUBLIC_FIREBASE_STORAGE_ENABLED === "true";
+
 export const fbStorage = (): FirebaseStorage | null => { const a = app(); return a ? getStorage(a) : null; };

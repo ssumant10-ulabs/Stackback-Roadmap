@@ -48,13 +48,24 @@ export function downscale(file: File): Promise<{ src: string; bytes: number }> {
 }
 
 
-/** Upload to Firebase Storage and return the public download URL. Falls back to a data URL
- *  when Storage is not configured, which is what keeps the app working without Firebase. */
+/** Firebase Storage needs the Blaze plan, so a Spark project has Firestore and auth but no
+ *  file storage. That combination is the dangerous one: falling back to a data URL would
+ *  embed a 200 KB image in a Firestore document that is capped at 1 MB, so a few uploads
+ *  would break the document rather than merely being unavailable. Uploads are therefore
+ *  refused when the shared backend is on without Storage, and the link route covers it. */
 export async function uploadShot(file: File, featureId: string): Promise<{ src: string; bytes: number; stored: "remote" | "local" }> {
+  const { fbStorage, firebaseEnabled, storageConfigured } = await import("./firebase");
+  const storage = firebaseEnabled && storageConfigured() ? fbStorage() : null;
+
+  if (firebaseEnabled && !storageConfigured()) {
+    throw new Error(
+      "Uploading from this machine needs Firebase Storage, which requires the Blaze plan. " +
+      "Use the link button instead and paste a hosted image URL.",
+    );
+  }
+
   const { src, bytes } = await downscale(file);
-  const { fbStorage, firebaseEnabled } = await import("./firebase");
-  const storage = firebaseEnabled ? fbStorage() : null;
-  if (!storage) return { src, bytes, stored: "local" };
+  if (!storage) return { src, bytes, stored: "local" };   // no Firebase at all: local budget
 
   const { ref, uploadString, getDownloadURL } = await import("firebase/storage");
   const id = `${featureId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;

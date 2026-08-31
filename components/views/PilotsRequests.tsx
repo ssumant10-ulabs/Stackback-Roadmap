@@ -4,7 +4,7 @@ import { useStore } from "@/lib/store";
 import type { Feature } from "@/lib/types";
 import { IcPlus, IcTrash } from "../icons";
 import { SHOT_MAX_PER_REQUEST, SHOT_TOTAL_BUDGET, fmtBytes, uploadShot } from "@/lib/shots";
-import { firebaseEnabled } from "@/lib/firebase";
+import { firebaseEnabled, storageConfigured } from "@/lib/firebase";
 
 /** What merchants have asked for, logged against the store that asked. These are the same
  *  records as the Features module's merchant block: CS logs it here, PM sees it there,
@@ -49,8 +49,10 @@ function Shots({ f }: { f: Feature }) {
       ))}
       {shots.length < SHOT_MAX_PER_REQUEST && (
         <>
-          <button type="button" className="sh-add" disabled={busy} title="Upload a screenshot from this machine"
-            onClick={() => ref.current?.click()}>{busy ? "…" : "+"}</button>
+          {(!firebaseEnabled || storageConfigured()) && (
+            <button type="button" className="sh-add" disabled={busy} title="Upload a screenshot from this machine"
+              onClick={() => ref.current?.click()}>{busy ? "…" : "+"}</button>
+          )}
           <button type="button" className="sh-add link" title="Paste a link to a hosted image"
             onClick={() => {
               const u = window.prompt("Paste the image link (Drive, Imgur, S3, anywhere public):");
