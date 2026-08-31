@@ -1,7 +1,6 @@
 "use client";
 import { Fragment, useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
-import { PILOT_SEED_SOURCE } from "@/lib/pilotSeed";
 import { DEFAULT_ORDER, DEFAULT_VISIBLE, POCS, colByKey, toCsv, type PilotCol } from "@/lib/pilotColumns";
 import { daysSince, fmtShort, parseLoose } from "@/lib/pilotDates";
 import type { PilotStore } from "@/lib/types";
@@ -248,7 +247,7 @@ export function PilotsLog() {
           </tbody>
         </table>
       </div>
-      <p className="pl-src">Rows are grouped by status. Drag a column heading to reorder. Every cell saves as you leave it. Source: {PILOT_SEED_SOURCE}</p>
+      <p className="pl-src">Drag a column heading to reorder. Every cell saves as you leave it.</p>
     </>
   );
 }

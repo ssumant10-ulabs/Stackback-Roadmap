@@ -115,7 +115,6 @@ export default function RoadmapApp() {
           {view === "board" ? <Board /> : view === "simple" ? <Overview /> : view === "teams" ? <TeamsPeople /> : view === "features" ? <Features /> : <Timeline />}
         </main>
         <div className="footnote">
-          The <strong>Board</strong> is the editing hub: drag the grip to move a card, drop one onto another to nest it, click a status ring to check off a whole milestone, and use the clock to set a start, end or TAT. Every view reads the same data. &nbsp;·&nbsp;
           <button onClick={() => { if (confirm(`Reset “${s.activeRoadmap().name}”? Added tasks and edits in this roadmap will be lost.`)) s.resetActive(); }}>Reset this roadmap</button>
         </div>
       </div>

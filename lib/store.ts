@@ -21,6 +21,8 @@ const ROSTER_KEY = "stackback_roster_v1";
 const THEME_KEY = "stackback_theme";
 /** Per-person, never shared: with Supabase on, everyone must keep their own identity. */
 const ME_KEY = "stackback_me_v1";
+/** Colour ramp, per browser like the theme. */
+const PALETTE_KEY = "stackback_palette_v1";
 /** The id of the roadmap that mirrors the roadmap sheet. Any other roadmap is hand-made
  *  by the team and is never touched by a re-seed. */
 const SHEET_ROADMAP_ID = "stackback";
@@ -72,6 +74,7 @@ export interface UiState {
   commentsOpen: Record<string, boolean>;
   sort: { key: string; dir: "asc" | "desc" } | null;
   theme: Theme;
+  palette: string;
   activityOpen: boolean;
 }
 
@@ -110,7 +113,7 @@ class Store {
   ui: UiState = {
     view: "timeline", tlMode: "swim", simpleMode: "stage", teamGran: "team",
     filter: null, boardOpen: {}, simpleOpen: {}, commentsOpen: {}, sort: null,
-    theme: "auto", activityOpen: false,
+    theme: "auto", palette: "lime", activityOpen: false,
   };
   /** Display name used for authorship on comments and activity. Local to this browser. */
   me = "";
@@ -141,6 +144,7 @@ class Store {
     this.hydrated = true;
     try { this.ui.theme = (localStorage.getItem(THEME_KEY) as Theme) || "auto"; } catch {}
     try { this.me = localStorage.getItem(ME_KEY) || ""; } catch {}
+    try { this.ui.palette = localStorage.getItem(PALETTE_KEY) || "lime"; } catch {}
 
     if (supabaseEnabled) {
       // Shared backend. Falls back to the seeded default on any error.
@@ -714,23 +718,6 @@ class Store {
     this.commit();
     return f.id;
   }
-  /** A merchant ask we have decided to build becomes planned work: it leaves the merchant
-   *  block for Upcoming, keeping the store attached so you can still see who asked and tell
-   *  them when it ships. It stays visible in Requests behind the "moved to features" filter
-   *  rather than disappearing on whoever logged it. */
-  moveRequestToFeatures(id: string): boolean {
-    const f = this.features.find((x) => x.id === id);
-    if (!f || f.band !== "merchant") return false;
-    f.band = "upcoming";
-    f.updatedAt = new Date().toISOString();
-    this.log("status", f.title, `moved to features${f.storeName ? ` (asked for by ${f.storeName})` : ""}`, undefined);
-    this.commit();
-    return true;
-  }
-  /** Requests that were promoted: no longer merchant-band, but still carry the store. */
-  get promotedRequests(): Feature[] {
-    return this.features.filter((f) => f.band !== "merchant" && !!f.storeId);
-  }
   setRequestStore(id: string, storeId: string | null) {
     const f = this.features.find((x) => x.id === id);
     if (!f) return;
@@ -1028,9 +1015,20 @@ class Store {
   /* ---- theme ---- */
   applyTheme() {
     if (typeof document === "undefined") return;
-    if (this.ui.theme === "auto") document.documentElement.removeAttribute("data-theme");
-    else document.documentElement.setAttribute("data-theme", this.ui.theme);
-    try { localStorage.setItem(THEME_KEY, this.ui.theme); } catch {}
+    const el = document.documentElement;
+    if (this.ui.theme === "auto") el.removeAttribute("data-theme");
+    else el.setAttribute("data-theme", this.ui.theme);
+    if (this.ui.palette && this.ui.palette !== "lime") el.setAttribute("data-palette", this.ui.palette);
+    else el.removeAttribute("data-palette");
+    try {
+      localStorage.setItem(THEME_KEY, this.ui.theme);
+      localStorage.setItem(PALETTE_KEY, this.ui.palette);
+    } catch {}
+  }
+  setPalette(id: string) {
+    this.ui.palette = id || "lime";
+    this.applyTheme();
+    this.notify();
   }
   cycleTheme() {
     this.ui.theme = this.ui.theme === "auto" ? "light" : this.ui.theme === "light" ? "dark" : "auto";

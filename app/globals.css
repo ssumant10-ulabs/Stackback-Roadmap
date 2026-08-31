@@ -1182,6 +1182,52 @@
   .rq-toggle{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:650;color:var(--ink-3);
     border:1px solid var(--border-2);border-radius:9px;padding:8px 11px;cursor:pointer;white-space:nowrap;}
   .rq-toggle input{accent-color:var(--brand-deep);}
+  .rq-board{min-width:210px;}
+  .rq-link{max-width:190px;font-size:11.5px;color:var(--ink-3);font-style:italic;}
+  .rq-link:hover{color:var(--ink);font-style:normal;}
+  .rq-task{position:relative;padding-right:14px;}
+  .rq-unlink{position:absolute;top:-2px;right:0;border:0;background:transparent;color:var(--ink-3);
+    font-size:13px;line-height:1;cursor:pointer;padding:0 2px;display:none;}
+  .rq-task:hover .rq-unlink{display:block;}
+  .rq-unlink:hover{color:var(--status-late);}
+
+
+  /* ---------- colour palettes ----------
+     Only the brand and accent ramp is swapped. Surfaces, ink and the status colours
+     stay put, so contrast and the meaning of green/amber/red survive every choice.
+     Lime is the default and needs no block: it is what the tokens already are. */
+  :root[data-palette="indigo"]{--brand:#B9C8FF;--brand-ink:#0B1030;--brand-deep:#3446C4;--accent:#B9C8FF;--accent-ink:#0B1030;--accent-line:#3446C4;--primary:#141F52;--primary-ink:#EEF1FF;}
+  @media (prefers-color-scheme: dark){
+    :root[data-palette="indigo"]:not([data-theme="light"]){--brand:#B9C8FF;--brand-ink:#0A1405;--brand-deep:#9DB2FF;--accent:#B9C8FF;--accent-ink:#0A1405;--accent-line:#9DB2FF;--primary:#B9C8FF;--primary-ink:#0B1030;}
+  }
+  :root[data-theme="dark"][data-palette="indigo"]{--brand:#B9C8FF;--brand-ink:#0A1405;--brand-deep:#9DB2FF;--accent:#B9C8FF;--accent-ink:#0A1405;--accent-line:#9DB2FF;--primary:#B9C8FF;--primary-ink:#0B1030;}
+  :root[data-palette="amber"]{--brand:#FFD27A;--brand-ink:#2A1D05;--brand-deep:#8A5A00;--accent:#FFD27A;--accent-ink:#2A1D05;--accent-line:#8A5A00;--primary:#2A1D05;--primary-ink:#FFF3DA;}
+  @media (prefers-color-scheme: dark){
+    :root[data-palette="amber"]:not([data-theme="light"]){--brand:#FFD27A;--brand-ink:#0A1405;--brand-deep:#F0B54A;--accent:#FFD27A;--accent-ink:#0A1405;--accent-line:#F0B54A;--primary:#FFD27A;--primary-ink:#2A1D05;}
+  }
+  :root[data-theme="dark"][data-palette="amber"]{--brand:#FFD27A;--brand-ink:#0A1405;--brand-deep:#F0B54A;--accent:#FFD27A;--accent-ink:#0A1405;--accent-line:#F0B54A;--primary:#FFD27A;--primary-ink:#2A1D05;}
+  :root[data-palette="teal"]{--brand:#8FE3D8;--brand-ink:#052722;--brand-deep:#0F6F63;--accent:#8FE3D8;--accent-ink:#052722;--accent-line:#0F6F63;--primary:#08302B;--primary-ink:#E4FBF7;}
+  @media (prefers-color-scheme: dark){
+    :root[data-palette="teal"]:not([data-theme="light"]){--brand:#8FE3D8;--brand-ink:#0A1405;--brand-deep:#6FD3C6;--accent:#8FE3D8;--accent-ink:#0A1405;--accent-line:#6FD3C6;--primary:#8FE3D8;--primary-ink:#052722;}
+  }
+  :root[data-theme="dark"][data-palette="teal"]{--brand:#8FE3D8;--brand-ink:#0A1405;--brand-deep:#6FD3C6;--accent:#8FE3D8;--accent-ink:#0A1405;--accent-line:#6FD3C6;--primary:#8FE3D8;--primary-ink:#052722;}
+  :root[data-palette="rose"]{--brand:#FFB3C7;--brand-ink:#3A0A1B;--brand-deep:#A82148;--accent:#FFB3C7;--accent-ink:#3A0A1B;--accent-line:#A82148;--primary:#3A0A1B;--primary-ink:#FFE9EF;}
+  @media (prefers-color-scheme: dark){
+    :root[data-palette="rose"]:not([data-theme="light"]){--brand:#FFB3C7;--brand-ink:#0A1405;--brand-deep:#F58BA6;--accent:#FFB3C7;--accent-ink:#0A1405;--accent-line:#F58BA6;--primary:#FFB3C7;--primary-ink:#3A0A1B;}
+  }
+  :root[data-theme="dark"][data-palette="rose"]{--brand:#FFB3C7;--brand-ink:#0A1405;--brand-deep:#F58BA6;--accent:#FFB3C7;--accent-ink:#0A1405;--accent-line:#F58BA6;--primary:#FFB3C7;--primary-ink:#3A0A1B;}
+  :root[data-palette="slate"]{--brand:#C9D2DC;--brand-ink:#10161D;--brand-deep:#3F4C5A;--accent:#C9D2DC;--accent-ink:#10161D;--accent-line:#3F4C5A;--primary:#1B222B;--primary-ink:#EEF2F6;}
+  @media (prefers-color-scheme: dark){
+    :root[data-palette="slate"]:not([data-theme="light"]){--brand:#C9D2DC;--brand-ink:#0A1405;--brand-deep:#AEBBC8;--accent:#C9D2DC;--accent-ink:#0A1405;--accent-line:#AEBBC8;--primary:#C9D2DC;--primary-ink:#10161D;}
+  }
+  :root[data-theme="dark"][data-palette="slate"]{--brand:#C9D2DC;--brand-ink:#0A1405;--brand-deep:#AEBBC8;--accent:#C9D2DC;--accent-ink:#0A1405;--accent-line:#AEBBC8;--primary:#C9D2DC;--primary-ink:#10161D;}
+
+  .pal-row{display:flex;gap:7px;flex-wrap:wrap;}
+  .pal{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--border-2);background:var(--card);
+    color:var(--ink-2);border-radius:999px;padding:6px 13px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;}
+  .pal:hover{color:var(--ink);border-color:var(--ink-3);}
+  .pal.on{border-color:var(--brand-deep);color:var(--ink);background:var(--sunken);}
+  .pal-dot{width:13px;height:13px;border-radius:50%;border:1px solid rgba(0,0,0,.18);flex:none;}
 
   @media (prefers-reduced-motion: reduce){ *{transition:none !important;animation-duration:1ms !important;} }
   @media (max-width:900px){

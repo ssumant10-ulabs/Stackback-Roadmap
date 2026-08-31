@@ -98,15 +98,6 @@ export function PilotsStats() {
         </div>
       </section>
 
-      <div className="ps-mail">
-        <h3>Scheduled mail</h3>
-        <p>
-          The scheduled merchant mails run off the sheet today. This module now holds the same
-          fields they read (store, owner, activation status, last touch, what it is waiting on),
-          so it can drive them instead. Wiring the send is a separate step and needs your
-          approval before anything leaves: nothing here sends mail.
-        </p>
-      </div>
     </>
   );
 }

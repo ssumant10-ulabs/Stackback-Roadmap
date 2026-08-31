@@ -1,7 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
-import { FEATURE_SEED_SOURCE } from "@/lib/featureSeed";
 import type { Feature, FeatureBand } from "@/lib/types";
 import { IcLink, IcPlus, IcTrash } from "../icons";
 import { STATES, stateOf, waveWord } from "@/lib/derive";
@@ -34,7 +33,6 @@ function Row({ f }: { f: Feature }) {
   const task = s.featureTask(f);
   const board = s.featureBoardStatus(f);
   const status = s.featureStatus(f);
-  const drift = s.featureDrifted(f);
 
   return (
     <div className={`ft-row${open ? " open" : ""}`}>
@@ -59,12 +57,6 @@ function Row({ f }: { f: Feature }) {
           </button>
         ) : <span className="ft-task none">Not on the board</span>}
       </div>
-
-      {drift && (
-        <div className="ft-drift">
-          Sheet says <b>{f.sheetStatus}</b>, the board says <b>{board}</b>. The board wins here.
-        </div>
-      )}
 
       {open && (
         <div className="ft-detail">
@@ -93,7 +85,7 @@ function Row({ f }: { f: Feature }) {
             )}
             <label>
               Link to a roadmap task
-              <select value={f.taskId || ""} onChange={(e) => s.linkFeature(f.id, e.target.value || null)}>
+              <select value={task ? task.id : ""} onChange={(e) => s.linkFeature(f.id, e.target.value || null)}>
                 <option value="">Not linked</option>
                 {s.tasks.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
               </select>
@@ -138,7 +130,6 @@ export function Features() {
     }
     if (fLink === "linked" && !s.featureTask(f)) return false;
     if (fLink === "unlinked" && s.featureTask(f)) return false;
-    if (fLink === "drift" && !s.featureDrifted(f)) return false;
     if (fBand && f.band !== fBand) return false;
     const t = q.trim().toLowerCase();
     if (!t) return true;
@@ -150,21 +141,13 @@ export function Features() {
 
   const stats = useMemo(() => {
     const linked = all.filter((f) => s.featureTask(f)).length;
-    const drifted = all.filter((f) => s.featureDrifted(f)).length;
     const done = all.filter((f) => s.featureStatus(f) === "Done").length;
-    return { total: all.length, linked, drifted, done };
+    return { total: all.length, linked, done };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [all, version]);
 
   return (
     <>
-      <div className="view-toolbar">
-        <div className="vt-note">
-          The pilot sheet&apos;s feature list and every merchant request, tracked here rather than read-only.
-          A feature on the board takes its status, horizon and team from the board, so this cannot fall
-          behind what actually shipped. Open a row to move one onto the board or attach it to an existing task.
-        </div>
-      </div>
 
       <div className="ft-filters">
         <input className="ft-search" placeholder="Search features, objectives, owners…" value={q} onChange={(e) => setQ(e.target.value)} />
@@ -180,7 +163,6 @@ export function Features() {
           <option value="">On and off the board</option>
           <option value="linked">On the board</option>
           <option value="unlinked">Not on the board</option>
-          <option value="drift">Sheet vs board drift</option>
         </select>
         {anyFilter && (
           <button type="button" className="btn ghost" onClick={() => { setQ(""); setFStatus(""); setFLink(""); setFBand(""); }}>
@@ -193,8 +175,6 @@ export function Features() {
         <div><b>{stats.total}</b><span>features</span></div>
         <div><b>{stats.linked}</b><span>on the board</span></div>
         <div><b>{stats.done}</b><span>done</span></div>
-        <div className={stats.drifted ? "warnq" : ""}><b>{stats.drifted}</b><span>sheet vs board drift</span></div>
-        <p className="ft-src">Source: {FEATURE_SEED_SOURCE}</p>
       </div>
 
       {anyFilter && !filtered.length && (
@@ -215,8 +195,9 @@ export function Features() {
               <p>{b.blurb}</p>
             </div>
             <div className="ft-list">
-              {rows.map((f) => <Row key={f.id} f={f} />)}
               {!anyFilter && <AddFeature band={b.id} />}
+              {rows.map((f) => <Row key={f.id} f={f} />)}
+              {!anyFilter && rows.length > 6 && <AddFeature band={b.id} />}
             </div>
           </section>
         );
