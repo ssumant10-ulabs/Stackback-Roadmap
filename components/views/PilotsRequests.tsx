@@ -3,7 +3,8 @@ import { useMemo, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import type { Feature } from "@/lib/types";
 import { IcPlus, IcTrash } from "../icons";
-import { SHOT_MAX_PER_REQUEST, downscale, fmtBytes } from "@/lib/shots";
+import { SHOT_MAX_PER_REQUEST, SHOT_TOTAL_BUDGET, fmtBytes, uploadShot } from "@/lib/shots";
+import { firebaseEnabled } from "@/lib/firebase";
 
 /** What merchants have asked for, logged against the store that asked. These are the same
  *  records as the Features module's merchant block: CS logs it here, PM sees it there,
@@ -26,10 +27,11 @@ function Shots({ f }: { f: Feature }) {
     setBusy(true);
     for (const file of Array.from(files)) {
       try {
-        const { src, bytes } = await downscale(file);
+        const { src, bytes } = await uploadShot(file, f.id);
+        // bytes is 0 for a hosted image, so it costs nothing against the local budget.
         const r = s.addShot(f.id, file.name, src, bytes);
         if (!r.ok) { alert(r.error); break; }
-      } catch (e) { alert((e as Error).message); break; }
+      } catch (e) { alert("Could not attach that image: " + (e as Error).message); break; }
     }
     setBusy(false);
   };

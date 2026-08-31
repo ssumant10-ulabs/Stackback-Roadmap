@@ -14,12 +14,12 @@ import { pilotSeed } from "./pilotSeed";
 import { autoLink, boardStatusOf, isDrifted, matchTask } from "./featureLink";
 import { SHOT_MAX_PER_REQUEST, SHOT_TOTAL_BUDGET, fmtBytes } from "./shots";
 import { parseLoose } from "./pilotDates";
-import { CLIENT_ID, loadRemote, saveRemote, subscribeRemote, supabaseEnabled } from "./remote";
+import { CLIENT_ID, firebaseEnabled, loadRemote, saveRemote, subscribeRemote } from "./remote";
 
 const ROADMAPS_KEY = "stackback_roadmaps_v3";
 const ROSTER_KEY = "stackback_roster_v1";
 const THEME_KEY = "stackback_theme";
-/** Per-person, never shared: with Supabase on, everyone must keep their own identity. */
+/** Per-person, never shared: on a shared backend, everyone must keep their own identity. */
 const ME_KEY = "stackback_me_v1";
 /** Colour ramp, per browser like the theme. */
 const PALETTE_KEY = "stackback_palette_v1";
@@ -148,7 +148,7 @@ class Store {
     try { this.me = localStorage.getItem(ME_KEY) || ""; } catch {}
     try { this.ui.palette = localStorage.getItem(PALETTE_KEY) || "lime"; } catch {}
 
-    if (supabaseEnabled) {
+    if (firebaseEnabled) {
       // Shared backend. Falls back to the seeded default on any error.
       try {
         const r = await loadRemote();
@@ -187,7 +187,7 @@ class Store {
           this.notify(); // no persist: adopting someone else's write must not echo back
         });
       } catch (e) {
-        console.warn("Supabase hydrate failed, using defaults:", e);
+        console.warn("Firestore hydrate failed, using defaults:", e);
       }
     } else {
       try {
@@ -289,7 +289,7 @@ class Store {
     };
   }
   private persist() {
-    if (supabaseEnabled) {
+    if (firebaseEnabled) {
       if (this.saveTimer) clearTimeout(this.saveTimer);
       this.saveTimer = setTimeout(() => { saveRemote(this.remoteState()); }, 400);
       return;
@@ -312,7 +312,7 @@ class Store {
   /** Writes and tells you whether it worked. Everything that can legitimately overflow the
    *  quota (screenshots) goes through this so it can undo itself instead of failing quietly. */
   private persistStrict(): boolean {
-    if (supabaseEnabled) { this.persist(); return true; }
+    if (firebaseEnabled) { this.persist(); return true; }
     try { this.writeLocal(); return true; } catch { return false; }
   }
   private commit() {

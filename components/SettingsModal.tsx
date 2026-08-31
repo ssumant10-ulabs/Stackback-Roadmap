@@ -2,7 +2,7 @@
 import { useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import { TEAM_ORDER } from "@/lib/constants";
-import { supabaseEnabled } from "@/lib/remote";
+import { firebaseEnabled } from "@/lib/firebase";
 import { PALETTES } from "@/lib/palettes";
 import { IcTrash } from "./icons";
 
@@ -104,8 +104,8 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
         <div className="settings-section">
           <div className="ss-head">Backup &amp; restore</div>
           <div className="ss-desc">
-            {supabaseEnabled
-              ? "Your roadmap lives on the shared backend, so this is an export rather than a safety net. Restoring replaces what the whole team sees."
+            {firebaseEnabled
+              ? "Your roadmap lives in Firestore, so this is an export rather than a safety net. Restoring replaces what the whole team sees."
               : "Until the shared backend is on, this browser holds the only copy of your edits. Nothing syncs between browsers or devices."}
           </div>
           <div className="bk-now">
@@ -117,12 +117,12 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
             <button type="button" className="btn ghost" onClick={() => fileRef.current?.click()}>Restore from file</button>
             <input ref={fileRef} type="file" accept="application/json" style={{ display: "none" }}
               onChange={(e) => { const f = e.target.files?.[0];
-                const warn = supabaseEnabled
+                const warn = firebaseEnabled
                   ? "Restore this backup? It replaces the roadmap for everyone on the shared backend, not just you."
                   : "Restore this backup? It replaces everything currently in this browser.";
                 if (f && confirm(warn)) upload(f); e.target.value = ""; }} />
           </div>
-          {!supabaseEnabled && snaps.length > 0 && (
+          {!firebaseEnabled && snaps.length > 0 && (
             <div className="bk-snaps">
               <div className="bk-snaps-h">
                 Recovery points, taken before resets and imports
@@ -146,13 +146,13 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
           <div className="ss-head">Storage</div>
           <div className="ss-auth">
             <div className="ss-auth-row">
-              <strong>{supabaseEnabled ? "Shared (Supabase)" : "This browser only"}</strong>
-              <span className={supabaseEnabled ? "ss-live" : "ss-soon"}>{supabaseEnabled ? "Live" : "Local"}</span>
+              <strong>{firebaseEnabled ? "Shared (Firestore)" : "This browser only"}</strong>
+              <span className={firebaseEnabled ? "ss-live" : "ss-soon"}>{firebaseEnabled ? "Live" : "Local"}</span>
             </div>
             <p className="ss-desc">
-              {supabaseEnabled
+              {firebaseEnabled
                 ? "Edits save to the shared backend and appear in everyone else's browser without a reload."
-                : "Edits are saved in this browser only, so each teammate sees their own copy. Set the two Supabase env vars to switch the whole team onto one shared roadmap. See SUPABASE.md."}
+                : "Edits are saved in this browser only, so each teammate sees their own copy. Set the Firebase env vars to switch the whole team onto one shared roadmap behind a login. See FIREBASE.md."}
             </p>
           </div>
         </div>

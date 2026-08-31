@@ -2,7 +2,7 @@
 
 Internal team roadmap tool for StackBack. Milestones, owners, and progress across the team, with multiple product roadmaps.
 
-Built with **Next.js 16 (App Router) · React 19 · TypeScript**. Runs on browser `localStorage` out of the box; set two Supabase env vars and the whole team shares one live roadmap (see [SUPABASE.md](./SUPABASE.md)).
+Built with **Next.js 16 (App Router) · React 19 · TypeScript**. Runs on browser `localStorage` out of the box; set two Supabase env vars and the whole team shares one live roadmap (see [FIREBASE.md](./FIREBASE.md)).
 
 ## Run locally
 
@@ -116,9 +116,9 @@ the app falls back to inferring the team from who is assigned.
 
 ## Shared backend
 
-Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` and the app switches from
-`localStorage` to a shared Supabase row, with **realtime** on: one person's edit appears in
-everyone else's browser without a reload. Full steps in [SUPABASE.md](./SUPABASE.md).
+Set the six `NEXT_PUBLIC_FIREBASE_*` values and the app switches from
+`localStorage` to shared Firestore documents behind a Google login, with **realtime** on: one person's edit appears in
+everyone else's browser without a reload. Full steps in [FIREBASE.md](./FIREBASE.md).
 `Settings → Storage` shows which mode you are in.
 
 Still to come: **Auth** (magic link, then tighten the RLS policy from anon to authenticated),

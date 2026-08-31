@@ -1,5 +1,10 @@
 import PilotsApp from "@/components/PilotsApp";
+import { AuthGate } from "@/components/AuthGate";
 
 export default function Page() {
-  return <PilotsApp />;
+  return (
+    <AuthGate>
+      <PilotsApp />
+    </AuthGate>
+  );
 }

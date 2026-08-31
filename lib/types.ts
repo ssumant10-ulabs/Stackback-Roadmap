@@ -48,7 +48,7 @@ export interface Roadmap {
   tasks: Node[];
   /** Only on the sheet-derived "stackback" roadmap: which SEED_VERSION these tasks came from.
    *  A stored value behind the current one is re-seeded on load so a saved browser (or the
-   *  shared Supabase row) never pins the team to a superseded copy of the roadmap sheet. */
+   *  shared Firestore copy) never pins the team to a superseded copy of the roadmap sheet. */
   seedVersion?: number;
 }
 
@@ -110,7 +110,7 @@ export interface Feature {
    *  open bugs per store but never says what they are. */
   kind?: "feature" | "bug";
   /** Screenshots. Downscaled to a data URL because there is no file storage yet; they move
-   *  to Supabase Storage the moment it is on. See SHOT_* limits in lib/shots.ts. */
+   *  to Firebase Storage the moment it is on. See SHOT_* limits in lib/shots.ts. */
   shots?: Shot[];
   updatedAt: string;
 }

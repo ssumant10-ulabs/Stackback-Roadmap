@@ -1,5 +1,7 @@
 "use client";
 import { useStore } from "@/lib/store";
+import { useAuth } from "./AuthGate";
+import { firebaseEnabled } from "@/lib/firebase";
 import { IcActivity, IcAdmin, IcPalette, IcPilots, IcSettings, Logo, ThemeIcon, ViewIcon } from "./icons";
 import { useAppUi } from "./appui";
 
@@ -15,6 +17,7 @@ function IconAction({ label, onClick, children }: { label: string; onClick: () =
 
 export function Header() {
   const s = useStore();
+  const { user, signOut } = useAuth();
   const ui = useAppUi();
   const name = s.activeRoadmap().name;
 
@@ -44,6 +47,14 @@ export function Header() {
           <IconAction label="Activity" onClick={() => s.setActivityOpen(true)}><IcActivity /></IconAction>
           <IconAction label={`Theme: ${THEME_LABEL[s.ui.theme]}`} onClick={() => s.cycleTheme()}><ThemeIcon theme={s.ui.theme} /></IconAction>
           <IconAction label="Settings" onClick={ui.openSettings}><IcSettings /></IconAction>
+          {firebaseEnabled && user && (
+            <button className="ibtn avatar-btn" data-tip={`${user.displayName || user.email}, sign out`}
+              aria-label="Sign out" onClick={() => { if (confirm("Sign out?")) signOut(); }}>
+              {user.photoURL
+                ? <img src={user.photoURL} alt="" />
+                : <span>{(user.displayName || user.email || "?").slice(0, 1).toUpperCase()}</span>}
+            </button>
+          )}
         </span>
       </div>
     </div>
