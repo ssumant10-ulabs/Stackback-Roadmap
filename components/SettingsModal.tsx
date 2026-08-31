@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import { TEAM_ORDER } from "@/lib/constants";
 import { supabaseEnabled } from "@/lib/remote";
+import { PALETTES } from "@/lib/palettes";
 import { IcTrash } from "./icons";
 
 export function SettingsModal({ onClose }: { onClose: () => void }) {
@@ -76,6 +77,20 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
             <input type="text" placeholder="New roadmap name, e.g. Milld" value={newName} onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
             <button type="button" onClick={add}>Create</button>
+          </div>
+        </div>
+        <div className="settings-section">
+          <div className="ss-head">Appearance</div>
+          <div className="ss-desc">Light and dark follow the theme button in the header. The colour below swaps the accent only, so contrast and the status colours stay as they are. Stored in this browser, so everyone can try one.</div>
+          <div className="pal-row">
+            {PALETTES.map((pl) => (
+              <button type="button" key={pl.id}
+                className={`pal${s.ui.palette === pl.id ? " on" : ""}`}
+                onClick={() => s.setPalette(pl.id)} title={pl.label}>
+                <span className="pal-dot" style={{ background: pl.swatch }} />
+                {pl.label}
+              </button>
+            ))}
           </div>
         </div>
         <div className="settings-section">
