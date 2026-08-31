@@ -337,6 +337,10 @@ class Store {
   snapshots(): { at: string; reason: string; state: string }[] {
     try { return JSON.parse(localStorage.getItem(SNAP_KEY) || "[]"); } catch { return []; }
   }
+  clearSnapshots() {
+    try { localStorage.removeItem(SNAP_KEY); } catch {}
+    this.notify();
+  }
   restoreSnapshot(at: string): boolean {
     const hit = this.snapshots().find((x) => x.at === at);
     if (!hit) return false;
