@@ -1,4 +1,4 @@
-import type { Activity, Feature, PilotStore, Roadmap, Roster } from "./types";
+import type { Activity, CustomCol, Feature, PilotStore, Roadmap, Roster } from "./types";
 import { fbDb, firebaseEnabled } from "./firebase";
 import {
   doc, getDoc, onSnapshot, setDoc, type Unsubscribe,
@@ -20,8 +20,13 @@ export interface RemoteState {
   pilots: PilotStore[];
   seeded?: { features?: boolean; pilots?: boolean; dates?: boolean };
   pilotCategories?: string[];
+  colOptions?: Record<string, string[]>;
+  customCols?: CustomCol[];
   adminUrl?: string;
   uiuxUrl?: string;
+  /** When the server copy was last written. Used to decide whether an edit recovered from
+   *  this browser is newer than what the team has since saved. */
+  updatedAt?: string | null;
 }
 
 /** Identifies this tab for the lifetime of the page. Written with every save so the live
@@ -43,9 +48,13 @@ function split(s: RemoteState): Record<string, Bag> {
     [DOCS.roadmap]: {
       roadmaps: s.roadmaps, activeId: s.activeId, roster: s.roster, activity: s.activity,
       adminUrl: s.adminUrl ?? null, uiuxUrl: s.uiuxUrl ?? null, updatedBy: CLIENT_ID,
+      updatedAt: new Date().toISOString(),
     },
     [DOCS.features]: { features: s.features, seeded: s.seeded ?? {}, updatedBy: CLIENT_ID },
-    [DOCS.pilots]: { pilots: s.pilots, pilotCategories: s.pilotCategories ?? [], updatedBy: CLIENT_ID },
+    [DOCS.pilots]: {
+      pilots: s.pilots, pilotCategories: s.pilotCategories ?? [],
+      colOptions: s.colOptions ?? {}, customCols: s.customCols ?? [], updatedBy: CLIENT_ID,
+    },
   };
 }
 
@@ -61,8 +70,11 @@ function merge(r: Bag, f: Bag, p: Bag): RemoteState | null {
     uiuxUrl: (r.uiuxUrl as string) || undefined,
     features: (f.features as Feature[]) || [],
     pilots: (p.pilots as PilotStore[]) || [],
+    updatedAt: (r.updatedAt as string) || null,
     seeded: (f.seeded as RemoteState["seeded"]) || {},
     pilotCategories: (p.pilotCategories as string[]) || [],
+    colOptions: (p.colOptions as Record<string, string[]>) || {},
+    customCols: (p.customCols as CustomCol[]) || [],
   };
 }
 

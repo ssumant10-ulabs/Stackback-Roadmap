@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
+import { ISSUE_TYPES } from "@/lib/pilotColumns";
 import type { Feature } from "@/lib/types";
 import { IcPlus, IcTrash } from "../icons";
 import { SHOT_MAX_PER_REQUEST, SHOT_TOTAL_BUDGET, fmtBytes, uploadShot } from "@/lib/shots";
@@ -68,6 +69,24 @@ function Shots({ f }: { f: Feature }) {
   );
 }
 
+/** Controlled, with a local draft while focused. An uncontrolled input keeps displaying what
+ *  was typed even when the save was dropped or a teammate's edit arrived, so the screen and
+ *  the record silently disagree. */
+function Field({ value, onSave, className, placeholder }:
+  { value: string; onSave: (v: string) => void; className?: string; placeholder?: string }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const shown = draft === null ? value : draft;
+  return (
+    <input className={className} value={shown} title={shown} placeholder={placeholder}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => { if (draft !== null && draft !== value) onSave(draft); setDraft(null); }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+        if (e.key === "Escape") { setDraft(null); (e.target as HTMLInputElement).blur(); }
+      }} />
+  );
+}
+
 function Row({ f, promoted }: { f: Feature; promoted?: boolean }) {
   const s = useStore();
   const own = f.sheetStatus || "Not started";
@@ -82,10 +101,25 @@ function Row({ f, promoted }: { f: Feature; promoted?: boolean }) {
           <option value="bug">Bug</option>
         </select>
       </td>
+      <td>
+        {f.kind === "bug" ? (
+          <select className={`pl-sel${f.issueType ? "" : " empty"}`} value={f.issueType || ""}
+            onChange={(e) => {
+              if (e.target.value === "__new__") {
+                const name = window.prompt("New issue type:");
+                if (name && s.addColOption("issueType", name)) s.setRequestIssueType(f.id, name.trim());
+                return;
+              }
+              s.setRequestIssueType(f.id, e.target.value);
+            }}>
+            <option value="">—</option>
+            {s.optionsFor("issueType", ISSUE_TYPES).map((o) => <option key={o} value={o}>{o}</option>)}
+            <option value="__new__">+ Add option…</option>
+          </select>
+        ) : <span className="rq-na" title="Issue type applies to bugs only">—</span>}
+      </td>
       <td className="rq-title">
-        <input className="pl-in" defaultValue={f.title} title={f.title}
-          onBlur={(e) => s.setFeatureField(f.id, "title", e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} />
+        <Field className="pl-in" value={f.title} onSave={(v) => s.setFeatureField(f.id, "title", v)} />
       </td>
       <td>
         <select className="pl-sel" value={f.storeId || ""}
@@ -97,9 +131,17 @@ function Row({ f, promoted }: { f: Feature; promoted?: boolean }) {
       <td>
         <div className="pl-selwrap">
           <select className="pl-sel" value={f.urgency || ""}
-            onChange={(e) => s.setRequestUrgency(f.id, e.target.value)}>
+            onChange={(e) => {
+              if (e.target.value === "__new__") {
+                const name = window.prompt("New priority:");
+                if (name && s.addColOption("urgency", name)) s.setRequestUrgency(f.id, name.trim());
+                return;
+              }
+              s.setRequestUrgency(f.id, e.target.value);
+            }}>
             <option value="">—</option>
-            {URGENCY.map((u) => <option key={u} value={u}>{u}</option>)}
+            {s.optionsFor("urgency", URGENCY).map((u) => <option key={u} value={u}>{u}</option>)}
+            <option value="__new__">+ Add option…</option>
           </select>
           {f.urgency && <span className={`rq-dot t-${U_TONE[f.urgency] || "neu"}`} />}
         </div>
@@ -131,9 +173,8 @@ function Row({ f, promoted }: { f: Feature; promoted?: boolean }) {
       </td>
       <td><Shots f={f} /></td>
       <td className="wide">
-        <input className="pl-in long" defaultValue={f.objective || ""} placeholder="What exactly did they ask for?"
-          onBlur={(e) => s.setFeatureField(f.id, "objective", e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} />
+        <Field className="pl-in long" value={f.objective || ""} placeholder="What exactly did they ask for?"
+          onSave={(v) => s.setFeatureField(f.id, "objective", v)} />
       </td>
       <td className="rq-actions">
         {promoted ? (
@@ -247,7 +288,7 @@ export function PilotsRequests() {
       <div className="pl-wrap">
         <table className="pl-table log">
           <thead>
-            <tr><th>Type</th><th>Request</th><th>Store</th><th>Priority</th><th>Status</th><th>On the roadmap</th><th>Screenshots</th><th className="wide">Detail</th><th>Actions</th></tr>
+            <tr><th>Type</th><th>Issue type</th><th>Request</th><th>Store</th><th>Priority</th><th>Status</th><th>On the roadmap</th><th>Screenshots</th><th className="wide">Detail</th><th>Actions</th></tr>
           </thead>
           <tbody>
             {rows.map((f) => <Row key={f.id} f={f} promoted={f.band !== "merchant"} />)}

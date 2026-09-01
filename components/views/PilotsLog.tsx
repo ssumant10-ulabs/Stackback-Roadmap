@@ -1,7 +1,10 @@
 "use client";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
-import { DEFAULT_ORDER, DEFAULT_VISIBLE, POCS, colByKey, toCsv, type PilotCol } from "@/lib/pilotColumns";
+
+/** Per-browser column choice for the activation log. */
+const COLS_KEY = "stackback_pilot_cols_v1";
+import { DEFAULT_ORDER, DEFAULT_VISIBLE, POCS, allColumns, cellValue, isCustomKey, toCsv, type PilotCol } from "@/lib/pilotColumns";
 import { daysSince, fmtShort, parseLoose } from "@/lib/pilotDates";
 import type { PilotStore } from "@/lib/types";
 import { IcPlus, IcTrash } from "../icons";
@@ -18,10 +21,19 @@ const GROUPS: { id: string; label: string; blurb: string }[] = [
   { id: "", label: "No status set", blurb: "Needs triaging" },
 ];
 
+/** Same initials chip the roadmap uses for owners, so a person reads as a person in both
+ *  places rather than as a name here and an avatar there. */
+function Who({ name }: { name: string }) {
+  const initials = name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
+  return <span className="pl-who" style={{ background: `hsl(${h} 45% 30%)`, color: `hsl(${h} 80% 85%)` }}>{initials}</span>;
+}
+
 function Cell({ p, col }: { p: PilotStore; col: PilotCol }) {
   const s = useStore();
-  const raw = p[col.key];
-  const value = raw === null || raw === undefined ? "" : String(raw);
+  const key = col.key as string;
+  const value = cellValue(p, key);
 
   if (col.kind === "readonly") {
     return (
@@ -55,33 +67,52 @@ function Cell({ p, col }: { p: PilotStore; col: PilotCol }) {
     );
   }
   if (col.kind === "select") {
-    const isCategory = col.key === "category";
-    const base = isCategory ? s.pilotCategories : (col.options || []);
+    const base = s.optionsFor(key, col.options || []);
     // Free-typed values already in the data must not vanish from their own dropdown.
     const opts = value && !base.includes(value) ? [value, ...base] : base;
     return (
       <div className="pl-selwrap">
+        {col.key === "poc" && value && <Who name={value} />}
         <select className={`pl-sel${value ? "" : " empty"}`} value={value}
           onChange={(e) => {
             if (e.target.value === "__new__") {
-              const name = window.prompt("New category name:");
-              if (name && s.addPilotCategory(name)) s.setPilotField(p.id, col.key, name.trim());
+              const name = window.prompt(`New ${col.label.toLowerCase()} option:`);
+              if (name && s.addColOption(key, name)) s.setPilotField(p.id, key, name.trim());
               return;
             }
-            s.setPilotField(p.id, col.key, e.target.value);
+            s.setPilotField(p.id, key, e.target.value);
           }}>
           <option value="">—</option>
           {opts.map((o) => <option key={o} value={o}>{o}</option>)}
-          {isCategory && <option value="__new__">+ New category…</option>}
+          <option value="__new__">+ Add option…</option>
         </select>
         {col.key === "activationStatus" && <span className={`pl-dot t-${TONE[value] || "dash"}`} />}
       </div>
     );
   }
+  return <TextCell p={p} col={col} value={value} />;
+}
+
+/** Controlled by state, not by the DOM. It used to use defaultValue, which meant the box kept
+ *  showing what was typed even after a save was dropped or a teammate's edit arrived, so the
+ *  screen and the record disagreed with nothing to show it. Local draft while focused, so
+ *  typing is never fought by a re-render. */
+function TextCell({ p, col, value }: { p: PilotStore; col: PilotCol; value: string }) {
+  const s = useStore();
+  const [draft, setDraft] = useState<string | null>(null);
+  const shown = draft === null ? value : draft;
+  const save = () => {
+    if (draft !== null && draft !== value) s.setPilotField(p.id, col.key as string, draft);
+    setDraft(null);
+  };
   return (
-    <input className={`pl-in${col.kind === "long" ? " long" : ""}`} defaultValue={value} title={value}
-      onBlur={(e) => s.setPilotField(p.id, col.key, e.target.value)}
-      onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} />
+    <input className={`pl-in${col.kind === "long" ? " long" : ""}`} value={shown} title={shown}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={save}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+        if (e.key === "Escape") { setDraft(null); (e.target as HTMLInputElement).blur(); }
+      }} />
   );
 }
 
@@ -95,10 +126,38 @@ export function PilotsLog() {
   const [adding, setAdding] = useState("");
   const [order, setOrder] = useState<string[]>(DEFAULT_ORDER);
   const [visible, setVisible] = useState<string[]>(DEFAULT_VISIBLE);
+  const [colsReady, setColsReady] = useState(false);
+  /* Which columns you chose is a per-person view preference, so it belongs in this browser
+     rather than in the shared record. It used to live only in component state, which meant
+     every reload threw the choice away. */
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(COLS_KEY);
+      if (!raw) return;
+      const p = JSON.parse(raw);
+      if (Array.isArray(p.order) && p.order.length) setOrder(p.order);
+      if (Array.isArray(p.visible)) setVisible(p.visible);
+    } catch {}
+    setColsReady(true);
+  }, []);
+  useEffect(() => {
+    if (!colsReady) return;
+    try { localStorage.setItem(COLS_KEY, JSON.stringify({ order, visible })); } catch {}
+  }, [order, visible, colsReady]);
   const [picker, setPicker] = useState(false);
   const [dragCol, setDragCol] = useState<string | null>(null);
 
-  const cols = order.filter((k) => visible.includes(k)).map(colByKey).filter(Boolean) as PilotCol[];
+  const [newCol, setNewCol] = useState("");
+  const [newColKind, setNewColKind] = useState<"text" | "select" | "long" | "date">("text");
+  const every = allColumns(s.customCols);
+  const byKey = (k: string) => every.find((c) => (c.key as string) === k);
+  // A column added since this browser saved its order would otherwise never appear.
+  const added = every.map((c) => c.key as string).filter((k) => !order.includes(k));
+  const fullOrder = [...order, ...added];
+  // Custom columns are visible until explicitly unticked: a column nobody can see is not a
+  // column. `added` are the ones this browser has not recorded a choice for yet.
+  const shown = (k: string) => visible.includes(k) || added.includes(k);
+  const cols = fullOrder.filter(shown).map(byKey).filter(Boolean) as PilotCol[];
 
   const rows = useMemo(() => {
     const t = q.trim().toLowerCase();
@@ -137,8 +196,16 @@ export function PilotsLog() {
     setOrder(next);
   };
 
+  /** A new column starts visible: the team just asked for it, so hiding it would be perverse. */
+  const addCol = () => {
+    const key = s.addCustomCol(newCol, newColKind);
+    if (!key) return;
+    setVisible([...visible, key]);
+    setOrder([...order, key]);
+    setNewCol("");
+  };
   const exportCsv = () => {
-    const csv = toCsv(rows, order.filter((k) => visible.includes(k)));
+    const csv = toCsv(rows, fullOrder.filter(shown), s.customCols);
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
     const a = document.createElement("a");
     a.href = url; a.download = "stackback-pilot-stores.csv";
@@ -184,18 +251,40 @@ export function PilotsLog() {
 
       {picker && (
         <div className="pl-picker">
-          {order.map((k) => {
-            const c = colByKey(k);
+          {fullOrder.map((k) => {
+            const c = byKey(k);
             if (!c || c.kind === "readonly") return null;
-            const on = visible.includes(k);
+            const on = shown(k);
             return (
               <label key={k} className={on ? "on" : ""}>
                 <input type="checkbox" checked={on}
                   onChange={() => setVisible(on ? visible.filter((x) => x !== k) : [...visible, k])} />
                 {c.label}
+                {isCustomKey(k) && (
+                  <button type="button" className="pl-colx" title={`Delete the ${c.label} column and its values`}
+                    onClick={(e) => {
+                      e.preventDefault(); e.stopPropagation();
+                      if (confirm(`Delete the "${c.label}" column? The values stored under it go too.`)) {
+                        s.removeCustomCol(k);
+                        setVisible(visible.filter((x) => x !== k));
+                        setOrder(order.filter((x) => x !== k));
+                      }
+                    }}>×</button>
+                )}
               </label>
             );
           })}
+          <span className="pl-newcol">
+            <input placeholder="New column…" value={newCol} onChange={(e) => setNewCol(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCol(); } }} />
+            <select value={newColKind} onChange={(e) => setNewColKind(e.target.value as "text" | "select" | "long" | "date")}>
+              <option value="text">Text</option>
+              <option value="select">Dropdown</option>
+              <option value="long">Long text</option>
+              <option value="date">Date</option>
+            </select>
+            <button type="button" onClick={addCol}>Add</button>
+          </span>
           <button type="button" className="btn ghost sm" onClick={() => { setVisible(DEFAULT_VISIBLE); setOrder(DEFAULT_ORDER); }}>Reset</button>
         </div>
       )}

@@ -953,6 +953,10 @@
     border-bottom:1px solid var(--border);white-space:nowrap;}
   .pl-table td{padding:6px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
   .pl-table tr:last-child td{border-bottom:none;}
+  /* Vertical rules. Without them a wide row of inputs reads as one continuous strip and the
+     eye loses which value belongs to which column. */
+  .pl-table th + th, .pl-table td + td{border-left:1px solid var(--border);}
+  .roadmap-table th + th, .roadmap-table td + td{border-left:1px solid var(--border);}
   .pl-table tr:hover td{background:var(--sunken);}
   .pl-table td.num{font-variant-numeric:tabular-nums;color:var(--ink-2);}
   .pl-table td.num.bad{color:var(--status-late);font-weight:800;}
@@ -1061,6 +1065,20 @@
   .pl-picker label.on{color:var(--ink);border-color:var(--brand-deep);background:var(--sunken);}
   .pl-picker input{accent-color:var(--brand-deep);}
   .pl-selwrap{display:flex;align-items:center;gap:4px;}
+  .pl-who{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
+    width:20px;height:20px;border-radius:50%;font-size:9.5px;font-weight:800;letter-spacing:.02em;}
+  .pl-colx{margin-left:2px;padding:0 3px;border:none;background:none;cursor:pointer;
+    color:var(--ink-dim);font-size:13px;line-height:1;border-radius:4px;}
+  .pl-colx:hover{color:var(--danger,#f87171);background:var(--sunken);}
+  .pl-newcol{display:inline-flex;align-items:center;gap:5px;padding:3px 5px;
+    border:1px dashed var(--border);border-radius:9px;}
+  .pl-newcol input{width:120px;padding:4px 7px;font-size:12px;background:var(--sunken);
+    border:1px solid var(--border);border-radius:7px;color:var(--ink);}
+  .pl-newcol select{padding:4px 6px;font-size:12px;background:var(--sunken);
+    border:1px solid var(--border);border-radius:7px;color:var(--ink);}
+  .pl-newcol button{padding:4px 9px;font-size:12px;font-weight:700;cursor:pointer;
+    background:var(--brand);color:var(--on-brand,#0b0f0a);border:none;border-radius:7px;}
+  .rq-na{color:var(--ink-dim);opacity:.5;font-size:12px;padding-left:4px;}
   .pl-sel.empty{color:var(--ink-3);}
   .pl-table.log th.draggable{cursor:grab;}
   .pl-table.log th.draggable:hover{color:var(--ink);background:var(--sunken);}
