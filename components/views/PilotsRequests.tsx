@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import { ISSUE_TYPES } from "@/lib/pilotColumns";
 import type { Feature } from "@/lib/types";
@@ -87,13 +87,16 @@ function Field({ value, onSave, className, placeholder }:
   );
 }
 
-function Row({ f, promoted }: { f: Feature; promoted?: boolean }) {
+function Row({ f, promoted, picked, onPick }:
+  { f: Feature; promoted?: boolean; picked: boolean; onPick: (id: string, on: boolean) => void }) {
   const s = useStore();
   const own = f.sheetStatus || "Not started";
-  const board = s.featureBoardStatus(f);
-  const task = s.featureTask(f);
   return (
-    <tr className={`${f.kind === "bug" ? "rq-bug" : ""}${promoted ? " rq-promoted" : ""}`.trim() || undefined}>
+    <tr className={`${f.kind === "bug" ? "rq-bug" : ""}${promoted ? " rq-promoted" : ""}${picked ? " rq-picked" : ""}`.trim() || undefined}>
+      <td className="rq-pick">
+        <input type="checkbox" checked={picked} aria-label={`Select ${f.title}`}
+          onChange={(e) => onPick(f.id, e.target.checked)} />
+      </td>
       <td>
         <select className="pl-sel" value={f.kind || "feature"}
           onChange={(e) => s.setRequestKind(f.id, e.target.value as "feature" | "bug")}>
@@ -116,7 +119,7 @@ function Row({ f, promoted }: { f: Feature; promoted?: boolean }) {
             {s.optionsFor("issueType", ISSUE_TYPES).map((o) => <option key={o} value={o}>{o}</option>)}
             <option value="__new__">+ Add option…</option>
           </select>
-        ) : <span className="rq-na" title="Issue type applies to bugs only">—</span>}
+        ) : null}
       </td>
       <td className="rq-title">
         <Field className="pl-in" value={f.title} onSave={(v) => s.setFeatureField(f.id, "title", v)} />
@@ -155,22 +158,6 @@ function Row({ f, promoted }: { f: Feature; promoted?: boolean }) {
           <span className={`rq-dot t-${S_TONE[own] || "dash"}`} />
         </div>
       </td>
-      <td className="rq-board">
-        {task ? (
-          <span className="rq-task" title={`${task.title} · board says ${board}`}>
-            {task.title}<em>{board}</em>
-            <button type="button" className="rq-unlink" title="Detach from this task"
-              onClick={() => s.linkFeature(f.id, null)}>×</button>
-          </span>
-        ) : (
-          <select className="pl-sel rq-link" value=""
-            title="Attach this request to a milestone already on the board"
-            onChange={(e) => { if (e.target.value) s.linkFeature(f.id, e.target.value); }}>
-            <option value="">Not on the board</option>
-            {s.tasks.map((t2) => <option key={t2.id} value={t2.id}>{t2.title}</option>)}
-          </select>
-        )}
-      </td>
       <td><Shots f={f} /></td>
       <td className="wide">
         <Field className="pl-in long" value={f.objective || ""} placeholder="What exactly did they ask for?"
@@ -201,6 +188,9 @@ export function PilotsRequests() {
   const [urg, setUrg] = useState("");
   const [showMoved, setShowMoved] = useState(false);
   const [nt, setNt] = useState({ store: "", title: "", kind: "feature" as "feature" | "bug", urgency: "Medium" });
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const pick = (id: string, on: boolean) =>
+    setSel((prev) => { const next = new Set(prev); if (on) next.add(id); else next.delete(id); return next; });
 
   const rows = useMemo(() => {
     const t = q.trim().toLowerCase();
@@ -215,6 +205,24 @@ export function PilotsRequests() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s.requests, q, store, kind, urg, showMoved, version]);
+
+  const visibleIds = useMemo(() => new Set(rows.map((r) => r.id)), [rows]);
+  useEffect(() => {
+    setSel((prev) => {
+      const kept = [...prev].filter((id) => visibleIds.has(id));
+      return kept.length === prev.size ? prev : new Set(kept);
+    });
+  }, [visibleIds]);
+  const picked = [...sel];
+  const allPicked = rows.length > 0 && picked.length === rows.length;
+  const somePicked = picked.length > 0;
+  /** Applies to the selection, then clears it: leaving rows selected after an action invites
+   *  a second one nobody meant. */
+  const applyBulk = (patch: Parameters<typeof s.bulkRequests>[1]) => {
+    if (!picked.length) return;
+    s.bulkRequests(picked, patch);
+    setSel(new Set());
+  };
 
   const anyFilter = !!(q || store || kind || urg);
 
@@ -285,15 +293,56 @@ export function PilotsRequests() {
         <button type="button" className="btn primary" onClick={add}><IcPlus /> Log it</button>
       </div>
 
+      {somePicked && (
+        <div className="rq-bulk">
+          <span className="rq-bulk-n"><b>{picked.length}</b> selected</span>
+          <select className="pl-sel" value="" onChange={(e) => applyBulk({ status: e.target.value })}>
+            <option value="">Set status…</option>
+            {STATUS.map((x) => <option key={x} value={x}>{x}</option>)}
+          </select>
+          <select className="pl-sel" value="" onChange={(e) => applyBulk({ urgency: e.target.value === "__clear__" ? "" : e.target.value })}>
+            <option value="">Set priority…</option>
+            {s.optionsFor("urgency", URGENCY).map((u) => <option key={u} value={u}>{u}</option>)}
+            <option value="__clear__">Clear priority</option>
+          </select>
+          <select className="pl-sel" value="" onChange={(e) => applyBulk({ kind: e.target.value as "feature" | "bug" })}>
+            <option value="">Set type…</option>
+            <option value="feature">Feature</option>
+            <option value="bug">Bug</option>
+          </select>
+          <select className="pl-sel" value="" onChange={(e) => applyBulk({ issueType: e.target.value === "__clear__" ? "" : e.target.value })}>
+            <option value="">Set issue type…</option>
+            {s.optionsFor("issueType", ISSUE_TYPES).map((o) => <option key={o} value={o}>{o}</option>)}
+            <option value="__clear__">Clear issue type</option>
+          </select>
+          <button type="button" className="btn ghost sm danger"
+            onClick={() => {
+              if (!confirm(`Delete ${picked.length} request(s)? This cannot be undone.`)) return;
+              s.bulkDeleteRequests(picked);
+              setSel(new Set());
+            }}>Delete</button>
+          <button type="button" className="btn ghost sm" onClick={() => setSel(new Set())}>Clear</button>
+        </div>
+      )}
+
       <div className="pl-wrap">
         <table className="pl-table log">
           <thead>
-            <tr><th>Type</th><th>Issue type</th><th>Request</th><th>Store</th><th>Priority</th><th>Status</th><th>On the roadmap</th><th>Screenshots</th><th className="wide">Detail</th><th>Actions</th></tr>
+            <tr>
+              <th className="rq-pick">
+                <input type="checkbox" aria-label="Select every row shown"
+                  checked={allPicked} ref={(el) => { if (el) el.indeterminate = somePicked && !allPicked; }}
+                  onChange={(e) => setSel(e.target.checked ? new Set(rows.map((r) => r.id)) : new Set())} />
+              </th>
+              <th>Type</th><th>Issue type</th><th>Request</th><th>Store</th><th>Priority</th><th>Status</th><th>Screenshots</th><th className="wide">Detail</th><th>Actions</th></tr>
           </thead>
           <tbody>
-            {rows.map((f) => <Row key={f.id} f={f} promoted={f.band !== "merchant"} />)}
+            {rows.map((f) => (
+              <Row key={f.id} f={f} promoted={f.band !== "merchant"}
+                picked={sel.has(f.id)} onPick={pick} />
+            ))}
             {!rows.length && (
-              <tr><td colSpan={9} className="pl-empty">
+              <tr><td colSpan={10} className="pl-empty">
                 {anyFilter ? (
                   <>
                     No requests match those filters.
