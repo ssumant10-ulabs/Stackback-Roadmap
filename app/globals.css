@@ -1081,6 +1081,12 @@
   .rq-na{color:var(--ink-dim);opacity:.5;font-size:12px;padding-left:4px;}
   /* Palette chooser. These had no styling at all, so the browser drew six default buttons
      joined into one grey bar and the swatch colours never showed. */
+  /* Delete lives on its own line, away from the controls it used to sit beside. */
+  .ft-add-place{max-width:210px;flex:0 1 210px;}
+  .ft-danger{display:flex;justify-content:flex-end;margin-top:10px;padding-top:10px;
+    border-top:1px solid var(--border);}
+  .ft-danger .btn{display:inline-flex;align-items:center;gap:6px;}
+  .ft-danger svg{width:14px;height:14px;}
   .pal-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:8px;margin-top:10px;}
   .pal{display:flex;align-items:center;gap:8px;padding:9px 11px;cursor:pointer;font:inherit;
     font-size:12.5px;font-weight:650;text-align:left;color:var(--ink-2);background:var(--card-2);
@@ -1091,7 +1097,9 @@
   .pal-dot{width:16px;height:16px;flex:0 0 auto;border-radius:50%;
     box-shadow:inset 0 0 0 1px hsl(0 0% 0% / .22);}
   /* Bulk selection */
-  .rq-pick{width:34px;text-align:center;}
+  /* Narrow and fixed. Auto table layout was handing this column the slack freed by removing
+     the roadmap column, so a 16px checkbox sat in a very wide cell. */
+  .rq-pick{width:30px;min-width:30px;max-width:30px;padding-left:6px;padding-right:0;text-align:center;}
   .rq-pick input{accent-color:var(--brand-deep);cursor:pointer;}
   .pl-table tr.rq-picked td{background:var(--sunken);}
   .rq-bulk{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 12px;margin-bottom:11px;
@@ -1100,15 +1108,22 @@
   .rq-bulk-n b{color:var(--ink);font-size:14px;}
   .btn.danger{color:var(--danger,#f87171);border-color:color-mix(in srgb,var(--danger,#f87171) 40%,transparent);}
   /* Top-level dropdown vocabularies */
-  .pl-opts{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:9px 12px;margin-bottom:11px;
+  /* Grid, not a wrapping flex row: the open panel's value list is full width, so on a flex
+     row it pushed the remaining pills onto their own lines and overflowed the container. */
+  .pl-opts{display:grid;grid-template-columns:auto 1fr;align-items:start;gap:8px 10px;
+    padding:9px 12px;margin-bottom:11px;
     border:1px solid var(--border);border-radius:11px;background:var(--card);}
+  .pl-opts-hd{padding-top:5px;}
+  .pl-optpills{display:flex;align-items:center;gap:7px;flex-wrap:wrap;min-width:0;}
   .pl-opts-hd{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim);}
   .pl-optgrp > button{padding:4px 9px;font-size:12px;font-weight:650;cursor:pointer;color:var(--ink-dim);
     background:var(--sunken);border:1px solid var(--border);border-radius:999px;}
   .pl-optgrp.open > button{color:var(--ink);border-color:var(--brand-deep);}
   .pl-optgrp em{font-style:normal;opacity:.6;margin-left:4px;}
-  .pl-optbody{display:flex;align-items:center;gap:6px;flex-wrap:wrap;width:100%;margin-top:7px;}
-  .pl-optlist{font-size:12px;color:var(--ink-dim);flex:1 1 240px;}
+  .pl-optbody{grid-column:1 / -1;display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+    padding:8px 10px;border:1px solid var(--border);border-radius:9px;background:var(--sunken);}
+  .pl-optlist{font-size:12px;color:var(--ink-dim);line-height:1.5;flex:1 1 100%;min-width:0;
+    overflow-wrap:anywhere;}
   .pl-optbody input{width:190px;padding:5px 8px;font-size:12px;background:var(--sunken);
     border:1px solid var(--border);border-radius:7px;color:var(--ink);}
   .pl-optbody button{padding:5px 11px;font-size:12px;font-weight:700;cursor:pointer;

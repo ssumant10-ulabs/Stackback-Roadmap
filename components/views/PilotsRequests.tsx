@@ -166,7 +166,7 @@ function Row({ f, promoted, picked, onPick }:
       <td className="rq-actions">
         {promoted ? (
           <span className="rq-moved" title="Moved into the roadmap's feature list">In features</span>
-        ) : (
+        ) : f.kind === "bug" ? null : (
           <button type="button" className="btn ghost sm" title="We have decided to build this: move it into the roadmap's feature list, keeping the store attached"
             onClick={() => { if (confirm(`Move "${f.title}" into the roadmap features?\n\n${f.storeName || f.requestedBy || "The store"} stays attached, and it remains visible here under "include moved to features".`)) s.moveRequestToFeatures(f.id); }}>
             To features

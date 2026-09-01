@@ -131,34 +131,39 @@ function OptionEditor({ cols }: { cols: PilotCol[] }) {
   const [draft, setDraft] = useState("");
   const selects = cols.filter((c) => c.kind === "select");
   if (!selects.length) return null;
+  const openCol = selects.find((c) => (c.key as string) === open) || null;
   return (
     <div className="pl-opts">
       <span className="pl-opts-hd">Dropdown values</span>
-      {selects.map((c) => {
-        const key = c.key as string;
-        const opts = s.optionsFor(key, c.options || []);
-        const isOpen = open === key;
-        return (
-          <span key={key} className={`pl-optgrp${isOpen ? " open" : ""}`}>
-            <button type="button" onClick={() => { setOpen(isOpen ? null : key); setDraft(""); }}>
-              {c.label} <em>{opts.length}</em>
-            </button>
-            {isOpen && (
-              <span className="pl-optbody">
-                <span className="pl-optlist">{opts.join(" · ") || "none yet"}</span>
-                <input placeholder={`New ${c.label.toLowerCase()} value…`} value={draft} autoFocus
-                  onChange={(e) => setDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key !== "Enter") return;
-                    e.preventDefault();
-                    if (s.addColOption(key, draft)) setDraft("");
-                  }} />
-                <button type="button" onClick={() => { if (s.addColOption(key, draft)) setDraft(""); }}>Add</button>
-              </span>
-            )}
+      <span className="pl-optpills">
+        {selects.map((c) => {
+          const key = c.key as string;
+          const n = s.optionsFor(key, c.options || []).length;
+          return (
+            <span key={key} className={`pl-optgrp${open === key ? " open" : ""}`}>
+              <button type="button" onClick={() => { setOpen(open === key ? null : key); setDraft(""); }}>
+                {c.label} <em>{n}</em>
+              </button>
+            </span>
+          );
+        })}
+      </span>
+      {openCol && (
+        <span className="pl-optbody">
+          <span className="pl-optlist">
+            {s.optionsFor(openCol.key as string, openCol.options || []).join(" · ") || "none yet"}
           </span>
-        );
-      })}
+          <input placeholder={`New ${openCol.label.toLowerCase()} value…`} value={draft} autoFocus
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key !== "Enter") return;
+              e.preventDefault();
+              if (s.addColOption(openCol.key as string, draft)) setDraft("");
+            }} />
+          <button type="button"
+            onClick={() => { if (s.addColOption(openCol.key as string, draft)) setDraft(""); }}>Add</button>
+        </span>
+      )}
     </div>
   );
 }
