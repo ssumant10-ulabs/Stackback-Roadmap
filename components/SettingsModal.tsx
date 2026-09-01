@@ -24,11 +24,26 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
+  /** Restoring replaces the roadmap everyone sees, and it sat one click away from the theme
+   *  buttons with nothing in between. So say what is in the file and what it will replace,
+   *  and make it an answer rather than a side effect of picking a file. */
   const upload = (f: File) => {
     const r = new FileReader();
     r.onload = () => {
-      const ok = s.importState(String(r.result));
-      alert(ok ? "Backup restored." : "That file could not be read as a StackBack backup. Nothing was changed.");
+      const text = String(r.result);
+      let summary = "";
+      try {
+        const p = JSON.parse(text);
+        const tasks = (p.roadmaps || []).reduce((n: number, rm: { tasks?: unknown[] }) => n + (rm.tasks || []).length, 0);
+        summary = `\n\nThe file holds ${tasks} tasks, ${(p.features || []).length} features and ${(p.pilots || []).length} pilot stores.`;
+      } catch {
+        alert("That file is not readable as a StackBack backup. Nothing was changed.");
+        return;
+      }
+      const now = `Right now there are ${s.tasks.length} tasks, ${s.features.length} features and ${s.pilots.length} pilot stores.`;
+      if (!confirm(`Replace the roadmap for everyone with this backup?${summary}\n\n${now}\n\nThis cannot be undone. Download a backup first if you are not sure.`)) return;
+      const ok = s.importState(text);
+      alert(ok ? "Backup restored. Everyone will see it on their next update." : "That file could not be read as a StackBack backup. Nothing was changed.");
     };
     r.readAsText(f);
   };

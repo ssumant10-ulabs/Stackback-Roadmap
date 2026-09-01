@@ -97,8 +97,22 @@ function TextCell({ p, col, value }: { p: PilotStore; col: PilotCol; value: stri
     if (draft !== null && draft !== value) s.setPilotField(p.id, col.key as string, draft);
     setDraft(null);
   };
+  /* Notes are sentences, so they wrap. A single-line input clipped them and left the whole
+     note readable only through a native tooltip that covered the next row. Two lines at rest,
+     the full note on hover or focus. */
+  if (col.kind === "long") {
+    return (
+      <textarea className="pl-in long" value={shown} rows={2} spellCheck={false}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={save}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") { setDraft(null); (e.target as HTMLTextAreaElement).blur(); }
+          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) (e.target as HTMLTextAreaElement).blur();
+        }} />
+    );
+  }
   return (
-    <input className={`pl-in${col.kind === "long" ? " long" : ""}`} value={shown} title={shown}
+    <input className="pl-in" value={shown} title={shown}
       onChange={(e) => setDraft(e.target.value)}
       onBlur={save}
       onKeyDown={(e) => {
