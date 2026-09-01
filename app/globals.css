@@ -1082,7 +1082,25 @@
   /* Palette chooser. These had no styling at all, so the browser drew six default buttons
      joined into one grey bar and the swatch colours never showed. */
   /* Delete lives on its own line, away from the controls it used to sit beside. */
-  .ft-add-place{max-width:210px;flex:0 1 210px;}
+  /* The linked card, summarised inside the feature. Read-only, so it is a panel rather than
+     a set of controls: the card itself stays the one place this is edited. */
+  .ft-board{margin:10px 0 4px;padding:10px 12px;border:1px solid var(--border);border-radius:11px;
+    background:var(--sunken);}
+  .ft-board-hd{display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+  .ft-board-dates,.ft-board-prog,.ft-board-who{font-size:12px;color:var(--ink-2);}
+  .ft-board-prog{font-weight:700;color:var(--ink);}
+  .ft-board-hd .btn{margin-left:auto;}
+  .ft-board-list{list-style:none;margin:9px 0 0;padding:0;display:grid;gap:5px;}
+  .ft-board-list li{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-2);}
+  .ft-board-list li.done{color:var(--ink-3);text-decoration:line-through;}
+  .ft-tick{width:9px;height:9px;flex:0 0 auto;border-radius:50%;background:var(--track);}
+  .ft-tick.t-done{background:var(--ok,#7BD88F);}
+  .ft-tick.t-progress{background:var(--warn,#E8A33D);}
+  .ft-add-place{max-width:200px;flex:0 1 200px;padding:8px 10px;font:inherit;font-size:12.5px;
+    color:var(--ink-2);background:var(--card-2);border:1px solid var(--border);border-radius:9px;
+    cursor:pointer;}
+  .ft-add-place:hover{color:var(--ink);border-color:var(--border-2);}
+  .ft-add-place:focus-visible{outline:2px solid var(--accent-line);outline-offset:1px;}
   .ft-danger{display:flex;justify-content:flex-end;margin-top:10px;padding-top:10px;
     border-top:1px solid var(--border);}
   .ft-danger .btn{display:inline-flex;align-items:center;gap:6px;}
@@ -1099,7 +1117,15 @@
   /* Bulk selection */
   /* Narrow and fixed. Auto table layout was handing this column the slack freed by removing
      the roadmap column, so a 16px checkbox sat in a very wide cell. */
-  .rq-pick{width:30px;min-width:30px;max-width:30px;padding-left:6px;padding-right:0;text-align:center;}
+  .rq-pick{width:30px;min-width:30px;max-width:30px;padding:0;text-align:center;}
+  /* The table's text inputs carry width:100% and min-width:70px, which a checkbox has no
+     business inheriting: it was drawn 70px wide inside a 30px cell and spilled across the
+     column beside it. Size it as a checkbox, and opt it out of the text-input treatment. */
+  .rq-pick input[type="checkbox"],
+  .pl-table td.rq-pick input[type="checkbox"],
+  .pl-table th.rq-pick input[type="checkbox"]{
+    width:15px;height:15px;min-width:0;margin:0;padding:0;border:none;background:none;
+    accent-color:var(--brand-deep);cursor:pointer;vertical-align:middle;}
   .rq-pick input{accent-color:var(--brand-deep);cursor:pointer;}
   .pl-table tr.rq-picked td{background:var(--sunken);}
   .rq-bulk{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 12px;margin-bottom:11px;

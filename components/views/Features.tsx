@@ -3,7 +3,8 @@ import { useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import type { Feature, FeatureBand, Node as TaskNode } from "@/lib/types";
 import { IcLink, IcPlus, IcTrash } from "../icons";
-import { STATES, stateOf } from "@/lib/derive";
+import { STATES, effStatus, stateOf, subtreeCounts } from "@/lib/derive";
+import { effRange, fmtRange } from "@/lib/dates";
 import { useAppUi } from "../appui";
 
 /** Grouped the way the board is, so the two read the same. The sheet's own blocks (upcoming,
@@ -73,6 +74,11 @@ function Row({ f }: { f: Feature }) {
           {f.objective && <p><span>Objective</span>{f.objective}</p>}
           {f.nextSteps && <p><span>Next steps</span>{f.nextSteps}</p>}
           {f.blockers && <p><span>Blockers</span>{f.blockers}</p>}
+          {/* What the board actually holds for this feature. Once a feature is linked, the
+              card is where the dates, the owners and the checklist live, and the detail here
+              showed none of it, so a feature that had been filled in on the board still read
+              as empty. Read-only on purpose: the card stays the one place it is edited. */}
+          {task && <BoardSummary task={task} onJump={() => ui.jumpToCard(task.id)} />}
           <div className="ft-meta">
             {f.requestedBy && <span>Requested by <b>{f.requestedBy}</b></span>}
             {f.effort && <span>Effort <b>{f.effort}</b></span>}
@@ -115,6 +121,38 @@ function Row({ f }: { f: Feature }) {
   );
 }
 
+/** A read-only view of the linked card: where it sits, its window, who owns it and how far
+ *  its checklist has got. */
+function BoardSummary({ task, onJump }: { task: TaskNode; onJump: () => void }) {
+  const c = subtreeCounts(task);
+  const range = effRange(task);
+  const st = effStatus(task);
+  const kids = task.children || [];
+  const owners = (task.assignees || []).map((a) => a.name);
+  return (
+    <div className="ft-board">
+      <div className="ft-board-hd">
+        <span className={`ft-status t-${st === "done" ? "ok" : st === "progress" ? "warn" : "neu"}`}>
+          {st === "done" ? "Done" : st === "progress" ? "In progress" : "Planned"}
+        </span>
+        {range && <span className="ft-board-dates">{fmtRange(range.start, range.end)}</span>}
+        {c.total > 0 && <span className="ft-board-prog">{c.done}/{c.total} done</span>}
+        {owners.length > 0 && <span className="ft-board-who">{owners.join(", ")}</span>}
+        <button type="button" className="btn ghost sm" onClick={onJump}>Open on the board</button>
+      </div>
+      {kids.length > 0 && (
+        <ul className="ft-board-list">
+          {kids.map((k) => (
+            <li key={k.id} className={effStatus(k) === "done" ? "done" : undefined}>
+              <span className={`ft-tick t-${effStatus(k)}`} />{k.title}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function AddFeature({ band }: { band: FeatureBand }) {
   const s = useStore();
   const [v, setV] = useState("");
@@ -136,7 +174,7 @@ function AddFeature({ band }: { band: FeatureBand }) {
       <input placeholder="Add a feature…" value={v} onChange={(e) => setV(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
       <select className="ft-add-place" value={place} onChange={(e) => setPlace(e.target.value)}
-        title="Optionally put it on the board straight away">
+        aria-label="Where this lands on the board">
         <option value="">Not on the board</option>
         {STATES.filter((w) => w.p).map((w) => (
           <option key={w.k} value={`new:${w.p}`}>New {w.word} milestone</option>
