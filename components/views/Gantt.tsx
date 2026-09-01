@@ -18,8 +18,13 @@ interface Row {
 function buildRows(tasks: Node[], openIds: Record<string, boolean>): Row[] {
   const out: Row[] = [];
   tasks.forEach((t) => {
-    out.push({ node: t, depth: 0, range: effRange(t) });
-    if (openIds[t.id]) {
+    const range = effRange(t);
+    out.push({ node: t, depth: 0, range });
+    /* Children only when the milestone is itself on the chart. An undated milestone is listed
+       below as "no dates set", so its subtasks have no bar to sit under and used to appear as
+       a run of empty rows: this view shares its expanded state with the board, so opening a
+       checklist there filled the timeline with rows that could never carry a bar. */
+    if (range && openIds[t.id]) {
       (t.children || []).forEach((c) => out.push({ node: c, depth: 1, range: effRange(c) }));
     }
   });

@@ -100,8 +100,14 @@ function Row({ f }: { f: Feature }) {
                 {s.tasks.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
               </select>
             </label>
-            <button type="button" className="icon-btn danger" aria-label="Remove feature"
-              onClick={() => { if (confirm(`Remove "${f.title}"?`)) s.delFeature(f.id); }}><IcTrash /></button>
+          </div>
+          {/* Its own row, right of everything else. A bare trash icon sitting against the link
+              dropdown put deleting the feature one slip away from choosing a task for it. */}
+          <div className="ft-danger">
+            <button type="button" className="btn ghost sm danger"
+              onClick={() => { if (confirm(`Delete "${f.title}"? This cannot be undone.`)) s.delFeature(f.id); }}>
+              <IcTrash /> Delete feature
+            </button>
           </div>
         </div>
       )}
@@ -113,12 +119,31 @@ function AddFeature({ band }: { band: FeatureBand }) {
   const s = useStore();
   const [v, setV] = useState("");
   const [ref, setRef] = useState("");
-  const add = () => { if (s.addFeature(v, band, ref)) { setV(""); setRef(""); } };
+  /** Where it lands: nowhere, a brand-new milestone in one of the three horizons, or an
+   *  existing task. Set at creation, so a new feature does not have to be found again and
+   *  reopened just to place it. */
+  const [place, setPlace] = useState("");
+  const add = () => {
+    const id = s.addFeature(v, band, ref);
+    if (!id) return;
+    if (place.startsWith("new:")) s.moveFeatureToBoard(id, Number(place.slice(4)));
+    else if (place) s.linkFeature(id, place);
+    setV(""); setRef(""); setPlace("");
+  };
   return (
     <div className="ft-add">
       <input className="ft-add-ref" placeholder="ID" value={ref} onChange={(e) => setRef(e.target.value)} />
       <input placeholder="Add a feature…" value={v} onChange={(e) => setV(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
+      <select className="ft-add-place" value={place} onChange={(e) => setPlace(e.target.value)}
+        title="Optionally put it on the board straight away">
+        <option value="">Not on the board</option>
+        {STATES.filter((w) => w.p).map((w) => (
+          <option key={w.k} value={`new:${w.p}`}>New {w.word} milestone</option>
+        ))}
+        {s.tasks.length > 0 && <option disabled>── or link to ──</option>}
+        {s.tasks.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
+      </select>
       <button type="button" onClick={add}><IcPlus /> Add</button>
     </div>
   );
