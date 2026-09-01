@@ -106,6 +106,8 @@ export interface Feature {
    *  request carries its origin rather than a name in a free-text "requested by" cell. */
   storeId?: string | null;
   storeName?: string | null;
+  /** Bugs only: which layer the fault sits in. Blank on features. */
+  issueType?: string | null;
   /** A merchant raises both. Bugs are the gap the pilot sheet never covered: it counts
    *  open bugs per store but never says what they are. */
   kind?: "feature" | "bug";
@@ -117,8 +119,19 @@ export interface Feature {
 
 /** One pilot store, merging the sheet's Overview and Activation Pointers tabs, which are
  *  the same 44 stores described twice. */
+/** A column the team added themselves, stored with the data rather than in code so it needs
+ *  no deploy. Keys are prefixed `c_` so a custom column can never shadow a built-in field. */
+export interface CustomCol {
+  key: string;
+  label: string;
+  kind: "text" | "select" | "long" | "date";
+  options?: string[];
+}
+
 export interface PilotStore {
   id: string;
+  /** Values for custom columns, keyed by their `c_` key. */
+  custom?: Record<string, string | null>;
   n: number;
   name: string;
   url?: string | null;

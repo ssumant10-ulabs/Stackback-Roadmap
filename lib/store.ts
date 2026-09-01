@@ -1,8 +1,5 @@
 import { useSyncExternalStore } from "react";
-import type {
-  Activity, ActivityKind, Assignee, Comment, Filter, Node, Roadmap, Roster, Status,
-  Theme, ViewId, TimelineMode, SimpleMode, TeamGran, Feature, FeatureBand, PilotStore, Shot,
-} from "./types";
+import type { Activity, ActivityKind, Assignee, Comment, CustomCol, Feature, FeatureBand, Filter, Node, PilotStore, Roadmap, Roster, Shot, SimpleMode, Status, TeamGran, Theme, TimelineMode, ViewId } from "./types";
 import { DEFAULT_ROSTER, STATUS_CYCLE } from "./constants";
 import { SEED_VERSION, seed, stampIds } from "./seed";
 import { uid, newRoadmapId } from "./id";
@@ -17,6 +14,9 @@ import { parseLoose } from "./pilotDates";
 import { CLIENT_ID, firebaseEnabled, loadRemote, saveRemote, subscribeRemote } from "./remote";
 
 const ROADMAPS_KEY = "stackback_roadmaps_v3";
+/** Set while a Firestore write is owed, cleared once it lands. Its presence on load means the
+ *  last session ended with an edit that never reached the server. */
+const PENDING_KEY = "stackback_pending_since";
 const ROSTER_KEY = "stackback_roster_v1";
 const THEME_KEY = "stackback_theme";
 /** Per-person, never shared: on a shared backend, everyone must keep their own identity. */
@@ -57,6 +57,11 @@ interface Data {
   seeded?: { features?: boolean; pilots?: boolean; dates?: boolean };
   /** Categories added by the team on top of the ones the sheet arrived with. */
   pilotCategories?: string[];
+  /** Dropdown values the team added, keyed by column. Kept with the data so extending a
+   *  vocabulary is a UI action, not a deploy. */
+  colOptions?: Record<string, string[]>;
+  /** Columns the team added to the activation log. */
+  customCols?: CustomCol[];
   /** Where the two admin surfaces live. Shared, so hosting them somewhere real is a
    *  one-time change for the whole team rather than a per-browser setting. */
   adminUrl?: string;
@@ -127,6 +132,8 @@ class Store {
    *  "promoted" means it carried the local board up; "seeded" means it found nothing to
    *  carry and the defaults were written; "adopted" means the shared copy already existed. */
   migrated: "promoted" | "seeded" | "adopted" | null = null;
+  /** True when this load found an edit that never reached the server and put it back. */
+  recovered = false;
 
   subscribe = (l: () => void) => {
     this.listeners.add(l);
@@ -169,8 +176,26 @@ class Store {
           this.data.pilots = Array.isArray(r.pilots) ? r.pilots : [];
           this.data.seeded = r.seeded || {};
           this.data.pilotCategories = r.pilotCategories || [];
+          this.data.colOptions = r.colOptions || {};
+          this.data.customCols = r.customCols || [];
           if (stale) await saveRemote(this.remoteState());
           this.migrated = "adopted";
+          /* An edit from the last session may never have reached the server. Recover it, but
+             only when this browser's unflushed copy is newer than what the team has saved
+             since, so recovering one person's lost keystroke cannot roll back someone else. */
+          let pending: string | null = null;
+          try { pending = localStorage.getItem(PENDING_KEY); } catch {}
+          if (pending) {
+            const remoteAt = r.updatedAt || "";
+            if (pending > remoteAt) {
+              const local = this.adoptLocal();
+              if (local.found) {
+                this.recovered = true;
+                await saveRemote(this.remoteState());
+              }
+            }
+            try { localStorage.removeItem(PENDING_KEY); } catch {}
+          }
         } else {
           /* Nothing shared yet. This is the one moment the local board can be promoted, so
              adopt it before writing: seeding the default here would silently discard whatever
@@ -192,6 +217,8 @@ class Store {
           this.data.pilots = Array.isArray(incoming.pilots) ? incoming.pilots : [];
           this.data.seeded = incoming.seeded || {};
           this.data.pilotCategories = incoming.pilotCategories || [];
+          this.data.colOptions = incoming.colOptions || {};
+          this.data.customCols = incoming.customCols || [];
           this.rebuildHelpers();
           this.notify(); // no persist: adopting someone else's write must not echo back
         });
@@ -203,6 +230,7 @@ class Store {
       if (local.stale) this.persist();
     }
 
+    this.watchUnload();
     this.seedModulesOnce();
     this.rebuildHelpers();
     this.applyTheme();
@@ -231,6 +259,8 @@ class Store {
           this.data.pilots = Array.isArray(p.pilots) ? p.pilots : [];
           this.data.seeded = p.seeded || {};
           this.data.pilotCategories = p.pilotCategories || [];
+          this.data.colOptions = p.colOptions || {};
+          this.data.customCols = p.customCols || [];
           found = true;
         }
       }
@@ -314,6 +344,57 @@ class Store {
     return { ok: true, tasks };
   }
 
+  /** Every value a dropdown should offer: what the code ships, what the team has added, and
+   *  anything already sitting in the data so a free-typed value never disappears from its own
+   *  list. */
+  optionsFor(key: string, base: string[]): string[] {
+    const set = new Set<string>(base);
+    if (key === "category") (this.data.pilotCategories || []).forEach((v) => set.add(v));
+    (this.data.colOptions?.[key] || []).forEach((v) => set.add(v));
+    return [...set];
+  }
+  addColOption(key: string, name: string): boolean {
+    name = (name || "").trim();
+    if (!name) return false;
+    if (key === "category") return this.addPilotCategory(name);
+    const bag = (this.data.colOptions = this.data.colOptions || {});
+    const list = (bag[key] = bag[key] || []);
+    if (list.some((x) => x.toLowerCase() === name.toLowerCase())) return false;
+    list.push(name);
+    this.commit();
+    return true;
+  }
+  get customCols(): CustomCol[] { return this.data.customCols || []; }
+  /** Adds a column to the activation log. The key is derived from the label but prefixed and
+   *  uniquified, so two columns named the same do not overwrite each other's values. */
+  addCustomCol(label: string, kind: CustomCol["kind"]): string | null {
+    label = (label || "").trim();
+    if (!label) return null;
+    const list = (this.data.customCols = this.data.customCols || []);
+    if (list.some((c) => c.label.toLowerCase() === label.toLowerCase())) return null;
+    const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "col";
+    let key = `c_${slug}`;
+    for (let i = 2; list.some((c) => c.key === key); i++) key = `c_${slug}_${i}`;
+    list.push({ key, label, kind });
+    this.log("roadmap", "Column added", `${label} (${kind})`);
+    this.commit();
+    return key;
+  }
+  /** Drops the column and the values under it. Confirmed in the UI, because the values go too. */
+  removeCustomCol(key: string) {
+    this.data.customCols = this.customCols.filter((c) => c.key !== key);
+    this.pilots.forEach((p) => { if (p.custom) delete p.custom[key]; });
+    this.commit();
+  }
+  /** Bugs carry which layer the fault is in; features do not. */
+  setRequestIssueType(id: string, value: string) {
+    const f = this.features.find((x) => x.id === id);
+    if (!f) return;
+    f.issueType = (value || "").trim() || null;
+    f.updatedAt = new Date().toISOString();
+    this.commit();
+  }
+
   private remoteState() {
     return {
       roadmaps: this.data.roadmaps,
@@ -326,17 +407,42 @@ class Store {
       pilots: this.data.pilots,
       seeded: this.data.seeded,
       pilotCategories: this.data.pilotCategories,
+      colOptions: this.data.colOptions,
+      customCols: this.data.customCols,
     };
   }
   private persist() {
     if (firebaseEnabled) {
+      /* Firestore writes are async and debounced, so between an edit and the flush there is a
+         window where the only record of it is in memory. Every nav link here is a plain <a>,
+         which tears that window down: the edit was lost and the older server copy loaded back.
+         So mirror to localStorage synchronously first. It costs nothing and it is what makes
+         the outbox below able to recover the edit on the next load. */
+      try { this.writeLocal(); localStorage.setItem(PENDING_KEY, new Date().toISOString()); } catch {}
       if (this.saveTimer) clearTimeout(this.saveTimer);
-      this.saveTimer = setTimeout(() => { saveRemote(this.remoteState()); }, 400);
+      this.saveTimer = setTimeout(() => { this.flush(); }, 400);
       return;
     }
     try {
       this.writeLocal();
     } catch { /* handled by persistStrict for writes that can legitimately be too big */ }
+  }
+  /** Send the pending state to Firestore and clear the unflushed marker. */
+  private flush() {
+    if (!firebaseEnabled) return;
+    if (this.saveTimer) { clearTimeout(this.saveTimer); this.saveTimer = null; }
+    saveRemote(this.remoteState())
+      .then(() => { try { localStorage.removeItem(PENDING_KEY); } catch {} })
+      .catch(() => { /* marker stays, so the next load recovers the edit */ });
+  }
+  /** Flush on the way out. `pagehide` is the one event that fires reliably for a normal
+   *  navigation, a back/forward and a tab close; `visibilitychange` covers switching away on
+   *  mobile, where pagehide can be skipped entirely. */
+  private watchUnload() {
+    if (typeof window === "undefined" || !firebaseEnabled) return;
+    const out = () => { if (this.saveTimer) this.flush(); };
+    window.addEventListener("pagehide", out);
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") out(); });
   }
   private writeLocal() {
     {
@@ -345,6 +451,7 @@ class Store {
         adminUrl: this.data.adminUrl, uiuxUrl: this.data.uiuxUrl,
         features: this.data.features, pilots: this.data.pilots, seeded: this.data.seeded,
         pilotCategories: this.data.pilotCategories,
+        colOptions: this.data.colOptions, customCols: this.data.customCols,
       }));
       localStorage.setItem(ROSTER_KEY, JSON.stringify(this.data.roster));
     }
@@ -975,9 +1082,15 @@ class Store {
   get pilots(): PilotStore[] {
     return this.data.pilots || [];
   }
-  setPilotField(id: string, field: keyof PilotStore, value: string) {
+  setPilotField(id: string, field: keyof PilotStore | string, value: string) {
     const p = this.pilots.find((x) => x.id === id);
     if (!p) return;
+    if (String(field).startsWith("c_")) {
+      const bag = (p.custom = p.custom || {});
+      bag[String(field)] = (value || "").trim() || null;
+      this.commit();
+      return;
+    }
     const numeric = ["totalSubs", "activeSubs", "oneTimeBundles", "prepaidSubs", "openBugs"];
     const v = (value || "").trim();
     if (numeric.includes(field as string)) {

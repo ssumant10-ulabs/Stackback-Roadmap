@@ -1,4 +1,4 @@
-import type { PilotStore } from "./types";
+import type { CustomCol, PilotStore } from "./types";
 
 export type ColKind = "text" | "select" | "long" | "readonly" | "date";
 
@@ -14,6 +14,9 @@ export interface PilotCol {
    *  the sparse ones just start hidden so the table opens readable. */
   hidden?: boolean;
 }
+
+/** Bugs only. Which layer the fault sits in, so triage can route it without reading the note. */
+export const ISSUE_TYPES = ["Theme", "App", "3rd Party checkout"];
 
 export const POCS = ["Ishita", "Shreya", "Sumant", "Rohan", "Shubham"];
 
@@ -43,19 +46,33 @@ export const PILOT_COLUMNS: PilotCol[] = [
   { key: "url", label: "Store URL", kind: "text", width: 200, hidden: true },
 ];
 
+/** Built-ins plus whatever the team has added. Everything downstream (the table, the picker,
+ *  the CSV) works off this, so a custom column is not a special case anywhere else. */
+export const allColumns = (custom: CustomCol[] = []): PilotCol[] => [
+  ...PILOT_COLUMNS,
+  ...custom.map((c) => ({ key: c.key as keyof PilotStore, label: c.label, kind: c.kind, options: c.options, width: 170 })),
+];
+export const isCustomKey = (k: string) => k.startsWith("c_");
+/** Custom values live in `p.custom`, built-ins on the record itself. */
+export const cellValue = (p: PilotStore, key: string): string => {
+  const raw = isCustomKey(key) ? p.custom?.[key] : (p as unknown as Record<string, unknown>)[key];
+  return raw === null || raw === undefined ? "" : String(raw);
+};
+
 export const DEFAULT_ORDER = PILOT_COLUMNS.map((c) => c.key as string);
 export const DEFAULT_VISIBLE = PILOT_COLUMNS.filter((c) => !c.hidden).map((c) => c.key as string);
 export const colByKey = (k: string) => PILOT_COLUMNS.find((c) => (c.key as string) === k);
 
 /** CSV with the columns in the order the user has them on screen, so an export matches
  *  what they were looking at rather than some canonical order they never chose. */
-export function toCsv(rows: PilotStore[], order: string[]): string {
-  const cols = order.map(colByKey).filter(Boolean) as PilotCol[];
+export function toCsv(rows: PilotStore[], order: string[], custom: CustomCol[] = []): string {
+  const all = allColumns(custom);
+  const cols = order.map((k) => all.find((c) => (c.key as string) === k)).filter(Boolean) as PilotCol[];
   const esc = (v: unknown) => {
     const t = v === null || v === undefined ? "" : String(v);
     return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
   };
   const head = ["#", ...cols.map((c) => c.label)].join(",");
-  const body = rows.map((r) => [r.n, ...cols.map((c) => esc(r[c.key]))].join(","));
+  const body = rows.map((r) => [r.n, ...cols.map((c) => esc(cellValue(r, c.key as string)))].join(","));
   return [head, ...body].join("\n");
 }
