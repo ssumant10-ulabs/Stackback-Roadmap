@@ -1079,6 +1079,29 @@
   .pl-newcol button{padding:4px 9px;font-size:12px;font-weight:700;cursor:pointer;
     background:var(--brand);color:var(--on-brand,#0b0f0a);border:none;border-radius:7px;}
   .rq-na{color:var(--ink-dim);opacity:.5;font-size:12px;padding-left:4px;}
+  /* Bulk selection */
+  .rq-pick{width:34px;text-align:center;}
+  .rq-pick input{accent-color:var(--brand-deep);cursor:pointer;}
+  .pl-table tr.rq-picked td{background:var(--sunken);}
+  .rq-bulk{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 12px;margin-bottom:11px;
+    border:1px solid var(--brand-deep);border-radius:11px;background:var(--card);box-shadow:var(--shadow);}
+  .rq-bulk-n{font-size:12.5px;color:var(--ink-dim);margin-right:2px;}
+  .rq-bulk-n b{color:var(--ink);font-size:14px;}
+  .btn.danger{color:var(--danger,#f87171);border-color:color-mix(in srgb,var(--danger,#f87171) 40%,transparent);}
+  /* Top-level dropdown vocabularies */
+  .pl-opts{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:9px 12px;margin-bottom:11px;
+    border:1px solid var(--border);border-radius:11px;background:var(--card);}
+  .pl-opts-hd{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim);}
+  .pl-optgrp > button{padding:4px 9px;font-size:12px;font-weight:650;cursor:pointer;color:var(--ink-dim);
+    background:var(--sunken);border:1px solid var(--border);border-radius:999px;}
+  .pl-optgrp.open > button{color:var(--ink);border-color:var(--brand-deep);}
+  .pl-optgrp em{font-style:normal;opacity:.6;margin-left:4px;}
+  .pl-optbody{display:flex;align-items:center;gap:6px;flex-wrap:wrap;width:100%;margin-top:7px;}
+  .pl-optlist{font-size:12px;color:var(--ink-dim);flex:1 1 240px;}
+  .pl-optbody input{width:190px;padding:5px 8px;font-size:12px;background:var(--sunken);
+    border:1px solid var(--border);border-radius:7px;color:var(--ink);}
+  .pl-optbody button{padding:5px 11px;font-size:12px;font-weight:700;cursor:pointer;
+    background:var(--brand);color:var(--on-brand,#0b0f0a);border:none;border-radius:7px;}
   .pl-sel.empty{color:var(--ink-3);}
   .pl-table.log th.draggable{cursor:grab;}
   .pl-table.log th.draggable:hover{color:var(--ink);background:var(--sunken);}

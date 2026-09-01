@@ -900,6 +900,35 @@ class Store {
     f.updatedAt = new Date().toISOString();
     this.commit();
   }
+  /** One pass over a selection, one write, one activity row. Doing it per row would fire a
+   *  save and a log line each time, which is both slower and unreadable in the log. */
+  bulkRequests(ids: string[], patch: { kind?: "feature" | "bug"; status?: string; urgency?: string; issueType?: string }): number {
+    const set = new Set(ids);
+    let n = 0;
+    this.features.forEach((f) => {
+      if (!set.has(f.id)) return;
+      if (patch.kind) f.kind = patch.kind;
+      if (patch.status) f.sheetStatus = patch.status;
+      if (patch.urgency !== undefined) f.urgency = patch.urgency || null;
+      if (patch.issueType !== undefined) f.issueType = patch.issueType || null;
+      f.updatedAt = new Date().toISOString();
+      n++;
+    });
+    if (!n) return 0;
+    const what = Object.entries(patch).map(([k, v]) => `${k} ${v || "cleared"}`).join(", ");
+    this.log("status", `${n} request(s)`, what);
+    this.commit();
+    return n;
+  }
+  /** Deletes a selection. Confirmed by the caller, since there is no undo. */
+  bulkDeleteRequests(ids: string[]): number {
+    const set = new Set(ids);
+    const before = this.data.features.length;
+    this.data.features = this.data.features.filter((f) => !set.has(f.id));
+    const n = before - this.data.features.length;
+    if (n) { this.log("delete", `${n} request(s)`, "deleted together"); this.commit(); }
+    return n;
+  }
   setRequestKind(id: string, kind: "feature" | "bug") {
     const f = this.features.find((x) => x.id === id);
     if (!f) return;

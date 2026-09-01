@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
+import { UserButton } from "./UserButton";
 import { Logo, IcActivity, IcRoadmap, IcSettings, ThemeIcon } from "./icons";
 import { PilotsLog } from "./views/PilotsLog";
 import { PilotsStats } from "./views/PilotsStats";
@@ -44,6 +45,7 @@ export default function PilotsApp() {
                 <button className="ibtn" data-tip="Activity" aria-label="Activity" onClick={() => s.setActivityOpen(true)}><IcActivity /></button>
                 <button className="ibtn" data-tip="Theme" aria-label="Theme" onClick={() => s.cycleTheme()}><ThemeIcon theme={s.ui.theme} /></button>
                 <button className="ibtn" data-tip="Settings" aria-label="Settings" onClick={() => setSettingsOpen(true)}><IcSettings /></button>
+                <UserButton />
               </span>
             </div>
           </div>

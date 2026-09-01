@@ -74,17 +74,9 @@ function Cell({ p, col }: { p: PilotStore; col: PilotCol }) {
       <div className="pl-selwrap">
         {col.key === "poc" && value && <Who name={value} />}
         <select className={`pl-sel${value ? "" : " empty"}`} value={value}
-          onChange={(e) => {
-            if (e.target.value === "__new__") {
-              const name = window.prompt(`New ${col.label.toLowerCase()} option:`);
-              if (name && s.addColOption(key, name)) s.setPilotField(p.id, key, name.trim());
-              return;
-            }
-            s.setPilotField(p.id, key, e.target.value);
-          }}>
+          onChange={(e) => s.setPilotField(p.id, key, e.target.value)}>
           <option value="">—</option>
           {opts.map((o) => <option key={o} value={o}>{o}</option>)}
-          <option value="__new__">+ Add option…</option>
         </select>
         {col.key === "activationStatus" && <span className={`pl-dot t-${TONE[value] || "dash"}`} />}
       </div>
@@ -113,6 +105,47 @@ function TextCell({ p, col, value }: { p: PilotStore; col: PilotCol; value: stri
         if (e.key === "Enter") (e.target as HTMLInputElement).blur();
         if (e.key === "Escape") { setDraft(null); (e.target as HTMLInputElement).blur(); }
       }} />
+  );
+}
+
+/** Manage what each dropdown is allowed to contain. Kept out of the cells on purpose: adding
+ *  an option from inside a row also set that row, which is how two stores ended up under a
+ *  brand-new status. Here, adding a value changes no store at all. */
+function OptionEditor({ cols }: { cols: PilotCol[] }) {
+  const s = useStore();
+  const [open, setOpen] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+  const selects = cols.filter((c) => c.kind === "select");
+  if (!selects.length) return null;
+  return (
+    <div className="pl-opts">
+      <span className="pl-opts-hd">Dropdown values</span>
+      {selects.map((c) => {
+        const key = c.key as string;
+        const opts = s.optionsFor(key, c.options || []);
+        const isOpen = open === key;
+        return (
+          <span key={key} className={`pl-optgrp${isOpen ? " open" : ""}`}>
+            <button type="button" onClick={() => { setOpen(isOpen ? null : key); setDraft(""); }}>
+              {c.label} <em>{opts.length}</em>
+            </button>
+            {isOpen && (
+              <span className="pl-optbody">
+                <span className="pl-optlist">{opts.join(" · ") || "none yet"}</span>
+                <input placeholder={`New ${c.label.toLowerCase()} value…`} value={draft} autoFocus
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter") return;
+                    e.preventDefault();
+                    if (s.addColOption(key, draft)) setDraft("");
+                  }} />
+                <button type="button" onClick={() => { if (s.addColOption(key, draft)) setDraft(""); }}>Add</button>
+              </span>
+            )}
+          </span>
+        );
+      })}
+    </div>
   );
 }
 
@@ -172,10 +205,19 @@ export function PilotsLog() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s.pilots, q, status, poc, category, version]);
 
-  const grouped = useMemo(
-    () => GROUPS.map((g) => ({ g, items: rows.filter((p) => (p.activationStatus || "") === g.id) }))
-      .filter((x) => x.items.length),
-    [rows]);
+  /* Every row must land in a group. The four below are the ones with a meaning worth
+     spelling out; a status the team adds gets a group of its own rather than falling through
+     the gaps. Adding a status used to make its stores vanish from the table entirely, which
+     read as data loss even though the records were intact. */
+  const grouped = useMemo(() => {
+    const known = new Set(GROUPS.map((g) => g.id));
+    const extra = [...new Set(rows.map((p) => p.activationStatus || "").filter((v) => !known.has(v)))]
+      .sort()
+      .map((id) => ({ id, label: id, blurb: "Added by the team" }));
+    return [...GROUPS, ...extra]
+      .map((g) => ({ g, items: rows.filter((p) => (p.activationStatus || "") === g.id) }))
+      .filter((x) => x.items.length);
+  }, [rows]);
 
   const stats = useMemo(() => {
     const c = (f: (p: PilotStore) => boolean) => rows.filter(f).length;
@@ -228,7 +270,8 @@ export function PilotsLog() {
         <input className="pl-search" placeholder="Search stores, owners, notes…" value={q} onChange={(e) => setQ(e.target.value)} />
         <select className="pl-sel big" value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">All statuses</option>
-          {["Activated", "Active", "Inactive"].map((a) => <option key={a} value={a}>{a}</option>)}
+          {s.optionsFor("activationStatus", ["Activated", "Active", "Inactive"])
+            .map((a) => <option key={a} value={a}>{a}</option>)}
         </select>
         <select className="pl-sel big" value={poc} onChange={(e) => setPoc(e.target.value)}>
           <option value="">All owners</option>
@@ -288,6 +331,8 @@ export function PilotsLog() {
           <button type="button" className="btn ghost sm" onClick={() => { setVisible(DEFAULT_VISIBLE); setOrder(DEFAULT_ORDER); }}>Reset</button>
         </div>
       )}
+
+      {picker && <OptionEditor cols={fullOrder.map(byKey).filter(Boolean) as PilotCol[]} />}
 
       <div className="pl-wrap">
         <table className="pl-table log">
