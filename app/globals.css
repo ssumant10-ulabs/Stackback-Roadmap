@@ -1079,6 +1079,17 @@
   .pl-newcol button{padding:4px 9px;font-size:12px;font-weight:700;cursor:pointer;
     background:var(--brand);color:var(--on-brand,#0b0f0a);border:none;border-radius:7px;}
   .rq-na{color:var(--ink-dim);opacity:.5;font-size:12px;padding-left:4px;}
+  /* Palette chooser. These had no styling at all, so the browser drew six default buttons
+     joined into one grey bar and the swatch colours never showed. */
+  .pal-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:8px;margin-top:10px;}
+  .pal{display:flex;align-items:center;gap:8px;padding:9px 11px;cursor:pointer;font:inherit;
+    font-size:12.5px;font-weight:650;text-align:left;color:var(--ink-2);background:var(--card-2);
+    border:1px solid var(--border);border-radius:10px;transition:border-color .12s,color .12s;}
+  .pal:hover{color:var(--ink);border-color:var(--border-2);}
+  .pal.on{color:var(--ink);border-color:var(--accent-line);background:var(--sunken);
+    box-shadow:inset 0 0 0 1px var(--accent-line);}
+  .pal-dot{width:16px;height:16px;flex:0 0 auto;border-radius:50%;
+    box-shadow:inset 0 0 0 1px hsl(0 0% 0% / .22);}
   /* Bulk selection */
   .rq-pick{width:34px;text-align:center;}
   .rq-pick input{accent-color:var(--brand-deep);cursor:pointer;}
@@ -1110,6 +1121,17 @@
   .pl-store{font-weight:700;white-space:nowrap;}
   .pl-store a{color:var(--ink);text-decoration:none;}
   .pl-store a:hover{color:var(--brand-deep);text-decoration:underline;}
+  /* Wrapping note cell. Two lines at rest so rows stay even; the whole note on hover or
+     focus, in place, rather than in a tooltip that covers the row beneath. */
+  /* The note is simply shown, wrapped, at whatever height it needs. Clamping to two lines and
+     revealing the rest on hover or focus was the wrong trade: it depends on a pointer, it
+     cannot be read while scanning, and it left most notes cut off at rest. Rows now vary in
+     height, which is the honest cost of showing the text. Very long notes scroll rather than
+     stretching the row without limit. */
+  textarea.pl-in.long{min-width:230px;width:100%;resize:none;line-height:1.45;
+    padding:5px 7px;font:inherit;font-size:12.5px;white-space:pre-wrap;overflow:auto;
+    field-sizing:content;min-height:34px;max-height:132px;}
+  textarea.pl-in.long:focus{background:var(--card);border-color:var(--accent-line);}
   .pl-in.long{min-width:230px;}
   .pl-empty{padding:26px;text-align:center;color:var(--ink-3);font-size:13px;}
 
