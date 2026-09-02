@@ -1,12 +1,13 @@
 "use client";
-import { createContext, DragEvent, Fragment, useContext, useRef, useState } from "react";
+import { createContext, DragEvent, Fragment, useContext, useEffect, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import { STATES, stateOf, subtreeCounts } from "@/lib/derive";
 import type { Node } from "@/lib/types";
 import { Assignees } from "../Assignees";
 import { CommentChip, DateChip, ReorderBtns, StatusButton } from "../bits";
 import { CommentsThread } from "../CommentsThread";
-import { IcAddSub, IcChevron, IcGrip, IcTrash } from "../icons";
+import { IcAddSub, IcChevron, IcGrip, IcMoveTo, IcPencil, IcTrash } from "../icons";
+import { useAppUi } from "../appui";
 import { useFlip } from "../useFlip";
 
 interface BoardCtx {
@@ -57,9 +58,56 @@ function NodeList({ items, parentId }: { items: Node[]; parentId: string }) {
   );
 }
 
+/** Click-through rename. The title doubles as a drag handle, so a single click cannot open
+ *  the editor without breaking the drag; double-click does, and the pencil in the tools row
+ *  is the same thing for anyone not using a mouse. Enter and blur commit, Escape reverts. */
+function EditableTitle({ node, className, editing, onStart, onDone, onDragStart, onDragEnd }: {
+  node: Node; className: string; editing: boolean; onStart: () => void; onDone: () => void;
+  onDragStart?: (e: DragEvent) => void; onDragEnd?: () => void;
+}) {
+  const s = useStore();
+  const [draft, setDraft] = useState(node.title);
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  /* A textarea, not an input: these titles are full sentences that wrap to three or four
+     lines in the column, and a one-line field scrolls all but a few words out of sight at
+     the moment you are trying to read what you are changing. */
+  const grow = (el: HTMLTextAreaElement | null) => { if (el) { el.style.height = "0px"; el.style.height = el.scrollHeight + "px"; } };
+  useEffect(() => {
+    if (!editing) return;
+    setDraft(node.title);
+    const el = ref.current;
+    if (!el) return;
+    el.focus();
+    el.setSelectionRange(0, el.value.length);
+    grow(el);
+  }, [editing, node.title]);
+
+  if (editing) {
+    const commit = () => { s.rename(node.id, draft); onDone(); };
+    return (
+      <textarea
+        ref={ref} rows={1} className={`${className} title-edit`} value={draft} aria-label="Rename"
+        onChange={(e) => { setDraft(e.target.value); grow(e.currentTarget); }}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); commit(); }
+          if (e.key === "Escape") { e.preventDefault(); setDraft(node.title); onDone(); }
+        }}
+      />
+    );
+  }
+  return (
+    <span className={className} draggable title="Drag to move, double-click to rename"
+      onDragStart={onDragStart} onDragEnd={onDragEnd} onDoubleClick={onStart}>{node.title}</span>
+  );
+}
+
 function Subnode({ node, up, down }: { node: Node; up: boolean; down: boolean }) {
   const s = useStore();
   const b = useBoard();
+  const ui = useAppUi();
+  const [editing, setEditing] = useState(false);
   const counts = subtreeCounts(node);
   const hasKids = (node.children || []).length > 0;
   const open = s.isBoardOpen(node.id);
@@ -70,12 +118,20 @@ function Subnode({ node, up, down }: { node: Node; up: boolean; down: boolean })
         <span className="sub-grip" draggable title="Drag to move" onDragStart={(e) => b.start(e, node.id)} onDragEnd={b.end}><IcGrip /></span>
         <StatusButton node={node} />
         <div className="sn-main">
-          <div className="sn-line"><span className="sn-text" draggable title="Drag to move" onDragStart={(e) => b.start(e, node.id)} onDragEnd={b.end}>{node.title}</span>{hasKids && <span className="sn-count">{counts.done}/{counts.total}</span>}</div>
+          <div className="sn-line">
+            <EditableTitle node={node} className="sn-text" editing={editing}
+              onStart={() => setEditing(true)} onDone={() => setEditing(false)}
+              onDragStart={(e) => b.start(e, node.id)} onDragEnd={b.end} />
+            {hasKids && !editing && <span className="sn-count">{counts.done}/{counts.total}</span>}
+          </div>
           {hasKids && <div className="sn-progress"><span style={{ width: (counts.total ? Math.round((counts.done / counts.total) * 100) : 0) + "%" }} /></div>}
           <div className="sn-line"><span className="sn-assignees"><Assignees node={node} small /></span><DateChip node={node} variant="icon" /><CommentChip node={node} /></div>
         </div>
         <div className="sn-tools">
           <ReorderBtns id={node.id} up={up} down={down} />
+          <button type="button" className="icon-btn" aria-label="Rename" title="Rename" onClick={() => setEditing(true)}><IcPencil /></button>
+          <button type="button" className="icon-btn" aria-label="Move to another card" title="Move to another card" data-move-anchor
+            onClick={(e) => ui.openMove(node.id, e.currentTarget)}><IcMoveTo /></button>
           <button type="button" className="icon-btn" aria-label="Add subtask" title="Add subtask" onClick={() => s.addChild(node.id)}><IcAddSub /></button>
           <button type="button" className="icon-btn danger" aria-label="Delete" onClick={() => { if (counts.total && !confirm(`Delete this and its ${counts.total} subtask(s)?`)) return; s.del(node.id); }}><IcTrash /></button>
         </div>
@@ -90,6 +146,7 @@ function Subnode({ node, up, down }: { node: Node; up: boolean; down: boolean })
 function Card({ task }: { task: Node }) {
   const s = useStore();
   const b = useBoard();
+  const [editing, setEditing] = useState(false);
   const counts = subtreeCounts(task);
   const hasKids = (task.children || []).length > 0;
   const open = s.isBoardOpen(task.id);
@@ -99,12 +156,15 @@ function Card({ task }: { task: Node }) {
   return (
     <div className={`card${b.dragId === task.id ? " dragging-src" : ""}`} data-node-id={task.id}>
       <div className={`card-head nest-target${b.overNest === task.id ? " nest-over" : ""}`} onDragOver={(e) => b.onNestOver(e, task.id)} onDrop={(e) => b.onNestDrop(e, task.id)}>
-        <div className="card-head-left" draggable title="Drag to move" onDragStart={(e) => b.start(e, task.id)} onDragEnd={b.end}>
-          <span className="drag-handle"><IcGrip /></span>
-          <span className="card-title">{task.title}</span>
+        <div className="card-head-left">
+          <span className="drag-handle" draggable title="Drag to move" onDragStart={(e) => b.start(e, task.id)} onDragEnd={b.end}><IcGrip /></span>
+          <EditableTitle node={task} className="card-title" editing={editing}
+            onStart={() => setEditing(true)} onDone={() => setEditing(false)}
+            onDragStart={(e) => b.start(e, task.id)} onDragEnd={b.end} />
         </div>
         <div className="card-tools">
           <ReorderBtns id={task.id} up={m.up} down={m.down} />
+          <button type="button" className="icon-btn" aria-label="Rename card" title="Rename" onClick={() => setEditing(true)}><IcPencil /></button>
           <StatusButton node={task} size={15} />
           <button type="button" className="icon-btn danger" aria-label="Delete task" onClick={() => { if (counts.total && !confirm(`Delete this and its ${counts.total} subtask(s)?`)) return; s.del(task.id); }}><IcTrash /></button>
         </div>

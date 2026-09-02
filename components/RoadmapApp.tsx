@@ -13,6 +13,7 @@ import { Features } from "./views/Features";
 import { FilterPopover } from "./FilterPopover";
 import { AssigneePopover } from "./AssigneePopover";
 import { DatesPopover } from "./DatesPopover";
+import { MovePopover } from "./MovePopover";
 import { AddTaskModal } from "./AddTaskModal";
 import { SettingsModal } from "./SettingsModal";
 import { ActivityDrawer } from "./ActivityDrawer";
@@ -24,6 +25,7 @@ export default function RoadmapApp() {
   const [mounted, setMounted] = useState(false);
   const [assignPop, setAssignPop] = useState<{ nodeId: string; left: number; top: number } | null>(null);
   const [datesPop, setDatesPop] = useState<{ nodeId: string; left: number; top: number } | null>(null);
+  const [movePop, setMovePop] = useState<{ nodeId: string; left: number; top: number } | null>(null);
   const [filterPop, setFilterPop] = useState<{ left: number; top: number } | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -72,18 +74,22 @@ export default function RoadmapApp() {
   const ui: AppUi = useMemo(() => ({
     openAssignee(nodeId, anchor) {
       setAssignPop({ nodeId, ...place(anchor, 260, 340) });
-      setFilterPop(null); setDatesPop(null);
+      setFilterPop(null); setDatesPop(null); setMovePop(null);
     },
     openDates(nodeId, anchor) {
       setDatesPop({ nodeId, ...place(anchor, 260, 260) });
-      setFilterPop(null); setAssignPop(null);
+      setFilterPop(null); setAssignPop(null); setMovePop(null);
+    },
+    openMove(nodeId, anchor) {
+      setMovePop({ nodeId, ...place(anchor, 300, 380) });
+      setFilterPop(null); setAssignPop(null); setDatesPop(null);
     },
     openFilter(anchor) {
       const r = anchor.getBoundingClientRect();
       const pw = 290;
       const left = Math.max(12, Math.min(r.left, window.innerWidth - pw - 12));
       setFilterPop({ left, top: r.bottom + 8 });
-      setAssignPop(null); setDatesPop(null);
+      setAssignPop(null); setDatesPop(null); setMovePop(null);
     },
     openAddTask() { setAddOpen(true); },
     openSettings() { setSettingsOpen(true); },
@@ -121,6 +127,7 @@ export default function RoadmapApp() {
       {filterPop && <FilterPopover pos={filterPop} onClose={() => setFilterPop(null)} />}
       {assignPop && <AssigneePopover pos={{ left: assignPop.left, top: assignPop.top }} nodeId={assignPop.nodeId} onClose={() => setAssignPop(null)} />}
       {datesPop && <DatesPopover pos={{ left: datesPop.left, top: datesPop.top }} nodeId={datesPop.nodeId} onClose={() => setDatesPop(null)} />}
+      {movePop && <MovePopover pos={{ left: movePop.left, top: movePop.top }} nodeId={movePop.nodeId} onClose={() => setMovePop(null)} />}
       {addOpen && <AddTaskModal onClose={() => setAddOpen(false)} />}
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
       {s.ui.activityOpen && <ActivityDrawer onClose={() => s.setActivityOpen(false)} />}

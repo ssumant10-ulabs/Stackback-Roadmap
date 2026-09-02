@@ -708,10 +708,31 @@ class Store {
     let idx = arr.length;
     if (beforeId) { const bi = arr.findIndex((x) => x.id === beforeId); if (bi >= 0) idx = bi; }
     arr.splice(idx, 0, node);
-    if (parent === "root" && priority !== null && wasPriority !== normPriority(priority)) {
-      this.log("move", node.title, `to ${waveWord(priority)}`, node.id);
+    /* Card-to-card moves used to go unlogged, so a subtask that reappeared under a different
+       card looked like someone had deleted it and typed it again somewhere else. */
+    const wasParent = before && before.parentId !== "root" ? before.parentId : null;
+    const nowParent = parent === "root" ? null : parent;
+    if (parent === "root") {
+      if (wasParent) this.log("move", node.title, `out to ${waveWord(priority)}`, node.id);
+      else if (priority !== null && wasPriority !== normPriority(priority)) this.log("move", node.title, `to ${waveWord(priority)}`, node.id);
+    } else if (wasParent !== nowParent) {
+      const pe = this.findEntry(parent);
+      this.log("move", node.title, pe ? `under ${pe.node.title}` : "to another card", node.id);
     }
     this.commit();
+  }
+
+  /** Everywhere a node may be sent from the Move picker: the three horizons as top level,
+   *  and every card that is not the node itself or one of its own descendants. Flat and
+   *  labelled rather than a tree, because the picker is for the long move across a scrolling
+   *  board, and the short one next door is already a drag. */
+  moveTargets(id: string): { cards: { id: string; title: string; priority: number; current: boolean }[]; currentParent: string | null } {
+    const e = this.findEntry(id);
+    const currentParent = e && e.parentId !== "root" ? e.parentId : null;
+    const cards = this.tasks
+      .filter((t) => t.id !== id && !this.isDesc(id, t.id))
+      .map((t) => ({ id: t.id, title: t.title, priority: normPriority(t.priority), current: t.id === currentParent }));
+    return { cards, currentParent };
   }
   nestNode(dragId: string, targetId: string) {
     if (!dragId || dragId === targetId || this.isDesc(dragId, targetId)) return;
@@ -778,7 +799,11 @@ class Store {
     if (!title) return;
     const e = this.findEntry(id);
     if (!e || e.node.title === title) return;
+    const was = e.node.title;
     e.node.title = title;
+    /* On a shared board a silent rename is indistinguishable from someone else's card
+       going missing, so the old title goes in the log where it can be traced. */
+    this.log("rename", title, `was "${was}"`, id);
     this.commit();
   }
   toggleAssignee(nodeId: string, name: string, isTeam: boolean) {

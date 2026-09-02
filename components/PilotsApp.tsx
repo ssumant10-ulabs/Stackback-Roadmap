@@ -23,7 +23,7 @@ export default function PilotsApp() {
 
   // Nothing here opens a card popover, but the drawer and modals expect the context.
   const ui: AppUi = {
-    openAssignee: () => {}, openDates: () => {}, openFilter: () => {}, openAddTask: () => {},
+    openAssignee: () => {}, openDates: () => {}, openMove: () => {}, openFilter: () => {}, openAddTask: () => {},
     openSettings: () => setSettingsOpen(true),
     // Cards live on the roadmap, so a jump leaves this module for that board.
     jumpToCard: (id) => { window.location.href = `/?view=board#${id}`; },

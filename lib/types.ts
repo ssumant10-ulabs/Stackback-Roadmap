@@ -54,7 +54,7 @@ export interface Roadmap {
 
 export type ActivityKind =
   | "status" | "done" | "undone" | "move" | "nest" | "add" | "delete"
-  | "dates" | "assign" | "comment" | "roadmap";
+  | "dates" | "assign" | "comment" | "roadmap" | "rename";
 
 export interface Activity {
   id: string;

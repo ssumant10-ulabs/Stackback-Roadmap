@@ -277,7 +277,8 @@
   .dropline{height:4px;margin:1px 0;border-radius:4px;background:transparent;}
   body.is-dragging .dropline{height:28px;margin:-12px 0;position:relative;z-index:2;}
   body.is-dragging .dropline.over::after{content:"";position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:3px;border-radius:3px;background:var(--accent);box-shadow:0 0 0 1px var(--accent);}
-  .card-head-left{cursor:grab;user-select:none;}
+  .card-head-left{user-select:none;}
+  .card-head-left .card-title{cursor:grab;}
   .card-head-left:active{cursor:grabbing;}
   .sn-text[draggable="true"]{cursor:grab;user-select:none;}
   .sub-grip{padding:2px;margin-left:-2px;}
@@ -1393,3 +1394,32 @@
 @media (prefers-reduced-motion: reduce){
   .save-chip.is-saving::before{animation:none;}
 }
+
+/* Rename in place. The input inherits the title's own type so the row does not jump when it
+   opens, and takes the full width it can, since a renamed card is usually a longer one. */
+  .title-edit{flex:1 1 auto;min-width:0;width:100%;font:inherit;color:var(--ink);
+    background:var(--card-2);border:1px solid var(--brand-deep);border-radius:7px;
+    padding:2px 6px;margin:-2px 0;outline:none;cursor:text;
+    resize:none;overflow:hidden;display:block;}
+  .title-edit::selection{background:color-mix(in srgb,var(--brand-deep) 30%,transparent);}
+
+/* Move-to picker. A flat labelled list, not a tree: it exists for the move across a board
+   that scrolls, and a tree of 79 cards is harder to scan than three labelled groups. */
+  .move-pop{width:300px;}
+  .mv-search{width:100%;font:inherit;font-size:12.5px;color:var(--ink);background:var(--card-2);
+    border:1px solid var(--border-2);border-radius:8px;padding:6px 9px;margin-bottom:8px;outline:none;}
+  .mv-search:focus{border-color:var(--brand-deep);}
+  .mv-scroll{max-height:280px;overflow-y:auto;margin:0 -4px;padding:0 4px;}
+  .mv-group + .mv-group{margin-top:10px;}
+  .mv-head{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;
+    color:var(--ink-3);padding:0 4px 4px;position:sticky;top:0;background:var(--card);}
+  .mv-row{display:flex;align-items:center;gap:8px;width:100%;text-align:left;font:inherit;
+    font-size:12.5px;color:var(--ink);background:none;border:0;border-radius:7px;
+    padding:6px 8px;cursor:pointer;}
+  .mv-row:hover:not(:disabled){background:var(--sunken);}
+  .mv-row:focus-visible{outline:2px solid var(--brand-deep);outline-offset:-2px;}
+  .mv-row:disabled{color:var(--ink-3);cursor:default;}
+  .mv-title{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mv-current{flex:none;font-size:10.5px;font-weight:700;text-transform:uppercase;
+    letter-spacing:.04em;color:var(--ink-3);}
+  .mv-empty{font-size:12px;color:var(--ink-3);padding:8px 4px;}
