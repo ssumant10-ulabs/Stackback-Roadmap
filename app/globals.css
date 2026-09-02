@@ -1379,10 +1379,17 @@
     .pg-spark{display:none;}
   }
 
-/* Refused-write tell in the topbar. Plain dot, no glyph: it is a status light, not an icon. */
-.save-warn{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
+/* Autosave state in the topbar. Plain dot, no glyph: it is a status light, not an icon.
+   The dot carries the state and the label stays plain ink. Colouring the label instead put
+   both the lime and the red under 4.5:1 on light; a dot only has to clear 3:1. */
+.save-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
   font-size:12px;font-weight:600;line-height:1;white-space:nowrap;cursor:default;
-  color:var(--danger,#f87171);
-  background:color-mix(in srgb,var(--danger,#f87171) 14%,transparent);
-  border:1px solid color-mix(in srgb,var(--danger,#f87171) 34%,transparent);}
-.save-warn::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--danger,#f87171);flex:0 0 auto;}
+  background:var(--sunken);border:1px solid var(--border);color:var(--ink-2);}
+.save-chip::before{content:"";width:6px;height:6px;border-radius:50%;flex:0 0 auto;background:var(--ink-2);}
+.save-chip.is-saving::before{animation:save-pulse 1.1s ease-in-out infinite;}
+.save-chip.is-saved::before{background:var(--brand-deep);}
+.save-chip.is-failed::before{background:var(--status-late);}
+@keyframes save-pulse{0%,100%{opacity:1;}50%{opacity:.25;}}
+@media (prefers-reduced-motion: reduce){
+  .save-chip.is-saving::before{animation:none;}
+}

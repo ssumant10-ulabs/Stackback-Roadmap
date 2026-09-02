@@ -134,9 +134,20 @@ class Store {
   migrated: "promoted" | "seeded" | "adopted" | null = null;
   /** True when this load found an edit that never reached the server and put it back. */
   recovered = false;
-  /** True once a write to the shared backend was refused. Surfaced in the topbar, because a
-   *  save that fails quietly reads exactly like a save that worked until the page reloads. */
-  saveFailed = false;
+  /** Where the shared copy stands, for the topbar chip. A save that fails quietly reads
+   *  exactly like a save that worked until the page reloads, and a save in flight reads the
+   *  same as both, so all three states are shown rather than only the bad one. */
+  saveState: "idle" | "saving" | "saved" | "failed" = "idle";
+  private savedTimer: ReturnType<typeof setTimeout> | null = null;
+  private setSaveState(v: Store["saveState"]) {
+    if (this.savedTimer) { clearTimeout(this.savedTimer); this.savedTimer = null; }
+    /* "Saved" is a confirmation, not a status: it earns a couple of seconds and then gets out
+       of the way, so the chip is not a permanent fixture in a header that is already full. */
+    if (v === "saved") this.savedTimer = setTimeout(() => { this.saveState = "idle"; this.notify(); }, 2200);
+    if (this.saveState === v) return;
+    this.saveState = v;
+    this.notify();
+  }
 
   subscribe = (l: () => void) => {
     this.listeners.add(l);
@@ -422,6 +433,7 @@ class Store {
          So mirror to localStorage synchronously first. It costs nothing and it is what makes
          the outbox below able to recover the edit on the next load. */
       try { this.writeLocal(); localStorage.setItem(PENDING_KEY, new Date().toISOString()); } catch {}
+      this.setSaveState("saving");
       if (this.saveTimer) clearTimeout(this.saveTimer);
       this.saveTimer = setTimeout(() => { this.flush(); }, 400);
       return;
@@ -438,11 +450,10 @@ class Store {
       .then((ok) => {
         /* Only a save that actually landed clears the marker. Clearing it on a refused write
            threw away the one record that the edit had not reached the server. */
-        this.saveFailed = !ok;
         if (ok) { try { localStorage.removeItem(PENDING_KEY); } catch {} }
-        this.notify();
+        this.setSaveState(ok ? "saved" : "failed");
       })
-      .catch(() => { this.saveFailed = true; this.notify(); });
+      .catch(() => this.setSaveState("failed"));
   }
   /** Flush on the way out. `pagehide` is the one event that fires reliably for a normal
    *  navigation, a back/forward and a tab close; `visibilitychange` covers switching away on
