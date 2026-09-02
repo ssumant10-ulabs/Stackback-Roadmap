@@ -20,7 +20,9 @@ export const IcPlus = (p: React.SVGProps<SVGSVGElement>) => S({ strokeWidth: 2.6
 export const IcGrip = (p: React.SVGProps<SVGSVGElement>) => S(p, <><circle cx="9" cy="6" r="1.6" /><circle cx="15" cy="6" r="1.6" /><circle cx="9" cy="12" r="1.6" /><circle cx="15" cy="12" r="1.6" /><circle cx="9" cy="18" r="1.6" /><circle cx="15" cy="18" r="1.6" /></>, false);
 export const IcAddSub = (p: React.SVGProps<SVGSVGElement>) => S(p, <><path d="M4 5h10M4 10h6" /><path d="M15 14v6M12 17h6" /></>);
 export const IcPencil = (p: React.SVGProps<SVGSVGElement>) => S(p, <><path d="M4 20h4l10-10a2.6 2.6 0 0 0-3.7-3.7L4.3 16.3 4 20Z" /><path d="M13.5 6.5l4 4" /></>);
-export const IcMoveTo = (p: React.SVGProps<SVGSVGElement>) => S(p, <><path d="M4 6h7M4 12h7M4 18h7" /><path d="M15 12h6M18 9l3 3-3 3" /></>);
+/* Out-of-a-box arrow, not lines-plus-arrow: the old glyph sat next to IcAddSub and the two
+   were indistinguishable at 12px, which is why the move control went unfound. */
+export const IcMoveTo = (p: React.SVGProps<SVGSVGElement>) => S(p, <><path d="M12 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6" /><path d="M17 8l4 4-4 4M9.5 12H21" /></>);
 export const IcCaretUp = (p: React.SVGProps<SVGSVGElement>) => S({ strokeWidth: 3, ...p } as never, <path d="M6 15l6-6 6 6" />);
 export const IcCaretDown = (p: React.SVGProps<SVGSVGElement>) => S({ strokeWidth: 3, ...p } as never, <path d="M6 9l6 6 6-6" />);
 export const IcClose = (p: React.SVGProps<SVGSVGElement>) => S({ strokeWidth: 2.2, ...p } as never, <path d="M6 6l12 12M18 6L6 18" />);

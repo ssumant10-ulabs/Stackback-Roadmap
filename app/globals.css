@@ -208,7 +208,9 @@
     box-shadow:var(--shadow);display:flex;flex-direction:column;gap:9px;}
   .card[draggable=true]{cursor:default;}
   .card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:6px;border-radius:9px;}
-  .card-head-left{display:flex;gap:7px;align-items:flex-start;min-width:0;}
+  /* flex:1 so the drag surface reaches the tools. Shrink-to-fit left a card with a short
+     title grabbable only across its own text, and the rest of the row inert. */
+  .card-head-left{display:flex;gap:7px;align-items:flex-start;min-width:0;flex:1 1 auto;}
   .drag-handle{color:var(--ink-3);cursor:grab;flex:none;margin-top:1px;opacity:.5;}
   .drag-handle:hover{opacity:1;}
   .drag-handle:active{cursor:grabbing;}
@@ -277,8 +279,7 @@
   .dropline{height:4px;margin:1px 0;border-radius:4px;background:transparent;}
   body.is-dragging .dropline{height:28px;margin:-12px 0;position:relative;z-index:2;}
   body.is-dragging .dropline.over::after{content:"";position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:3px;border-radius:3px;background:var(--accent);box-shadow:0 0 0 1px var(--accent);}
-  .card-head-left{user-select:none;}
-  .card-head-left .card-title{cursor:grab;}
+  .card-head-left{cursor:grab;user-select:none;}
   .card-head-left:active{cursor:grabbing;}
   .sn-text[draggable="true"]{cursor:grab;user-select:none;}
   .sub-grip{padding:2px;margin-left:-2px;}

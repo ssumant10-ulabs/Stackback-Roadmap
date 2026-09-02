@@ -726,13 +726,19 @@ class Store {
    *  and every card that is not the node itself or one of its own descendants. Flat and
    *  labelled rather than a tree, because the picker is for the long move across a scrolling
    *  board, and the short one next door is already a drag. */
-  moveTargets(id: string): { cards: { id: string; title: string; priority: number; current: boolean }[]; currentParent: string | null } {
+  moveTargets(id: string): {
+    cards: { id: string; title: string; priority: number; current: boolean }[];
+    currentParent: string | null;
+    isTopLevel: boolean;
+    currentPriority: number | null;
+  } {
     const e = this.findEntry(id);
     const currentParent = e && e.parentId !== "root" ? e.parentId : null;
+    const isTopLevel = !!e && e.parentId === "root";
     const cards = this.tasks
       .filter((t) => t.id !== id && !this.isDesc(id, t.id))
       .map((t) => ({ id: t.id, title: t.title, priority: normPriority(t.priority), current: t.id === currentParent }));
-    return { cards, currentParent };
+    return { cards, currentParent, isTopLevel, currentPriority: isTopLevel && e ? normPriority(e.node.priority) : null };
   }
   nestNode(dragId: string, targetId: string) {
     if (!dragId || dragId === targetId || this.isDesc(dragId, targetId)) return;

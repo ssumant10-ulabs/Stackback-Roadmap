@@ -146,6 +146,7 @@ function Subnode({ node, up, down }: { node: Node; up: boolean; down: boolean })
 function Card({ task }: { task: Node }) {
   const s = useStore();
   const b = useBoard();
+  const ui = useAppUi();
   const [editing, setEditing] = useState(false);
   const counts = subtreeCounts(task);
   const hasKids = (task.children || []).length > 0;
@@ -156,8 +157,11 @@ function Card({ task }: { task: Node }) {
   return (
     <div className={`card${b.dragId === task.id ? " dragging-src" : ""}`} data-node-id={task.id}>
       <div className={`card-head nest-target${b.overNest === task.id ? " nest-over" : ""}`} onDragOver={(e) => b.onNestOver(e, task.id)} onDrop={(e) => b.onNestDrop(e, task.id)}>
-        <div className="card-head-left">
-          <span className="drag-handle" draggable title="Drag to move" onDragStart={(e) => b.start(e, task.id)} onDragEnd={b.end}><IcGrip /></span>
+        {/* The whole row is the drag surface, not just the glyphs in it: a card with a short
+            title was grabbable only across its own text, which reads as a card that cannot
+            be dragged at all. */}
+        <div className="card-head-left" draggable title="Drag to move" onDragStart={(e) => b.start(e, task.id)} onDragEnd={b.end}>
+          <span className="drag-handle"><IcGrip /></span>
           <EditableTitle node={task} className="card-title" editing={editing}
             onStart={() => setEditing(true)} onDone={() => setEditing(false)}
             onDragStart={(e) => b.start(e, task.id)} onDragEnd={b.end} />
@@ -165,6 +169,8 @@ function Card({ task }: { task: Node }) {
         <div className="card-tools">
           <ReorderBtns id={task.id} up={m.up} down={m.down} />
           <button type="button" className="icon-btn" aria-label="Rename card" title="Rename" onClick={() => setEditing(true)}><IcPencil /></button>
+          <button type="button" className="icon-btn" aria-label="Move card" title="Move to another horizon or card" data-move-anchor
+            onClick={(e) => ui.openMove(task.id, e.currentTarget)}><IcMoveTo /></button>
           <StatusButton node={task} size={15} />
           <button type="button" className="icon-btn danger" aria-label="Delete task" onClick={() => { if (counts.total && !confirm(`Delete this and its ${counts.total} subtask(s)?`)) return; s.del(task.id); }}><IcTrash /></button>
         </div>

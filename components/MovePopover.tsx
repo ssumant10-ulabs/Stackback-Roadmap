@@ -4,14 +4,15 @@ import { useStore } from "@/lib/store";
 import { PRIORITIES } from "@/lib/constants";
 import { IcClose } from "./icons";
 
-/** Send a checklist item somewhere else on this board: under a different card, or out to a
- *  horizon as a card of its own. Dragging already covers the move to the card next door;
- *  this is for the one across a board that scrolls, which a drag cannot reach. */
+/** Send a card or a checklist item somewhere else on this board: under a different card, or
+ *  out to a horizon of its own. Dragging covers the move to whatever is next door, but only
+ *  while source and destination are both on screen, which on this board they usually are
+ *  not. This is the move that does not depend on being able to see both ends of it. */
 export function MovePopover({ pos, nodeId, onClose }: { pos: { left: number; top: number }; nodeId: string; onClose: () => void }) {
   const s = useStore();
   const ref = useRef<HTMLDivElement>(null);
   const [q, setQ] = useState("");
-  const { cards, currentParent } = s.moveTargets(nodeId);
+  const { cards, isTopLevel, currentPriority } = s.moveTargets(nodeId);
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
@@ -40,10 +41,12 @@ export function MovePopover({ pos, nodeId, onClose }: { pos: { left: number; top
         onChange={(e) => setQ(e.target.value)} aria-label="Find a card" />
       <div className="mv-scroll">
         <div className="mv-group">
-          <div className="mv-head">Make it a card of its own</div>
+          <div className="mv-head">{isTopLevel ? "Horizon" : "Make it a card of its own"}</div>
           {PRIORITIES.map((w) => (
-            <button type="button" key={w.p} className="mv-row" onClick={() => toTop(w.p)}>
-              <span className="mv-title">Top level, {w.word}</span>
+            <button type="button" key={w.p} className="mv-row" disabled={w.p === currentPriority}
+              onClick={() => toTop(w.p)}>
+              <span className="mv-title">{isTopLevel ? w.word : `Top level, ${w.word}`}</span>
+              {w.p === currentPriority && <span className="mv-current">here</span>}
             </button>
           ))}
         </div>
