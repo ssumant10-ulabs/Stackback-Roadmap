@@ -134,6 +134,9 @@ class Store {
   migrated: "promoted" | "seeded" | "adopted" | null = null;
   /** True when this load found an edit that never reached the server and put it back. */
   recovered = false;
+  /** True once a write to the shared backend was refused. Surfaced in the topbar, because a
+   *  save that fails quietly reads exactly like a save that worked until the page reloads. */
+  saveFailed = false;
 
   subscribe = (l: () => void) => {
     this.listeners.add(l);
@@ -432,8 +435,14 @@ class Store {
     if (!firebaseEnabled) return;
     if (this.saveTimer) { clearTimeout(this.saveTimer); this.saveTimer = null; }
     saveRemote(this.remoteState())
-      .then(() => { try { localStorage.removeItem(PENDING_KEY); } catch {} })
-      .catch(() => { /* marker stays, so the next load recovers the edit */ });
+      .then((ok) => {
+        /* Only a save that actually landed clears the marker. Clearing it on a refused write
+           threw away the one record that the edit had not reached the server. */
+        this.saveFailed = !ok;
+        if (ok) { try { localStorage.removeItem(PENDING_KEY); } catch {} }
+        this.notify();
+      })
+      .catch(() => { this.saveFailed = true; this.notify(); });
   }
   /** Flush on the way out. `pagehide` is the one event that fires reliably for a normal
    *  navigation, a back/forward and a tab close; `visibilitychange` covers switching away on
@@ -582,10 +591,16 @@ class Store {
     ) {
       head.at = now;
       head.title = title;
-      head.detail = detail;
+      if (detail === undefined) delete head.detail; else head.detail = detail;
       return;
     }
-    this.data.activity.unshift({ id: uid("a_"), at: now, who: this.who, kind, title, detail, nodeId });
+    /* Keys are omitted rather than set to undefined. Firestore refuses a document holding an
+       undefined value and throws out of setDoc synchronously, which took the whole save with
+       it: one logged add and nothing saved again for the rest of the session. */
+    const entry: Activity = { id: uid("a_"), at: now, who: this.who, kind, title };
+    if (detail !== undefined) entry.detail = detail;
+    if (nodeId !== undefined) entry.nodeId = nodeId;
+    this.data.activity.unshift(entry);
     if (this.data.activity.length > ACTIVITY_CAP) this.data.activity.length = ACTIVITY_CAP;
   }
   get activity(): Activity[] {

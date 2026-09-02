@@ -8,6 +8,7 @@ import { PilotsStats } from "./views/PilotsStats";
 import { PilotsRequests } from "./views/PilotsRequests";
 import { ActivityDrawer } from "./ActivityDrawer";
 import { SettingsModal } from "./SettingsModal";
+import { SaveState } from "./SaveState";
 import { AppUiContext, type AppUi } from "./appui";
 
 /** The pilots module. Its own route so CS and growth can live here without the roadmap's
@@ -41,6 +42,7 @@ export default function PilotsApp() {
             </a>
             <div className="top-actions">
               <a className="btn ghost" href="/" title="Back to the roadmap"><IcRoadmap /><span>Roadmap</span></a>
+              <SaveState />
               <span className="icon-group">
                 <button className="ibtn" data-tip="Activity" aria-label="Activity" onClick={() => s.setActivityOpen(true)}><IcActivity /></button>
                 <button className="ibtn" data-tip="Theme" aria-label="Theme" onClick={() => s.cycleTheme()}><ThemeIcon theme={s.ui.theme} /></button>

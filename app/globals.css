@@ -1378,3 +1378,11 @@
     .group-grid.cols-team,.group-grid.cols-person{grid-template-columns:1fr;}
     .pg-spark{display:none;}
   }
+
+/* Refused-write tell in the topbar. Plain dot, no glyph: it is a status light, not an icon. */
+.save-warn{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
+  font-size:12px;font-weight:600;line-height:1;white-space:nowrap;cursor:default;
+  color:var(--danger,#f87171);
+  background:color-mix(in srgb,var(--danger,#f87171) 14%,transparent);
+  border:1px solid color-mix(in srgb,var(--danger,#f87171) 34%,transparent);}
+.save-warn::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--danger,#f87171);flex:0 0 auto;}

@@ -96,17 +96,28 @@ export async function loadRemote(): Promise<RemoteState | null> {
   }
 }
 
-export async function saveRemote(state: RemoteState): Promise<void> {
-  if (!firebaseEnabled) return;
+/** Writes the three documents and reports whether every one of them landed.
+ *
+ *  Each write is isolated. setDoc validates its argument synchronously and throws rather
+ *  than rejecting, so calling all three from one map() meant a bad first document aborted
+ *  the loop and the other two were never sent: a stray undefined in the activity log stopped
+ *  pilots and requests saving at all, silently. Wrapping each in its own async function turns
+ *  that throw into one rejected promise, and allSettled keeps the other two going.
+ *
+ *  Returns false rather than throwing, so a failure here cannot abort a caller mid-hydrate.
+ *  The caller keeps its unflushed marker on false, which is what makes the edit recoverable. */
+export async function saveRemote(state: RemoteState): Promise<boolean> {
+  if (!firebaseEnabled) return true;
   const parts = split(state);
-  try {
-    await Promise.all(Object.entries(parts).map(([name, body]) => {
+  const results = await Promise.allSettled(
+    Object.entries(parts).map(async ([name, body]) => {
       const d = ref(name);
-      return d ? setDoc(d, body) : Promise.resolve();
-    }));
-  } catch (e) {
-    console.warn("Firestore save failed:", (e as Error).message);
-  }
+      if (d) await setDoc(d, body);
+    }),
+  );
+  const failed = results.filter((r) => r.status === "rejected");
+  failed.forEach((r) => console.warn("Firestore save failed:", (r as PromiseRejectedResult).reason?.message));
+  return failed.length === 0;
 }
 
 /** Live updates. Fires when any of the three documents changes elsewhere; our own writes are

@@ -1,6 +1,7 @@
 "use client";
 import { useStore } from "@/lib/store";
 import { UserButton } from "./UserButton";
+import { SaveState } from "./SaveState";
 import { firebaseEnabled } from "@/lib/firebase";
 import { IcActivity, IcAdmin, IcPalette, IcPilots, IcSettings, Logo, ThemeIcon, ViewIcon } from "./icons";
 import { useAppUi } from "./appui";
@@ -42,6 +43,7 @@ export function Header() {
         <a className="btn ghost" href="/pilots" title="Pilot stores: activation log and stats">
           <IcPilots /><span>Pilots</span>
         </a>
+        <SaveState />
         <span className="icon-group">
           <IconAction label="Activity" onClick={() => s.setActivityOpen(true)}><IcActivity /></IconAction>
           <IconAction label={`Theme: ${THEME_LABEL[s.ui.theme]}`} onClick={() => s.cycleTheme()}><ThemeIcon theme={s.ui.theme} /></IconAction>

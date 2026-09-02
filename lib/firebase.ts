@@ -1,6 +1,6 @@
 import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
-import { getFirestore, type Firestore } from "firebase/firestore";
+import { getFirestore, initializeFirestore, type Firestore } from "firebase/firestore";
 import { getStorage, type FirebaseStorage } from "firebase/storage";
 
 /** The app runs with or without Firebase. With no config it stays on browser localStorage,
@@ -38,7 +38,21 @@ function app(): FirebaseApp | null {
 }
 
 export const fbAuth = (): Auth | null => { const a = app(); return a ? getAuth(a) : null; };
-export const fbDb = (): Firestore | null => { const a = app(); return a ? getFirestore(a) : null; };
+/** `ignoreUndefinedProperties` is the safety net, not the fix. Firestore throws synchronously
+ *  out of setDoc when any field is undefined, and because our three documents are written
+ *  from one map() that throw aborted the other two before they were ever sent: a single
+ *  stray undefined stopped the whole app saving. Callers still omit undefined keys; this
+ *  makes sure the next one that slips through drops a field instead of a session of edits. */
+let _db: Firestore | null = null;
+export const fbDb = (): Firestore | null => {
+  const a = app();
+  if (!a) return null;
+  if (!_db) {
+    try { _db = initializeFirestore(a, { ignoreUndefinedProperties: true }); }
+    catch { _db = getFirestore(a); }   // already initialised elsewhere (fast refresh)
+  }
+  return _db;
+};
 /** Firebase Storage requires the Blaze plan, so it is opt-in rather than assumed present.
  *  Set NEXT_PUBLIC_FIREBASE_STORAGE_ENABLED=true once the project is upgraded and Storage
  *  rules are published; until then uploads are refused and the link route is used instead. */
