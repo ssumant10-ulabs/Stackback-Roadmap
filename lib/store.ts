@@ -60,6 +60,14 @@ interface Data {
   /** Dropdown values the team added, keyed by column. Kept with the data so extending a
    *  vocabulary is a UI action, not a deploy. */
   colOptions?: Record<string, string[]>;
+  /** The team's chosen order for a dropdown, keyed by column. A value the order does not
+   *  mention keeps its natural position after the ones it does, so adding an option never
+   *  requires the order to be rewritten. */
+  colOrder?: Record<string, string[]>;
+  /** Values taken out of a dropdown, keyed by column. Recorded rather than deleted, because
+   *  the shipped defaults come from the code and would otherwise reappear on the next load.
+   *  Adding the same value back clears it from here. */
+  colRemoved?: Record<string, string[]>;
   /** Columns the team added to the activation log. */
   customCols?: CustomCol[];
   /** Where the two admin surfaces live. Shared, so hosting them somewhere real is a
@@ -191,6 +199,8 @@ class Store {
           this.data.seeded = r.seeded || {};
           this.data.pilotCategories = r.pilotCategories || [];
           this.data.colOptions = r.colOptions || {};
+          this.data.colOrder = r.colOrder || {};
+          this.data.colRemoved = r.colRemoved || {};
           this.data.customCols = r.customCols || [];
           if (stale) await saveRemote(this.remoteState());
           this.migrated = "adopted";
@@ -232,6 +242,8 @@ class Store {
           this.data.seeded = incoming.seeded || {};
           this.data.pilotCategories = incoming.pilotCategories || [];
           this.data.colOptions = incoming.colOptions || {};
+          this.data.colOrder = incoming.colOrder || {};
+          this.data.colRemoved = incoming.colRemoved || {};
           this.data.customCols = incoming.customCols || [];
           this.rebuildHelpers();
           this.notify(); // no persist: adopting someone else's write must not echo back
@@ -274,6 +286,8 @@ class Store {
           this.data.seeded = p.seeded || {};
           this.data.pilotCategories = p.pilotCategories || [];
           this.data.colOptions = p.colOptions || {};
+          this.data.colOrder = (p.colOrder as Record<string, string[]>) || {};
+          this.data.colRemoved = (p.colRemoved as Record<string, string[]>) || {};
           this.data.customCols = p.customCols || [];
           found = true;
         }
@@ -362,19 +376,74 @@ class Store {
    *  anything already sitting in the data so a free-typed value never disappears from its own
    *  list. */
   optionsFor(key: string, base: string[]): string[] {
+    const lc = (v: string) => v.toLowerCase();
     const set = new Set<string>(base);
     if (key === "category") (this.data.pilotCategories || []).forEach((v) => set.add(v));
     (this.data.colOptions?.[key] || []).forEach((v) => set.add(v));
-    return [...set];
+    const gone = new Set((this.data.colRemoved?.[key] || []).map(lc));
+    const all = [...set].filter((v) => !gone.has(lc(v)));
+    const order = this.data.colOrder?.[key];
+    if (!order || !order.length) return all;
+    /* A value the order does not name sorts after every value it does, keeping its own
+       relative position, so an option added later lands at the end rather than at random. */
+    const rank = new Map(order.map((v, i) => [lc(v), i]));
+    return all
+      .map((v, i) => ({ v, r: rank.has(lc(v)) ? (rank.get(lc(v)) as number) : order.length + i }))
+      .sort((a, b) => a.r - b.r)
+      .map((x) => x.v);
   }
   addColOption(key: string, name: string): boolean {
     name = (name || "").trim();
     if (!name) return false;
+    // Adding a value back is the undo for removing it.
+    const rem = this.data.colRemoved?.[key];
+    if (rem?.length && this.data.colRemoved) {
+      this.data.colRemoved[key] = rem.filter((x) => x.toLowerCase() !== name.toLowerCase());
+    }
     if (key === "category") return this.addPilotCategory(name);
     const bag = (this.data.colOptions = this.data.colOptions || {});
     const list = (bag[key] = bag[key] || []);
-    if (list.some((x) => x.toLowerCase() === name.toLowerCase())) return false;
+    if (list.some((x) => x.toLowerCase() === name.toLowerCase())) { this.commit(); return false; }
     list.push(name);
+    this.commit();
+    return true;
+  }
+  /** Swap a value with its neighbour. The whole resulting list is stored as the order, so it
+   *  stays right whichever of the three sources each value came from. */
+  moveColOption(key: string, base: string[], name: string, dir: "up" | "down"): boolean {
+    const list = this.optionsFor(key, base);
+    const i = list.indexOf(name);
+    const j = i + (dir === "up" ? -1 : 1);
+    if (i < 0 || j < 0 || j >= list.length) return false;
+    [list[i], list[j]] = [list[j], list[i]];
+    const bag = (this.data.colOrder = this.data.colOrder || {});
+    bag[key] = list;
+    this.commit();
+    return true;
+  }
+  /** How many stores currently hold this value. A value in use is not removable: taking it
+   *  out of the list does not take it out of the rows carrying it, and the cell would then
+   *  show a value its own dropdown denies. */
+  colOptionUses(key: string, name: string): number {
+    return this.pilots.filter((p) => {
+      const v = key.startsWith("c_")
+        ? p.custom?.[key]
+        : (p as unknown as Record<string, unknown>)[key];
+      return typeof v === "string" && v.toLowerCase() === name.toLowerCase();
+    }).length;
+  }
+  removeColOption(key: string, name: string): boolean {
+    if (this.colOptionUses(key, name)) return false;
+    const bag = (this.data.colRemoved = this.data.colRemoved || {});
+    const list = (bag[key] = bag[key] || []);
+    if (!list.some((x) => x.toLowerCase() === name.toLowerCase())) list.push(name);
+    if (this.data.colOptions?.[key]) {
+      this.data.colOptions[key] = this.data.colOptions[key].filter((x) => x.toLowerCase() !== name.toLowerCase());
+    }
+    if (key === "category" && this.data.pilotCategories) {
+      this.data.pilotCategories = this.data.pilotCategories.filter((x) => x.toLowerCase() !== name.toLowerCase());
+    }
+    this.log("roadmap", name, `removed from the ${key} values`);
     this.commit();
     return true;
   }
@@ -422,6 +491,8 @@ class Store {
       seeded: this.data.seeded,
       pilotCategories: this.data.pilotCategories,
       colOptions: this.data.colOptions,
+      colOrder: this.data.colOrder,
+      colRemoved: this.data.colRemoved,
       customCols: this.data.customCols,
     };
   }
@@ -471,7 +542,8 @@ class Store {
         adminUrl: this.data.adminUrl, uiuxUrl: this.data.uiuxUrl,
         features: this.data.features, pilots: this.data.pilots, seeded: this.data.seeded,
         pilotCategories: this.data.pilotCategories,
-        colOptions: this.data.colOptions, customCols: this.data.customCols,
+        colOptions: this.data.colOptions, colOrder: this.data.colOrder,
+        colRemoved: this.data.colRemoved, customCols: this.data.customCols,
       }));
       localStorage.setItem(ROSTER_KEY, JSON.stringify(this.data.roster));
     }

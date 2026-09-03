@@ -7,7 +7,7 @@ const COLS_KEY = "stackback_pilot_cols_v1";
 import { DEFAULT_ORDER, DEFAULT_VISIBLE, POCS, allColumns, cellValue, isCustomKey, toCsv, type PilotCol } from "@/lib/pilotColumns";
 import { daysSince, fmtShort, parseLoose } from "@/lib/pilotDates";
 import type { PilotStore } from "@/lib/types";
-import { IcPlus, IcTrash } from "../icons";
+import { IcCaretDown, IcCaretUp, IcPlus, IcTrash } from "../icons";
 
 const TONE: Record<string, string> = { Activated: "ok", Active: "info", Inactive: "dash" };
 
@@ -125,6 +125,45 @@ function TextCell({ p, col, value }: { p: PilotStore; col: PilotCol; value: stri
 /** Manage what each dropdown is allowed to contain. Kept out of the cells on purpose: adding
  *  an option from inside a row also set that row, which is how two stores ended up under a
  *  brand-new status. Here, adding a value changes no store at all. */
+/** The list a dropdown offers, in the order it will offer it. Was a dot-joined string, which
+ *  said what the values were and gave no way to change which came first or to take one out.
+ *
+ *  A value some store already holds is not removable. Dropping it from the list would not
+ *  drop it from the rows carrying it, and those cells would then show a value their own
+ *  dropdown denies, so the count is shown instead and the control is disabled. */
+function OptionRows({ col }: { col: PilotCol }) {
+  const s = useStore();
+  const key = col.key as string;
+  const base = col.options || [];
+  const list = s.optionsFor(key, base);
+  if (!list.length) return <span className="pl-optlist">none yet</span>;
+  return (
+    <span className="pl-optrows">
+      {list.map((v, i) => {
+        const uses = s.colOptionUses(key, v);
+        return (
+          <span className="pl-optrow" key={v}>
+            <span className="pl-optmv">
+              <button type="button" disabled={i === 0} aria-label={`Move ${v} up`} title="Move up"
+                onClick={() => s.moveColOption(key, base, v, "up")}><IcCaretUp /></button>
+              <button type="button" disabled={i === list.length - 1} aria-label={`Move ${v} down`} title="Move down"
+                onClick={() => s.moveColOption(key, base, v, "down")}><IcCaretDown /></button>
+            </span>
+            <span className="pl-optname">{v}</span>
+            {uses > 0 && <span className="pl-optuse" title={`${uses} store${uses === 1 ? "" : "s"} set to this`}>{uses}</span>}
+            <button type="button" className="pl-optdel" disabled={uses > 0}
+              aria-label={`Remove ${v}`}
+              title={uses > 0
+                ? `${uses} store${uses === 1 ? " is" : "s are"} set to this, so it cannot be removed`
+                : `Remove ${v}`}
+              onClick={() => s.removeColOption(key, v)}><IcTrash /></button>
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
 function OptionEditor({ cols }: { cols: PilotCol[] }) {
   const s = useStore();
   const [open, setOpen] = useState<string | null>(null);
@@ -150,9 +189,7 @@ function OptionEditor({ cols }: { cols: PilotCol[] }) {
       </span>
       {openCol && (
         <span className="pl-optbody">
-          <span className="pl-optlist">
-            {s.optionsFor(openCol.key as string, openCol.options || []).join(" · ") || "none yet"}
-          </span>
+          <OptionRows col={openCol} />
           <input placeholder={`New ${openCol.label.toLowerCase()} value…`} value={draft} autoFocus
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {

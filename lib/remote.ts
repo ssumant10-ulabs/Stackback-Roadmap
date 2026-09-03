@@ -21,6 +21,8 @@ export interface RemoteState {
   seeded?: { features?: boolean; pilots?: boolean; dates?: boolean };
   pilotCategories?: string[];
   colOptions?: Record<string, string[]>;
+  colOrder?: Record<string, string[]>;
+  colRemoved?: Record<string, string[]>;
   customCols?: CustomCol[];
   adminUrl?: string;
   uiuxUrl?: string;
@@ -53,7 +55,8 @@ function split(s: RemoteState): Record<string, Bag> {
     [DOCS.features]: { features: s.features, seeded: s.seeded ?? {}, updatedBy: CLIENT_ID },
     [DOCS.pilots]: {
       pilots: s.pilots, pilotCategories: s.pilotCategories ?? [],
-      colOptions: s.colOptions ?? {}, customCols: s.customCols ?? [], updatedBy: CLIENT_ID,
+      colOptions: s.colOptions ?? {}, colOrder: s.colOrder ?? {}, colRemoved: s.colRemoved ?? {},
+      customCols: s.customCols ?? [], updatedBy: CLIENT_ID,
     },
   };
 }
@@ -74,6 +77,8 @@ function merge(r: Bag, f: Bag, p: Bag): RemoteState | null {
     seeded: (f.seeded as RemoteState["seeded"]) || {},
     pilotCategories: (p.pilotCategories as string[]) || [],
     colOptions: (p.colOptions as Record<string, string[]>) || {},
+    colOrder: (p.colOrder as Record<string, string[]>) || {},
+    colRemoved: (p.colRemoved as Record<string, string[]>) || {},
     customCols: (p.customCols as CustomCol[]) || [],
   };
 }
