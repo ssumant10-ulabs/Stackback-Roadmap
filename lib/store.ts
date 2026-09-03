@@ -8,6 +8,7 @@ import { effStatus, normPriority, subtreeCounts, waveWord } from "./derive";
 import { reconcile } from "./dates";
 import { featureSeed } from "./featureSeed";
 import { pilotSeed } from "./pilotSeed";
+import { DEFAULT_STATUSES, STATUS_META } from "./pilotColumns";
 import { autoLink, boardStatusOf, isDrifted, matchTask } from "./featureLink";
 import { SHOT_MAX_PER_REQUEST, SHOT_TOTAL_BUDGET, fmtBytes } from "./shots";
 import { parseLoose } from "./pilotDates";
@@ -438,6 +439,21 @@ class Store {
         : (p as unknown as Record<string, unknown>)[key];
       return typeof v === "string" && v.toLowerCase() === name.toLowerCase();
     }).length;
+  }
+  /** Every status worth a count, in the order the values panel sets: the ones the dropdown
+   *  offers, then the no-status bucket, then anything still sitting on a store but no longer
+   *  offered. Counted over whatever list the caller passes, so the log's filtered view and
+   *  the stats tab's whole roster share one definition instead of three hardcoded names. */
+  statusBuckets(list: PilotStore[]): { value: string; label: string; tone: string; n: number }[] {
+    const offered = this.optionsFor("activationStatus", DEFAULT_STATUSES);
+    const inData = [...new Set(list.map((p) => p.activationStatus || ""))];
+    const stray = inData.filter((v) => v && !offered.includes(v)).sort();
+    return [...new Set([...offered, "", ...stray])].map((value) => ({
+      value,
+      label: STATUS_META[value]?.label || value,
+      tone: this.colColor("activationStatus", value) || STATUS_META[value]?.tone || "dash",
+      n: list.filter((p) => (p.activationStatus || "") === value).length,
+    }));
   }
   /** The tone chosen for a value, or null to fall back to whatever the code defaults to. */
   colColor(key: string, value: string): string | null {

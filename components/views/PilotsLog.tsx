@@ -4,12 +4,11 @@ import { useStore } from "@/lib/store";
 
 /** Per-browser column choice for the activation log. */
 const COLS_KEY = "stackback_pilot_cols_v1";
-import { DEFAULT_ORDER, DEFAULT_VISIBLE, POCS, allColumns, cellValue, isCustomKey, toCsv, type PilotCol } from "@/lib/pilotColumns";
+import { DEFAULT_ORDER, DEFAULT_STATUSES, DEFAULT_VISIBLE, POCS, STATUS_META, allColumns, cellValue, isCustomKey, toCsv, type PilotCol } from "@/lib/pilotColumns";
 import { daysSince, fmtShort, parseLoose } from "@/lib/pilotDates";
 import type { PilotStore } from "@/lib/types";
 import { IcCaretDown, IcCaretUp, IcPlus, IcTrash } from "../icons";
 
-const TONE: Record<string, string> = { Activated: "ok", Active: "info", Inactive: "dash" };
 
 /** The tones a status may be given. Token names rather than hex, so each one flips with the
  *  theme; every colour here is already defined for both. */
@@ -24,15 +23,6 @@ const TONES: { id: string; label: string }[] = [
   { id: "dash", label: "Grey" },
 ];
 
-/** Stores are read in status blocks, not one flat list: the question is almost always
- *  "what is still inactive", so the rows cluster and carry the status as row colour
- *  rather than only as a pill you have to scan for. */
-const GROUPS: { id: string; label: string; blurb: string }[] = [
-  { id: "Activated", label: "Activated", blurb: "Live and running" },
-  { id: "Active", label: "In conversation", blurb: "Being worked right now" },
-  { id: "Inactive", label: "Inactive", blurb: "Stalled or unresponsive" },
-  { id: "", label: "No status set", blurb: "Needs triaging" },
-];
 
 /** Same initials chip the roadmap uses for owners, so a person reads as a person in both
  *  places rather than as a name here and an avatar there. */
@@ -91,7 +81,7 @@ function Cell({ p, col }: { p: PilotStore; col: PilotCol }) {
           <option value="">—</option>
           {opts.map((o) => <option key={o} value={o}>{o}</option>)}
         </select>
-        {col.key === "activationStatus" && <span className={`pl-dot t-${s.colColor("activationStatus", value) || TONE[value] || "dash"}`} />}
+        {col.key === "activationStatus" && <span className={`pl-dot t-${s.colColor("activationStatus", value) || STATUS_META[value]?.tone || "dash"}`} />}
       </div>
     );
   }
@@ -158,7 +148,7 @@ function OptionRows({ col }: { col: PilotCol }) {
     <span className="pl-optrows">
       {list.map((v, i) => {
         const uses = s.colOptionUses(key, v);
-        const tone = s.colColor(key, v) || TONE[v] || "dash";
+        const tone = s.colColor(key, v) || STATUS_META[v]?.tone || "dash";
         return (
           <Fragment key={v}>
           <span className="pl-optrow">
@@ -305,32 +295,26 @@ export function PilotsLog() {
      Group order follows the dropdown, so reordering a status in the values panel moves its
      rows here too. It used to be GROUPS then the team's own statuses sorted alphabetically
      after them, which pinned a team-added status to the bottom whatever the panel said. */
-  const grouped = useMemo(() => {
-    const meta = new Map(GROUPS.map((g) => [g.id, g]));
-    const listed = s.optionsFor("activationStatus", ["Activated", "Active", "Inactive"]);
-    const inData = [...new Set(rows.map((p) => p.activationStatus || ""))];
-    // A status still on rows but no longer offered (removed from the panel) sorts last, so
-    // its stores stay visible instead of dropping out of the table.
-    const stray = inData.filter((v) => v !== "" && !listed.includes(v)).sort();
-    const ids = [...new Set([...listed, "", ...stray])];
-    return ids
-      .map((id) => meta.get(id) || { id, label: id, blurb: "Added by the team" })
-      .map((g) => ({ g, items: rows.filter((p) => (p.activationStatus || "") === g.id) }))
-      .filter((x) => x.items.length);
+  const buckets = useMemo(() => s.statusBuckets(rows).filter((b) => b.n > 0),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, s, version]);
+    [rows, s, version]);
 
-  const stats = useMemo(() => {
-    const c = (f: (p: PilotStore) => boolean) => rows.filter(f).length;
-    return {
-      shown: rows.length, all: s.pilots.length,
-      activated: c((p) => p.activationStatus === "Activated"),
-      active: c((p) => p.activationStatus === "Active"),
-      inactive: c((p) => p.activationStatus === "Inactive"),
-      noOwner: c((p) => !p.poc),
-      noNext: c((p) => !p.activationNotes),
-    };
-  }, [rows, s.pilots.length]);
+  const grouped = useMemo(() => buckets.map((b) => ({
+    g: {
+      id: b.value,
+      label: b.label,
+      tone: b.tone,
+      blurb: STATUS_META[b.value]?.blurb || "Added by the team",
+    },
+    items: rows.filter((p) => (p.activationStatus || "") === b.value),
+  })), [buckets, rows]);
+
+  const stats = useMemo(() => ({
+    shown: rows.length,
+    all: s.pilots.length,
+    noOwner: rows.filter((p) => !p.poc).length,
+    noNext: rows.filter((p) => !p.activationNotes).length,
+  }), [rows, s.pilots.length]);
 
   const moveCol = (from: string, to: string) => {
     if (from === to) return;
@@ -360,9 +344,9 @@ export function PilotsLog() {
     <>
       <div className="pl-statbar">
         <span><b>{stats.shown}</b>{stats.shown !== stats.all && <em> of {stats.all}</em>} stores</span>
-        <span className="ok"><b>{stats.activated}</b> activated</span>
-        <span className="info"><b>{stats.active}</b> in conversation</span>
-        <span className="dim"><b>{stats.inactive}</b> inactive</span>
+        {buckets.map((b) => (
+          <span key={b.value || "none"} className={`st t-${b.tone}`}><b>{b.n}</b> {b.label.toLowerCase()}</span>
+        ))}
         <span className={stats.noOwner ? "warn" : "dim"}><b>{stats.noOwner}</b> no owner</span>
         <span className={stats.noNext ? "warn" : "dim"}><b>{stats.noNext}</b> no next step</span>
       </div>
@@ -371,7 +355,7 @@ export function PilotsLog() {
         <input className="pl-search" placeholder="Search stores, owners, notes…" value={q} onChange={(e) => setQ(e.target.value)} />
         <select className="pl-sel big" value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">All statuses</option>
-          {s.optionsFor("activationStatus", ["Activated", "Active", "Inactive"])
+          {s.optionsFor("activationStatus", DEFAULT_STATUSES)
             .map((a) => <option key={a} value={a}>{a}</option>)}
         </select>
         <select className="pl-sel big" value={poc} onChange={(e) => setPoc(e.target.value)}>
@@ -458,7 +442,7 @@ export function PilotsLog() {
           <tbody>
             {grouped.map(({ g, items }) => (
               <Fragment key={g.id || "none"}>
-                <tr className={`pl-group g-${slug(g.id)} t-${s.colColor("activationStatus", g.id) || TONE[g.id] || "dash"}`}>
+                <tr className={`pl-group g-${slug(g.id)} t-${g.tone}`}>
                   <td colSpan={cols.length + 2}>
                     <span className="pl-dot" />
                     <b>{g.label}</b>
@@ -467,7 +451,7 @@ export function PilotsLog() {
                   </td>
                 </tr>
                 {items.map((p) => (
-                  <tr key={p.id} className={`pl-row s-${slug(g.id)} t-${s.colColor("activationStatus", g.id) || TONE[g.id] || "dash"}`}>
+                  <tr key={p.id} className={`pl-row s-${slug(g.id)} t-${g.tone}`}>
                     <td className="num">{p.n}</td>
                     {cols.map((c) => <td key={c.key as string} className={c.kind === "long" ? "wide" : undefined}><Cell p={p} col={c} /></td>)}
                     <td className="row-del">

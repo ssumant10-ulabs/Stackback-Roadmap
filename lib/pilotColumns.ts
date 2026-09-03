@@ -20,6 +20,20 @@ export const ISSUE_TYPES = ["Theme", "App", "3rd Party checkout"];
 
 export const POCS = ["Ishita", "Shreya", "Sumant", "Rohan", "Shubham"];
 
+/** The statuses the code ships, and what each one means in the table and the stats. One
+ *  place, because the log's groups, the log's stat bar and the stats tab all used to carry
+ *  their own copy of these three names, so a status the team added went uncounted in two of
+ *  them while the store total kept including it. Team-added statuses have no entry here and
+ *  fall back to their own name, a grey tone and "Added by the team". */
+export const DEFAULT_STATUSES = ["Activated", "Active", "Inactive"];
+
+export const STATUS_META: Record<string, { label: string; tone: string; blurb: string }> = {
+  Activated: { label: "Activated", tone: "ok", blurb: "Live and running" },
+  Active: { label: "In conversation", tone: "info", blurb: "Being worked right now" },
+  Inactive: { label: "Inactive", tone: "dash", blurb: "Stalled or unresponsive" },
+  "": { label: "No status set", tone: "dash", blurb: "Needs triaging" },
+};
+
 export const CATEGORIES = [
   "Food & Grocery Brands", "Protein & Supplement Brands", "Bath & Body Products",
   "Specialty Food & Snacks", "Coffee Brands", "Tea Brands",
