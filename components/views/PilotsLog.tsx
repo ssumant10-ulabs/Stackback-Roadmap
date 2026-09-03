@@ -11,6 +11,19 @@ import { IcCaretDown, IcCaretUp, IcPlus, IcTrash } from "../icons";
 
 const TONE: Record<string, string> = { Activated: "ok", Active: "info", Inactive: "dash" };
 
+/** The tones a status may be given. Token names rather than hex, so each one flips with the
+ *  theme; every colour here is already defined for both. */
+/** A status is free text, so it cannot go into a class name as it stands: "Final Updates"
+ *  emitted `g-Final Updates`, which is two classes, and a status called "row" would have
+ *  emitted a class the table already styles. */
+const slug = (v: string) => v.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "none";
+
+const TONES: { id: string; label: string }[] = [
+  { id: "ok", label: "Lime" }, { id: "info", label: "Blue" }, { id: "pink", label: "Pink" },
+  { id: "orange", label: "Orange" }, { id: "gold", label: "Gold" }, { id: "red", label: "Red" },
+  { id: "dash", label: "Grey" },
+];
+
 /** Stores are read in status blocks, not one flat list: the question is almost always
  *  "what is still inactive", so the rows cluster and carry the status as row colour
  *  rather than only as a pill you have to scan for. */
@@ -78,7 +91,7 @@ function Cell({ p, col }: { p: PilotStore; col: PilotCol }) {
           <option value="">—</option>
           {opts.map((o) => <option key={o} value={o}>{o}</option>)}
         </select>
-        {col.key === "activationStatus" && <span className={`pl-dot t-${TONE[value] || "dash"}`} />}
+        {col.key === "activationStatus" && <span className={`pl-dot t-${s.colColor("activationStatus", value) || TONE[value] || "dash"}`} />}
       </div>
     );
   }
@@ -133,16 +146,22 @@ function TextCell({ p, col, value }: { p: PilotStore; col: PilotCol; value: stri
  *  dropdown denies, so the count is shown instead and the control is disabled. */
 function OptionRows({ col }: { col: PilotCol }) {
   const s = useStore();
+  const [palette, setPalette] = useState<string | null>(null);
   const key = col.key as string;
   const base = col.options || [];
   const list = s.optionsFor(key, base);
+  /* Colour is offered only where the table shows one. Status drives the group heading, the
+     row edge and the dot; the other dropdowns have nowhere to put it yet. */
+  const colourable = key === "activationStatus";
   if (!list.length) return <span className="pl-optlist">none yet</span>;
   return (
     <span className="pl-optrows">
       {list.map((v, i) => {
         const uses = s.colOptionUses(key, v);
+        const tone = s.colColor(key, v) || TONE[v] || "dash";
         return (
-          <span className="pl-optrow" key={v}>
+          <Fragment key={v}>
+          <span className="pl-optrow">
             <span className="pl-optmv">
               <button type="button" disabled={i === 0} aria-label={`Move ${v} up`} title="Move up"
                 onClick={() => s.moveColOption(key, base, v, "up")}><IcCaretUp /></button>
@@ -151,6 +170,11 @@ function OptionRows({ col }: { col: PilotCol }) {
             </span>
             <span className="pl-optname">{v}</span>
             {uses > 0 && <span className="pl-optuse" title={`${uses} store${uses === 1 ? "" : "s"} set to this`}>{uses}</span>}
+            {colourable && (
+              <button type="button" className={`pl-optswatch t-${tone}`}
+                aria-label={`Colour for ${v}`} aria-expanded={palette === v} title="Colour"
+                onClick={() => setPalette(palette === v ? null : v)}><i /></button>
+            )}
             <button type="button" className="pl-optdel" disabled={uses > 0}
               aria-label={`Remove ${v}`}
               title={uses > 0
@@ -158,6 +182,18 @@ function OptionRows({ col }: { col: PilotCol }) {
                 : `Remove ${v}`}
               onClick={() => s.removeColOption(key, v)}><IcTrash /></button>
           </span>
+          {colourable && palette === v && (
+            <span className="pl-optpalette" role="group" aria-label={`Colour for ${v}`}>
+              {TONES.map((t) => (
+                <button type="button" key={t.id} className={`t-${t.id}`} title={t.label}
+                  aria-label={t.label} aria-pressed={tone === t.id}
+                  onClick={() => { s.setColColor(key, v, t.id); setPalette(null); }} />
+              ))}
+              <button type="button" className="pl-optclear" title="Back to the default colour"
+                onClick={() => { s.setColColor(key, v, ""); setPalette(null); }}>Default</button>
+            </span>
+          )}
+          </Fragment>
         );
       })}
     </span>
@@ -261,19 +297,28 @@ export function PilotsLog() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s.pilots, q, status, poc, category, version]);
 
-  /* Every row must land in a group. The four below are the ones with a meaning worth
+  /* Every row must land in a group. The four in GROUPS are the ones with a meaning worth
      spelling out; a status the team adds gets a group of its own rather than falling through
      the gaps. Adding a status used to make its stores vanish from the table entirely, which
-     read as data loss even though the records were intact. */
+     read as data loss even though the records were intact.
+     
+     Group order follows the dropdown, so reordering a status in the values panel moves its
+     rows here too. It used to be GROUPS then the team's own statuses sorted alphabetically
+     after them, which pinned a team-added status to the bottom whatever the panel said. */
   const grouped = useMemo(() => {
-    const known = new Set(GROUPS.map((g) => g.id));
-    const extra = [...new Set(rows.map((p) => p.activationStatus || "").filter((v) => !known.has(v)))]
-      .sort()
-      .map((id) => ({ id, label: id, blurb: "Added by the team" }));
-    return [...GROUPS, ...extra]
+    const meta = new Map(GROUPS.map((g) => [g.id, g]));
+    const listed = s.optionsFor("activationStatus", ["Activated", "Active", "Inactive"]);
+    const inData = [...new Set(rows.map((p) => p.activationStatus || ""))];
+    // A status still on rows but no longer offered (removed from the panel) sorts last, so
+    // its stores stay visible instead of dropping out of the table.
+    const stray = inData.filter((v) => v !== "" && !listed.includes(v)).sort();
+    const ids = [...new Set([...listed, "", ...stray])];
+    return ids
+      .map((id) => meta.get(id) || { id, label: id, blurb: "Added by the team" })
       .map((g) => ({ g, items: rows.filter((p) => (p.activationStatus || "") === g.id) }))
       .filter((x) => x.items.length);
-  }, [rows]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, s, version]);
 
   const stats = useMemo(() => {
     const c = (f: (p: PilotStore) => boolean) => rows.filter(f).length;
@@ -413,16 +458,16 @@ export function PilotsLog() {
           <tbody>
             {grouped.map(({ g, items }) => (
               <Fragment key={g.id || "none"}>
-                <tr className={`pl-group g-${g.id || "none"}`}>
+                <tr className={`pl-group g-${slug(g.id)} t-${s.colColor("activationStatus", g.id) || TONE[g.id] || "dash"}`}>
                   <td colSpan={cols.length + 2}>
-                    <span className={`pl-dot t-${TONE[g.id] || "dash"}`} />
+                    <span className="pl-dot" />
                     <b>{g.label}</b>
                     <span className="pl-group-n">{items.length}</span>
                     <em>{g.blurb}</em>
                   </td>
                 </tr>
                 {items.map((p) => (
-                  <tr key={p.id} className={`pl-row s-${g.id || "none"}`}>
+                  <tr key={p.id} className={`pl-row s-${slug(g.id)} t-${s.colColor("activationStatus", g.id) || TONE[g.id] || "dash"}`}>
                     <td className="num">{p.n}</td>
                     {cols.map((c) => <td key={c.key as string} className={c.kind === "long" ? "wide" : undefined}><Cell p={p} col={c} /></td>)}
                     <td className="row-del">

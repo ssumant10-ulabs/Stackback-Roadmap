@@ -23,6 +23,7 @@ export interface RemoteState {
   colOptions?: Record<string, string[]>;
   colOrder?: Record<string, string[]>;
   colRemoved?: Record<string, string[]>;
+  colColors?: Record<string, Record<string, string>>;
   customCols?: CustomCol[];
   adminUrl?: string;
   uiuxUrl?: string;
@@ -56,6 +57,7 @@ function split(s: RemoteState): Record<string, Bag> {
     [DOCS.pilots]: {
       pilots: s.pilots, pilotCategories: s.pilotCategories ?? [],
       colOptions: s.colOptions ?? {}, colOrder: s.colOrder ?? {}, colRemoved: s.colRemoved ?? {},
+      colColors: s.colColors ?? {},
       customCols: s.customCols ?? [], updatedBy: CLIENT_ID,
     },
   };
@@ -79,6 +81,7 @@ function merge(r: Bag, f: Bag, p: Bag): RemoteState | null {
     colOptions: (p.colOptions as Record<string, string[]>) || {},
     colOrder: (p.colOrder as Record<string, string[]>) || {},
     colRemoved: (p.colRemoved as Record<string, string[]>) || {},
+    colColors: (p.colColors as Record<string, Record<string, string>>) || {},
     customCols: (p.customCols as CustomCol[]) || [],
   };
 }

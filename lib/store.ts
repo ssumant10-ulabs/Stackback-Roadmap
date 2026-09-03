@@ -68,6 +68,10 @@ interface Data {
    *  the shipped defaults come from the code and would otherwise reappear on the next load.
    *  Adding the same value back clears it from here. */
   colRemoved?: Record<string, string[]>;
+  /** A tone name per dropdown value, keyed by column. Names, not hex, so the colour flips
+   *  with the theme like every other colour here. The three shipped statuses carried theirs
+   *  hardcoded in CSS, which left anything the team added with no colour at all. */
+  colColors?: Record<string, Record<string, string>>;
   /** Columns the team added to the activation log. */
   customCols?: CustomCol[];
   /** Where the two admin surfaces live. Shared, so hosting them somewhere real is a
@@ -201,6 +205,7 @@ class Store {
           this.data.colOptions = r.colOptions || {};
           this.data.colOrder = r.colOrder || {};
           this.data.colRemoved = r.colRemoved || {};
+          this.data.colColors = r.colColors || {};
           this.data.customCols = r.customCols || [];
           if (stale) await saveRemote(this.remoteState());
           this.migrated = "adopted";
@@ -244,6 +249,7 @@ class Store {
           this.data.colOptions = incoming.colOptions || {};
           this.data.colOrder = incoming.colOrder || {};
           this.data.colRemoved = incoming.colRemoved || {};
+          this.data.colColors = incoming.colColors || {};
           this.data.customCols = incoming.customCols || [];
           this.rebuildHelpers();
           this.notify(); // no persist: adopting someone else's write must not echo back
@@ -288,6 +294,7 @@ class Store {
           this.data.colOptions = p.colOptions || {};
           this.data.colOrder = (p.colOrder as Record<string, string[]>) || {};
           this.data.colRemoved = (p.colRemoved as Record<string, string[]>) || {};
+          this.data.colColors = (p.colColors as Record<string, Record<string, string>>) || {};
           this.data.customCols = p.customCols || [];
           found = true;
         }
@@ -432,6 +439,16 @@ class Store {
       return typeof v === "string" && v.toLowerCase() === name.toLowerCase();
     }).length;
   }
+  /** The tone chosen for a value, or null to fall back to whatever the code defaults to. */
+  colColor(key: string, value: string): string | null {
+    return this.data.colColors?.[key]?.[value] || null;
+  }
+  setColColor(key: string, value: string, tone: string) {
+    const bag = (this.data.colColors = this.data.colColors || {});
+    const forKey = (bag[key] = bag[key] || {});
+    if (tone) forKey[value] = tone; else delete forKey[value];
+    this.commit();
+  }
   removeColOption(key: string, name: string): boolean {
     if (this.colOptionUses(key, name)) return false;
     const bag = (this.data.colRemoved = this.data.colRemoved || {});
@@ -493,6 +510,7 @@ class Store {
       colOptions: this.data.colOptions,
       colOrder: this.data.colOrder,
       colRemoved: this.data.colRemoved,
+      colColors: this.data.colColors,
       customCols: this.data.customCols,
     };
   }
@@ -543,7 +561,8 @@ class Store {
         features: this.data.features, pilots: this.data.pilots, seeded: this.data.seeded,
         pilotCategories: this.data.pilotCategories,
         colOptions: this.data.colOptions, colOrder: this.data.colOrder,
-        colRemoved: this.data.colRemoved, customCols: this.data.customCols,
+        colRemoved: this.data.colRemoved, colColors: this.data.colColors,
+        customCols: this.data.customCols,
       }));
       localStorage.setItem(ROSTER_KEY, JSON.stringify(this.data.roster));
     }

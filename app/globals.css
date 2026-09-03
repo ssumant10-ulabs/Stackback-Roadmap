@@ -1005,10 +1005,18 @@
     padding:4px 6px;font:inherit;font-size:12.5px;cursor:pointer;max-width:100%;}
   .pl-sel:hover{border-color:var(--border-2);background:var(--card);}
   .pl-sel.big{border-color:var(--border-2);background:var(--card);padding:8px 10px;}
-  .pl-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-left:4px;vertical-align:1px;}
-  .pl-dot.t-ok{background:var(--accent);}
-  .pl-dot.t-info{background:var(--team-eng);}
-  .pl-dot.t-dash{background:var(--border-2);}
+  /* One tone per status, as two variables: the fill for dots and edges, and a readable ink
+     for heading text. Everything that used to hardcode a colour per status id now reads
+     these, which is what lets a status the team added carry a colour at all. */
+  .t-ok{--tone:var(--accent);--tone-ink:var(--brand-deep);}
+  .t-info{--tone:var(--team-eng);--tone-ink:var(--team-eng);}
+  .t-pink{--tone:var(--team-dsg);--tone-ink:var(--team-dsg);}
+  .t-orange{--tone:var(--team-pm);--tone-ink:var(--team-pm);}
+  .t-gold{--tone:var(--status-progress);--tone-ink:var(--status-progress);}
+  .t-red{--tone:var(--status-late);--tone-ink:var(--status-late);}
+  .t-dash{--tone:var(--border-2);--tone-ink:var(--ink-3);}
+  .pl-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-left:4px;
+    vertical-align:1px;background:var(--tone,var(--border-2));}
   .pl-in{width:100%;min-width:66px;border:1px solid transparent;background:transparent;color:var(--ink);
     border-radius:6px;padding:4px 6px;font:inherit;font-size:12.5px;}
   .pl-in:hover{border-color:var(--border-2);}
@@ -1172,6 +1180,18 @@
   .pl-optbody .pl-optdel:hover:not(:disabled){color:var(--status-late);background:var(--sunken);}
   .pl-optbody .pl-optdel:disabled{opacity:.3;cursor:default;}
   .pl-optdel svg{width:13px;height:13px;}
+  .pl-optbody .pl-optswatch{padding:0;width:20px;height:20px;flex:none;display:grid;place-items:center;
+    background:none;border:0;border-radius:5px;cursor:pointer;}
+  .pl-optbody .pl-optswatch:hover{background:var(--sunken);}
+  .pl-optswatch i{display:block;width:11px;height:11px;border-radius:50%;
+    background:var(--tone,var(--border-2));box-shadow:0 0 0 1px var(--border-2);}
+  .pl-optpalette{display:flex;gap:5px;align-items:center;flex:1 1 100%;
+    padding:5px 4px 7px 27px;}
+  .pl-optbody .pl-optpalette button{padding:0;width:17px;height:17px;flex:none;border-radius:50%;
+    background:var(--tone,var(--border-2));border:1px solid var(--border-2);cursor:pointer;}
+  .pl-optbody .pl-optpalette button[aria-pressed="true"]{box-shadow:0 0 0 2px var(--card),0 0 0 3.5px var(--tone);}
+  .pl-optbody .pl-optpalette .pl-optclear{width:auto;height:17px;padding:0 7px;border-radius:999px;
+    background:var(--sunken);color:var(--ink-3);font-size:10px;font-weight:700;}
   .pl-optbody input{width:190px;padding:5px 8px;font-size:12px;background:var(--sunken);
     border:1px solid var(--border);border-radius:7px;color:var(--ink);}
   .pl-optbody button{padding:5px 11px;font-size:12px;font-weight:700;cursor:pointer;
@@ -1206,19 +1226,15 @@
   .pl-group-n{display:inline-block;margin-left:8px;font-size:11px;font-weight:800;color:var(--ink-3);
     background:var(--sunken);border-radius:999px;padding:1px 8px;font-variant-numeric:tabular-nums;}
   .pl-group em{font-style:normal;margin-left:10px;font-size:11.5px;color:var(--ink-3);font-weight:650;}
-  .pl-group.g-Activated b{color:var(--brand-deep);}
-  .pl-group.g-Active b{color:var(--team-eng);}
-  .pl-group.g-Inactive b{color:var(--ink-3);}
+  .pl-group b{color:var(--tone-ink,var(--ink));}
 
   /* Row colour carries the status, so a block is legible without reading every pill. */
-  .pl-table.log tr.pl-row td:first-child{border-left:3px solid transparent;}
-  .pl-table.log tr.s-Activated td{background:color-mix(in srgb,var(--accent) 7%,transparent);}
-  .pl-table.log tr.s-Activated td:first-child{border-left-color:var(--accent);}
-  .pl-table.log tr.s-Activated:hover td{background:color-mix(in srgb,var(--accent) 13%,transparent);}
-  .pl-table.log tr.s-Active td:first-child{border-left-color:var(--team-eng);}
-  .pl-table.log tr.s-Inactive td{opacity:.62;}
-  .pl-table.log tr.s-Inactive:hover td{opacity:1;}
-  .pl-table.log tr.s-Inactive td:first-child{border-left-color:var(--border-2);}
+  .pl-table.log tr.pl-row td:first-child{border-left:3px solid var(--tone,transparent);}
+  /* Grey is the absence of a colour, so it gets the edge but no wash. */
+  .pl-table.log tr.pl-row:not(.t-dash) td{background:color-mix(in srgb,var(--tone) 7%,transparent);}
+  .pl-table.log tr.pl-row:not(.t-dash):hover td{background:color-mix(in srgb,var(--tone) 13%,transparent);}
+  .pl-table.log tr.s-inactive td{opacity:.62;}
+  .pl-table.log tr.s-inactive:hover td{opacity:1;}
   .pl-table.log tr.s-none td:first-child{border-left-color:var(--status-late);}
 
   .ft-none{text-align:center;padding:44px 20px;border:1.5px dashed var(--border-2);border-radius:13px;}
