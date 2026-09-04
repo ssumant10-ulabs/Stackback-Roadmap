@@ -12,12 +12,16 @@ import { DEFAULT_STATUSES, STATUS_META } from "./pilotColumns";
 import { autoLink, boardStatusOf, isDrifted, matchTask } from "./featureLink";
 import { SHOT_MAX_PER_REQUEST, SHOT_TOTAL_BUDGET, fmtBytes } from "./shots";
 import { parseLoose } from "./pilotDates";
-import { CLIENT_ID, firebaseEnabled, loadRemote, saveRemote, subscribeRemote } from "./remote";
+import { CLIENT_ID, firebaseEnabled, loadRemote, saveRemote, subscribeRemote, type RemoteState } from "./remote";
 
 const ROADMAPS_KEY = "stackback_roadmaps_v3";
 /** Set while a Firestore write is owed, cleared once it lands. Its presence on load means the
  *  last session ended with an edit that never reached the server. */
 const PENDING_KEY = "stackback_pending_since";
+/** The copy this browser last agreed with the server on. Every save is the difference
+ *  between this and what is in memory, so it has to survive a reload for an edit recovered
+ *  from the last session to be merged rather than blindly replayed. */
+const BASE_KEY = "stackback_base_v1";
 const ROSTER_KEY = "stackback_roster_v1";
 const THEME_KEY = "stackback_theme";
 /** Per-person, never shared: on a shared backend, everyone must keep their own identity. */
@@ -178,6 +182,22 @@ class Store {
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private unsubRemote: (() => void) | null = null;
 
+  /** What the server held the last time this browser and it agreed. Saves send the difference
+   *  between this and the current state, never the whole state, which is what stops one stale
+   *  tab rewriting everyone else's work. */
+  private base: RemoteState | null = null;
+  private setBase(st: RemoteState | null) {
+    this.base = st ? (JSON.parse(JSON.stringify(st)) as RemoteState) : null;
+    try {
+      if (this.base) localStorage.setItem(BASE_KEY, JSON.stringify(this.base));
+      else localStorage.removeItem(BASE_KEY);
+    } catch { /* quota: the merge falls back to a full write, which is the old behaviour */ }
+  }
+  private readBase(): RemoteState | null {
+    try { return JSON.parse(localStorage.getItem(BASE_KEY) || "null") as RemoteState | null; }
+    catch { return null; }
+  }
+
   /* ---- persistence ---- */
   async hydrate() {
     if (this.hydrated || typeof window === "undefined") return;
@@ -208,20 +228,33 @@ class Store {
           this.data.colRemoved = r.colRemoved || {};
           this.data.colColors = r.colColors || {};
           this.data.customCols = r.customCols || [];
-          if (stale) await saveRemote(this.remoteState());
+          this.setBase(r);
           this.migrated = "adopted";
-          /* An edit from the last session may never have reached the server. Recover it, but
-             only when this browser's unflushed copy is newer than what the team has saved
-             since, so recovering one person's lost keystroke cannot roll back someone else. */
+          if (stale) {
+            /* A seed bump replaces the sheet roadmap with the copy in the code. That is the
+               point of it, but it is still the one write that can discard board edits, so it
+               is snapshotted first and said out loud rather than happening quietly. */
+            this.snapshot("before re-seed");
+            this.log("roadmap", "Roadmap re-seeded", `sheet updated to v${SEED_VERSION}; previous board saved to snapshots`);
+            this.persist();
+          }
+          /* An edit from the last session may never have reached the server. Recover it as a
+             merge against the base that edit was made on, so it adds this browser's change
+             back without carrying the rest of that stale copy over anyone else. Without a
+             stored base there is no way to tell a local edit from a local absence, and the
+             recovery is skipped rather than guessed at. */
           let pending: string | null = null;
           try { pending = localStorage.getItem(PENDING_KEY); } catch {}
           if (pending) {
-            const remoteAt = r.updatedAt || "";
-            if (pending > remoteAt) {
+            const storedBase = this.readBase();
+            if (storedBase) {
+              const server = this.remoteState();
               const local = this.adoptLocal();
               if (local.found) {
-                this.recovered = true;
-                await saveRemote(this.remoteState());
+                this.base = storedBase;
+                const res = await saveRemote(this.remoteState(), storedBase);
+                if (res.ok && res.state) { this.adoptRemote(res.state); this.recovered = true; }
+                else { this.adoptRemote(server); }
               }
             }
             try { localStorage.removeItem(PENDING_KEY); } catch {}
@@ -231,28 +264,14 @@ class Store {
              adopt it before writing: seeding the default here would silently discard whatever
              this browser has been the only copy of. */
           const local = this.adoptLocal();
-          await saveRemote(this.remoteState());
+          const res = await saveRemote(this.remoteState(), null);
+          if (res.ok && res.state) this.setBase(res.state);
           this.migrated = local.found ? "promoted" : "seeded";
         }
         // Live updates from other browsers. Our own echo is filtered by client id.
         this.unsubRemote = subscribeRemote((incoming) => {
-          incoming.roadmaps.forEach((rm) => (rm.tasks = (rm.tasks || []).map(stampIds)));
-          this.data.roadmaps = incoming.roadmaps;
-          this.data.activeId = incoming.activeId || incoming.roadmaps[0].id;
-          if (incoming.roster && incoming.roster.Engineering) this.data.roster = incoming.roster;
-          this.data.activity = Array.isArray(incoming.activity) ? incoming.activity : [];
-          this.data.adminUrl = incoming.adminUrl || DEFAULT_ADMIN_URL;
-          this.data.uiuxUrl = incoming.uiuxUrl || DEFAULT_UIUX_URL;
-          this.data.features = Array.isArray(incoming.features) ? incoming.features : [];
-          this.data.pilots = Array.isArray(incoming.pilots) ? incoming.pilots : [];
-          this.data.seeded = incoming.seeded || {};
-          this.data.pilotCategories = incoming.pilotCategories || [];
-          this.data.colOptions = incoming.colOptions || {};
-          this.data.colOrder = incoming.colOrder || {};
-          this.data.colRemoved = incoming.colRemoved || {};
-          this.data.colColors = incoming.colColors || {};
-          this.data.customCols = incoming.customCols || [];
-          this.rebuildHelpers();
+          this.adoptRemote(incoming);
+          this.setBase(incoming);
           this.notify(); // no persist: adopting someone else's write must not echo back
         });
       } catch (e) {
@@ -269,6 +288,29 @@ class Store {
     this.applyTheme();
     this.notify();
   }
+  /** Apply a copy of the shared state to memory. One routine, because hydrate, the live
+   *  listener and the result of a save all have to land the same way; three near-identical
+   *  copies of this is how a field added to one of them went missing from the others. */
+  private adoptRemote(r: RemoteState) {
+    r.roadmaps.forEach((rm) => (rm.tasks = (rm.tasks || []).map(stampIds)));
+    this.data.roadmaps = r.roadmaps;
+    this.data.activeId = r.activeId || r.roadmaps[0]?.id || SHEET_ROADMAP_ID;
+    if (r.roster && r.roster.Engineering) this.data.roster = r.roster;
+    this.data.activity = Array.isArray(r.activity) ? r.activity : [];
+    this.data.adminUrl = r.adminUrl || DEFAULT_ADMIN_URL;
+    this.data.uiuxUrl = r.uiuxUrl || DEFAULT_UIUX_URL;
+    this.data.features = Array.isArray(r.features) ? r.features : [];
+    this.data.pilots = Array.isArray(r.pilots) ? r.pilots : [];
+    this.data.seeded = r.seeded || {};
+    this.data.pilotCategories = r.pilotCategories || [];
+    this.data.colOptions = r.colOptions || {};
+    this.data.colOrder = r.colOrder || {};
+    this.data.colRemoved = r.colRemoved || {};
+    this.data.colColors = r.colColors || {};
+    this.data.customCols = r.customCols || [];
+    this.rebuildHelpers();
+  }
+
   /** Read this browser's saved board into state. Used both offline, where localStorage is
    *  the store, and once on the way to Firestore, where it is the migration: the local copy
    *  is the only record of everything logged before the shared backend existed.
@@ -373,7 +415,9 @@ class Store {
     const local = this.adoptLocal();
     if (!local.found) return { ok: false, tasks: 0 };
     const tasks = this.data.roadmaps.reduce((n, r) => n + (r.tasks || []).length, 0);
-    await saveRemote(this.remoteState());
+    // No base: this one is meant to replace the shared copy, and says so before it runs.
+    const res = await saveRemote(this.remoteState(), null);
+    if (res.ok && res.state) this.setBase(res.state);
     this.rebuildHelpers();
     this.log("roadmap", "Board restored", `this browser's copy is now the shared one, ${tasks} tasks`);
     this.notify();
@@ -551,11 +595,17 @@ class Store {
   private flush() {
     if (!firebaseEnabled) return;
     if (this.saveTimer) { clearTimeout(this.saveTimer); this.saveTimer = null; }
-    saveRemote(this.remoteState())
-      .then((ok) => {
+    saveRemote(this.remoteState(), this.base)
+      .then(({ ok, state }) => {
         /* Only a save that actually landed clears the marker. Clearing it on a refused write
            threw away the one record that the edit had not reached the server. */
-        if (ok) { try { localStorage.removeItem(PENDING_KEY); } catch {} }
+        if (ok) {
+          try { localStorage.removeItem(PENDING_KEY); } catch {}
+          /* Adopt what the server now holds. When somebody else wrote in between, that is
+             their work with ours merged into it, so this is also how their change arrives
+             without waiting for the listener. */
+          if (state) { this.adoptRemote(state); this.setBase(state); this.writeLocal(); }
+        }
         this.setSaveState(ok ? "saved" : "failed");
       })
       .catch(() => this.setSaveState("failed"));
