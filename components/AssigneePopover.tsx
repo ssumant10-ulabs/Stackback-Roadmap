@@ -37,7 +37,10 @@ export function AssigneePopover({ pos, nodeId, onClose }: { pos: { left: number;
   return (
     <div className="popover open" ref={ref} style={{ left: pos.left, top: pos.top }}>
       <button className="icon-btn pop-close" aria-label="Close" onClick={onClose}><IcClose /></button>
-      <h4>Assign owners</h4>
+      {/* Named, not just "Assign owners". The picker can be opened from a card that has
+          since moved out of view, most obviously right after a feature is promoted onto the
+          board, and an unnamed popover then looks like it belongs to whatever is underneath it. */}
+      <h4 className="pop-title">Assign owners<span>{node.title}</span></h4>
       <RosterPicker assignees={node.assignees} onToggle={(name, isTeam) => s.toggleAssignee(nodeId, name, isTeam)} />
       <div className="assignee-custom">
         <input type="text" placeholder="Add someone" value={custom} onChange={(e) => setCustom(e.target.value)}
