@@ -933,7 +933,11 @@
   .ft-add{display:flex;gap:6px;margin-top:4px;}
   .ft-add input{flex:1;min-width:0;border:1px dashed var(--border-2);background:transparent;color:var(--ink);
     border-radius:9px;padding:8px 11px;font:inherit;font-size:12.5px;}
-  .ft-add .ft-add-ref{flex:0 0 76px;}
+  /* The id is issued, not typed, so it reads as a value rather than an empty field. */
+  .ft-add-id{flex:0 0 auto;display:inline-flex;align-items:center;padding:8px 11px;
+    border:1px dashed var(--border-2);border-radius:9px;font-size:11.5px;font-weight:800;
+    color:var(--ink-3);font-variant-numeric:tabular-nums;letter-spacing:.02em;
+    background:var(--card-2);cursor:default;}
   .ft-add input:focus{outline:2px solid var(--brand);outline-offset:-1px;border-style:solid;}
   .ft-add button{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--border-2);
     background:var(--card-2);color:var(--ink);border-radius:9px;padding:8px 13px;font-size:12px;font-weight:750;cursor:pointer;}
@@ -1466,3 +1470,145 @@
   .mv-current{flex:none;font-size:10.5px;font-weight:700;text-transform:uppercase;
     letter-spacing:.04em;color:var(--ink-3);}
   .mv-empty{font-size:12px;color:var(--ink-3);padding:8px 4px;}
+
+/* ---------- features: two-column board ----------
+   On the board / Not on the board, because that is the only question this screen is asked.
+   Priority reads twice inside the left column: as a group heading and as a tag on every
+   card, so a card that has been scrolled away from its heading still says where it sits. */
+  .fb-count{margin-left:auto;align-self:center;font-size:12px;font-weight:650;color:var(--ink-3);
+    font-variant-numeric:tabular-nums;}
+  .fb-clear{margin-left:auto;}
+  .ft-filters select{max-width:150px;}
+
+  .fb-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;margin-top:16px;}
+  .fb-col{border:1px solid var(--border);border-radius:14px;background:var(--card-2);
+    padding:12px;min-width:0;}
+  .fb-colhd{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;padding:0 2px 9px;
+    margin-bottom:12px;border-bottom:2px solid var(--border);position:sticky;top:0;z-index:3;
+    background:var(--card-2);}
+  .fb-colhd h3{margin:0;font-size:16px;font-weight:800;letter-spacing:-.01em;}
+  .fb-colhd .n{font-size:12px;font-weight:800;color:var(--ink-3);font-variant-numeric:tabular-nums;}
+  .fb-colhd p{margin:0 0 0 auto;font-size:11.5px;color:var(--ink-3);font-weight:600;}
+  .fb-empty{margin:2px 2px 0;font-size:12.5px;color:var(--ink-3);font-weight:600;}
+
+  .fb-group + .fb-group{margin-top:16px;}
+  /* The whole heading is the fold control. Done starts folded, so the group that is history
+     rather than work does not cost a third of the column's scroll to skip past. */
+  .fb-grouphd{display:flex;align-items:center;gap:8px;width:100%;text-align:left;font:inherit;
+    background:none;border:0;border-bottom:1px solid var(--border);padding:0 2px 7px;
+    margin-bottom:8px;cursor:pointer;}
+  .fb-grouphd:hover h5{color:var(--ink);}
+  .fb-grouphd:focus-visible{outline:2px solid var(--brand-deep);outline-offset:2px;border-radius:4px;}
+  .fb-grouphd>svg{width:13px;height:13px;flex:none;color:var(--ink-3);transition:transform .14s;}
+  .fb-grouphd.shut>svg{transform:rotate(-90deg);}
+  .fb-grouphd h5{margin:0;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--ink-2);}
+  .fb-grouphd.h-now h5{color:var(--brand-deep);}
+  .fb-grouphd .n{font-size:11.5px;font-weight:800;color:var(--ink-3);font-variant-numeric:tabular-nums;}
+  .fb-grouphd em{margin-left:auto;font-style:normal;font-size:11px;color:var(--ink-3);font-weight:600;}
+
+  /* Two cards to a row inside each column. auto-fill rather than a hard 2, so a wide screen
+     gets three and a narrow one drops to a single file without a second breakpoint. */
+  .fb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(236px,1fr));gap:8px;
+    align-items:start;}
+  /* An open card takes the full width of its column: the detail is a paragraph, and a
+     paragraph in a 236px gutter is unreadable. */
+  .fb-card.open{grid-column:1 / -1;}
+
+  .fb-card{border:1px solid var(--border);border-radius:11px;background:var(--card);
+    overflow:hidden;transition:border-color .12s,box-shadow .12s;}
+  .fb-card:hover{border-color:var(--border-2);box-shadow:var(--shadow);}
+  .fb-card.open{border-color:var(--border-2);}
+  .fb-head{padding:9px 11px 8px;cursor:pointer;}
+  .fb-head:hover{background:var(--card-2);}
+  .fb-line1{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px;}
+  .fb-ref{font-size:10.5px;font-weight:800;color:var(--ink-3);font-variant-numeric:tabular-nums;
+    letter-spacing:.02em;}
+  .fb-title{margin:0;font-size:13px;font-weight:680;line-height:1.38;letter-spacing:-.005em;
+    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+  .fb-line2{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:6px;}
+
+  /* The horizon tag. One tone per horizon so the eye sorts the column without reading it. */
+  .fb-tag{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;
+    border-radius:999px;padding:2px 8px;white-space:nowrap;flex:none;}
+  .fb-tag.h-now{background:color-mix(in srgb,var(--accent) 42%,transparent);color:var(--brand-deep);}
+  .fb-tag.h-next{background:color-mix(in srgb,var(--team-eng) 20%,transparent);color:var(--team-eng);}
+  .fb-tag.h-future{background:var(--sunken);color:var(--ink-2);}
+  .fb-tag.h-done{background:transparent;border:1px solid var(--border-2);color:var(--ink-3);}
+
+  .fb-status{font-size:10.5px;font-weight:800;border-radius:999px;padding:2px 8px;
+    white-space:nowrap;flex:none;}
+  .fb-status.t-ok{background:color-mix(in srgb,var(--accent) 34%,transparent);color:var(--brand-deep);}
+  .fb-status.t-warn{background:color-mix(in srgb,var(--status-progress) 26%,transparent);color:var(--status-progress);}
+  .fb-status.t-info{background:color-mix(in srgb,var(--team-eng) 22%,transparent);color:var(--team-eng);}
+  .fb-status.t-neu{background:var(--sunken);color:var(--ink-2);}
+  .fb-status.t-dash{background:transparent;border:1px dashed var(--border-2);color:var(--ink-3);}
+  .fb-bug{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;
+    color:var(--status-late);border:1px solid currentColor;border-radius:999px;padding:1px 6px;}
+  .fb-from{font-size:10.5px;font-weight:700;color:var(--ink-3);}
+
+  .fb-prog{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:750;
+    color:var(--ink-2);font-variant-numeric:tabular-nums;}
+  .fb-prog.empty{color:var(--ink-3);font-weight:600;}
+  .fb-bar{display:block;width:56px;height:5px;border-radius:999px;background:var(--track);overflow:hidden;}
+  .fb-bar>span{display:block;height:100%;background:var(--accent-line);border-radius:999px;}
+  .fb-dates{font-size:11px;font-weight:650;color:var(--ink-3);}
+  .fb-dates.late{color:var(--status-late);font-weight:800;}
+
+  .fb-foot{display:flex;align-items:center;gap:8px;padding:6px 11px;border-top:1px solid var(--border);
+    background:var(--card-2);}
+  .fb-task{display:inline-flex;align-items:center;gap:5px;flex:1 1 auto;min-width:0;
+    border:0;background:none;color:var(--ink-3);font:inherit;font-size:11px;font-weight:700;
+    padding:0;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;}
+  .fb-task svg{width:11px;height:11px;flex:none;}
+  .fb-task:hover{color:var(--brand-deep);}
+  .fb-owners{display:inline-flex;align-items:center;gap:3px;flex:none;}
+
+  /* Promote and assign in one gesture: the owner picker opens over this row the moment the
+     card is placed, because by then the card has left this column. */
+  .fb-put{display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding:6px 11px;
+    border-top:1px dashed var(--border-2);background:var(--card-2);}
+  /* The label takes its own line inside a 236px card, so the three buttons never break
+     across two rows with Future stranded underneath Now. */
+  .fb-put>span{flex:0 0 100%;margin-bottom:1px;}
+  .fb-put>span,.fb-move>span{font-size:10px;font-weight:800;text-transform:uppercase;
+    letter-spacing:.05em;color:var(--ink-3);margin-right:2px;}
+  .fb-put button,.fb-move button{font:inherit;font-size:11.5px;font-weight:750;color:var(--ink);
+    background:var(--card);border:1px solid var(--border-2);border-radius:999px;padding:3px 11px;cursor:pointer;}
+  .fb-put button:hover,.fb-move button:hover:not(:disabled){background:var(--brand);color:var(--brand-ink);
+    border-color:var(--brand-deep);}
+  .fb-move button:disabled{opacity:.4;cursor:default;}
+  .fb-move{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 12px;
+    border-top:1px solid var(--border);background:var(--card-2);}
+
+  .fb-detail{border-top:1px solid var(--border);padding:11px 12px;background:var(--sunken);}
+  .fb-detail p{margin:0 0 9px;font-size:12.5px;line-height:1.55;color:var(--ink-2);}
+  .fb-detail p span{display:block;font-size:10px;font-weight:800;text-transform:uppercase;
+    letter-spacing:.05em;color:var(--ink-3);margin-bottom:2px;}
+  .fb-subs{margin:0 0 10px;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;}
+  .fb-subs li{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-2);font-weight:600;}
+  .fb-subs li.done{color:var(--ink-3);text-decoration:line-through;}
+  .fb-tick{width:8px;height:8px;border-radius:50%;flex:none;background:var(--track);}
+  .fb-tick.t-progress{background:var(--status-progress);}
+  .fb-tick.t-done{background:var(--accent-line);}
+  .fb-meta{display:flex;gap:13px;flex-wrap:wrap;font-size:11.5px;color:var(--ink-3);
+    font-weight:650;margin-bottom:10px;}
+  .fb-meta b{color:var(--ink-2);}
+  .fb-actions{display:flex;align-items:flex-end;gap:9px;flex-wrap:wrap;}
+  .fb-actions label{display:flex;flex-direction:column;gap:4px;font-size:10px;font-weight:800;
+    text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3);flex:1 1 200px;min-width:0;}
+  .fb-actions select{border:1px solid var(--border-2);background:var(--card);color:var(--ink);
+    border-radius:8px;padding:6px 8px;font:inherit;font-size:12.5px;max-width:100%;}
+  .fb-del{margin-left:auto;color:var(--status-late);}
+
+  /* One column under a laptop half-screen: two 320px columns of cards is where this stops
+     being easier to read than a list. */
+  @media (max-width:1000px){
+    .fb-cols{grid-template-columns:1fr;}
+    .fb-colhd{position:static;}
+  }
+
+/* The assignee picker names its card, since it can outlive the row it was opened from. */
+  .pop-title{display:block;}
+  .pop-title span{display:block;font-size:11px;font-weight:650;color:var(--ink-3);
+    margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;}

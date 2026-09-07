@@ -59,7 +59,7 @@ interface Data {
    *  store list, alongside the roadmap itself. */
   features: Feature[];
   pilots: PilotStore[];
-  seeded?: { features?: boolean; pilots?: boolean; dates?: boolean };
+  seeded?: { features?: boolean; pilots?: boolean; dates?: boolean; featureRefs?: boolean };
   /** Categories added by the team on top of the ones the sheet arrived with. */
   pilotCategories?: string[];
   /** Dropdown values the team added, keyed by column. Kept with the data so extending a
@@ -112,6 +112,9 @@ interface Entry {
 function sheetRoadmap(): Roadmap {
   return { id: SHEET_ROADMAP_ID, name: "StackBack", tasks: seed().map(stampIds), seedVersion: SEED_VERSION };
 }
+/** Which prefix a new feature id gets, by the sheet block it belongs to. */
+const REF_PREFIX: Record<FeatureBand, string> = { upcoming: "INT", merchant: "MR", partner: "PT" };
+
 function defaultData(): Data {
   return {
     roadmaps: [sheetRoadmap()], activeId: SHEET_ROADMAP_ID, roster: clone(DEFAULT_ROSTER),
@@ -368,6 +371,42 @@ class Store {
     if (changed) this.persist();
     this.linkRequestStoresOnce();
     this.migrateDatesOnce();
+    this.backfillFeatureRefsOnce();
+  }
+
+  /** Every feature carries an id now, issued by the app rather than typed. The sheet's own
+   *  three prefixes are kept because they say where a row came from: INT for planned work,
+   *  MR for a merchant ask, PT for a partner one. An id is issued once and never reissued,
+   *  so a merchant request promoted to Upcoming keeps its MR number instead of losing the
+   *  fact that a merchant asked for it. */
+  nextFeatureRef(band: FeatureBand): string {
+    const prefix = REF_PREFIX[band] || "INT";
+    const re = new RegExp(`^${prefix}-(\\d+)$`, "i");
+    let max = 0;
+    this.features.forEach((f) => {
+      const m = re.exec((f.ref || "").trim());
+      if (m) max = Math.max(max, Number(m[1]));
+    });
+    return `${prefix}-${String(max + 1).padStart(2, "0")}`;
+  }
+
+  /** Requests logged from the Pilots module never got an id, so a merchant ask was the one
+   *  row you could not refer to by number. Fill the blanks once. Only ever writes into an
+   *  empty ref, so nothing that already has an id can be renumbered by this. */
+  private backfillFeatureRefsOnce() {
+    const sd = (this.data.seeded = this.data.seeded || {});
+    if (sd.featureRefs) return;
+    let n = 0;
+    this.features.forEach((f) => {
+      if (!(f.ref || "").trim()) { f.ref = this.nextFeatureRef(f.band); n++; }
+    });
+    /* Nothing to fill means nothing to save. Returning without setting the flag costs one
+       scan of 60 rows on each load and buys the guarantee that a board where every feature
+       already has an id is not written to at all on deploy. */
+    if (!n) return;
+    sd.featureRefs = true;
+    this.persist();
+    this.log("roadmap", "Feature ids", `${n} issued`);
   }
   /** The date columns were free text. Convert what is already stored to ISO so they can
    *  become real date fields. Anything unrecognised is left exactly as typed rather than
@@ -1074,7 +1113,7 @@ class Store {
     if (!title) return null;
     const store = this.pilots.find((p) => p.id === storeId);
     const f: Feature = {
-      id: uid("f_"), ref: "", band: "merchant", title,
+      id: uid("f_"), ref: this.nextFeatureRef("merchant"), band: "merchant", title,
       priority: null, sheetStatus: "Not started", requestedBy: store ? store.name : this.me || null,
       effort: null, urgency: urgency || null, importance: null, team: null,
       objective: null, nextSteps: null, blockers: null,
@@ -1252,7 +1291,7 @@ class Store {
     title = (title || "").trim();
     if (!title) return null;
     const f: Feature = {
-      id: uid("f_"), ref: ref.trim(), band, title,
+      id: uid("f_"), ref: ref.trim() || this.nextFeatureRef(band), band, title,
       priority: null, sheetStatus: "Not started", requestedBy: this.me || null,
       effort: null, urgency: null, importance: null, team: null,
       objective: null, nextSteps: null, blockers: null,
