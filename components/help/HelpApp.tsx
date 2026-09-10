@@ -10,9 +10,21 @@ import { useOptionalAuth } from "./useOptionalAuth";
 import ChatDock from "./ChatDock";
 import Insights from "./Insights";
 import Article from "./Article";
+import Queries from "./Queries";
+import type { LoggedQuery } from "@/lib/sanity/queries";
 import "./help.css";
 
-type View = { kind: "home" } | { kind: "cat"; id: string } | { kind: "search"; q: string } | { kind: "insights" };
+type View =
+  | { kind: "home" }
+  | { kind: "cat"; id: string }
+  | { kind: "search"; q: string }
+  | { kind: "insights" }
+  | { kind: "queries" };
+
+/** The Help Centre is two parts, and they answer different questions.
+ *  Queries is live and incomplete by nature: what came in, what we answered.
+ *  Help Centre is the settled corpus: 234 FAQs, the order flow, the screens. */
+type Part = "queries" | "help";
 
 const COUNTS = CATEGORIES.map((c) => ({ ...c, n: ARTICLES.filter((a) => a.cat === c.id).length }));
 
@@ -31,10 +43,11 @@ function parseHash(): View {
   if (route.startsWith("cat/")) return { kind: "cat", id: decodeURIComponent(route.slice(4)) };
   if (route.startsWith("search/")) return { kind: "search", q: decodeURIComponent(route.slice(7)) };
   if (route === "insights") return { kind: "insights" };
+  if (route === "queries") return { kind: "queries" };
   return { kind: "home" };
 }
 
-export default function HelpApp() {
+export default function HelpApp({ answered, sanityConnected }: { answered: LoggedQuery[]; sanityConnected: boolean }) {
   const auth = useOptionalAuth();
   const [view, setView] = useState<View>({ kind: "home" });
   const [q, setQ] = useState("");
@@ -64,7 +77,8 @@ export default function HelpApp() {
 
   const go = useCallback((v: View) => {
     const h = v.kind === "home" ? "#/" : v.kind === "cat" ? `#/cat/${v.id}`
-      : v.kind === "search" ? `#/search/${encodeURIComponent(v.q)}` : "#/insights";
+      : v.kind === "search" ? `#/search/${encodeURIComponent(v.q)}`
+      : v.kind === "queries" ? "#/queries" : "#/insights";
     if (window.location.hash !== h) window.location.hash = h; else setView(v);
     setNavOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -98,6 +112,7 @@ export default function HelpApp() {
 
   const submit = (e: React.FormEvent) => { e.preventDefault(); go(q.trim() ? { kind: "search", q: q.trim() } : { kind: "home" }); };
 
+  const part: Part = view.kind === "queries" ? "queries" : "help";
   const cat = view.kind === "cat" ? COUNTS.find((c) => c.id === view.id) : undefined;
   const risky = ARTICLES.filter((a) => RISK_STATUSES.includes(a.status)).length;
 
@@ -110,6 +125,13 @@ export default function HelpApp() {
           <Logo />
           <span className="hc-brandname">Help Centre</span>
         </a>
+
+        <div className="hc-parts" role="tablist" aria-label="Help Centre parts">
+          <button role="tab" aria-selected={part === "queries"} className={"hc-part" + (part === "queries" ? " on" : "")}
+            onClick={() => go({ kind: "queries" })}>Queries</button>
+          <button role="tab" aria-selected={part === "help"} className={"hc-part" + (part === "help" ? " on" : "")}
+            onClick={() => go({ kind: "home" })}>Help Centre</button>
+        </div>
 
         <form className="hc-searchwrap" onSubmit={submit} role="search">
           <svg className="hc-mag" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="M16 16l4.5 4.5" /></svg>
@@ -135,13 +157,16 @@ export default function HelpApp() {
             ? <button className="hc-btn ghost" onClick={auth.signOut} title={auth.user?.email || ""}>Internal · sign out</button>
             : <button className="hc-btn ghost" onClick={auth.signIn}>ULABS sign in</button>)}
         </div>
-        <button className="hc-navtoggle hc-btn ghost" onClick={() => setNavOpen((v) => !v)} aria-expanded={navOpen}>
-          {navOpen ? "Close" : "Topics"}
-        </button>
+        {/* The topic rail only exists on the Help Centre part, so neither does its toggle. */}
+        {part === "help" && (
+          <button className="hc-navtoggle hc-btn ghost" onClick={() => setNavOpen((v) => !v)} aria-expanded={navOpen}>
+            {navOpen ? "Close" : "Topics"}
+          </button>
+        )}
       </header>
 
-      <div className="hc-body">
-        <nav className={"hc-nav" + (navOpen ? " open" : "")} aria-label="Topics">
+      <div className={"hc-body" + (part === "queries" ? " solo" : "")}>
+        <nav className={"hc-nav" + (navOpen ? " open" : "") + (part === "queries" ? " hidden" : "")} aria-label="Topics">
           <button className={"hc-navitem" + (view.kind === "home" ? " on" : "")} onClick={() => go({ kind: "home" })}>
             <span>Overview</span>
           </button>
@@ -161,7 +186,8 @@ export default function HelpApp() {
         </nav>
 
         <main className="hc-main" id="hc-main" tabIndex={-1}>
-          {view.kind === "home" && <Home go={go} internal={auth.internal} onAsk={setChatSeed} />}
+          {view.kind === "queries" && <Queries answered={answered} connected={sanityConnected} />}
+          {view.kind === "home" && <Home go={go} internal={auth.internal} onAsk={setChatSeed} answered={answered.length} />}
           {view.kind === "cat" && cat && (
             <section>
               <p className="hc-eyebrow">{cat.n} answers</p>
@@ -201,7 +227,9 @@ export default function HelpApp() {
   );
 }
 
-function Home({ go, internal, onAsk }: { go: (v: View) => void; internal: boolean; onAsk: (q: string) => void }) {
+function Home({ go, internal, onAsk, answered }: {
+  go: (v: View) => void; internal: boolean; onAsk: (q: string) => void; answered: number;
+}) {
   const start = ARTICLES.filter((a) => a.cat === "start").slice(0, 6);
   const asked = [...ARTICLES].sort((a, b) => b.asked - a.asked).slice(0, 8);
   return (
@@ -246,6 +274,9 @@ function Home({ go, internal, onAsk }: { go: (v: View) => void; internal: boolea
       <div className="hc-askrow">
         <p>Not finding it?</p>
         <button className="hc-btn primary" onClick={() => onAsk("")}>Ask the chat</button>
+        <button className="hc-btn" onClick={() => go({ kind: "queries" })}>
+          {answered > 0 ? `Raise a query, or read ${answered} answered` : "Raise a query"}
+        </button>
       </div>
       {internal && <p className="hc-intnote">Internal layer is on. Ask counts, answer risk and the question log are in Insights.</p>}
     </section>

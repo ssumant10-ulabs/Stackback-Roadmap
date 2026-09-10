@@ -343,3 +343,62 @@
   .hc-card, .hc-chev { transition: none; }
   .hc *, .hc *::before, .hc *::after { scroll-behavior: auto !important; }
 }
+
+/* ---------------------------------------------------------------- the two parts */
+.hc-parts { display: flex; gap: 2px; padding: 2px; background: var(--sunken); border-radius: 10px; flex: none; }
+.hc-part {
+  appearance: none; border: 0; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 640;
+  color: var(--hc-muted); background: transparent; padding: 6px 13px; border-radius: 8px;
+}
+.hc-part:hover { color: var(--ink); }
+.hc-part.on { background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
+.hc-part:focus-visible { outline: 2px solid var(--brand-deep); outline-offset: 1px; }
+
+.hc-body.solo { grid-template-columns: minmax(0, 1fr); }
+.hc-nav.hidden { display: none; }
+
+/* ---------------------------------------------------------------- query form */
+.hc-form {
+  background: var(--card); border: 1px solid var(--border); border-radius: 13px;
+  padding: 17px 18px 18px; box-shadow: var(--shadow); max-width: 640px; margin-bottom: 8px;
+}
+.hc-formh { margin: 0 0 14px; font-size: 14.5px; }
+.hc-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 13px; position: relative; }
+.hc-field > span { font-size: 12px; font-weight: 650; color: var(--ink-2); }
+.hc-field > span i { font-style: normal; font-weight: 400; color: var(--hc-muted); }
+.hc-field textarea, .hc-field input, .hc-field select {
+  appearance: none; font: inherit; font-size: 13.5px; width: 100%;
+  padding: 9px 11px; border: 1px solid var(--border-2); border-radius: 9px;
+  background: var(--page); color: var(--ink); resize: vertical;
+}
+.hc-field select { cursor: pointer; }
+.hc-field textarea:focus, .hc-field input:focus, .hc-field select:focus {
+  outline: 2px solid var(--brand-deep); outline-offset: 1px; border-color: transparent;
+}
+.hc-field em { position: absolute; right: 2px; top: 0; font-style: normal; font-size: 10.5px; color: var(--hc-muted); font-variant-numeric: tabular-nums; }
+.hc-fieldrow { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.hc-formnote { font-size: 11.5px; line-height: 1.55; color: var(--hc-muted); margin: 2px 0 14px; }
+.hc-formactions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.hc-savedat { font-size: 11.5px; color: var(--hc-muted); }
+.hc-result { margin: 12px 0 0; font-size: 12.5px; line-height: 1.55; padding: 9px 11px; border-radius: 8px; }
+.hc-result.ok { color: var(--hc-ok); background: var(--hc-ok-soft); }
+.hc-result.bad { color: var(--hc-warn); background: var(--hc-warn-soft); }
+
+.hc-sent { list-style: none; margin: 0 0 6px; padding: 0; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--card); max-width: 640px; }
+.hc-sent li { display: flex; justify-content: space-between; gap: 14px; align-items: baseline; padding: 10px 14px; font-size: 12.5px; }
+.hc-sent li + li { border-top: 1px solid var(--border); }
+.hc-sent b { font-weight: 600; }
+.hc-sent span { color: var(--hc-muted); font-size: 11px; white-space: nowrap; }
+
+.hc-filter {
+  appearance: none; font: inherit; font-size: 13px; width: 100%; max-width: 340px;
+  padding: 8px 11px; margin-bottom: 11px;
+  border: 1px solid var(--border-2); border-radius: 9px; background: var(--card); color: var(--ink);
+}
+.hc-filter:focus { outline: 2px solid var(--brand-deep); outline-offset: 1px; border-color: transparent; }
+.hc-nofilter { padding: 14px; margin: 0; }
+
+@media (max-width: 767px) {
+  .hc-parts { order: 4; }
+  .hc-fieldrow { grid-template-columns: minmax(0, 1fr); }
+}
