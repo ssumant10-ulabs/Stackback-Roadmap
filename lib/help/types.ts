@@ -41,10 +41,9 @@ export const STATUS_LABEL: Record<HelpStatus, string> = {
  *  anyway. The internal layer counts these; the merchant view just shows the badge. */
 export const RISK_STATUSES: HelpStatus[] = ["n", "r", "x"];
 
-export interface Shot {
-  /** File under public/help/shots. */
-  file: string;
-  caption: string;
-  /** Which approved prototype screen it was captured from, so a stale shot is traceable. */
-  source: string;
-}
+
+/** The app's name, stated wherever a path or a screen is referenced. A merchant runs a
+ *  dozen Shopify apps and "go to Orders" is ambiguous across most of them. */
+export const APP_NAME = "StackBack";
+/** Where the app sits in their admin, for the same reason. */
+export const APP_LOCATION = "Shopify admin › Apps › StackBack";

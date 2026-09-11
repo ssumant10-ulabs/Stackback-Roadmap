@@ -4,17 +4,17 @@ import { client } from "./client";
 export interface LoggedQuery {
   _id: string;
   question: string;
-  /** Matches a Help Centre category id, so a query can point at the topic it belongs to. */
+  /** Which part of the subscription setup: frequency, discount, products and so on. */
   topic: string | null;
   answer: unknown[] | null;
   raisedAt: string;
-  /** How many times this has come up. The team increments it as it recurs. */
+  /** How many clients have raised it. The team increments it as it recurs. */
   raisedCount: number | null;
   source: "merchant" | "team" | null;
 }
 
-/** Only answered queries are public. A question sitting unanswered is an internal to-do,
- *  not content, and publishing it would tell a merchant we have their problem and no reply. */
+/** Only answered queries are public. One sitting unanswered is an internal to-do, not
+ *  content, and publishing it would tell a client we have their question and no reply. */
 export const ANSWERED = groq`
   *[_type == "merchantQuery" && status == "answered" && defined(answer)]
     | order(coalesce(raisedCount, 1) desc, raisedAt desc) {
@@ -29,8 +29,14 @@ export const ALL_QUERIES = groq`
   }
 `;
 
+/** The page itself is dynamic, because the theme comes from a cookie and that has to be
+ *  read per request. This fetch must not become per request with it: an answered query is
+ *  content, and a minute stale is fine where a Sanity round trip on every hit is not. */
 export async function fetchAnswered(): Promise<LoggedQuery[]> {
   if (!client) return [];
-  try { return await client.fetch<LoggedQuery[]>(ANSWERED); }
-  catch { return []; }
+  try {
+    return await client.fetch<LoggedQuery[]>(ANSWERED, {}, {
+      next: { revalidate: 60, tags: ["help-queries"] },
+    });
+  } catch { return []; }
 }

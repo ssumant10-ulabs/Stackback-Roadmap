@@ -1,9 +1,8 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ARTICLES, CATEGORIES, CORPUS_BUILT, CORPUS_SOURCE, FLOWS } from "@/lib/help/corpus";
-import { RISK_STATUSES, STATUS_LABEL, type HelpArticle } from "@/lib/help/types";
+import { APP_NAME, APP_LOCATION, RISK_STATUSES, STATUS_LABEL, type HelpArticle } from "@/lib/help/types";
 import { search, stripTags } from "@/lib/help/search";
-import { SHOTS, SHOT_NOTE } from "@/lib/help/shots";
 import { record } from "@/lib/help/log";
 import { Logo } from "@/components/icons";
 import { useOptionalAuth } from "./useOptionalAuth";
@@ -11,6 +10,7 @@ import ChatDock from "./ChatDock";
 import Insights from "./Insights";
 import Article from "./Article";
 import Queries from "./Queries";
+import Simulator from "./Simulator";
 import type { LoggedQuery } from "@/lib/sanity/queries";
 import "./help.css";
 
@@ -19,12 +19,17 @@ type View =
   | { kind: "cat"; id: string }
   | { kind: "search"; q: string }
   | { kind: "insights" }
-  | { kind: "queries" };
+  | { kind: "queries" }
+  | { kind: "sim" };
 
 /** The Help Centre is two parts, and they answer different questions.
  *  Queries is live and incomplete by nature: what came in, what we answered.
  *  Help Centre is the settled corpus: 234 FAQs, the order flow, the screens. */
 type Part = "queries" | "help";
+
+/** Topics where the question underneath is usually "what would that actually do", which
+ *  a simulator answers and a paragraph does not. */
+const SIM_TOPICS = ["flows", "orders", "plans", "pay", "widget"];
 
 const COUNTS = CATEGORIES.map((c) => ({ ...c, n: ARTICLES.filter((a) => a.cat === c.id).length }));
 
@@ -44,16 +49,20 @@ function parseHash(): View {
   if (route.startsWith("search/")) return { kind: "search", q: decodeURIComponent(route.slice(7)) };
   if (route === "insights") return { kind: "insights" };
   if (route === "queries") return { kind: "queries" };
+  if (route === "sim") return { kind: "sim" };
   return { kind: "home" };
 }
 
-export default function HelpApp({ answered, sanityConnected }: { answered: LoggedQuery[]; sanityConnected: boolean }) {
+export default function HelpApp({ answered, sanityConnected, theme: initialTheme }: {
+  answered: LoggedQuery[]; sanityConnected: boolean; theme: "light" | "dark";
+}) {
   const auth = useOptionalAuth();
   const [view, setView] = useState<View>({ kind: "home" });
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<string | null>(null);
   const [navOpen, setNavOpen] = useState(false);
   const [chatSeed, setChatSeed] = useState<string | null>(null);
+  const [theme, setTheme] = useState<"light" | "dark">(initialTheme);
   const boxRef = useRef<HTMLInputElement>(null);
 
   /* The hash is the address of what you are reading, so a merchant can send a colleague a
@@ -78,12 +87,22 @@ export default function HelpApp({ answered, sanityConnected }: { answered: Logge
   const go = useCallback((v: View) => {
     const h = v.kind === "home" ? "#/" : v.kind === "cat" ? `#/cat/${v.id}`
       : v.kind === "search" ? `#/search/${encodeURIComponent(v.q)}`
-      : v.kind === "queries" ? "#/queries" : "#/insights";
+      : v.kind === "queries" ? "#/queries"
+      : v.kind === "sim" ? "#/sim" : "#/insights";
     if (window.location.hash !== h) window.location.hash = h; else setView(v);
     setNavOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
     setOpen(null);
   }, []);
+
+  /* A cookie, not localStorage, because the server reads it to render the right palette
+     on the first byte. A year is long enough that nobody re-picks, and it carries nothing
+     but the word light or dark. */
+  const flipTheme = () => {
+    const next = theme === "light" ? "dark" : "light";
+    setTheme(next);
+    document.cookie = `sb-help-theme=${next};path=/;max-age=31536000;samesite=lax`;
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -117,18 +136,18 @@ export default function HelpApp({ answered, sanityConnected }: { answered: Logge
   const risky = ARTICLES.filter((a) => RISK_STATUSES.includes(a.status)).length;
 
   return (
-    <div className="hc">
+    <div className="hc" data-hc-theme={theme}>
       <a className="hc-skip" href="#hc-main">Skip to the answers</a>
       <header className="hc-top">
         <a className="hc-brand" href="#/" aria-label="StackBack Help Centre, overview"
           onClick={(e) => { e.preventDefault(); go({ kind: "home" }); }}>
           <Logo />
-          <span className="hc-brandname">Help Centre</span>
+          <span className="hc-brandname"><b>{APP_NAME}</b> Help Centre</span>
         </a>
 
         <div className="hc-parts" role="tablist" aria-label="Help Centre parts">
           <button role="tab" aria-selected={part === "queries"} className={"hc-part" + (part === "queries" ? " on" : "")}
-            onClick={() => go({ kind: "queries" })}>Queries</button>
+            onClick={() => go({ kind: "queries" })}>Subscription queries</button>
           <button role="tab" aria-selected={part === "help"} className={"hc-part" + (part === "help" ? " on" : "")}
             onClick={() => go({ kind: "home" })}>Help Centre</button>
         </div>
@@ -152,6 +171,12 @@ export default function HelpApp({ answered, sanityConnected }: { answered: Logge
         </form>
 
         <div className="hc-topright">
+          <button className="hc-btn ghost hc-theme" onClick={flipTheme}
+            aria-label={`Switch to ${theme === "light" ? "dark" : "light"} theme`}>
+            {theme === "light"
+              ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" /></svg>
+              : <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2" /><path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4L17 7M7 17l-1.6 1.6" /></svg>}
+          </button>
           {auth.internal && <button className="hc-btn hc-int" onClick={() => go({ kind: "insights" })}>Insights</button>}
           {auth.available && (auth.internal
             ? <button className="hc-btn ghost" onClick={auth.signOut} title={auth.user?.email || ""}>Internal · sign out</button>
@@ -170,6 +195,9 @@ export default function HelpApp({ answered, sanityConnected }: { answered: Logge
           <button className={"hc-navitem" + (view.kind === "home" ? " on" : "")} onClick={() => go({ kind: "home" })}>
             <span>Overview</span>
           </button>
+          <button className={"hc-navitem hc-navsim" + (view.kind === "sim" ? " on" : "")} onClick={() => go({ kind: "sim" })}>
+            <span>Simulate a subscription</span>
+          </button>
           {COUNTS.map((c) => (
             <button key={c.id} className={"hc-navitem" + (view.kind === "cat" && view.id === c.id ? " on" : "")}
               aria-label={`${c.name}, ${c.n} answers`} aria-current={view.kind === "cat" && view.id === c.id ? "page" : undefined}
@@ -187,6 +215,7 @@ export default function HelpApp({ answered, sanityConnected }: { answered: Logge
 
         <main className="hc-main" id="hc-main" tabIndex={-1}>
           {view.kind === "queries" && <Queries answered={answered} connected={sanityConnected} />}
+          {view.kind === "sim" && <Simulator />}
           {view.kind === "home" && <Home go={go} internal={auth.internal} onAsk={setChatSeed} answered={answered.length} />}
           {view.kind === "cat" && cat && (
             <section>
@@ -194,7 +223,12 @@ export default function HelpApp({ answered, sanityConnected }: { answered: Logge
               <h1 className="hc-h1">{cat.name}</h1>
               <p className="hc-blurb">{cat.blurb}</p>
               {cat.flow && FLOWS[cat.flow] && <Flow html={FLOWS[cat.flow]} />}
-              {SHOTS[cat.id] && <Shots ids={cat.id} />}
+              {SIM_TOPICS.includes(cat.id) && (
+                <button className="hc-simlink" onClick={() => go({ kind: "sim" })}>
+                  <b>Try it instead of reading it</b>
+                  <span>Set a frequency, a discount and a run length, and watch the widget, the checkout and every order move together.</span>
+                </button>
+              )}
               <ArticleList list={ARTICLES.filter((a) => a.cat === cat.id)} open={open} setOpen={setOpen} internal={auth.internal} />
             </section>
           )}
@@ -216,7 +250,8 @@ export default function HelpApp({ answered, sanityConnected }: { answered: Logge
             : <div className="hc-empty"><p>Insights is the internal layer. Sign in with a ULABS account to open it.</p></div>)}
 
           <footer className="hc-foot">
-            <span>{ARTICLES.length} answers across {CATEGORIES.length} topics, written from what {"32"} pilot stores asked.</span>
+            <span>{ARTICLES.length} answers across {CATEGORIES.length} topics, written from what 32 pilot stores asked.</span>
+            <span>{APP_LOCATION}</span>
             <span>Built {CORPUS_BUILT} from {CORPUS_SOURCE}.</span>
           </footer>
         </main>
@@ -271,6 +306,18 @@ function Home({ go, internal, onAsk, answered }: {
         ))}
       </ol>
 
+      <div className="hc-simhero">
+        <div>
+          <h2>See it before you sell it</h2>
+          <p>
+            Pick a frequency, a discount and a run length. The product page, the checkout and every
+            order {APP_NAME} creates in Shopify all move together, including the parent order and the
+            child order per delivery.
+          </p>
+        </div>
+        <button className="hc-btn primary" onClick={() => go({ kind: "sim" })}>Simulate a subscription</button>
+      </div>
+
       <div className="hc-askrow">
         <p>Not finding it?</p>
         <button className="hc-btn primary" onClick={() => onAsk("")}>Ask the chat</button>
@@ -291,22 +338,6 @@ const Stat = ({ n, l }: { n: string; l: string }) => (
  *  so they are injected rather than rebuilt. The source is a file in this repo, not input. */
 function Flow({ html }: { html: string }) {
   return <div className="hc-flow" dangerouslySetInnerHTML={{ __html: html }} />;
-}
-
-function Shots({ ids }: { ids: string }) {
-  const list = SHOTS[ids] || [];
-  if (!list.length) return null;
-  return (
-    <div className="hc-shots">
-      {list.map((s) => (
-        <figure key={s.file}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={`/help/shots/${s.file}`} alt={s.caption} loading="lazy" />
-          <figcaption>{s.caption} <em>{SHOT_NOTE}</em></figcaption>
-        </figure>
-      ))}
-    </div>
-  );
 }
 
 function ArticleList({ list, open, setOpen, internal, showCat }: {

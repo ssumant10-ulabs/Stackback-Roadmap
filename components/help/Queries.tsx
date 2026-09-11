@@ -1,10 +1,10 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { PortableText } from "@portabletext/react";
-import { CATEGORIES } from "@/lib/help/corpus";
+import { QUERY_TOPICS, QUERY_TOPIC_NAME } from "@/lib/help/topics";
 import type { LoggedQuery } from "@/lib/sanity/queries";
 
-const CAT_NAME = new Map(CATEGORIES.map((c) => [c.id, c.name]));
+
 const DRAFT_KEY = "sb-help-query-draft";
 const SENT_KEY = "sb-help-query-sent";
 
@@ -80,21 +80,22 @@ export default function Queries({ answered, connected }: { answered: LoggedQuery
   return (
     <section>
       <p className="hc-eyebrow">Part one</p>
-      <h1 className="hc-h1">Queries</h1>
+      <h1 className="hc-h1">Subscription queries</h1>
       <p className="hc-blurb">
-        The questions that come in, and what we answered. Ask something that is not in the FAQs and it
-        lands here; when we answer it, the answer appears on this page for everybody.
+        The questions we work through with you while your plans are being set up: frequency, plan length,
+        discount bands, which products carry a subscription. Raise one here and the answer is posted back
+        on this page, so the decision is written down instead of living in a thread.
       </p>
 
       <form className="hc-form" onSubmit={submit}>
         <h2 className="hc-h2 hc-formh">Raise a query</h2>
 
         <label className="hc-field">
-          <span>Your question</span>
+          <span>Your query</span>
           <textarea
             value={draft.question} rows={4} maxLength={1200}
             onChange={(e) => setDraft({ ...draft, question: e.target.value })}
-            placeholder="Ask it the way you would on a call. What you expected, what happened instead."
+            placeholder="What are you trying to decide? A monthly run at 15 percent, or fortnightly at 10? Which products should carry it?"
             required minLength={8}
           />
           <em>{draft.question.length}/1200</em>
@@ -105,7 +106,7 @@ export default function Queries({ answered, connected }: { answered: LoggedQuery
             <span>What is it about <i>(optional)</i></span>
             <select value={draft.topic} onChange={(e) => setDraft({ ...draft, topic: e.target.value })}>
               <option value="">Not sure</option>
-              {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {QUERY_TOPICS.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
           </label>
           <label className="hc-field">
@@ -161,7 +162,7 @@ export default function Queries({ answered, connected }: { answered: LoggedQuery
         <div className="hc-empty">
           <p>
             {connected
-              ? "Nothing answered here yet. The FAQs already cover 234 questions, so start there, and anything they miss goes in the form above."
+              ? "Nothing answered here yet. The Help Centre tab already covers 234 questions, and Simulate will show you what a frequency or a discount actually does before you ask."
               : "This is where answered queries appear once the CMS is connected. The 234 FAQs in the Help Centre tab work either way."}
           </p>
         </div>
@@ -184,12 +185,12 @@ export default function Queries({ answered, connected }: { answered: LoggedQuery
 
 function Answered({ q }: { q: LoggedQuery }) {
   const [open, setOpen] = useState(false);
-  const topic = q.topic ? CAT_NAME.get(q.topic) : null;
+  const topic = q.topic ? QUERY_TOPIC_NAME.get(q.topic) : null;
   return (
     <article className={"hc-item" + (open ? " open" : "")}>
       <button className="hc-q" onClick={() => setOpen(!open)} aria-expanded={open}>
         <span className="hc-qtext">{q.question}</span>
-        {q.raisedCount && q.raisedCount > 1 && <span className="hc-pill p-m">{q.raisedCount} stores</span>}
+        {q.raisedCount && q.raisedCount > 1 && <span className="hc-pill p-m">{q.raisedCount} clients</span>}
         <svg className="hc-chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M4 2 L8.5 6 L4 10" /></svg>
       </button>
       {open && (

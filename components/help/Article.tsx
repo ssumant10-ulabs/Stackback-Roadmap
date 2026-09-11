@@ -1,16 +1,30 @@
 "use client";
 import { useState } from "react";
 import { CATEGORIES } from "@/lib/help/corpus";
-import { STATUS_LABEL, type HelpArticle } from "@/lib/help/types";
-import { related } from "@/lib/help/search";
+import { APP_NAME, STATUS_LABEL, type HelpArticle } from "@/lib/help/types";
 
 const CAT_NAME = new Map(CATEGORIES.map((c) => [c.id, c.name]));
+
+/** Paths in the corpus are a mix: some point into Shopify's own admin, some into ours. A
+ *  merchant reading "Purchase options" has no way to tell which, and hunts the wrong menu.
+ *  Shopify's own surfaces are named; everything else is inside the app, so say so. */
+const SHOPIFY_OWN = /^(settings|online store|products|orders|customers|discounts|analytics|apps|content|finance|marketing)\b/i;
+
+export function Path({ path }: { path: string }) {
+  const inShopify = SHOPIFY_OWN.test(path.trim());
+  return (
+    <p className="hc-path">
+      <span>Where to look</span>
+      <b className="hc-where">{inShopify ? "Shopify admin" : `${APP_NAME} app`}</b>
+      {path}
+    </p>
+  );
+}
 
 export default function Article({ art, open, onToggle, internal, showCat }: {
   art: HelpArticle; open: boolean; onToggle: () => void; internal: boolean; showCat?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
-  const near = open ? related(art) : [];
 
   const copyLink = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -28,7 +42,7 @@ export default function Article({ art, open, onToggle, internal, showCat }: {
 
       {open && (
         <div className="hc-a">
-          {art.path && <p className="hc-path"><span>Where to look</span>{art.path}</p>}
+          {art.path && <Path path={art.path} />}
           {/* Authored HTML from the versioned deliverable in this repo, not user input. */}
           <div className="hc-prose" dangerouslySetInnerHTML={{ __html: art.a }} />
 
@@ -37,15 +51,6 @@ export default function Article({ art, open, onToggle, internal, showCat }: {
             {showCat && <span>{CAT_NAME.get(art.cat)}</span>}
             <button className="hc-linkbtn" onClick={copyLink}>{copied ? "Link copied" : "Copy link"}</button>
           </div>
-
-          {near.length > 0 && (
-            <div className="hc-near">
-              <span>Next question people ask</span>
-              <ul>{near.map((r) => (
-                <li key={r.id}><a href={`#/cat/${r.cat}#a=${r.id}`}>{r.q}</a></li>
-              ))}</ul>
-            </div>
-          )}
 
           {internal && <InternalNote art={art} />}
         </div>

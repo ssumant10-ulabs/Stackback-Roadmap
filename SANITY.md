@@ -4,8 +4,8 @@ The Help Centre at `/help` is two parts, and only one of them needs Sanity.
 
 | Part | Content | Source | Needs Sanity |
 |---|---|---|---|
-| Queries | Questions merchants and the team raise, and the answers we write | Sanity, document type `merchantQuery` | Yes |
-| Help Centre | 234 FAQs, 17 topics, 4 order-flow diagrams, 8 screens | Generated from the Help Centre HTML deliverable | No |
+| Subscription queries | Frequency, plan length, discount and product questions worked through with a client, and the answers | Sanity, document type `merchantQuery` | Yes |
+| Help Centre | 234 FAQs, 17 topics, 4 order-flow diagrams, the flow simulator | Generated from the Help Centre HTML deliverable | No |
 
 The FAQ half stays out of the CMS on purpose. Those words live in
 `Project Deliverables/stackback/Operations/StackBack_Merchant_Help_Centre_v<n>.html`, and
@@ -56,12 +56,12 @@ Studios also auto-update, which an embedded one cannot.
 
 ## The workflow
 
-1. A merchant sends a question from the Queries tab. It arrives as `status: new`, invisible
-   to everybody except the Studio. The team can also add one directly for a question that
-   came in over WhatsApp or on a call.
+1. A client sends a query from the Subscription queries tab. It arrives as `status: new`,
+   invisible to everybody except the Studio. The team can also post one directly, which is
+   the usual case: the queries we work through with a client during plan setup.
 2. Somebody answers it in **Needs an answer** and sets the status to **Answered and public**.
    The schema refuses to accept "answered" with an empty answer.
-3. It appears in the Queries tab within a minute, ordered by how many stores raised it.
+3. It appears in the tab within a minute, ordered by how many clients raised it.
 
 Nothing auto-publishes. A merchant's words never reach the public page until a person has
 read them and written a reply.

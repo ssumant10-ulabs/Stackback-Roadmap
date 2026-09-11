@@ -3,39 +3,35 @@ import { HelpCircleIcon } from "@sanity/icons/HelpCircle";
 
 /** The topics a query can be filed under. Same ids as the Help Centre corpus, so an answered
  *  query can sit beside the FAQs it relates to rather than in a list of its own. */
+/** What the query is about. These are the subscription-setup decisions we take with a
+ *  client during onboarding and re-cuts, not the Help Centre's reading topics: the queries
+ *  logged here are the frequency, discount and product questions that come up while a plan
+ *  is being agreed. */
 const TOPICS = [
-  { title: "Start here", value: "start" },
-  { title: "How it works", value: "flows" },
-  { title: "Using the app", value: "admin" },
-  { title: "Access and install", value: "access" },
-  { title: "Plans and pricing", value: "plans" },
+  { title: "Delivery frequency", value: "frequency" },
+  { title: "Plan length and deliveries", value: "duration" },
+  { title: "Discounts and bands", value: "discount" },
+  { title: "Products and variants", value: "products" },
+  { title: "Pricing and margins", value: "pricing" },
   { title: "Bundles", value: "bundles" },
-  { title: "Widget and theme", value: "widget" },
-  { title: "Payments and checkout", value: "pay" },
-  { title: "Orders and fulfilment", value: "orders" },
-  { title: "Customer portal", value: "portal" },
-  { title: "Cancellations", value: "cancel" },
-  { title: "Notifications", value: "notify" },
-  { title: "Shipping", value: "ship" },
-  { title: "Inventory", value: "stock" },
-  { title: "Integrations", value: "integ" },
-  { title: "Reporting", value: "report" },
-  { title: "App plans and billing", value: "bill" },
+  { title: "Payment mode: prepaid, PAYG, AutoPay", value: "payment" },
+  { title: "Shipping", value: "shipping" },
+  { title: "Something else", value: "other" },
 ];
 
 export const merchantQuery = defineType({
   name: "merchantQuery",
-  title: "Merchant query",
+  title: "Subscription query",
   type: "document",
   icon: HelpCircleIcon,
   fields: [
     defineField({
       name: "question",
-      title: "The question, in the words it was asked",
+      title: "The query, in the words it was raised",
       type: "text",
       rows: 2,
       description:
-        "Keep the merchant's phrasing. Search matches what people type, and rewriting it into our vocabulary is how a question stops being findable.",
+        "Keep the client's phrasing. Search matches what people type, and rewriting it into our vocabulary is how a query stops being findable.",
       validation: (rule) => rule.required().min(8),
     }),
     defineField({
@@ -50,14 +46,14 @@ export const merchantQuery = defineType({
         ],
         layout: "radio",
       },
-      description: "Only Answered appears in the merchant-facing tab.",
+      description: "Only Answered appears in the client-facing tab.",
       validation: (rule) => rule.required(),
     }),
     defineField({
       name: "answer",
       type: "array",
       of: [{ type: "block", styles: [{ title: "Normal", value: "normal" }], lists: [{ title: "Bullet", value: "bullet" }, { title: "Numbered", value: "number" }] }],
-      description: "Written for the merchant, not for us. Say no plainly when the answer is no.",
+      description: "Written for the client, not for us. Say no plainly when the answer is no.",
       validation: (rule) =>
         rule.custom((value, ctx) => {
           const status = (ctx.document as { status?: string } | undefined)?.status;
@@ -71,11 +67,11 @@ export const merchantQuery = defineType({
       name: "topic",
       type: "string",
       options: { list: TOPICS },
-      description: "Files the answer beside the FAQs it belongs with.",
+      description: "Which part of the subscription setup this is about.",
     }),
     defineField({
       name: "raisedCount",
-      title: "Stores that raised it",
+      title: "Clients that raised it",
       type: "number",
       initialValue: 1,
       description: "Bump this each time it comes up again. It orders the public list.",
@@ -88,7 +84,7 @@ export const merchantQuery = defineType({
       options: {
         list: [
           { title: "Logged by the team", value: "team" },
-          { title: "Submitted by a merchant", value: "merchant" },
+          { title: "Raised by the client", value: "merchant" },
         ],
         layout: "radio",
       },
@@ -117,7 +113,7 @@ export const merchantQuery = defineType({
     prepare({ title, status, count, topic }) {
       const t = TOPICS.find((x) => x.value === topic)?.title;
       const bits = [status === "answered" ? "Answered" : status === "parked" ? "Parked" : "Needs an answer"];
-      if (count && count > 1) bits.push(`${count} stores`);
+      if (count && count > 1) bits.push(`${count} clients`);
       if (t) bits.push(t);
       return { title, subtitle: bits.join(" · ") };
     },
