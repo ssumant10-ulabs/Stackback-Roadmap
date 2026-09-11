@@ -787,16 +787,6 @@
 
 /* ---------------------------------------------------------------- form: suggester, bands */
 .hc-formgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 320px); gap: 22px; align-items: start; }
-.hc-suggest { position: sticky; top: 78px; background: var(--card); border: 1px solid var(--border); border-radius: 13px; padding: 15px 16px; box-shadow: var(--shadow); }
-.hc-suggesth { margin: 0 0 3px; font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--hc-muted); }
-.hc-suggestcat { margin: 0 0 11px; font-size: 15px; font-weight: 720; }
-.hc-suggestrows { margin: 0 0 12px; }
-.hc-suggestrows > div { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid var(--border); }
-.hc-suggestrows dt { font-size: 12px; color: var(--hc-muted); flex: none; }
-.hc-suggestrows dd { margin: 0; font-size: 12.5px; font-weight: 620; text-align: right; }
-.hc-suggestwhy { margin: 0 0 13px; font-size: 12px; line-height: 1.6; color: var(--ink-2); }
-.hc-suggestnote { margin-top: 10px; }
-
 .hc-bands { display: flex; flex-wrap: wrap; gap: 8px; }
 .hc-band { display: flex; align-items: center; gap: 7px; border: 1px solid var(--border-2); border-radius: 10px; padding: 7px 11px; background: var(--page); }
 .hc-band > span { font-size: 12px; color: var(--ink-2); white-space: nowrap; }
@@ -823,3 +813,41 @@
 .hc-await { color: var(--hc-limit); font-weight: 650; }
 
 @media (max-width: 1099px) { .hc-formgrid { grid-template-columns: minmax(0, 1fr); } .hc-suggest { position: static; } }
+
+/* ---------------------------------------------------------------- plan suggester
+   It sits beside a tall form, so it is sticky and self-contained: a card per thing it is
+   suggesting, each with its own heading, rather than one block of mixed facts and prose. */
+.hc-suggest {
+  position: sticky; top: 78px; align-self: start;
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+  padding: 16px; box-shadow: var(--shadow);
+  display: flex; flex-direction: column; gap: 14px;
+}
+.hc-suggesth {
+  margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--hc-muted);
+}
+.hc-sugblock { background: var(--card-2); border-radius: 11px; padding: 13px 14px; }
+.hc-sugblock h3 { margin: 0 0 9px; font-size: 14.5px; font-weight: 720; letter-spacing: -0.01em; }
+.hc-sugfacts { list-style: none; margin: 0 0 11px; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.hc-sugfacts li { display: flex; flex-direction: column; gap: 1px; }
+.hc-sugfacts span { font-size: 11px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; color: var(--hc-muted); }
+.hc-sugfacts b { font-size: 13px; font-weight: 640; line-height: 1.4; }
+.hc-sugwhy { margin: 0; font-size: 12.5px; line-height: 1.6; color: var(--ink-2); }
+.hc-sugapply { width: 100%; }
+.hc-suggestnote { margin: 9px 0 0; }
+
+/* ---------------------------------------------------------------- widget: promo, one-time, bar */
+.hc-wpromo { margin: 0; padding: 10px 12px; font-size: .84em; font-weight: 650; text-align: center; }
+.hc-wonetime { padding: 13px; display: flex; flex-direction: column; gap: 7px; }
+.hc-wonetime > p { margin: 0 0 3px; font-size: .84em; line-height: 1.55; }
+.hc-wtotalbtn {
+  display: flex; align-items: center; gap: 7px; appearance: none; border: 0; background: none;
+  font: inherit; font-size: 1.1em; font-weight: 700; padding: 0; margin-top: 1px; cursor: pointer;
+}
+.hc-wcaret { transition: transform .14s; }
+
+.hc-simbar-order { grid-template-columns: repeat(2, minmax(0, 200px)) minmax(0, 1fr); align-items: start; }
+.hc-simnote { margin: 0; align-self: center; font-size: 12px; line-height: 1.55; color: var(--hc-muted); }
+
+@media (max-width: 767px) { .hc-simbar-order { grid-template-columns: minmax(0, 1fr); } }

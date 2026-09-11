@@ -16,12 +16,15 @@ import { APP_NAME } from "@/lib/help/types";
  *
  *  So both modes are shown at once rather than behind a toggle. "What is the difference
  *  between prepaid and pay as you go" is answered by putting them next to each other. */
-export default function Simulator({ seed, compact, config, onConfig, hideOrders, ordersOnly }: {
+export default function Simulator({ seed, compact, config, onConfig, hideOrders, ordersOnly, showOrderControls }: {
   seed?: Partial<SimConfig>; compact?: boolean;
   /** When given, the caller owns the numbers and other things on the page read them too. */
   config?: SimConfig; onConfig?: (next: SimConfig) => void;
   /** The wizard splits this across two steps: the controls on one, the orders on the next. */
   hideOrders?: boolean; ordersOnly?: boolean;
+  /** The two inputs the plan form never asks for, because they are about your warehouse
+   *  rather than your pricing: how far ahead an order is cut, and when the run starts. */
+  showOrderControls?: boolean;
 } = {}) {
   const [own, setOwn] = useState<SimConfig>({ ...DEFAULT_CONFIG, ...seed });
   const c = config ?? own;
@@ -48,43 +51,25 @@ export default function Simulator({ seed, compact, config, onConfig, hideOrders,
         types. Change anything and both move.
       </p>
 
-      {!ordersOnly && <div className="hc-simbar hc-simbar-row">
-        <label className="hc-field hc-simnum">
-          <span>One-time price</span>
-          <input type="number" min={1} step={10} value={c.unitPrice}
-            onChange={(e) => set("unitPrice", Math.max(1, +e.target.value || 0))} />
-        </label>
-        <label className="hc-field hc-simnum">
-          <span>Deliveries</span>
-          <input type="number" min={1} max={36} value={c.deliveries}
-            onChange={(e) => set("deliveries", Math.min(36, Math.max(1, +e.target.value || 1)))} />
-        </label>
-        <label className="hc-field">
-          <span>Frequency</span>
-          <select value={c.everyDays} onChange={(e) => set("everyDays", +e.target.value)}>
-            {FREQUENCIES.map((f) => <option key={f.days} value={f.days}>{f.label}</option>)}
-          </select>
-        </label>
-        <label className="hc-field hc-simnum">
-          <span>Discount %</span>
-          <input type="number" min={0} max={90} value={c.discountPct}
-            onChange={(e) => set("discountPct", Math.min(90, Math.max(0, +e.target.value || 0)))} />
-        </label>
-        <label className="hc-field hc-simnum">
-          <span>Lead time, days</span>
-          <input type="number" min={0} max={30} value={c.leadDays}
-            onChange={(e) => set("leadDays", Math.min(30, Math.max(0, +e.target.value || 0)))} />
-        </label>
-        <label className="hc-field">
-          <span>First delivery</span>
-          <input type="date" value={c.startDate || startOf(c).toISOString().slice(0, 10)}
-            onChange={(e) => set("startDate", e.target.value)} />
-        </label>
-      </div>}
+      {showOrderControls && (
+        <div className="hc-simbar hc-simbar-order">
+          <label className="hc-field hc-simnum">
+            <span>Lead time, days</span>
+            <input type="number" min={0} max={30} value={c.leadDays}
+              onChange={(e) => set("leadDays", Math.min(30, Math.max(0, +e.target.value || 0)))} />
+          </label>
+          <label className="hc-field">
+            <span>First delivery</span>
+            <input type="date" value={c.startDate || startOf(c).toISOString().slice(0, 10)}
+              onChange={(e) => set("startDate", e.target.value)} />
+          </label>
+          <p className="hc-simnote">
+            Everything else on this page comes from the plans you set in step one. These two are
+            about your warehouse, so they live here.
+          </p>
+        </div>
+      )}
 
-      </>)}
-
-      {!hideOrders && (<>
       {/* ------------------------------------------------ the store's side */}
       <h2 className="hc-h2">What lands in your Shopify orders</h2>
       <p className="hc-blurb hc-flowlede">

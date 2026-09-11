@@ -1,6 +1,6 @@
 /** The decisions we cannot curate plans without. They were prose, which is a list of things
  *  to go and reply about somewhere else; as fields they are a thing you finish. */
-import { CATEGORIES } from "./categories";
+import { CATEGORIES, SCALES } from "./categories";
 
 export type FieldKind = "choice" | "multi" | "text" | "number" | "list" | "bands";
 
@@ -33,6 +33,9 @@ export const QUESTIONS: Question[] = [
       { id: "brand_name", kind: "text", label: "Brand name", placeholder: "As your customers know it" },
       { id: "category", kind: "choice", label: "Category",
         options: CATEGORIES.map((c) => ({ value: c.id, label: c.label })) },
+      { id: "scale", kind: "choice", label: "Roughly how many orders a month",
+        help: "It decides which payment types are worth offering, not just what we suggest.",
+        options: SCALES.map((x) => ({ value: x.id, label: x.label, hint: x.hint })) },
     ],
   },
   {
@@ -61,6 +64,8 @@ export const QUESTIONS: Question[] = [
       },
       { id: "variants_detail", kind: "list", label: "Which variants", placeholder: "250g, 500g",
         help: "Separate them with commas.", showWhen: { field: "variants", is: ["some"] } },
+      { id: "unit_price", kind: "number", label: "One-time price of one delivery", suffix: "\u20b9",
+        help: "What a customer pays today without a subscription. Everything downstream is priced off it." },
     ],
   },
   {
@@ -133,8 +138,8 @@ export const QUESTIONS: Question[] = [
 export type Answers = Record<string, string | string[]>;
 
 export const DEFAULT_ANSWERS: Answers = {
-  brand_name: "", category: "",
-  scope_kind: "products", scope_detail: "", variants: "all",
+  brand_name: "", category: "", scale: "",
+  scope_kind: "products", scope_detail: "", variants: "all", unit_price: "750",
   every_days: ["30"], deliveries: "3, 6",
   tiered: "no", discount_pct: "15", bands: "",
   modes: ["prepaid", "payg"], shipping_kind: "free",

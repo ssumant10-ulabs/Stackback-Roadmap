@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { TOGGLE_GROUPS, type WidgetSettings } from "@/lib/help/widget";
-import { checkWidget } from "@/lib/help/contrast";
 import type { PlanOption } from "@/lib/help/sim";
 
 /** The storefront widget, rendered from the settings object.
@@ -13,13 +12,15 @@ import type { PlanOption } from "@/lib/help/sim";
  *  Hovering a setting highlights what it touches. That is the explorer's affordance, and
  *  the only thing that makes twenty switches legible on a call. */
 export default function WidgetPreview({
-  s, onChange, unitPrice, compareAt, plans, productName, variantLine, currency = "₹",
+  s, onChange, unitPrice, compareAt, plans, productName, variantLine, currency = "₹", onSubscribe,
 }: {
   s: WidgetSettings;
   onChange: (next: WidgetSettings) => void;
   unitPrice: number; compareAt?: number;
   plans: PlanOption[];
   productName: string; variantLine?: string; currency?: string;
+  /** Subscribe Now advances the wizard: it is the only real action on this page. */
+  onSubscribe?: () => void;
 }) {
   const t = s.theme;
   const [hot, setHot] = useState<string | null>(null);
@@ -41,8 +42,6 @@ export default function WidgetPreview({
     minimumFractionDigits: s.hide_price_decimals ? 0 : 2,
     maximumFractionDigits: s.hide_price_decimals ? 0 : 2,
   });
-
-  const issues = useMemo(() => checkWidget(t), [t]);
 
   const modes = [
     !s.hide_prepaid && { id: "prepaid", label: "Prepaid", tag: "mode-prepaid", note: "Paid in full at checkout." },
@@ -124,10 +123,18 @@ export default function WidgetPreview({
           )}
 
           {intent === "onetime" ? (
-            <p className="hc-wonetime" style={{ background: t.surfaces.mutedSurface, color: t.text.secondary, borderRadius: radius - 4 }}>
-              No schedule on a one-time purchase. The customer buys once at {money(unitPrice)},
-              and the theme&rsquo;s own Add to cart takes over.
-            </p>
+            <div className="hc-wonetime" style={{ background: t.surfaces.mutedSurface, borderRadius: radius - 4 }}>
+              <p style={{ color: t.text.secondary }}>
+                No schedule on a one-time purchase. The quantity above is the whole order.
+              </p>
+              <div className="hc-wline"><span style={{ color: t.text.secondary }}>1 x {productName}</span><b style={{ color: t.text.primary }}>{money(unitPrice)}</b></div>
+              {compareAt && compareAt > unitPrice && (
+                <div className="hc-wline"><span style={{ color: t.text.muted }}>Before discount</span><span style={{ color: t.text.muted }}>{money(compareAt)}</span></div>
+              )}
+              {!s.hide_free_shipping_line && (
+                <div className="hc-wline"><span style={{ color: t.text.secondary }}>Shipping</span><span style={{ color: t.colors.savings }}>Free</span></div>
+              )}
+            </div>
           ) : (<>
           <p className="hc-wsection" style={{ color: t.text.muted }}>Pick your schedule</p>
           <div className={"hc-wplans" + lit("plan-card")}>
@@ -182,7 +189,13 @@ export default function WidgetPreview({
             )}
           </div>
 
-          {s.promo_line && <p className="hc-wpromo" style={{ color: t.colors.subscriptionAccent }}>{s.promo_line}</p>}
+          {s.promo_line && (
+            <p className={"hc-wpromo" + lit("promo")} style={{ background: withAlpha(t.colors.savings, .1), color: t.colors.savings, borderRadius: radius - 4 }}>
+              {s.promo_line}
+            </p>
+          )}
+
+
         </div>
 
         <div className="hc-wbar" style={{
@@ -191,12 +204,13 @@ export default function WidgetPreview({
         }}>
           <span className={"hc-wbarl" + lit("summary")}>
             <em style={{ color: t.text.secondary }}>{chosen?.schedule}</em>
-            <b style={{ color: t.text.primary }}>
+            <button type="button" className="hc-wtotalbtn" onClick={() => setOpen((v) => !v)}
+              style={{ color: t.text.primary }} aria-expanded={open}>
               {s.tag_shows_per_delivery_price
                 ? `${money(chosen?.perDelivery ?? 0)}/delivery`
                 : `${money(chosen?.total ?? 0)} total`}
-              <i className="hc-wcaret" style={{ borderBottomColor: t.text.muted }} />
-            </b>
+              <i className="hc-wcaret" style={{ borderBottomColor: t.text.muted, transform: open ? "rotate(180deg)" : "none" }} />
+            </button>
             {open && chosen && (
               <span className="hc-wbreak">
                 <span style={{ color: t.text.muted }}>Before discount<b>{money(unitPrice * chosen.deliveries)}</b></span>
@@ -207,14 +221,14 @@ export default function WidgetPreview({
               </span>
             )}
           </span>
-          <button className={"hc-wcta" + lit("cta")} type="button" onClick={() => setOpen((v) => !v)}
+          <button className={"hc-wcta" + lit("cta")} type="button" onClick={onSubscribe}
             style={{
               borderRadius: radius - 4,
               background: t.components.ctaButton === "solid" ? t.colors.primary : "transparent",
               color: t.components.ctaButton === "solid" ? "#fff" : t.colors.primary,
               border: `1px solid ${t.colors.primary}`,
             }}>
-            {s.direct_checkout ? "Subscribe and checkout" : "Subscribe Now"}
+            Subscribe Now
           </button>
         </div>
 
@@ -222,17 +236,7 @@ export default function WidgetPreview({
       </div>
 
       <div className="hc-wtoggles">
-        {issues.length > 0 && (
-          <div className="hc-wcontrast">
-            <b>{issues.length === 1 ? "One colour pair is hard to read" : `${issues.length} colour pairs are hard to read`}</b>
-            <ul>{issues.map((i) => <li key={i.what}>{i.what}: <b>{i.ratio}:1</b>, needs {i.needs}:1</li>)}</ul>
-            <p>Measured on your own brand colours. A reading problem for some customers on some screens, and a colour change rather than a code change.</p>
-          </div>
-        )}
-        <p className="hc-brandnote">
-          Colours, fonts and corner radius are set from your brand once we build. What is drawn here
-          is the shape of the widget, not its final palette.
-        </p>
+        <p className="hc-brandnote">Colours are set from your brand colours when we build.</p>
         <p className="hc-wtogglesh">What the customer sees</p>
         <p className="hc-note hc-wtoggleshelp">Hover a setting to see what it changes in the preview.</p>
 

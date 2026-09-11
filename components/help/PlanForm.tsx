@@ -4,7 +4,8 @@ import {
   DEFAULT_ANSWERS, QUESTIONS, asLines, complete, parseBands, parseList, visible, writeBands,
   type Answers, type Field,
 } from "@/lib/help/questions";
-import { CATEGORY_BY_ID, freqWord } from "@/lib/help/categories";
+import { CATEGORY_BY_ID, SCALE_BY_ID, freqWord } from "@/lib/help/categories";
+import { drawPlanSheet } from "@/lib/help/sheet-png";
 
 const DRAFT = "sb-help-planform";
 
@@ -14,14 +15,13 @@ const DRAFT = "sb-help-planform";
  *  is "what does everyone else do", and having an answer on the page turns a two-day email
  *  round trip into a click. It proposes, it never fills, because a store's own repeat gap
  *  beats a category average every time and quietly overwriting their number would hide that. */
-export default function PlanForm({ answers, onAnswers, storeId, storeName, connected, onDone }: {
+export default function PlanForm({ answers, onAnswers, storeName, onDone }: {
   answers: Answers; onAnswers: (a: Answers) => void;
   storeId: string | null; storeName: string | null;
   connected: boolean; onDone: () => void;
 }) {
-  const [sending, setSending] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
-  const [sent, setSent] = useState(false);
 
   useEffect(() => {
     try {
@@ -47,7 +47,9 @@ export default function PlanForm({ answers, onAnswers, storeId, storeName, conne
   const done = complete(answers);
 
   const applySuggestion = () => {
-    if (!cat) return;
+    const sc = SCALE_BY_ID.get(String(answers.scale || ""));
+    if (!cat && !sc) return;
+    if (!cat) { const next = { ...answers, modes: sc!.modes }; onAnswers(next); save(next); return; }
     const bands: Record<number, number> = {};
     cat.deliveries.forEach((d, i) => { bands[d] = cat.discounts[i] ?? cat.discounts[cat.discounts.length - 1]; });
     const next: Answers = {
@@ -57,30 +59,43 @@ export default function PlanForm({ answers, onAnswers, storeId, storeName, conne
       tiered: cat.discounts.length > 1 ? "yes" : "no",
       bands: writeBands(bands),
       discount_pct: String(cat.discounts[0]),
+      ...(sc ? { modes: sc.modes } : {}),
     };
     onAnswers(next); save(next);
   };
 
-  async function send() {
-    if (!done || sending) return;
-    setSending(true); setResult(null);
-    const brand = String(answers.brand_name || storeName || "").trim();
+  /** Export rather than send.
+   *
+   *  These answers get walked through on a call, forwarded to a co-founder, and pasted into
+   *  a thread. A PNG survives all three; a row in our CMS survives none of them, and the
+   *  client cannot see it. So the deliverable is the picture, and it carries the plans AND
+   *  what similar stores run, because the second is what the forwarded copy gets argued about.
+   *
+   *  Rendered from the live DOM at 2x, so it is legible pasted into a deck. */
+  /** Export the plans as a picture.
+   *
+   *  Drawn on a canvas rather than rasterised from the DOM: html-to-image goes through an
+   *  SVG foreignObject loaded into an <img>, and when that image never fires onload there is
+   *  no error to catch, only a button that says "making the image" forever. It did exactly
+   *  that here. Canvas cannot hang, and the output is the same in every browser. */
+  function download() {
+    if (busy) return;
+    setBusy(true); setResult(null);
     try {
-      const res = await fetch("/api/help/answers", {
-        method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          brand, storeId, trap: "",
-          answers: asLines(answers).map((l, i) => ({ id: storeId ? `${storeId}-q${i}` : `q${i}`, question: l.question, answer: l.answer })),
-        }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) { setResult({ ok: false, msg: json.error || "That did not go through." }); return; }
-      setSent(true);
-      setResult({ ok: true, msg: `Sent, filed against ${brand}. We will build against these.` });
+      const canvas = drawPlanSheet(answers);
+      const brand = String(answers.brand_name || storeName || "plans").trim()
+        .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "plans";
+      const a = document.createElement("a");
+      a.href = canvas.toDataURL("image/png");
+      a.download = `stackback-plans-${brand}-${new Date().toISOString().slice(0, 10)}.png`;
+      a.click();
+      setResult({ ok: true, msg: "Downloaded. Send it on, or bring it to the call." });
     } catch {
-      setResult({ ok: false, msg: "No connection. Your answers are saved on this device, so try again when you are back." });
-    } finally { setSending(false); }
+      setResult({ ok: false, msg: "The image could not be made in this browser. A screenshot of this page carries the same thing." });
+    } finally { setBusy(false); }
   }
+
+  const scale = SCALE_BY_ID.get(String(answers.scale || ""));
 
   return (
     <div className="hc-formgrid">
@@ -97,44 +112,57 @@ export default function PlanForm({ answers, onAnswers, storeId, storeName, conne
           </fieldset>
         ))}
 
-        <div className="hc-formactions">
-          <button className="hc-btn primary" onClick={send} disabled={!done || sending}>
-            {sending ? "Sending" : sent ? "Send again" : "Send these answers"}
+        <div className="hc-formactions" data-noexport="true">
+          <button className="hc-btn primary" onClick={download} disabled={!done || busy}>
+            {busy ? "Making the image" : "Download these plans"}
           </button>
           <button className="hc-btn" onClick={onDone}>
-            {sent ? "Next: what your customers see" : "Skip ahead and look first"}
+            {done ? "Next: what your customers see" : "Skip ahead and look first"}
           </button>
           <span className="hc-savedat">Saved on this device as you type.</span>
         </div>
 
-        {!done && <p className="hc-note hc-incomplete">Every field above needs an answer before these can be sent.</p>}
-        {result && <p className={"hc-result " + (result.ok ? "ok" : "bad")} role="status">{result.msg}</p>}
-        {!connected && (
-          <p className="hc-result bad" role="status">
-            Not connected to the CMS yet, so sending will not reach anybody. Your answers are still saved here.
-          </p>
-        )}
+        {!done && <p className="hc-note hc-incomplete" data-noexport="true">Every field above needs an answer before this can be downloaded.</p>}
+        {result && <p className={"hc-result " + (result.ok ? "ok" : "bad")} role="status" data-noexport="true">{result.msg}</p>}
       </div>
 
       <aside className="hc-suggest">
         <p className="hc-suggesth">What similar stores run</p>
-        {!cat ? (
-          <p className="hc-note">Pick a category above and this fills in with what works for it.</p>
-        ) : (
-          <>
-            <p className="hc-suggestcat">{cat.label}</p>
-            <dl className="hc-suggestrows">
-              <div><dt>Frequency</dt><dd>{cat.everyDays.map(freqWord).join(", ").toLowerCase()}</dd></div>
-              <div><dt>Run lengths</dt><dd>{cat.deliveries.join(", ")} deliveries</dd></div>
-              <div><dt>Discount</dt><dd>{cat.deliveries.map((d, i) => `${cat.discounts[i]}% at ${d}`).join(", ")}</dd></div>
-            </dl>
-            <p className="hc-suggestwhy">{cat.why}</p>
-            <button className="hc-btn" onClick={applySuggestion}>Use these as a starting point</button>
+
+        {!cat && !scale && (
+          <p className="hc-note">Pick a category and a size above, and this fills in with what works for them.</p>
+        )}
+
+        {cat && (
+          <section className="hc-sugblock">
+            <h3>{cat.label}</h3>
+            <ul className="hc-sugfacts">
+              <li><span>Frequency</span><b>{cat.everyDays.map(freqWord).join(", ").toLowerCase()}</b></li>
+              <li><span>Run lengths</span><b>{cat.deliveries.join(", ")} deliveries</b></li>
+              <li><span>Discount</span><b>{cat.deliveries.map((d, i) => `${cat.discounts[i]}% at ${d}`).join(", ")}</b></li>
+            </ul>
+            <p className="hc-sugwhy">{cat.why}</p>
+          </section>
+        )}
+
+        {scale && (
+          <section className="hc-sugblock">
+            <h3>{scale.hint}</h3>
+            <ul className="hc-sugfacts">
+              <li><span>Offer</span><b>{scale.modes.map((m) => MODE_NAME[m]).join(", ")}</b></li>
+            </ul>
+            <p className="hc-sugwhy">{scale.why}</p>
+          </section>
+        )}
+
+        {(cat || scale) && (
+          <div data-noexport="true">
+            <button className="hc-btn hc-sugapply" onClick={applySuggestion}>Use these as a starting point</button>
             <p className="hc-note hc-suggestnote">
               A starting point, not an answer. Once we have read your order history we will propose
               numbers from your own repeat gap, and those beat a category average every time.
             </p>
-          </>
+          </div>
         )}
       </aside>
     </div>
@@ -217,3 +245,7 @@ function FieldRow({ f, value, answers, onChange, readOnly }: {
     </div>
   );
 }
+
+const MODE_NAME: Record<string, string> = {
+  prepaid: "Prepaid", payg: "Pay as you go", auto_debit: "Pay per delivery",
+};

@@ -70,6 +70,7 @@ export default function Brief({ store, open, answered, connected }: {
         ? (bands[runs[0]] ?? prev.discountPct)
         : Number(answers.discount_pct) || 0,
       productName: names[0] || "Dummy product",
+      unitPrice: Number(answers.unit_price) || prev.unitPrice,
     }));
     const modes = Array.isArray(answers.modes) ? answers.modes : [];
     setSettings((s) => ({
@@ -144,14 +145,11 @@ export default function Brief({ store, open, answered, connected }: {
             <li><b>Checks out once</b><span>The last action they take. Every delivery after this happens on its own.</span></li>
           </ol>
 
-          <div className="hc-simblock">
-            <Simulator compact config={cfg} onConfig={setCfg} hideOrders />
-          </div>
-
           <h2 className="hc-h2">The widget on your product page</h2>
           <p className="hc-blurb">
-            The {APP_NAME} Purchase Options block, drawn from your settings and the numbers above. Hover a
-            setting on the right to see what it changes.
+            The {APP_NAME} Purchase Options block, drawn from the plans you set in step one. Hover a
+            setting on the right to see what it changes, and press Subscribe Now to follow the order
+            through.
           </p>
           <WidgetPreview
             s={settings} onChange={setSettings}
@@ -160,6 +158,7 @@ export default function Brief({ store, open, answered, connected }: {
             variantLine={rec?.scope === "collection" ? rec.scopeDetail || undefined : undefined}
             unitPrice={cfg.unitPrice}
             compareAt={Math.round(cfg.unitPrice * 1.22)}
+            onSubscribe={() => go(3)}
           />
 
           <div className="hc-stepnav">
@@ -172,7 +171,7 @@ export default function Brief({ store, open, answered, connected }: {
       {/* ------------------------------------------------------------ step 3 */}
       {step === 3 && (
         <>
-          <Simulator compact config={cfg} onConfig={setCfg} ordersOnly />
+          <Simulator compact config={cfg} onConfig={setCfg} ordersOnly showOrderControls />
           <div className="hc-stepnav">
             <button className="hc-btn" onClick={() => go(2)}>Back to the widget</button>
           </div>

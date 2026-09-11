@@ -62,6 +62,41 @@ export const CATEGORIES: CategorySuggestion[] = [
   },
 ];
 
+/** How big the store is, which is what decides the payment types worth offering.
+ *
+ *  Auto-debit is the one that scales: it needs Razorpay connected, mandates to manage and
+ *  somebody to watch failed debits, so below real volume it costs more attention than it
+ *  saves. Prepaid is the opposite, and works from the first order. Pay as you go sits in
+ *  between: it lowers the upfront ask, at the cost of an invoice to chase per delivery. */
+export interface ScaleBand {
+  id: string;
+  label: string;
+  hint: string;
+  /** Payment modes worth offering at this size, in the order to enable them. */
+  modes: string[];
+  why: string;
+}
+
+export const SCALES: ScaleBand[] = [
+  {
+    id: "early", label: "Under 100 orders a month", hint: "Launching, or early",
+    modes: ["prepaid"],
+    why: "Prepaid only. The money is in the bank on day one and there is nothing to chase, which matters more than conversion while the volume is small. Adding pay as you go here buys you invoices to follow up and little else.",
+  },
+  {
+    id: "growing", label: "100 to 1,000 orders a month", hint: "Growing",
+    modes: ["prepaid", "payg"],
+    why: "Prepaid and pay as you go. The upfront ask starts costing conversions at this size, so a per-delivery option earns its keep, and the invoice volume is still small enough for one person to chase.",
+  },
+  {
+    id: "scaled", label: "Over 1,000 orders a month", hint: "Scaled",
+    modes: ["prepaid", "payg", "auto_debit"],
+    why: "All three. Chasing invoices stops being viable at this volume, which is exactly where UPI AutoPay pays for its setup: it needs Razorpay connected and somebody watching failed debits, and both are affordable at this size.",
+  },
+];
+
+export const SCALE_BY_ID = new Map(SCALES.map((s) => [s.id, s]));
+
 export const CATEGORY_BY_ID = new Map(CATEGORIES.map((c) => [c.id, c]));
 
 export { freqWord } from "./sim";
