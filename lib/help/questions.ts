@@ -88,26 +88,33 @@ export const QUESTIONS: Question[] = [
     ],
   },
   {
-    id: "discount", topic: "discount",
+    id: "discount",
+    topic: "discount",
     title: "Discount",
-    blurb: "What a subscriber saves. Check it against your margin before it is promised, because it is hard to walk back.",
+    blurb: "What a subscriber saves. Prepaid carries the most, because they have handed over the whole run and taken the risk. Pay as you go carries the least, because nothing is committed and you are wearing the collection cost.",
     fields: [
+      { id: "discount_min", kind: "number", label: "Lowest you would go", suffix: "%",
+        help: "What pay as you go gets." },
+      { id: "discount_max", kind: "number", label: "Most you would give", suffix: "%",
+        help: "What prepaid gets. Pay per delivery lands between the two." },
       {
-        id: "tiered", kind: "choice", label: "How it works",
+        id: "tiered", kind: "choice", label: "Does a longer run earn more",
         options: [
-          { value: "no", label: "One rate for every run" },
-          { value: "yes", label: "A better rate on longer runs" },
+          { value: "no", label: "One rate per payment type" },
+          { value: "yes", label: "A better rate on longer runs too" },
         ],
       },
-      { id: "discount_pct", kind: "number", label: "Subscriber discount", suffix: "%",
-        showWhen: { field: "tiered", is: ["no"] } },
-      { id: "bands", kind: "bands", label: "Discount per run length",
-        help: "One rate for each run length you offered above.",
+      { id: "bands", kind: "bands", label: "Prepaid rate per run length",
+        help: "The prepaid rate for each run you offered. Pay per delivery and pay as you go scale down from it.",
         showWhen: { field: "tiered", is: ["yes"] } },
+      { id: "freebie", kind: "text", label: "Freebie on pay as you go", optional: true,
+        placeholder: "A sampler with the first delivery",
+        help: "Optional, and often worth more than another two points off. Pay as you go is where a free item does the most work." },
     ],
   },
   {
-    id: "payment", topic: "payment",
+    id: "payment",
+    topic: "payment",
     title: "Payment and shipping",
     blurb: "What a customer can choose, and what a delivery costs them.",
     fields: [
@@ -116,7 +123,15 @@ export const QUESTIONS: Question[] = [
         options: [
           { value: "prepaid", label: "Prepaid", hint: "The whole run paid at checkout." },
           { value: "payg", label: "Pay as you go", hint: "A payment link before every delivery." },
-          { value: "auto_debit", label: "Pay per delivery", hint: "Charged automatically before every delivery. Needs Razorpay connected." },
+          { value: "auto_debit", label: "Pay per delivery", hint: "Charged automatically. Needs Razorpay connected." },
+        ],
+      },
+      {
+        id: "cod", kind: "choice", label: "Cash on delivery",
+        help: "COD cannot back a subscription: there is no stored instrument to charge for delivery two.",
+        options: [
+          { value: "no", label: "Subscriptions are prepaid only" },
+          { value: "first", label: "COD on the first delivery, then a payment link" },
         ],
       },
       {
@@ -127,10 +142,59 @@ export const QUESTIONS: Question[] = [
           { value: "flat", label: "A flat rate every time" },
         ],
       },
-      { id: "shipping_rate", kind: "number", label: "The rate", suffix: "₹ per delivery",
+      { id: "shipping_rate", kind: "number", label: "The rate", suffix: "\u20b9 per delivery",
         showWhen: { field: "shipping_kind", is: ["threshold", "flat"] } },
-      { id: "shipping_threshold", kind: "number", label: "Free above", suffix: "₹ cart value",
+      { id: "shipping_threshold", kind: "number", label: "Free above", suffix: "\u20b9 cart value",
         showWhen: { field: "shipping_kind", is: ["threshold"] } },
+      {
+        id: "cancellation", kind: "choice", label: "If a prepaid customer wants out mid-run",
+        help: "Whatever you pick here is what the widget shows as your cancellation policy.",
+        options: [
+          { value: "refund", label: "Refund the deliveries they have not had" },
+          { value: "credit", label: "Store credit for the remainder" },
+          { value: "none", label: "Run it to the end, no refund" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "stack",
+    topic: "other",
+    title: "Your stack",
+    blurb: "Four things that change what we build rather than what we price. Each of them has held up a go-live for somebody.",
+    fields: [
+      {
+        id: "checkout", kind: "choice", label: "Checkout",
+        help: "A third-party checkout intercepts the cart, and subscriptions need Shopify's own checkout to create the contract.",
+        options: [
+          { value: "shopify", label: "Shopify's own" },
+          { value: "gokwik", label: "GoKwik" },
+          { value: "shopflo", label: "Shopflo" },
+          { value: "other", label: "Something else" },
+        ],
+      },
+      {
+        id: "builder", kind: "choice", label: "Page builder on the product page",
+        help: "Page builders publish straight to live, so we tell you before touching one.",
+        options: [
+          { value: "none", label: "None, it is the theme" },
+          { value: "pagefly", label: "PageFly" },
+          { value: "gempages", label: "GemPages" },
+          { value: "other", label: "Something else" },
+        ],
+      },
+      {
+        id: "wms", kind: "choice", label: "Who picks and ships",
+        help: "A WMS pulls orders on its own schedule, which has to agree with when we create them.",
+        options: [
+          { value: "inhouse", label: "In house" },
+          { value: "shiprocket", label: "Shiprocket" },
+          { value: "unicommerce", label: "Unicommerce" },
+          { value: "other", label: "Another 3PL or WMS" },
+        ],
+      },
+      { id: "lead_days", kind: "number", label: "Days of notice your warehouse needs", suffix: "days",
+        help: "We create each delivery's order this far ahead. Default 7; several stores run 5 or 10." },
     ],
   },
 ];
@@ -141,8 +205,9 @@ export const DEFAULT_ANSWERS: Answers = {
   brand_name: "", category: "", scale: "",
   scope_kind: "products", scope_detail: "", variants: "all", unit_price: "750",
   every_days: ["30"], deliveries: "3, 6",
-  tiered: "no", discount_pct: "15", bands: "",
-  modes: ["prepaid", "payg"], shipping_kind: "free",
+  tiered: "no", discount_min: "10", discount_max: "20", bands: "", freebie: "",
+  modes: ["prepaid", "payg"], cod: "no", shipping_kind: "free", cancellation: "refund",
+  checkout: "shopify", builder: "none", wms: "inhouse", lead_days: "7",
 };
 
 export function visible(f: Field, a: Answers): boolean {

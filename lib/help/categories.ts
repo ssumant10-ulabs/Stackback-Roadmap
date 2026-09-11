@@ -75,23 +75,38 @@ export interface ScaleBand {
   /** Payment modes worth offering at this size, in the order to enable them. */
   modes: string[];
   why: string;
+  /** At this size AutoPay is the recommendation rather than an option, and prepaid is the
+   *  one you choose to keep. */
+  autopayFirst?: boolean;
 }
 
 export const SCALES: ScaleBand[] = [
   {
     id: "early", label: "Under 100 orders a month", hint: "Launching, or early",
     modes: ["prepaid"],
-    why: "Prepaid only. The money is in the bank on day one and there is nothing to chase, which matters more than conversion while the volume is small. Adding pay as you go here buys you invoices to follow up and little else.",
+    why: "Prepaid only. The money is in the bank on day one and there is nothing to chase, which matters more than conversion while the volume is small. Pay as you go here buys you invoices to follow up and little else.",
   },
   {
     id: "growing", label: "100 to 1,000 orders a month", hint: "Growing",
     modes: ["prepaid", "payg"],
-    why: "Prepaid and pay as you go. The upfront ask starts costing conversions at this size, so a per-delivery option earns its keep, and the invoice volume is still small enough for one person to chase.",
+    why: "Prepaid and pay as you go. The upfront ask starts costing conversions at this size, and the invoice volume is still small enough for one person to chase.",
   },
   {
-    id: "scaled", label: "Over 1,000 orders a month", hint: "Scaled",
+    id: "established", label: "1,000 to 5,000 orders a month", hint: "Established",
     modes: ["prepaid", "payg", "auto_debit"],
-    why: "All three. Chasing invoices stops being viable at this volume, which is exactly where UPI AutoPay pays for its setup: it needs Razorpay connected and somebody watching failed debits, and both are affordable at this size.",
+    why: "All three, with AutoPay worth turning on. Chasing invoices is becoming a job, and the Razorpay setup pays for itself at this volume.",
+  },
+  {
+    id: "large", label: "5,000 to 20,000 orders a month", hint: "Large",
+    modes: ["auto_debit", "payg", "prepaid"],
+    why: "AutoPay regardless, and it should be the default a customer sees. At this volume manual collection is a headcount decision rather than a preference. Prepaid becomes optional: keep it if your customers like the discount, drop it if the refund handling on cancellations is costing you more than it earns.",
+    autopayFirst: true,
+  },
+  {
+    id: "enterprise", label: "Over 20,000 orders a month", hint: "Enterprise",
+    modes: ["auto_debit", "payg", "prepaid"],
+    why: "AutoPay regardless. Nothing else collects reliably at this scale, and every prepaid cancellation is a refund somebody has to process. Prepaid is optional and usually kept only for a long-run plan where the discount does real work.",
+    autopayFirst: true,
   },
 ];
 
@@ -100,3 +115,26 @@ export const SCALE_BY_ID = new Map(SCALES.map((s) => [s.id, s]));
 export const CATEGORY_BY_ID = new Map(CATEGORIES.map((c) => [c.id, c]));
 
 export { freqWord } from "./sim";
+
+
+/** How a discount differs by payment type.
+ *
+ *  Prepaid carries the most because the customer has handed over the whole run and taken the
+ *  risk. Pay per delivery sits in the middle: the money is committed but arrives over time.
+ *  Pay as you go carries the least, because nothing is committed at all and the store is
+ *  wearing the collection cost, which is why a freebie often does more work there than
+ *  another two points off.
+ *
+ *  Given a min and a max the client sets, this is the split. */
+export function modeDiscounts(min: number, max: number): Record<string, number> {
+  const lo = Math.min(min, max), hi = Math.max(min, max);
+  return {
+    prepaid: hi,
+    auto_debit: Math.round((lo + hi) / 2),
+    payg: lo,
+  };
+}
+
+export const MODE_LABEL: Record<string, string> = {
+  prepaid: "Prepaid", payg: "Pay as you go", auto_debit: "Pay per delivery",
+};

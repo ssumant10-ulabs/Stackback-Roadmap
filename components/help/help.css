@@ -387,7 +387,7 @@
 .hc-part.on { background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
 .hc-part:focus-visible { outline: 2px solid var(--brand-deep); outline-offset: 1px; }
 
-.hc-body.solo { grid-template-columns: minmax(0, 1fr); }
+.hc-body.solo { grid-template-columns: minmax(0, 1fr); max-width: 1460px; }
 .hc-nav.hidden { display: none; }
 
 /* ---------------------------------------------------------------- query form */
@@ -851,3 +851,39 @@
 .hc-simnote { margin: 0; align-self: center; font-size: 12px; line-height: 1.55; color: var(--hc-muted); }
 
 @media (max-width: 767px) { .hc-simbar-order { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------------------------------------------------------------- step three surfaces */
+.hc-surfaces { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 22px 0 16px; }
+.hc-surface {
+  appearance: none; cursor: pointer; font: inherit; text-align: left;
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; color: var(--ink);
+}
+.hc-surface:hover { border-color: var(--border-2); }
+.hc-surface.on { border-color: var(--brand-deep); border-width: 1.5px; box-shadow: var(--shadow); }
+.hc-surface:focus-visible { outline: 2px solid var(--brand-deep); outline-offset: 2px; }
+.hc-surface b { display: block; font-size: 13.5px; font-weight: 700; }
+.hc-surface em { display: block; font-style: normal; font-size: 12px; color: var(--hc-muted); margin-top: 2px; }
+
+.hc-contracts { background: var(--card); border: 1px solid var(--border); border-radius: 13px; padding: 15px 16px; box-shadow: var(--shadow); }
+.hc-ctabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+.hc-ctab {
+  appearance: none; border: 0; background: none; cursor: pointer; font: inherit; font-size: 13px; font-weight: 620;
+  color: var(--hc-muted); padding: 8px 12px; border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.hc-ctab.on { color: var(--ink); border-bottom-color: var(--brand-deep); }
+.hc-cfilters { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
+.hc-cfilter {
+  appearance: none; cursor: pointer; font: inherit; font-size: 12px; font-weight: 620;
+  background: var(--sunken); border: 1px solid transparent; color: var(--hc-muted);
+  border-radius: 999px; padding: 5px 12px;
+}
+.hc-cfilter.on { background: var(--brand); color: var(--brand-ink); }
+.hc-ctable td em { display: block; font-style: normal; font-size: 11px; color: var(--hc-muted); margin-top: 2px; }
+.hc-cbar { display: block; height: 5px; width: 84px; border-radius: 999px; background: var(--track); margin-top: 5px; overflow: hidden; }
+.hc-cbar i { display: block; height: 100%; background: var(--hc-ok); border-radius: 999px; }
+.hc-cempty { margin: 0; padding: 26px 14px; text-align: center; font-size: 13px; color: var(--hc-muted); background: var(--sunken); border-radius: 10px; }
+
+/* The order tables carry more per row now, so give them the page rather than a column. */
+.hc-modecols { grid-template-columns: repeat(auto-fit, minmax(430px, 1fr)); }
+
+@media (max-width: 767px) { .hc-surfaces { grid-template-columns: minmax(0, 1fr); } }

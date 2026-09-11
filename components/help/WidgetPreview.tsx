@@ -13,6 +13,7 @@ import type { PlanOption } from "@/lib/help/sim";
  *  the only thing that makes twenty switches legible on a call. */
 export default function WidgetPreview({
   s, onChange, unitPrice, compareAt, plans, productName, variantLine, currency = "₹", onSubscribe,
+  rates, cancellation,
 }: {
   s: WidgetSettings;
   onChange: (next: WidgetSettings) => void;
@@ -21,6 +22,10 @@ export default function WidgetPreview({
   productName: string; variantLine?: string; currency?: string;
   /** Subscribe Now advances the wizard: it is the only real action on this page. */
   onSubscribe?: () => void;
+  /** Discount by payment type: prepaid the most, pay as you go the least. The card shows the
+   *  rate for whatever the customer has selected, because that is what they would be charged. */
+  rates?: Record<string, number>;
+  cancellation?: string;
 }) {
   const t = s.theme;
   const [hot, setHot] = useState<string | null>(null);
@@ -34,21 +39,33 @@ export default function WidgetPreview({
   useEffect(() => { setOpen(s.summary_expanded_by_default); }, [s.summary_expanded_by_default]);
   useEffect(() => { if (picked >= plans.length) setPicked(0); }, [plans.length, picked]);
 
-  const chosen = plans[picked] ?? plans[0];
-  const best = plans.reduce((m, p) => Math.max(m, p.discountPct), 0);
-
   /* Indian grouping either way: 1,058.00, never 1058.00. */
   const money = (n: number) => currency + n.toLocaleString("en-IN", {
     minimumFractionDigits: s.hide_price_decimals ? 0 : 2,
     maximumFractionDigits: s.hide_price_decimals ? 0 : 2,
   });
 
-  const modes = [
+  const modeList = [
     !s.hide_prepaid && { id: "prepaid", label: "Prepaid", tag: "mode-prepaid", note: "Paid in full at checkout." },
     !s.hide_payg && { id: "payg", label: "Pay as you go", tag: "mode-payg", note: "Payment link before every delivery" },
     !s.hide_auto_debit && { id: "auto_debit", label: "Pay Per Delivery", tag: "mode-auto", note: "Charged before every delivery." },
   ].filter(Boolean) as { id: string; label: string; tag: string; note: string }[];
+  const modes = modeList;
   const activeMode = modes.find((m) => m.id === mode) || modes[0];
+  const activeModeId = activeMode?.id;
+
+  /* A plan's headline rate is the prepaid one. Selecting another payment type scales every
+   * card by the ratio between that type's rate and prepaid's, so the numbers on the cards
+   * and the number in the bar can never disagree with the tab that is selected. */
+  const shift = rates && rates.prepaid > 0 && activeModeId
+    ? (rates[activeModeId] ?? rates.prepaid) / rates.prepaid : 1;
+  const shown = plans.map((p) => {
+    const pct = Math.round(p.discountPct * shift);
+    const per = unitPrice * (1 - pct / 100);
+    return { ...p, discountPct: pct, perDelivery: per, total: per * p.deliveries };
+  });
+  const chosen = shown[picked] ?? shown[0];
+  const best = shown.reduce((m, p) => Math.max(m, p.discountPct), 0);
 
   const radius = t.shape.radius;
   const lit = (tag: string) => (hot === tag ? " sb-lit" : "");
@@ -138,7 +155,7 @@ export default function WidgetPreview({
           ) : (<>
           <p className="hc-wsection" style={{ color: t.text.muted }}>Pick your schedule</p>
           <div className={"hc-wplans" + lit("plan-card")}>
-            {plans.map((plan, i) => {
+            {shown.map((plan, i) => {
               const on = i === picked;
               return (
                 <button key={plan.title + i} type="button" onClick={() => setPicked(i)} className="hc-wplan"
@@ -213,8 +230,20 @@ export default function WidgetPreview({
             </button>
             {open && chosen && (
               <span className="hc-wbreak">
-                <span style={{ color: t.text.muted }}>Before discount<b>{money(unitPrice * chosen.deliveries)}</b></span>
-                <span style={{ color: t.colors.savings }}>You save<b>{money((unitPrice - chosen.perDelivery) * chosen.deliveries)}</b></span>
+                {/* Show the arithmetic, not just its result. "Before discount" on its own
+                    invites the reader to check it and find they cannot. */}
+                <span style={{ color: t.text.secondary }}>
+                  {chosen.deliveries} x {money(chosen.perDelivery)}
+                  <b style={{ color: t.text.primary }}>{money(chosen.total)}</b>
+                </span>
+                <span style={{ color: t.text.muted }}>
+                  Same at the one-time price
+                  <b>{money(unitPrice * chosen.deliveries)}</b>
+                </span>
+                <span style={{ color: t.colors.savings }}>
+                  You save {chosen.discountPct}%
+                  <b>{money((unitPrice - chosen.perDelivery) * chosen.deliveries)}</b>
+                </span>
                 {!s.hide_free_shipping_line && (
                   <span className={lit("shipping-line")} style={{ color: t.colors.savings }}>Shipping<b>Free</b></span>
                 )}

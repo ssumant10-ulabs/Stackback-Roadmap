@@ -8,6 +8,8 @@
  *  So this draws the sheet itself. More code, but it cannot hang, it needs no dependency,
  *  and the output is identical everywhere because nothing is inherited from the page. */
 import { parseBands, parseList, type Answers } from "./questions";
+import type { WidgetSettings } from "./widget";
+import { ALL_TOGGLES } from "./widget";
 import { CATEGORY_BY_ID, SCALE_BY_ID, freqWord } from "./categories";
 
 const W = 880;
@@ -73,10 +75,10 @@ function label(t: Ctx, s: string, x = PAD) {
 
 /** Two passes: measure with a throwaway context to size the canvas, then draw. Guessing a
  *  height and cropping the rationale is how an export loses the half that matters. */
-export function drawPlanSheet(answers: Answers): HTMLCanvasElement {
+export function drawPlanSheet(answers: Answers, settings?: WidgetSettings): HTMLCanvasElement {
   const measure = document.createElement("canvas").getContext("2d");
   if (!measure) throw new Error("no canvas");
-  const height = render({ c: measure, y: 0 }, answers, true);
+  const height = render({ c: measure, y: 0 }, answers, true, settings);
 
   const canvas = document.createElement("canvas");
   const ratio = 2;
@@ -87,11 +89,11 @@ export function drawPlanSheet(answers: Answers): HTMLCanvasElement {
   c.scale(ratio, ratio);
   c.fillStyle = "#ffffff";
   c.fillRect(0, 0, W, height);
-  render({ c, y: 0 }, answers, false);
+  render({ c, y: 0 }, answers, false, settings);
   return canvas;
 }
 
-function render(t: Ctx, a: Answers, dry: boolean): number {
+function render(t: Ctx, a: Answers, dry: boolean, settings?: WidgetSettings): number {
   const draw = !dry;
   const cat = CATEGORY_BY_ID.get(String(a.category || ""));
   const scale = SCALE_BY_ID.get(String(a.scale || ""));
@@ -224,6 +226,40 @@ function render(t: Ctx, a: Answers, dry: boolean): number {
       t.y += 16;
     }
     t.y = panelTop + h + 34 + 8;
+  }
+
+  /* ---------- widget settings snapshot ---------- */
+  if (settings) {
+    // Only what was changed from the default. A list of twenty rows all reading "off" tells
+    // the reader nothing; the three that are on are the decisions somebody made.
+    const changed = ALL_TOGGLES
+      .map((d) => ({ d, v: settings[d.key] }))
+      .filter(({ d, v }) => {
+        if (d.kind === "text") return Boolean(String(v || "").trim());
+        if (d.kind === "select") return true;
+        return v === true;
+      });
+    t.y += 10;
+    if (draw) label(t, "Widget settings");
+    t.y += 20;
+    if (changed.length === 0) {
+      t.y += draw ? wrap(t, "Everything left at its default.", PAD, W - PAD * 2, 12.5, MUTED) : 20;
+    } else {
+      for (const { d, v } of changed) {
+        if (draw) rule(t);
+        t.y += 19;
+        if (draw) {
+          text(t, d.label, PAD, 13, 600, INK);
+          const val = d.kind === "select"
+            ? (d.options?.find((o) => o.value === v)?.label ?? String(v))
+            : d.kind === "text" ? String(v) : "On";
+          text(t, val, W - PAD, 13, 400, SOFT, "right");
+        }
+        t.y += 13;
+      }
+      if (draw) rule(t);
+    }
+    t.y += 16;
   }
 
   /* ---------- footer ---------- */

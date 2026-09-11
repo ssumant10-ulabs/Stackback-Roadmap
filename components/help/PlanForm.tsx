@@ -6,6 +6,7 @@ import {
 } from "@/lib/help/questions";
 import { CATEGORY_BY_ID, SCALE_BY_ID, freqWord } from "@/lib/help/categories";
 import { drawPlanSheet } from "@/lib/help/sheet-png";
+import type { WidgetSettings } from "@/lib/help/widget";
 
 const DRAFT = "sb-help-planform";
 
@@ -15,8 +16,10 @@ const DRAFT = "sb-help-planform";
  *  is "what does everyone else do", and having an answer on the page turns a two-day email
  *  round trip into a click. It proposes, it never fills, because a store's own repeat gap
  *  beats a category average every time and quietly overwriting their number would hide that. */
-export default function PlanForm({ answers, onAnswers, storeName, onDone }: {
+export default function PlanForm({ answers, onAnswers, storeName, onDone, settings }: {
   answers: Answers; onAnswers: (a: Answers) => void;
+  /** Snapshotted into the export, so the picture records what was toggled as well as priced. */
+  settings: WidgetSettings;
   storeId: string | null; storeName: string | null;
   connected: boolean; onDone: () => void;
 }) {
@@ -82,7 +85,7 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone }: {
     if (busy) return;
     setBusy(true); setResult(null);
     try {
-      const canvas = drawPlanSheet(answers);
+      const canvas = drawPlanSheet(answers, settings);
       const brand = String(answers.brand_name || storeName || "plans").trim()
         .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "plans";
       const a = document.createElement("a");

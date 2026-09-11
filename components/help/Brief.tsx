@@ -6,6 +6,7 @@ import { parseSettings, type WidgetSettings } from "@/lib/help/widget";
 import { APP_NAME } from "@/lib/help/types";
 import { DEFAULT_CONFIG, money, planOptions, type SimConfig } from "@/lib/help/sim";
 import { DEFAULT_ANSWERS, parseBands, parseList, parseNames, type Answers } from "@/lib/help/questions";
+import { modeDiscounts } from "@/lib/help/categories";
 import type { LoggedQuery, PlanRec, StoreRecord } from "@/lib/sanity/queries";
 import PlanForm from "./PlanForm";
 import WidgetPreview from "./WidgetPreview";
@@ -66,9 +67,11 @@ export default function Brief({ store, open, answered, connected }: {
       // A store can offer several of each; the simulation has to pick one to be about.
       everyDays: freqs[0] || prev.everyDays,
       deliveries: runs[0] || prev.deliveries,
+      // The widget shows the rate for the payment type the customer is looking at, so the
+      // simulation is about the one the store leads with.
       discountPct: answers.tiered === "yes"
-        ? (bands[runs[0]] ?? prev.discountPct)
-        : Number(answers.discount_pct) || 0,
+        ? (bands[runs[0]] ?? (Number(answers.discount_max) || 0))
+        : Number(answers.discount_max) || 0,
       productName: names[0] || "Dummy product",
       unitPrice: Number(answers.unit_price) || prev.unitPrice,
     }));
@@ -78,7 +81,10 @@ export default function Brief({ store, open, answered, connected }: {
       hide_prepaid: !modes.includes("prepaid"),
       hide_payg: !modes.includes("payg"),
       hide_auto_debit: !modes.includes("auto_debit"),
+      // The line only ever says shipping is free. When it is not, there is no line.
       hide_free_shipping_line: answers.shipping_kind !== "free",
+      promo_line: typeof answers.freebie === "string" && answers.freebie.trim()
+        ? answers.freebie.trim() : s.promo_line,
     }));
   }, [answers, runs, bands]);
 
@@ -93,7 +99,12 @@ export default function Brief({ store, open, answered, connected }: {
     setCfg((prev) => ({ ...prev, unitPrice: rec.unitPrice || prev.unitPrice }));
   }, [rec]);
 
-  const plans = useMemo(() => planOptions(cfg, runs, bands, settings.schedule_text_format), [cfg, runs, bands, settings.schedule_text_format]);
+  const rates = useMemo(
+    () => modeDiscounts(Number(answers.discount_min) || 0, Number(answers.discount_max) || 0),
+    [answers.discount_min, answers.discount_max],
+  );
+  const plans = useMemo(() => planOptions(cfg, runs, bands, settings.schedule_text_format),
+    [cfg, runs, bands, settings.schedule_text_format]);
   const go = (n: number) => { setStep(n); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
   return (
@@ -127,6 +138,7 @@ export default function Brief({ store, open, answered, connected }: {
       {/* ------------------------------------------------------------ step 1 */}
       {step === 1 && (
         <PlanForm
+          settings={settings}
           answers={answers} onAnswers={setAnswers}
           storeId={store?._id ?? null} storeName={store?.name ?? null}
           connected={connected} onDone={() => go(2)}
@@ -146,11 +158,6 @@ export default function Brief({ store, open, answered, connected }: {
           </ol>
 
           <h2 className="hc-h2">The widget on your product page</h2>
-          <p className="hc-blurb">
-            The {APP_NAME} Purchase Options block, drawn from the plans you set in step one. Hover a
-            setting on the right to see what it changes, and press Subscribe Now to follow the order
-            through.
-          </p>
           <WidgetPreview
             s={settings} onChange={setSettings}
             plans={plans}
@@ -159,6 +166,8 @@ export default function Brief({ store, open, answered, connected }: {
             unitPrice={cfg.unitPrice}
             compareAt={Math.round(cfg.unitPrice * 1.22)}
             onSubscribe={() => go(3)}
+            rates={rates}
+            cancellation={String(answers.cancellation || "refund")}
           />
 
           <div className="hc-stepnav">
@@ -171,7 +180,7 @@ export default function Brief({ store, open, answered, connected }: {
       {/* ------------------------------------------------------------ step 3 */}
       {step === 3 && (
         <>
-          <Simulator compact config={cfg} onConfig={setCfg} ordersOnly showOrderControls />
+          <Simulator config={cfg} onConfig={setCfg} />
           <div className="hc-stepnav">
             <button className="hc-btn" onClick={() => go(2)}>Back to the widget</button>
           </div>
