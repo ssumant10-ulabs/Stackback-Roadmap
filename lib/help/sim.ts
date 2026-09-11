@@ -33,18 +33,31 @@ export interface SimConfig {
   startDate: string;
 }
 
+/** The widget's own vocabulary, and its own arithmetic: "every 2 weeks" is 14 days, not 15,
+ *  which is what makes 6 deliveries read as a 12 week plan rather than a 13 week one. */
 export const FREQUENCIES = [
-  { label: "Weekly", days: 7 },
-  { label: "Every 15 days", days: 15 },
-  { label: "Monthly", days: 30 },
+  { label: "Every week", days: 7 },
+  { label: "Every 2 weeks", days: 14 },
+  { label: "Every month", days: 30 },
   { label: "Every 2 months", days: 60 },
 ];
+
+/** How the plan card names a run length. A monthly plan counts in months; anything shorter
+ *  counts in weeks, because "26 weeks plan" is how you describe half a year to nobody. */
+export function runLabel(everyDays: number, deliveries: number): string {
+  if (everyDays % 30 === 0) {
+    const months = (everyDays / 30) * deliveries;
+    return `${months} month${months === 1 ? "" : "s"} plan`;
+  }
+  const weeks = Math.round((everyDays * deliveries) / 7);
+  return `${weeks} week${weeks === 1 ? "" : "s"} plan`;
+}
 
 export const DEFAULT_CONFIG: SimConfig = {
   productName: "Cold pressed coffee, 250g",
   unitPrice: 750,
   deliveries: 6,
-  everyDays: 30,
+  everyDays: 14,
   discountPct: 15,
   mode: "prepaid",
   leadDays: 7,

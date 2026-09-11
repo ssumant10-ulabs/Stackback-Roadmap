@@ -1,10 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PortableText } from "@portabletext/react";
 import { QUERY_TOPIC_NAME } from "@/lib/help/topics";
 import { parseSettings, type WidgetSettings } from "@/lib/help/widget";
 import { APP_NAME } from "@/lib/help/types";
-import { money } from "@/lib/help/sim";
+import { DEFAULT_CONFIG, money, type SimConfig } from "@/lib/help/sim";
 import type { LoggedQuery, PlanRec, StoreRecord } from "@/lib/sanity/queries";
 import AnswerQueries from "./AnswerQueries";
 import WidgetPreview from "./WidgetPreview";
@@ -38,9 +38,27 @@ export default function Brief({ store, open, answered, connected }: {
   const [settings, setSettings] = useState<WidgetSettings>(
     () => ({ ...parseSettings(store?.widgetSettings), hide_auto_debit: true }),
   );
+
+  /* One set of numbers drives both. The simulator owns them, because that is where somebody
+     is already changing a frequency to see what it does, and the widget showing different
+     values from the orders underneath it was the thing that made the pair unconvincing. */
+  const [cfg, setCfg] = useState<SimConfig>(() => ({ ...DEFAULT_CONFIG }));
   const recs = store?.recommendations || [];
   const [active, setActive] = useState(0);
   const rec: PlanRec | undefined = recs[active];
+
+  useEffect(() => {
+    if (!rec) return;
+    setCfg((prev) => ({
+      ...prev,
+      productName: rec.scopeDetail || rec.label,
+      unitPrice: rec.unitPrice || prev.unitPrice,
+      everyDays: rec.everyDays,
+      deliveries: rec.deliveries,
+      discountPct: rec.discountPct,
+      mode: rec.mode === "payg" ? "payg" : "prepaid",
+    }));
+  }, [rec]);
 
   return (
     <section>
@@ -92,35 +110,28 @@ export default function Brief({ store, open, answered, connected }: {
         </ol>
       )}
 
-      {/* ---------------- the widget ---------------- */}
+      {/* ---------------- the maths, first ---------------- */}
+      <div className="hc-simblock">
+        <Simulator compact config={cfg} onConfig={setCfg} />
+      </div>
+
+      {/* ---------------- then the same numbers, as the customer sees them ---------------- */}
       <h2 className="hc-h2">What your customers would see</h2>
       <p className="hc-blurb">
-        This is the {APP_NAME} widget on your product page, drawn from your settings. Flip anything on the
-        right and it redraws, so you can decide on the call rather than after the build.
+        The same plan, on your product page. It is the {APP_NAME} Purchase Options block drawn from your
+        settings, so this is the real thing rather than a picture of it. Change a setting on the right
+        and it redraws; change a number above and this follows.
       </p>
       <WidgetPreview
         s={settings} onChange={setSettings}
-        productName={rec?.scopeDetail || "Your product"}
-        unitPrice={rec?.unitPrice || 750}
-        everyDays={rec?.everyDays || 30}
-        deliveries={rec?.deliveries || 6}
-        discountPct={rec?.discountPct ?? 15}
+        productName={cfg.productName || rec?.scopeDetail || "Your product"}
+        variantLine={rec?.scope === "collection" ? rec.scopeDetail || undefined : undefined}
+        unitPrice={cfg.unitPrice}
+        compareAt={Math.round(cfg.unitPrice * 1.22)}
+        everyDays={cfg.everyDays}
+        deliveries={cfg.deliveries}
+        discountPct={cfg.discountPct}
       />
-
-      {/* ---------------- the maths ---------------- */}
-      <div className="hc-simblock">
-        <Simulator
-          compact
-          seed={rec ? {
-            productName: rec.scopeDetail || rec.label,
-            unitPrice: rec.unitPrice || 750,
-            everyDays: rec.everyDays,
-            deliveries: rec.deliveries,
-            discountPct: rec.discountPct,
-            mode: rec.mode === "payg" ? "payg" : "prepaid",
-          } : undefined}
-        />
-      </div>
 
       {/* ---------------- answered ---------------- */}
       <h2 className="hc-h2">Answered</h2>

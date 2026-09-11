@@ -16,9 +16,15 @@ import { APP_NAME } from "@/lib/help/types";
  *
  *  So both modes are shown at once rather than behind a toggle. "What is the difference
  *  between prepaid and pay as you go" is answered by putting them next to each other. */
-export default function Simulator({ seed, compact }: { seed?: Partial<SimConfig>; compact?: boolean } = {}) {
-  const [c, setC] = useState<SimConfig>({ ...DEFAULT_CONFIG, ...seed });
-  const set = <K extends keyof SimConfig>(k: K, v: SimConfig[K]) => setC({ ...c, [k]: v });
+export default function Simulator({ seed, compact, config, onConfig }: {
+  seed?: Partial<SimConfig>; compact?: boolean;
+  /** When given, the caller owns the numbers and other things on the page read them too. */
+  config?: SimConfig; onConfig?: (next: SimConfig) => void;
+} = {}) {
+  const [own, setOwn] = useState<SimConfig>({ ...DEFAULT_CONFIG, ...seed });
+  const c = config ?? own;
+  const write = onConfig ?? setOwn;
+  const set = <K extends keyof SimConfig>(k: K, v: SimConfig[K]) => write({ ...c, [k]: v });
 
   const prepaid = useMemo(() => ({ p: price({ ...c, mode: "prepaid" }), rows: schedule(c, "prepaid") }), [c]);
   const payg = useMemo(() => ({ p: price({ ...c, mode: "payg" }), rows: schedule(c, "payg") }), [c]);
@@ -99,11 +105,12 @@ export default function Simulator({ seed, compact }: { seed?: Partial<SimConfig>
       </ol>
 
       {/* ------------------------------------------------ the store's side */}
-      <h2 className="hc-h2">What {APP_NAME} creates in your Shopify admin</h2>
+      <h2 className="hc-h2">What lands in your Shopify orders</h2>
       <p className="hc-blurb hc-flowlede">
-        That one checkout becomes <b>{c.deliveries + 1} Shopify orders</b>: a parent that takes the money,
-        and one child per delivery that actually ships. The parent and the first child are created
-        <b> in the same moment</b>, which is the thing most often reported to us as a duplicate order.
+        That one checkout becomes <b>{c.deliveries + 1} orders</b>: a parent that takes the money and
+        one child per delivery that ships. The parent and the first child are written
+        <b> at the same minute</b>, which is the pair most often reported to us as a duplicate.
+        This is how the list reads.
       </p>
 
       <div className="hc-modecols">
@@ -132,6 +139,9 @@ function ModeColumn({ mode, c, p, rows }: {
   p: ReturnType<typeof price>; rows: ReturnType<typeof schedule>;
 }) {
   const prepaid = mode === "prepaid";
+  // Order numbers are cosmetic here, but sequential ones make the table read like the real
+  // list rather than like a diagram, which is the whole point of showing it this way.
+  const base = 44521;
   return (
     <div className="hc-modecol">
       <div className="hc-modehead">
@@ -141,34 +151,53 @@ function ModeColumn({ mode, c, p, rows }: {
           : `${money(p.chargedNow)} taken at checkout, one delivery`}</span>
       </div>
 
-      <ol className="hc-orders">
-        <li className="hc-order parent">
-          <span className="hc-otag warn">PARENT</span>
-          <b>{money(p.chargedNow)}</b>
-          <em>At checkout · takes the money, ships nothing</em>
-        </li>
-        {rows.map((o) => (
-          <li key={o.n} className={"hc-order" + (o.withParent ? " together" : "")}>
-            <span className="hc-otag ok">CHILD {o.n}</span>
-            <b>{money(o.amount)}</b>
-            <em>
-              {o.withParent
-                ? <><strong>At checkout, with the parent</strong> · delivers {fmtDate(o.deliveryDate)}</>
-                : <>Created {fmtDate(o.createdOn)} · delivers {fmtDate(o.deliveryDate)}</>}
-            </em>
-            {!o.paidAtCheckout && o.invoicedOn && (
-              <em className="hc-oinv">Invoice sent {fmtDate(o.invoicedOn)}, and it cannot be pushed until it is paid</em>
-            )}
-            {o.early && <em className="hc-oinv">Its lead window has already passed, so it is cut now too</em>}
-          </li>
-        ))}
-      </ol>
+      <div className="hc-shopscroll">
+        <table className="hc-shoptable">
+          <thead>
+            <tr>
+              <th>Order</th><th>Created</th><th>Channel</th><th className="hc-num">Total</th>
+              <th>Payment</th><th>Fulfilment</th><th>Delivery method</th><th>Tags</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="hc-parentrow">
+              <td><b>#{base}</b></td>
+              <td>{fmtDate(rows[0].createdOn)}<em>at checkout</em></td>
+              <td>Online Store</td>
+              <td className="hc-num"><b>{money(p.chargedNow)}</b></td>
+              <td><Dot tone="ok" />Paid</td>
+              <td><Dot tone="ok" />Fulfilled</td>
+              <td>Shipping not required</td>
+              <td><Tag>parent</Tag><Tag>id-1989</Tag></td>
+            </tr>
+            {rows.map((o) => (
+              <tr key={o.n} className={o.withParent ? "hc-togetherrow" : ""}>
+                <td><b>#{base + o.n}</b></td>
+                <td>
+                  {fmtDate(o.createdOn)}
+                  {o.withParent ? <em className="hc-same">same minute as the parent</em>
+                    : <em>delivers {fmtDate(o.deliveryDate)}</em>}
+                </td>
+                <td>StackBack Subscriptions &amp; More</td>
+                <td className="hc-num">{money(o.amount)}</td>
+                <td>{o.paidAtCheckout ? <><Dot tone="ok" />Paid</> : <><Dot tone="warn" />Unpaid</>}</td>
+                <td><Dot tone="warn" />Unfulfilled</td>
+                <td>Free Shipping</td>
+                <td><Tag>child</Tag><Tag>subscription</Tag><Tag>scheduler</Tag><Tag>automated</Tag></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <p className="hc-modefoot">
         {prepaid
           ? `All ${c.deliveries} paid up front. Each child draws down the store credit as it is created.`
-          : `${money(p.chargedLater)} still to collect, one invoice per delivery.`}
+          : `${money(p.chargedLater)} still to collect. Each child is invoiced ${3 + c.leadDays} days before its delivery and cannot be pushed until it is paid.`}
       </p>
     </div>
   );
 }
+
+const Tag = ({ children }: { children: React.ReactNode }) => <i className="hc-shoptag">{children}</i>;
+const Dot = ({ tone }: { tone: "ok" | "warn" }) => <i className={"hc-shopdot " + tone} />;

@@ -13,6 +13,7 @@ import Brief from "./Brief";
 import Internal from "./Internal";
 import Simulator from "./Simulator";
 import type { LoggedQuery, StoreRecord, StoreSummary } from "@/lib/sanity/queries";
+import { helpFont } from "./font";
 import "./help.css";
 
 type View =
@@ -147,7 +148,7 @@ export default function HelpApp({
   const risky = ARTICLES.filter((a) => RISK_STATUSES.includes(a.status)).length;
 
   return (
-    <div className="hc" data-hc-theme={theme}>
+    <div className={`hc ${helpFont.variable}`} data-hc-theme={theme}>
       <a className="hc-skip" href="#hc-main">Skip to the answers</a>
       <header className="hc-top">
         <a className="hc-brand" href="#/" aria-label="StackBack Help Centre, overview"

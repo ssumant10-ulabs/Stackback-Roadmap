@@ -26,6 +26,7 @@ export interface WidgetSettings {
   theme: WidgetTheme;
   hide_prepaid: boolean;
   hide_payg: boolean;
+  /** The explorer calls this "pay per delivery", not AutoPay. Same field. */
   hide_auto_debit: boolean;
   default_payment_mode: "prepaid" | "payg" | "auto_debit";
   default_intent: "auto" | "onetime" | "subscribe";
@@ -111,16 +112,80 @@ export function parseSettings(raw: string | null | undefined): WidgetSettings {
 /** The toggles worth putting in front of a client on a call. The full settings object has
  *  more, but most of it is either a colour or a thing nobody changes, and a wall of 24
  *  switches is how a call stops being about the plans. */
-export const CLIENT_TOGGLES: { key: keyof WidgetSettings; label: string; help: string }[] = [
-  { key: "hide_onetime_option", label: "Hide the one-time option", help: "Subscription only. Converts harder, but stops people defaulting to a single purchase." },
-  { key: "hide_prepaid", label: "Hide prepaid", help: "Removes the pay-upfront option entirely." },
-  { key: "hide_payg", label: "Hide pay as you go", help: "Removes per-delivery billing." },
-  { key: "hide_intent_selector", label: "Hide the one-time / subscribe tabs", help: "Shows the plans directly, with no tab above them." },
-  { key: "tag_shows_per_delivery_price", label: "Show per-delivery price on the tag", help: "The tag carries the price rather than only the saving." },
-  { key: "card_shows_option_title", label: "Show the plan name on the card", help: "Useful when plan names mean something to the customer." },
-  { key: "summary_expanded_by_default", label: "Expand the price breakdown", help: "Shows the full maths without a click." },
-  { key: "hide_free_shipping_line", label: "Hide the free shipping line", help: "Turn off if shipping is not free on subscriptions." },
-  { key: "hide_price_decimals", label: "Hide price decimals", help: "Rounded prices throughout." },
-  { key: "direct_checkout", label: "Subscribe goes straight to checkout", help: "Skips the cart. Fewer steps, and no chance to add anything else." },
-  { key: "hide_branding", label: "Hide StackBack branding", help: "Removes the Powered by line." },
+/** The settings a client is asked about, grouped the way the explorer groups them, with the
+ *  code path each one maps to. `touches` names the preview element the setting changes, so
+ *  hovering a row can highlight exactly what it does: the explorer's own affordance, and the
+ *  thing that makes a wall of switches legible. */
+export interface ToggleDef {
+  key: keyof WidgetSettings;
+  label: string;
+  path: string;
+  help: string;
+  /** data-sb attribute of the element(s) this setting controls. */
+  touches: string;
+}
+
+export interface ToggleGroup {
+  title: string;
+  source: string;
+  items: ToggleDef[];
+}
+
+export const TOGGLE_GROUPS: ToggleGroup[] = [
+  {
+    title: "Payment modes",
+    source: "app/constants/widget-templates.ts \u00b7 portal-templates.ts",
+    items: [
+      { key: "hide_prepaid", label: "Hide prepaid", path: "hide_prepaid", touches: "mode-prepaid",
+        help: "Removes the pay-upfront option." },
+      { key: "hide_payg", label: "Hide pay as you go", path: "hide_payg", touches: "mode-payg",
+        help: "Removes per-delivery billing." },
+      { key: "hide_auto_debit", label: "Hide pay per delivery", path: "hide_auto_debit", touches: "mode-auto",
+        help: "Removes the charge-before-every-delivery option." },
+    ],
+  },
+  {
+    title: "Tabs and defaults",
+    source: "app/constants/portal-templates.ts",
+    items: [
+      { key: "hide_onetime_option", label: "Hide the one-time option", path: "hide_onetime_option", touches: "tab-onetime",
+        help: "Subscription only. Stops people defaulting to a single purchase." },
+      { key: "hide_intent_selector", label: "Hide the tab row", path: "hide_intent_selector", touches: "tabs",
+        help: "Shows the plans directly, with no One-time / Subscribe / Bundle row above them." },
+      { key: "bundle_selector_tabs", label: "Show the bundle tab", path: "bundle_selector_tabs", touches: "tab-bundle",
+        help: "Adds Bundle and Save beside Subscribe and Save." },
+      { key: "hide_product_row", label: "Hide the product row", path: "hide_product_row", touches: "product-row",
+        help: "Removes the thumbnail, variant line and quantity stepper." },
+    ],
+  },
+  {
+    title: "Prices and labels",
+    source: "app/constants/widget-templates.ts",
+    items: [
+      { key: "tag_shows_per_delivery_price", label: "Per-delivery price on the plan card", path: "tag_shows_per_delivery_price", touches: "plan-card",
+        help: "The card carries the price as well as the saving." },
+      { key: "card_shows_option_title", label: "Show the plan name on the card", path: "card_shows_option_title", touches: "plan-card",
+        help: "Useful when plan names mean something to the customer." },
+      { key: "hide_price_decimals", label: "Hide price decimals", path: "hide_price_decimals", touches: "price",
+        help: "Rounded prices throughout." },
+      { key: "use_compare_at_price_for_discount_label", label: "Discount off the compare-at price", path: "use_compare_at_price_for_discount_label", touches: "price",
+        help: "The saving is calculated against the struck-through price rather than the selling price." },
+      { key: "summary_expanded_by_default", label: "Expand the price breakdown", path: "summary_expanded_by_default", touches: "summary",
+        help: "Shows the full maths without a click." },
+      { key: "hide_free_shipping_line", label: "Hide the free shipping line", path: "hide_free_shipping_line", touches: "shipping-line",
+        help: "Turn off if shipping is not free on subscriptions." },
+    ],
+  },
+  {
+    title: "Checkout and branding",
+    source: "extensions/stackback-widgets/blocks/react-purchase-options-test.liquid",
+    items: [
+      { key: "direct_checkout", label: "Subscribe goes straight to checkout", path: "direct_checkout", touches: "cta",
+        help: "Skips the cart. Fewer steps, and no chance to add anything else." },
+      { key: "hide_branding", label: "Hide StackBack branding", path: "hide_branding", touches: "branding",
+        help: "Removes the Powered by line." },
+    ],
+  },
 ];
+
+export const ALL_TOGGLES = TOGGLE_GROUPS.flatMap((g) => g.items);
