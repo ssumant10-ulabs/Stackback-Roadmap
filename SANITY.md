@@ -4,8 +4,9 @@ The Help Centre at `/help` is two parts, and only one of them needs Sanity.
 
 | Part | Content | Source | Needs Sanity |
 |---|---|---|---|
-| Subscription queries | Frequency, plan length, discount and product questions worked through with a client, and the answers | Sanity, document type `merchantQuery` | Yes |
-| Help Centre | 234 FAQs, 17 topics, 4 order-flow diagrams, the flow simulator | Generated from the Help Centre HTML deliverable | No |
+| Your plans | One store: its recommended plans, the queries it still has to answer, its widget settings | Sanity, `store` + `merchantQuery` | Yes |
+| Help Centre | The FAQs, 17 topics, the order-flow diagrams, the simulator | Generated from the Help Centre HTML deliverable | No |
+| Internal | The onboarding checklist, per store | Spine in `lib/help/checklist.ts`, progress on the store in Sanity | Yes |
 
 The FAQ half stays out of the CMS on purpose. Those words live in
 `Project Deliverables/stackback/Operations/StackBack_Merchant_Help_Centre_v<n>.html`, and
@@ -23,8 +24,8 @@ Take the project id it prints and put it in `.env.local` (and in Vercel > Settin
 Environment Variables):
 
 ```
-NEXT_PUBLIC_SANITY_PROJECT_ID=<the id>
-NEXT_PUBLIC_SANITY_DATASET=production
+SANITY_PROJECT_ID=<the id>
+SANITY_DATASET=production
 SANITY_API_WRITE_TOKEN=<Editor token from sanity.io/manage > API > Tokens>
 ```
 
@@ -35,12 +36,8 @@ SANITY_STUDIO_PROJECT_ID=<the id>
 SANITY_STUDIO_DATASET=production
 ```
 
-Then allow the site to read the dataset from the browser and let the Studio talk to it:
-
-```
-npx sanity cors add http://localhost:4341
-npx sanity cors add https://stackback-roadmap.vercel.app
-```
+No CORS entries are needed for the site: the browser never talks to Sanity, only the server
+does. The Studio talks to it from `localhost:3333`, which Sanity allows by default.
 
 ## Running the Studio
 
@@ -66,16 +63,34 @@ Studios also auto-update, which an embedded one cannot.
 Nothing auto-publishes. A merchant's words never reach the public page until a person has
 read them and written a reply.
 
-## One thing to know about the free plan
+## Per-store links, and the free-plan limit behind how they work
 
-On Sanity's free tier a dataset is **public-read**: anyone with the project id can read
-every document in it, including a query still sitting at `status: new`. That is why:
+Each store gets `/help/<slug>`, and the slug is **random, not their name**. That is the link
+you send them; it carries their plan recommendations and the queries you need answered.
 
-- the submission form tells merchants not to include card details, passwords, or customer
-  contact details, and
-- `askedBy` carries the same warning in the Studio.
+On Sanity's free tier a dataset is **public-read**: anyone holding the project id can list
+every document in it, which here would mean every store's pricing. So:
 
-If inbound queries need to be genuinely private, move to a paid plan and switch the dataset
-to private. Nothing in the code changes: it is a setting in `sanity.io/manage`. This is the
-open question recorded in `memory/projects/stackback/open-questions.md` (2026-08-31),
-narrowed to the one dataset that now holds merchant-written text.
+- the project id is **not** exposed to the browser. `SANITY_PROJECT_ID` has no
+  `NEXT_PUBLIC_` prefix, `lib/sanity/client.ts` is `server-only`, and every read happens in
+  a server component and reaches the page as props.
+- the slug is random, so one client's link does not suggest another's.
+
+Be honest about what that is: **obscurity, not a boundary.** It is a reasonable posture for
+a pilot and the wrong one for GA. The real fix is a paid plan with a private dataset, and
+**no code changes when you do it**: it is a setting in `sanity.io/manage`. This narrows the
+open question in `memory/projects/stackback/open-questions.md` (2026-08-31) to the datasets
+that now hold client pricing and client-written text.
+
+Keep contact details out of `askedBy` and `internalNotes` until that switch is made.
+
+## The internal tab
+
+`lib/help/checklist.ts` holds the onboarding spine: 22 steps across Access, Data and plan
+queries, Build, Review and Go live, each owned by us, the client, or both, and each naming
+the step that blocks it. The spine lives in code so every store is measured against the same
+one; only the tick state is per store, on the store document.
+
+Ticking writes through `app/api/help/progress`, which verifies a Firebase ID token against
+Google and checks the email domain before it touches Sanity. A client-side auth check alone
+would mean anyone who can reach the URL can rewrite any store's progress.

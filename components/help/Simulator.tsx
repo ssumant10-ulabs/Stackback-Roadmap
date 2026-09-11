@@ -13,8 +13,8 @@ import { APP_NAME } from "@/lib/help/types";
  *  actual question underneath most of these tickets. Change a number here and the widget,
  *  the checkout and the order schedule all move together, which is the part that is hard
  *  to hold in your head and easy to get wrong on a call. */
-export default function Simulator() {
-  const [c, setC] = useState<SimConfig>(DEFAULT_CONFIG);
+export default function Simulator({ seed, compact }: { seed?: Partial<SimConfig>; compact?: boolean } = {}) {
+  const [c, setC] = useState<SimConfig>({ ...DEFAULT_CONFIG, ...seed });
   const set = <K extends keyof SimConfig>(k: K, v: SimConfig[K]) => setC({ ...c, [k]: v });
 
   const p = useMemo(() => price(c), [c]);
@@ -23,13 +23,25 @@ export default function Simulator() {
 
   return (
     <section>
-      <p className="hc-eyebrow">Simulate</p>
-      <h1 className="hc-h1">What a subscription actually does</h1>
-      <p className="hc-blurb">
-        Set it up the way you are thinking of selling it. The widget, the checkout and the orders
-        {" "}{APP_NAME} creates in the background all move together, so you can see what a frequency
-        or a discount does before you commit to it.
-      </p>
+      {compact ? (
+        <>
+          <h2 className="hc-h2">Simulate it</h2>
+          <p className="hc-blurb">
+            Change anything below and the checkout and the orders move with it. Useful for
+            answering &ldquo;what would fortnightly at 10 percent look like&rdquo; without a call.
+          </p>
+        </>
+      ) : (
+        <>
+          <p className="hc-eyebrow">Simulate</p>
+          <h1 className="hc-h1">What a subscription actually does</h1>
+          <p className="hc-blurb">
+            Set it up the way you are thinking of selling it. The widget, the checkout and the orders
+            {" "}{APP_NAME} creates in the background all move together, so you can see what a frequency
+            or a discount does before you commit to it.
+          </p>
+        </>
+      )}
 
       <div className="hc-simbar">
         <label className="hc-field">
@@ -77,8 +89,8 @@ export default function Simulator() {
       </div>
 
       {/* ---------- stage 1: the product page ---------- */}
-      <h2 className="hc-h2">1 · What the customer sees on the product page</h2>
-      <div className="hc-widget">
+      {!compact && <h2 className="hc-h2">1 · What the customer sees on the product page</h2>}
+      {!compact && <div className="hc-widget">
         <p className="hc-wprod">{c.productName}</p>
         <label className="hc-wopt">
           <input type="radio" readOnly checked={false} />
@@ -111,10 +123,10 @@ export default function Simulator() {
           </div>
         )}
         {p.savings > 0 && <p className="hc-wnote">Customer saves {money(p.savings)} over {money(p.oneTimeTotal)} at the one-time price.</p>}
-      </div>
+      </div>}
 
       {/* ---------- stage 2: checkout ---------- */}
-      <h2 className="hc-h2">2 · What checkout collects</h2>
+      <h2 className="hc-h2">{compact ? "What checkout collects" : "2 · What checkout collects"}</h2>
       <div className="hc-cards hc-simcards">
         <div className="hc-simcard">
           <b>{money(p.chargedNow)}</b>
@@ -136,7 +148,7 @@ export default function Simulator() {
       </div>
 
       {/* ---------- stage 3: the orders ---------- */}
-      <h2 className="hc-h2">3 · The orders {APP_NAME} creates in Shopify</h2>
+      <h2 className="hc-h2">{compact ? `The orders ${APP_NAME} creates` : `3 · The orders ${APP_NAME} creates in Shopify`}</h2>
 
       <div className="hc-parent">
         <div className="hc-ohead">

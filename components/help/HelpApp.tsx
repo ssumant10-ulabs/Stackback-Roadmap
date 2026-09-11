@@ -9,9 +9,10 @@ import { useOptionalAuth } from "./useOptionalAuth";
 import ChatDock from "./ChatDock";
 import Insights from "./Insights";
 import Article from "./Article";
-import Queries from "./Queries";
+import Brief from "./Brief";
+import Internal from "./Internal";
 import Simulator from "./Simulator";
-import type { LoggedQuery } from "@/lib/sanity/queries";
+import type { LoggedQuery, StoreRecord, StoreSummary } from "@/lib/sanity/queries";
 import "./help.css";
 
 type View =
@@ -20,12 +21,13 @@ type View =
   | { kind: "search"; q: string }
   | { kind: "insights" }
   | { kind: "queries" }
-  | { kind: "sim" };
+  | { kind: "sim" }
+  | { kind: "internal" };
 
 /** The Help Centre is two parts, and they answer different questions.
  *  Queries is live and incomplete by nature: what came in, what we answered.
- *  Help Centre is the settled corpus: 234 FAQs, the order flow, the screens. */
-type Part = "queries" | "help";
+ *  Help Centre is the settled corpus: the FAQs, the order flow, the simulator. */
+type Part = "queries" | "help" | "internal";
 
 /** Topics where the question underneath is usually "what would that actually do", which
  *  a simulator answers and a paragraph does not. */
@@ -50,11 +52,19 @@ function parseHash(): View {
   if (route === "insights") return { kind: "insights" };
   if (route === "queries") return { kind: "queries" };
   if (route === "sim") return { kind: "sim" };
+  if (route === "internal") return { kind: "internal" };
   return { kind: "home" };
 }
 
-export default function HelpApp({ answered, sanityConnected, theme: initialTheme }: {
-  answered: LoggedQuery[]; sanityConnected: boolean; theme: "light" | "dark";
+export default function HelpApp({
+  answered, openQueries, store, stores, sanityConnected, theme: initialTheme,
+}: {
+  answered: LoggedQuery[];
+  openQueries: LoggedQuery[];
+  store: StoreRecord | null;
+  stores: StoreSummary[];
+  sanityConnected: boolean;
+  theme: "light" | "dark";
 }) {
   const auth = useOptionalAuth();
   const [view, setView] = useState<View>({ kind: "home" });
@@ -88,7 +98,8 @@ export default function HelpApp({ answered, sanityConnected, theme: initialTheme
     const h = v.kind === "home" ? "#/" : v.kind === "cat" ? `#/cat/${v.id}`
       : v.kind === "search" ? `#/search/${encodeURIComponent(v.q)}`
       : v.kind === "queries" ? "#/queries"
-      : v.kind === "sim" ? "#/sim" : "#/insights";
+      : v.kind === "sim" ? "#/sim"
+      : v.kind === "internal" ? "#/internal" : "#/insights";
     if (window.location.hash !== h) window.location.hash = h; else setView(v);
     setNavOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -131,7 +142,7 @@ export default function HelpApp({ answered, sanityConnected, theme: initialTheme
 
   const submit = (e: React.FormEvent) => { e.preventDefault(); go(q.trim() ? { kind: "search", q: q.trim() } : { kind: "home" }); };
 
-  const part: Part = view.kind === "queries" ? "queries" : "help";
+  const part: Part = view.kind === "queries" ? "queries" : view.kind === "internal" ? "internal" : "help";
   const cat = view.kind === "cat" ? COUNTS.find((c) => c.id === view.id) : undefined;
   const risky = ARTICLES.filter((a) => RISK_STATUSES.includes(a.status)).length;
 
@@ -142,20 +153,24 @@ export default function HelpApp({ answered, sanityConnected, theme: initialTheme
         <a className="hc-brand" href="#/" aria-label="StackBack Help Centre, overview"
           onClick={(e) => { e.preventDefault(); go({ kind: "home" }); }}>
           <Logo />
-          <span className="hc-brandname"><b>{APP_NAME}</b> Help Centre</span>
+          <span className="hc-brandname"><b>{APP_NAME}</b><span className="hc-brandsuffix"> Help Centre</span></span>
         </a>
 
         <div className="hc-parts" role="tablist" aria-label="Help Centre parts">
           <button role="tab" aria-selected={part === "queries"} className={"hc-part" + (part === "queries" ? " on" : "")}
-            onClick={() => go({ kind: "queries" })}>Subscription queries</button>
+            onClick={() => go({ kind: "queries" })}>Your plans</button>
           <button role="tab" aria-selected={part === "help"} className={"hc-part" + (part === "help" ? " on" : "")}
             onClick={() => go({ kind: "home" })}>Help Centre</button>
+          {auth.internal && (
+            <button role="tab" aria-selected={part === "internal"} className={"hc-part hc-partint" + (part === "internal" ? " on" : "")}
+              onClick={() => go({ kind: "internal" })}>Internal</button>
+          )}
         </div>
 
         <form className="hc-searchwrap" onSubmit={submit} role="search">
           <svg className="hc-mag" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="M16 16l4.5 4.5" /></svg>
           <input
-            ref={boxRef} className="hc-search" type="search" value={q} placeholder="Search 234 answers"
+            ref={boxRef} className="hc-search" type="search" value={q} placeholder={`Search ${ARTICLES.length} answers`}
             aria-label="Search the Help Centre"
             /* Search as you type past two characters, which is where the ranking stops being
                noise. Clearing the box returns to the overview rather than leaving a dead
@@ -190,8 +205,8 @@ export default function HelpApp({ answered, sanityConnected, theme: initialTheme
         )}
       </header>
 
-      <div className={"hc-body" + (part === "queries" ? " solo" : "")}>
-        <nav className={"hc-nav" + (navOpen ? " open" : "") + (part === "queries" ? " hidden" : "")} aria-label="Topics">
+      <div className={"hc-body" + (part !== "help" ? " solo" : "")}>
+        <nav className={"hc-nav" + (navOpen ? " open" : "") + (part !== "help" ? " hidden" : "")} aria-label="Topics">
           <button className={"hc-navitem" + (view.kind === "home" ? " on" : "")} onClick={() => go({ kind: "home" })}>
             <span>Overview</span>
           </button>
@@ -214,7 +229,12 @@ export default function HelpApp({ answered, sanityConnected, theme: initialTheme
         </nav>
 
         <main className="hc-main" id="hc-main" tabIndex={-1}>
-          {view.kind === "queries" && <Queries answered={answered} connected={sanityConnected} />}
+          {view.kind === "queries" && (
+            <Brief store={store} open={openQueries} answered={answered} connected={sanityConnected} />
+          )}
+          {view.kind === "internal" && (auth.internal
+            ? <Internal store={store} stores={stores} connected={sanityConnected} getToken={auth.getToken} />
+            : <div className="hc-empty"><p>The internal tab needs a ULABS account.</p></div>)}
           {view.kind === "sim" && <Simulator />}
           {view.kind === "home" && <Home go={go} internal={auth.internal} onAsk={setChatSeed} answered={answered.length} />}
           {view.kind === "cat" && cat && (
@@ -238,7 +258,7 @@ export default function HelpApp({ answered, sanityConnected, theme: initialTheme
               <h1 className="hc-h1">&ldquo;{view.q}&rdquo;</h1>
               {hits.length === 0 && (
                 <div className="hc-empty">
-                  <p>Nothing in the 234 answers matches that. Try a merchant word rather than ours: COD, mandate, pincode, Shiprocket and BOGO all work.</p>
+                  <p>Nothing in the {ARTICLES.length} answers matches that. Try a merchant word rather than ours: COD, mandate, pincode, Shiprocket and BOGO all work.</p>
                   <button className="hc-btn primary" onClick={() => setChatSeed(view.q)}>Ask support instead</button>
                 </div>
               )}
@@ -322,7 +342,7 @@ function Home({ go, internal, onAsk, answered }: {
         <p>Not finding it?</p>
         <button className="hc-btn primary" onClick={() => onAsk("")}>Ask the chat</button>
         <button className="hc-btn" onClick={() => go({ kind: "queries" })}>
-          {answered > 0 ? `Raise a query, or read ${answered} answered` : "Raise a query"}
+          {answered > 0 ? `Raise a query, or read ${answered} answered` : "See your plans"}
         </button>
       </div>
       {internal && <p className="hc-intnote">Internal layer is on. Ask counts, answer risk and the question log are in Insights.</p>}

@@ -28,5 +28,11 @@ export function useOptionalAuth() {
   };
   const signOut = () => { const a = fbAuth(); if (a) void fbSignOut(a); };
 
-  return { user, ready, internal: !!user, available: firebaseEnabled, signIn, signOut };
+  /** A fresh ID token for the privileged write routes. The server verifies it; this side
+   *  only fetches it, and lets the Firebase SDK refresh it when it is close to expiring. */
+  const getToken = async (): Promise<string | null> => {
+    try { return user ? await user.getIdToken() : null; } catch { return null; }
+  };
+
+  return { user, ready, internal: !!user, available: firebaseEnabled, signIn, signOut, getToken };
 }

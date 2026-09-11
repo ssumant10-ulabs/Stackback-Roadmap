@@ -1,22 +1,13 @@
-import { cookies } from "next/headers";
 import HelpApp from "@/components/help/HelpApp";
-import { sanityEnabled } from "@/lib/sanity/client";
-import { fetchAnswered } from "@/lib/sanity/queries";
+import { loadHelp } from "@/lib/help/load";
 
 export const metadata = {
   title: "StackBack Help Centre",
-  description: "Answers to what pilot stores actually asked: plans, bundles, orders, payments and the customer portal.",
+  description: "Subscription plans, the questions behind them, and 236 answers to what pilot stores actually asked.",
 };
 
-/** Deliberately not wrapped in AuthGate. The merchant-facing half is public; signing in
- *  with a ULABS account unlocks the internal layer from inside the page. */
+/** The generic Help Centre: no store in the path, so no recommendations. This is the link
+ *  to hand somebody who is not a store record yet. Per-store pages live at /help/<slug>. */
 export default async function Page() {
-  const answered = await fetchAnswered();
-  /* Theme comes from a cookie rather than localStorage so the server renders the right
-     palette on the first byte: no flash of the wrong theme, and no hydration mismatch from
-     a script rewriting the document before React runs. Light is the default here, unlike
-     the roadmap app which follows the system: somebody opening a help page wants the
-     document, not the console. */
-  const theme = (await cookies()).get("sb-help-theme")?.value === "dark" ? "dark" : "light";
-  return <HelpApp answered={answered} sanityConnected={sanityEnabled} theme={theme} />;
+  return <HelpApp {...await loadHelp()} />;
 }

@@ -6,7 +6,7 @@
  *  What it adds over the search box is judgement about the shape of the reply: answer when
  *  one article clearly wins, ask which one when several are close, and say plainly that
  *  there is no answer when there is not. */
-import { CATEGORIES } from "./corpus";
+import { ARTICLES, CATEGORIES } from "./corpus";
 import { related, search, stripTags, tokenize } from "./search";
 import type { HelpArticle } from "./types";
 
@@ -42,7 +42,7 @@ const FLOOR = 2.6;
 const DECISIVE = 1.45;
 
 const SMALLTALK: [RegExp, string][] = [
-  [/^(hi|hey|hello|yo|namaste|hii+)\b/i, "Hello. Ask me anything about your StackBack setup: plans, bundles, orders, payments, the customer portal. I answer out of the 234 questions pilot stores have actually asked."],
+  [/^(hi|hey|hello|yo|namaste|hii+)\b/i, `Hello. Ask me anything about your StackBack setup: plans, bundles, orders, payments, the customer portal. I answer out of the ${ARTICLES.length} questions pilot stores have actually asked.`],
   [/^(thanks|thank you|thx|ty|great|perfect|got it|cool)\b/i, "Glad that helped. Anything else?"],
   [/(human|person|team|agent|support|talk to someone|call me)/i, "I can hand this to the team. Use **Send to the team** below the chat and it will carry your question and what I showed you, so nobody asks you to repeat it."],
   [/^(bye|thats all|that's all|nothing)\b/i, "Right. The categories on the left hold everything I know, if you would rather browse."],
@@ -152,5 +152,5 @@ export function transcript(turns: Turn[]): string {
 
 export const OPENER: Turn = {
   id: "opener", role: "help", kind: "chat", at: 0,
-  text: "Ask a question the way you would ask it on a call. I search 234 answers written from what pilot stores actually asked, and I will tell you when I do not have one.",
+  text: `Ask a question the way you would ask it on a call. I search ${ARTICLES.length} answers written from what pilot stores actually asked, and I will tell you when I do not have one.`,
 };

@@ -1,3 +1,4 @@
 import { merchantQuery } from "./merchantQuery";
+import { store } from "./store";
 
-export const schemaTypes = [merchantQuery];
+export const schemaTypes = [store, merchantQuery];

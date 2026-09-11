@@ -1,4 +1,4 @@
-/** Retrieval over the 234-article corpus. Runs entirely in the browser: no API key, no
+/** Retrieval over the article corpus. Runs entirely in the browser: no API key, no
  *  server round trip, no third-party widget. The corpus is small enough that an honest
  *  ranked scan beats anything that needs a network hop, and it keeps working offline. */
 import { ARTICLES, CATEGORIES } from "./corpus";

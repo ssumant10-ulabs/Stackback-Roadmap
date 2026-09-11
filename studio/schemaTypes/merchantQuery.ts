@@ -98,6 +98,12 @@ export const merchantQuery = defineType({
         "Never rendered on the merchant-facing tab. On a free Sanity plan the dataset is public-read, so treat anything typed here as published: no phone numbers, no email addresses, no order ids.",
     }),
     defineField({
+      name: "store",
+      type: "reference",
+      to: [{ type: "store" }],
+      description: "Which client raised it. Leave empty for a query that belongs on every store's page.",
+    }),
+    defineField({
       name: "raisedAt",
       type: "datetime",
       initialValue: () => new Date().toISOString(),
