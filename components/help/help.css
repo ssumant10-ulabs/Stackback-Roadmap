@@ -784,3 +784,42 @@
   .hc-steps-nav em { display: none; }
   .hc-fchoices { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* ---------------------------------------------------------------- form: suggester, bands */
+.hc-formgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 320px); gap: 22px; align-items: start; }
+.hc-suggest { position: sticky; top: 78px; background: var(--card); border: 1px solid var(--border); border-radius: 13px; padding: 15px 16px; box-shadow: var(--shadow); }
+.hc-suggesth { margin: 0 0 3px; font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--hc-muted); }
+.hc-suggestcat { margin: 0 0 11px; font-size: 15px; font-weight: 720; }
+.hc-suggestrows { margin: 0 0 12px; }
+.hc-suggestrows > div { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid var(--border); }
+.hc-suggestrows dt { font-size: 12px; color: var(--hc-muted); flex: none; }
+.hc-suggestrows dd { margin: 0; font-size: 12.5px; font-weight: 620; text-align: right; }
+.hc-suggestwhy { margin: 0 0 13px; font-size: 12px; line-height: 1.6; color: var(--ink-2); }
+.hc-suggestnote { margin-top: 10px; }
+
+.hc-bands { display: flex; flex-wrap: wrap; gap: 8px; }
+.hc-band { display: flex; align-items: center; gap: 7px; border: 1px solid var(--border-2); border-radius: 10px; padding: 7px 11px; background: var(--page); }
+.hc-band > span { font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+.hc-band input { width: 54px; appearance: none; font: inherit; font-size: 13px; text-align: right; padding: 4px 6px; border: 1px solid var(--border-2); border-radius: 7px; background: var(--card); color: var(--ink); }
+.hc-band input:focus { outline: 2px solid var(--brand-deep); outline-offset: 1px; }
+.hc-band i { font-style: normal; font-size: 12px; color: var(--hc-muted); }
+
+/* ---------------------------------------------------------------- widget additions */
+.hc-wonetime { margin: 0; padding: 14px 13px; font-size: .86em; line-height: 1.6; }
+.hc-wship { margin: 0; display: flex; align-items: center; gap: 7px; font-size: .84em; font-weight: 600; }
+.hc-wship i { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+.hc-brandnote { margin: 0 0 14px; padding: 10px 12px; background: var(--sunken); border-radius: 9px; font-size: 12px; line-height: 1.55; color: var(--ink-2); }
+.hc-wtoggle.wide { display: block; }
+.hc-wtoggle select, .hc-wtoggle input[type=text] {
+  display: block; width: 100%; margin-top: 6px; appearance: none; font: inherit; font-size: 12.5px;
+  padding: 7px 9px; border: 1px solid var(--border-2); border-radius: 8px; background: var(--page); color: var(--ink);
+}
+.hc-wtoggle select:focus, .hc-wtoggle input[type=text]:focus { outline: 2px solid var(--brand-deep); outline-offset: 1px; }
+
+/* ---------------------------------------------------------------- payg gate */
+.hc-pendingrow { opacity: .96; }
+.hc-pendingrow td { background: repeating-linear-gradient(135deg, transparent, transparent 7px, var(--sunken) 7px, var(--sunken) 14px); }
+.hc-noorder { color: var(--hc-muted); font-size: 11.5px; }
+.hc-await { color: var(--hc-limit); font-weight: 650; }
+
+@media (max-width: 1099px) { .hc-formgrid { grid-template-columns: minmax(0, 1fr); } .hc-suggest { position: static; } }

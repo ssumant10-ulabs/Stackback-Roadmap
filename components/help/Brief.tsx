@@ -5,7 +5,7 @@ import { QUERY_TOPIC_NAME } from "@/lib/help/topics";
 import { parseSettings, type WidgetSettings } from "@/lib/help/widget";
 import { APP_NAME } from "@/lib/help/types";
 import { DEFAULT_CONFIG, money, planOptions, type SimConfig } from "@/lib/help/sim";
-import { DEFAULT_ANSWERS, type Answers } from "@/lib/help/questions";
+import { DEFAULT_ANSWERS, parseBands, parseList, parseNames, type Answers } from "@/lib/help/questions";
 import type { LoggedQuery, PlanRec, StoreRecord } from "@/lib/sanity/queries";
 import PlanForm from "./PlanForm";
 import WidgetPreview from "./WidgetPreview";
@@ -41,7 +41,6 @@ export default function Brief({ store, open, answered, connected }: {
 }) {
   const [step, setStep] = useState(1);
   const [answers, setAnswers] = useState<Answers>(DEFAULT_ANSWERS);
-  const [brand, setBrand] = useState(store?.name || "");
   const [settings, setSettings] = useState<WidgetSettings>(() => parseSettings(store?.widgetSettings));
   const [cfg, setCfg] = useState<SimConfig>(() => ({ ...DEFAULT_CONFIG }));
   const [active, setActive] = useState(0);
@@ -52,14 +51,25 @@ export default function Brief({ store, open, answered, connected }: {
   /* The form's answers are the source for everything downstream, so step 2 and 3 show the
      client their own choices rather than our defaults. A store's recommendation seeds them
      when there is one. */
+  const runs = useMemo(() => parseList(answers.deliveries), [answers.deliveries]);
+  const bands = useMemo(
+    () => (answers.tiered === "yes" ? parseBands(answers.bands) : {}),
+    [answers.tiered, answers.bands],
+  );
+
   useEffect(() => {
+    const freqs = (Array.isArray(answers.every_days) ? answers.every_days : []).map(Number).filter(Boolean);
+    const names = parseNames(answers.scope_detail);
     setCfg((prev) => ({
       ...prev,
-      everyDays: Number(answers.every_days) || prev.everyDays,
-      deliveries: Number(answers.deliveries) || prev.deliveries,
-      discountPct: Number(answers.discount_pct) || 0,
-      mode: answers.default_mode === "payg" ? "payg" : "prepaid",
-      productName: (typeof answers.scope_detail === "string" && answers.scope_detail) || prev.productName,
+      // The first frequency and the shortest run are what the orders below are drawn for.
+      // A store can offer several of each; the simulation has to pick one to be about.
+      everyDays: freqs[0] || prev.everyDays,
+      deliveries: runs[0] || prev.deliveries,
+      discountPct: answers.tiered === "yes"
+        ? (bands[runs[0]] ?? prev.discountPct)
+        : Number(answers.discount_pct) || 0,
+      productName: names[0] || "Dummy product",
     }));
     const modes = Array.isArray(answers.modes) ? answers.modes : [];
     setSettings((s) => ({
@@ -67,23 +77,22 @@ export default function Brief({ store, open, answered, connected }: {
       hide_prepaid: !modes.includes("prepaid"),
       hide_payg: !modes.includes("payg"),
       hide_auto_debit: !modes.includes("auto_debit"),
-      default_payment_mode: (answers.default_mode as WidgetSettings["default_payment_mode"]) || s.default_payment_mode,
+      hide_free_shipping_line: answers.shipping_kind !== "free",
     }));
-  }, [answers]);
+  }, [answers, runs, bands]);
 
   useEffect(() => {
     if (!rec) return;
     setAnswers((a) => ({
       ...a,
       scope_kind: rec.scope, scope_detail: rec.scopeDetail || "",
-      every_days: String(rec.everyDays), deliveries: String(rec.deliveries),
+      every_days: [String(rec.everyDays)], deliveries: String(rec.deliveries),
       discount_pct: String(rec.discountPct),
-      default_mode: rec.mode === "payg" ? "payg" : "prepaid",
     }));
     setCfg((prev) => ({ ...prev, unitPrice: rec.unitPrice || prev.unitPrice }));
   }, [rec]);
 
-  const plans = useMemo(() => planOptions(cfg), [cfg]);
+  const plans = useMemo(() => planOptions(cfg, runs, bands, settings.schedule_text_format), [cfg, runs, bands, settings.schedule_text_format]);
   const go = (n: number) => { setStep(n); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
   return (
@@ -118,7 +127,6 @@ export default function Brief({ store, open, answered, connected }: {
       {step === 1 && (
         <PlanForm
           answers={answers} onAnswers={setAnswers}
-          brand={brand} onBrand={setBrand}
           storeId={store?._id ?? null} storeName={store?.name ?? null}
           connected={connected} onDone={() => go(2)}
         />

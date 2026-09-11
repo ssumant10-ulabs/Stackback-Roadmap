@@ -73,7 +73,11 @@ export default function WidgetPreview({
                 <Tab t={t} on={intent === "onetime"} onClick={() => setIntent("onetime")} label="One-time" className={lit("tab-onetime")} />
               )}
               <Tab t={t} on={intent === "subscribe"} onClick={() => setIntent("subscribe")}
-                label="Subscribe &" accentWord="Save" sub={`UP TO ${best}% OFF`} />
+                label="Subscribe &" accentWord="Save" sub={
+                  s.tab_discount_format === "amount"
+                    ? `SAVE ${money(unitPrice * (best / 100))}`
+                    : `${s.tab_badge_shows_plan_discount ? "EXTRA " : "UP TO "}${best}% OFF`
+                } />
               {s.bundle_selector_tabs && (
                 <Tab t={t} on={intent === "bundle"} onClick={() => setIntent("bundle")}
                   label="Bundle & Save" sub={`${best}% OFF`} className={lit("tab-bundle")} />
@@ -119,6 +123,12 @@ export default function WidgetPreview({
             </div>
           )}
 
+          {intent === "onetime" ? (
+            <p className="hc-wonetime" style={{ background: t.surfaces.mutedSurface, color: t.text.secondary, borderRadius: radius - 4 }}>
+              No schedule on a one-time purchase. The customer buys once at {money(unitPrice)},
+              and the theme&rsquo;s own Add to cart takes over.
+            </p>
+          ) : (<>
           <p className="hc-wsection" style={{ color: t.text.muted }}>Pick your schedule</p>
           <div className={"hc-wplans" + lit("plan-card")}>
             {plans.map((plan, i) => {
@@ -153,6 +163,13 @@ export default function WidgetPreview({
               );
             })}
           </div>
+
+          {!s.hide_free_shipping_line && (
+            <p className={"hc-wship" + lit("shipping-line")} style={{ color: t.colors.savings }}>
+              <i style={{ background: t.colors.savings }} />Free shipping on every delivery
+            </p>
+          )}
+          </>)}
 
           <div className="hc-wfootline" style={{ borderColor: t.borders.default }}>
             <span className="hc-wpolicy" style={{ color: t.text.secondary }}>
@@ -212,6 +229,10 @@ export default function WidgetPreview({
             <p>Measured on your own brand colours. A reading problem for some customers on some screens, and a colour change rather than a code change.</p>
           </div>
         )}
+        <p className="hc-brandnote">
+          Colours, fonts and corner radius are set from your brand once we build. What is drawn here
+          is the shape of the widget, not its final palette.
+        </p>
         <p className="hc-wtogglesh">What the customer sees</p>
         <p className="hc-note hc-wtoggleshelp">Hover a setting to see what it changes in the preview.</p>
 
@@ -220,12 +241,29 @@ export default function WidgetPreview({
             <p className="hc-tgrouph">{g.title}<em>{g.items.length}</em></p>
             <p className="hc-tgroups">{g.source}</p>
             {g.items.map((d) => (
-              <label key={String(d.key)} className="hc-wtoggle"
+              <label key={String(d.key)} className={"hc-wtoggle" + (d.kind ? " wide" : "")}
                 onMouseOver={() => setHot(d.touches)} onMouseOut={() => setHot(null)}
                 onFocus={() => setHot(d.touches)} onBlur={() => setHot(null)}>
-                <input type="checkbox" checked={Boolean(s[d.key])}
-                  onChange={(e) => onChange({ ...s, [d.key]: e.target.checked })} />
-                <span>{d.label}<code>{d.path}</code><em>{d.help}</em></span>
+                {!d.kind && (
+                  <input type="checkbox" checked={Boolean(s[d.key])}
+                    onChange={(e) => onChange({ ...s, [d.key]: e.target.checked })} />
+                )}
+                <span>
+                  {d.label}
+                  <code>{d.path}</code>
+                  {d.kind === "select" && (
+                    <select value={String(s[d.key] ?? "")}
+                      onChange={(e) => onChange({ ...s, [d.key]: e.target.value })}>
+                      {d.options?.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  )}
+                  {d.kind === "text" && (
+                    <input type="text" value={String(s[d.key] ?? "")} maxLength={120}
+                      placeholder="Leave empty to hide it"
+                      onChange={(e) => onChange({ ...s, [d.key]: e.target.value })} />
+                  )}
+                  <em>{d.help}</em>
+                </span>
               </label>
             ))}
           </div>

@@ -91,7 +91,8 @@ export default function Simulator({ seed, compact, config, onConfig, hideOrders,
         That one checkout becomes <b>{c.deliveries + 1} orders</b>: a parent that takes the money and
         one child per delivery that ships. The parent and the first child are written
         <b> at the same minute</b>, which is the pair most often reported to us as a duplicate.
-        This is how the list reads.
+        Everything after that is pushed to Shopify <b>only once it is paid</b>, which is the
+        difference between the two columns below.
       </p>
 
       <div className="hc-modecols">
@@ -104,7 +105,7 @@ export default function Simulator({ seed, compact, config, onConfig, hideOrders,
         <li>Each <b>child</b> carries the real product, is left unfulfilled, and carries the shipping. Your 3PL ships these</li>
         <li>Children after the first appear <b>{c.leadDays} {c.leadDays === 1 ? "day" : "days"} before</b> their delivery date.
           That is <code>time_to_delivery</code>, a per-store setting. Tell us what your warehouse needs</li>
-        <li>On pay as you go an <b>unpaid</b> delivery cannot be pushed, by us or by you. That is what stops anything shipping unpaid</li>
+        <li>On pay as you go, <b>no Shopify order exists</b> for an unpaid delivery. It is not an unpaid order sitting in your admin, it is not there at all, which is what stops anything shipping unpaid</li>
       </ul>
 
       </>)}
@@ -154,19 +155,22 @@ function ModeColumn({ mode, c, p, rows }: {
               <td><Tag>parent</Tag><Tag>id-1989</Tag></td>
             </tr>
             {rows.map((o) => (
-              <tr key={o.n} className={o.withParent ? "hc-togetherrow" : ""}>
-                <td><b>#{base + o.n}</b></td>
+              <tr key={o.n} className={o.withParent ? "hc-togetherrow" : o.paidAtCheckout ? "" : "hc-pendingrow"}>
+                <td>{o.paidAtCheckout ? <b>#{base + o.n}</b> : <span className="hc-noorder">not yet</span>}</td>
                 <td>
-                  {fmtDate(o.createdOn)}
+                  {o.paidAtCheckout ? fmtDate(o.createdOn) : <b className="hc-await">Waits for payment</b>}
                   {o.withParent ? <em className="hc-same">same minute as the parent</em>
-                    : <em>delivers {fmtDate(o.deliveryDate)}</em>}
+                    : o.paidAtCheckout ? <em>delivers {fmtDate(o.deliveryDate)}</em>
+                    : <em>invoice {fmtDate(o.invoicedOn ?? o.createdOn)}, delivers {fmtDate(o.deliveryDate)}</em>}
                 </td>
-                <td>StackBack Subscriptions &amp; More</td>
+                <td>{o.paidAtCheckout ? "StackBack Subscriptions & More" : <span className="hc-noorder">no order exists yet</span>}</td>
                 <td className="hc-num">{money(o.amount)}</td>
-                <td>{o.paidAtCheckout ? <><Dot tone="ok" />Paid</> : <><Dot tone="warn" />Unpaid</>}</td>
-                <td><Dot tone="warn" />Unfulfilled</td>
-                <td>Free Shipping</td>
-                <td><Tag>child</Tag><Tag>subscription</Tag><Tag>scheduler</Tag><Tag>automated</Tag></td>
+                <td>{o.paidAtCheckout ? <><Dot tone="ok" />Paid</> : <><Dot tone="warn" />Awaiting payment</>}</td>
+                <td>{o.paidAtCheckout ? <><Dot tone="warn" />Unfulfilled</> : <span className="hc-noorder">&mdash;</span>}</td>
+                <td>{o.paidAtCheckout ? "Free Shipping" : <span className="hc-noorder">&mdash;</span>}</td>
+                <td>{o.paidAtCheckout
+                  ? <><Tag>child</Tag><Tag>subscription</Tag><Tag>scheduler</Tag><Tag>automated</Tag></>
+                  : <span className="hc-noorder">&mdash;</span>}</td>
               </tr>
             ))}
           </tbody>
@@ -175,8 +179,8 @@ function ModeColumn({ mode, c, p, rows }: {
 
       <p className="hc-modefoot">
         {prepaid
-          ? `All ${c.deliveries} paid up front. Each child draws down the store credit as it is created.`
-          : `${money(p.chargedLater)} still to collect. Each child is invoiced ${3 + c.leadDays} days before its delivery and cannot be pushed until it is paid.`}
+          ? `All ${c.deliveries} are already paid, so StackBack pushes each order to Shopify on schedule, ${c.leadDays} days before its delivery, drawing down the store credit.`
+          : `Only the first is paid. For every later delivery StackBack sends an invoice ${3 + c.leadDays} days ahead and pushes the order to Shopify ONLY once that invoice is paid. Rows above with no order number do not exist in Shopify yet.`}
       </p>
     </div>
   );

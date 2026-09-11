@@ -66,7 +66,7 @@ export function runLabel(everyDays: number, deliveries: number): string {
 }
 
 export const DEFAULT_CONFIG: SimConfig = {
-  productName: "Cold pressed coffee, 250g",
+  productName: "Dummy product",
   unitPrice: 750,
   deliveries: 6,
   everyDays: 14,
@@ -175,24 +175,35 @@ export const fmtDate = (d: Date) =>
  *  beside it is the pattern every screenshot shows, because a tiered discount is how these
  *  stores sell a longer plan. Both are derived from the configured run so the numbers on the
  *  card always agree with the orders underneath. */
-export function planOptions(c: SimConfig): PlanOption[] {
-  const freq = c.everyDays === 7 ? "Every week" : c.everyDays === 14 ? "Every 2 weeks"
-    : c.everyDays === 30 ? "Every 1 month" : c.everyDays === 60 ? "Every 2 months"
-    : `Every ${c.everyDays} days`;
+export function planOptions(
+  c: SimConfig,
+  runs: number[] = [c.deliveries],
+  bands: Record<number, number> = {},
+  format: "frequency-deliveries" | "cadence" | "none" = "frequency-deliveries",
+): PlanOption[] {
+  const freq = freqWord(c.everyDays);
 
-  const make = (deliveries: number, discountPct: number): PlanOption => {
+  const line = (deliveries: number) => {
+    if (format === "none") return "";
+    // The codebase's own wording for each format. "cadence" is what a client asked for and
+    // what the widget already supports; inventing a third phrasing here would just be wrong.
+    if (format === "cadence") return `1 delivery ${freq.toLowerCase()}`;
+    return `${freq} \u00b7 ${deliveries} deliver${deliveries === 1 ? "y" : "ies"}`;
+  };
+
+  const list = (runs.length ? runs : [c.deliveries]).slice(0, 4);
+  return list.map((deliveries) => {
+    const discountPct = Number.isFinite(bands[deliveries]) ? bands[deliveries] : c.discountPct;
     const perDelivery = c.unitPrice * (1 - discountPct / 100);
     return {
       title: runLabel(c.everyDays, deliveries),
-      schedule: `${freq} \u00b7 ${deliveries} deliver${deliveries === 1 ? "y" : "ies"}`,
+      schedule: line(deliveries),
       deliveries, everyDays: c.everyDays, discountPct,
       perDelivery, total: perDelivery * deliveries,
     };
-  };
-
-  // A longer run at a better rate, capped so a generous headline discount cannot produce
-  // a second tier that is implausible.
-  const longer = c.deliveries * 2;
-  const bump = Math.min(90, c.discountPct + 5);
-  return [make(c.deliveries, c.discountPct), make(longer, bump)];
+  });
 }
+
+export const freqWord = (d: number) =>
+  d === 7 ? "Every week" : d === 14 ? "Every 2 weeks" : d === 30 ? "Every month"
+  : d === 60 ? "Every 2 months" : `Every ${d} days`;
