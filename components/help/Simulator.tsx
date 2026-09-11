@@ -16,10 +16,12 @@ import { APP_NAME } from "@/lib/help/types";
  *
  *  So both modes are shown at once rather than behind a toggle. "What is the difference
  *  between prepaid and pay as you go" is answered by putting them next to each other. */
-export default function Simulator({ seed, compact, config, onConfig }: {
+export default function Simulator({ seed, compact, config, onConfig, hideOrders, ordersOnly }: {
   seed?: Partial<SimConfig>; compact?: boolean;
   /** When given, the caller owns the numbers and other things on the page read them too. */
   config?: SimConfig; onConfig?: (next: SimConfig) => void;
+  /** The wizard splits this across two steps: the controls on one, the orders on the next. */
+  hideOrders?: boolean; ordersOnly?: boolean;
 } = {}) {
   const [own, setOwn] = useState<SimConfig>({ ...DEFAULT_CONFIG, ...seed });
   const c = config ?? own;
@@ -31,7 +33,7 @@ export default function Simulator({ seed, compact, config, onConfig }: {
 
   return (
     <section>
-      {compact ? (
+      {ordersOnly ? null : compact ? (
         <h2 className="hc-h2">Simulate it</h2>
       ) : (
         <>
@@ -39,13 +41,14 @@ export default function Simulator({ seed, compact, config, onConfig }: {
           <h1 className="hc-h1">One checkout, several orders</h1>
         </>
       )}
+      {!ordersOnly && (<>
       <p className="hc-blurb">
         Set a plan up the way you are thinking of selling it. Below it: what the customer does,
         then what {APP_NAME} creates in your Shopify admin once they have done it, on both payment
         types. Change anything and both move.
       </p>
 
-      <div className="hc-simbar hc-simbar-row">
+      {!ordersOnly && <div className="hc-simbar hc-simbar-row">
         <label className="hc-field hc-simnum">
           <span>One-time price</span>
           <input type="number" min={1} step={10} value={c.unitPrice}
@@ -77,33 +80,11 @@ export default function Simulator({ seed, compact, config, onConfig }: {
           <input type="date" value={c.startDate || startOf(c).toISOString().slice(0, 10)}
             onChange={(e) => set("startDate", e.target.value)} />
         </label>
-      </div>
+      </div>}
 
-      {/* ------------------------------------------------ the customer's side */}
-      <h2 className="hc-h2">What the customer does</h2>
-      <p className="hc-note">One page, one choice, one payment. They never see any of the backend flow below.</p>
-      <ol className="hc-userflow">
-        <li>
-          <b>Opens the product page</b>
-          <span>Sees the one-time price at {money(c.unitPrice)}, and a subscription option beside it.</span>
-        </li>
-        <li>
-          <b>Picks the subscription</b>
-          <span>
-            {FREQUENCIES.find((f) => f.days === c.everyDays)?.label.toLowerCase()}, {c.deliveries} deliveries,
-            {" "}{money(prepaid.p.perDelivery)} each instead of {money(c.unitPrice)}.
-          </span>
-        </li>
-        <li>
-          <b>Chooses how to pay</b>
-          <span>Prepaid, {money(prepaid.p.chargedNow)} now for the whole run. Or pay as you go, {money(payg.p.chargedNow)} now and the rest per delivery.</span>
-        </li>
-        <li>
-          <b>Checks out once</b>
-          <span>That is the last action they take. Every delivery after this happens on its own.</span>
-        </li>
-      </ol>
+      </>)}
 
+      {!hideOrders && (<>
       {/* ------------------------------------------------ the store's side */}
       <h2 className="hc-h2">What lands in your Shopify orders</h2>
       <p className="hc-blurb hc-flowlede">
@@ -126,10 +107,12 @@ export default function Simulator({ seed, compact, config, onConfig }: {
         <li>On pay as you go an <b>unpaid</b> delivery cannot be pushed, by us or by you. That is what stops anything shipping unpaid</li>
       </ul>
 
-      <p className="hc-note hc-simfoot">
+      </>)}
+
+      {!hideOrders && <p className="hc-note hc-simfoot">
         This models the behaviour the answers describe. It is a teaching tool, not a preview of your store:
         it does not read your catalogue, your shipping rates or your tax settings.
-      </p>
+      </p>}
     </section>
   );
 }

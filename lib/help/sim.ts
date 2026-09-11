@@ -42,6 +42,18 @@ export const FREQUENCIES = [
   { label: "Every 2 months", days: 60 },
 ];
 
+export interface PlanOption {
+  /** "3 months plan". The card's headline. */
+  title: string;
+  /** "Every 1 month \u00b7 3 deliveries". The line under it. */
+  schedule: string;
+  deliveries: number;
+  everyDays: number;
+  discountPct: number;
+  perDelivery: number;
+  total: number;
+}
+
 /** How the plan card names a run length. A monthly plan counts in months; anything shorter
  *  counts in weeks, because "26 weeks plan" is how you describe half a year to nobody. */
 export function runLabel(everyDays: number, deliveries: number): string {
@@ -157,3 +169,30 @@ export function schedule(c: SimConfig, mode: Mode = c.mode): ChildOrder[] {
 
 export const fmtDate = (d: Date) =>
   d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+
+
+/** The schedule options a widget offers. A run of N is one option; the longer commitment
+ *  beside it is the pattern every screenshot shows, because a tiered discount is how these
+ *  stores sell a longer plan. Both are derived from the configured run so the numbers on the
+ *  card always agree with the orders underneath. */
+export function planOptions(c: SimConfig): PlanOption[] {
+  const freq = c.everyDays === 7 ? "Every week" : c.everyDays === 14 ? "Every 2 weeks"
+    : c.everyDays === 30 ? "Every 1 month" : c.everyDays === 60 ? "Every 2 months"
+    : `Every ${c.everyDays} days`;
+
+  const make = (deliveries: number, discountPct: number): PlanOption => {
+    const perDelivery = c.unitPrice * (1 - discountPct / 100);
+    return {
+      title: runLabel(c.everyDays, deliveries),
+      schedule: `${freq} \u00b7 ${deliveries} deliver${deliveries === 1 ? "y" : "ies"}`,
+      deliveries, everyDays: c.everyDays, discountPct,
+      perDelivery, total: perDelivery * deliveries,
+    };
+  };
+
+  // A longer run at a better rate, capped so a generous headline discount cannot produce
+  // a second tier that is implausible.
+  const longer = c.deliveries * 2;
+  const bump = Math.min(90, c.discountPct + 5);
+  return [make(c.deliveries, c.discountPct), make(longer, bump)];
+}
