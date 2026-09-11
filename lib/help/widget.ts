@@ -115,7 +115,6 @@ export const CLIENT_TOGGLES: { key: keyof WidgetSettings; label: string; help: s
   { key: "hide_onetime_option", label: "Hide the one-time option", help: "Subscription only. Converts harder, but stops people defaulting to a single purchase." },
   { key: "hide_prepaid", label: "Hide prepaid", help: "Removes the pay-upfront option entirely." },
   { key: "hide_payg", label: "Hide pay as you go", help: "Removes per-delivery billing." },
-  { key: "hide_auto_debit", label: "Hide UPI AutoPay", help: "Removes the mandate option." },
   { key: "hide_intent_selector", label: "Hide the one-time / subscribe tabs", help: "Shows the plans directly, with no tab above them." },
   { key: "tag_shows_per_delivery_price", label: "Show per-delivery price on the tag", help: "The tag carries the price rather than only the saving." },
   { key: "card_shows_option_title", label: "Show the plan name on the card", help: "Useful when plan names mean something to the customer." },

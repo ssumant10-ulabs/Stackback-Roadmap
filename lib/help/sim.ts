@@ -4,8 +4,11 @@
  *   - one checkout creates a parent order that collects the money, plus one child order
  *     per delivery, and the parent never ships (it carries a helper line and is
  *     auto-fulfilled, which is why it must be filtered out of revenue reports);
- *   - a child order is created `time_to_delivery` days BEFORE its delivery date, not on
- *     it, so the warehouse can pick. That is a per-store setting defaulting to 7;
+ *   - the parent order and the FIRST child order are created together, at checkout. This is
+ *     the single most reported piece of confusion in the product: a merchant sees two orders
+ *     appear at once and reads it as a duplicate or a double charge. It is neither;
+ *   - every LATER child order is created `time_to_delivery` days before its delivery date,
+ *     not on it, so the warehouse can pick. That is a per-store setting defaulting to 7;
  *   - on prepaid the whole run is paid at checkout and sits as store credit, debited as
  *     each child order is created;
  *   - on pay as you go only the first delivery is paid at checkout. Each later one is
@@ -85,9 +88,11 @@ export interface ChildOrder {
   deliveryDate: Date;
   /** When StackBack creates the Shopify order. */
   createdOn: Date;
-  /** Created the moment the subscription starts, because the delivery is already inside
-   *  the lead window. Merchants read this as a duplicate order; it is not. */
-  immediate: boolean;
+  /** Cut at checkout, in the same moment as the parent order. True for delivery 1, always.
+   *  This is the pair a merchant reads as a duplicate. */
+  withParent: boolean;
+  /** A later delivery whose lead window has already passed, so its order is cut now too. */
+  early: boolean;
   /** PAYG only: when the invoice for this delivery goes out. */
   invoicedOn: Date | null;
   amount: number;
@@ -110,24 +115,29 @@ export function startOf(c: SimConfig): Date {
   return addDays(new Date(), 14);
 }
 
-export function schedule(c: SimConfig): ChildOrder[] {
-  const p = price(c);
+export function schedule(c: SimConfig, mode: Mode = c.mode): ChildOrder[] {
+  const p = price({ ...c, mode });
   const first = startOf(c);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   return Array.from({ length: c.deliveries }, (_, i) => {
     const deliveryDate = addDays(first, i * c.everyDays);
+    // Delivery 1's order is cut at checkout, alongside the parent. Later ones wait for
+    // their lead window. Treating delivery 1 like the rest is what makes a simulator
+    // disagree with the store a merchant is looking at.
+    const atCheckout = i === 0;
     const due = addDays(deliveryDate, -c.leadDays);
-    const immediate = due <= today;
+    const createdOn = atCheckout ? today : (due <= today ? today : due);
     return {
       n: i + 1,
       deliveryDate,
-      createdOn: immediate ? today : due,
-      immediate,
-      invoicedOn: c.mode === "payg" && i > 0 ? addDays(due, -3) : null,
+      createdOn,
+      withParent: atCheckout,
+      early: !atCheckout && due <= today,
+      invoicedOn: mode === "payg" && i > 0 ? addDays(due, -3) : null,
       amount: p.perDelivery,
-      paidAtCheckout: c.mode === "prepaid" || i === 0,
+      paidAtCheckout: mode === "prepaid" || i === 0,
     };
   });
 }

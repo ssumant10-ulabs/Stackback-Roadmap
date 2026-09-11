@@ -6,6 +6,7 @@ import { parseSettings, type WidgetSettings } from "@/lib/help/widget";
 import { APP_NAME } from "@/lib/help/types";
 import { money } from "@/lib/help/sim";
 import type { LoggedQuery, PlanRec, StoreRecord } from "@/lib/sanity/queries";
+import AnswerQueries from "./AnswerQueries";
 import WidgetPreview from "./WidgetPreview";
 import Simulator from "./Simulator";
 
@@ -31,7 +32,12 @@ export default function Brief({ store, open, answered, connected }: {
   answered: LoggedQuery[];
   connected: boolean;
 }) {
-  const [settings, setSettings] = useState<WidgetSettings>(() => parseSettings(store?.widgetSettings));
+  /* AutoPay is not offered on this screen. It is a live payment mode in the product, but it
+     is not one we put in front of a client while plans are still being agreed, so the
+     preview never shows it and there is no toggle to turn it back on here. */
+  const [settings, setSettings] = useState<WidgetSettings>(
+    () => ({ ...parseSettings(store?.widgetSettings), hide_auto_debit: true }),
+  );
   const recs = store?.recommendations || [];
   const [active, setActive] = useState(0);
   const rec: PlanRec | undefined = recs[active];
@@ -68,16 +74,10 @@ export default function Brief({ store, open, answered, connected }: {
       {open.length > 0 ? (
         <>
           <p className="hc-note">
-            Nothing gets built until these are answered. Reply on WhatsApp, or raise anything back at us below.
+            Nothing gets built until these are answered. Answer them here and they are filed against your
+            brand, so the decision is on a page rather than three hundred messages up a thread.
           </p>
-          <ol className="hc-openq">
-            {open.map((q) => (
-              <li key={q._id}>
-                <b>{q.question}</b>
-                {q.topic && <span>{QUERY_TOPIC_NAME.get(q.topic)}</span>}
-              </li>
-            ))}
-          </ol>
+          <AnswerQueries queries={open} storeId={store?._id ?? null} storeName={store?.name ?? null} connected={connected} />
         </>
       ) : (
         <ol className="hc-openq hc-openq-generic">

@@ -64,6 +64,25 @@ export const merchantQuery = defineType({
         }),
     }),
     defineField({
+      name: "clientAnswers",
+      title: "What the client answered",
+      type: "array",
+      description: "Sent from their Help Centre link. Their words, not ours: read these, then write the public answer above. Sending an answer does not publish anything.",
+      readOnly: true,
+      of: [{
+        type: "object",
+        name: "clientAnswer",
+        fields: [
+          { name: "brand", type: "string" },
+          { name: "answer", type: "text", rows: 3 },
+          { name: "at", type: "datetime" },
+        ],
+        preview: {
+          select: { title: "brand", subtitle: "answer" },
+        },
+      }],
+    }),
+    defineField({
       name: "topic",
       type: "string",
       options: { list: TOPICS },

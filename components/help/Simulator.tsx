@@ -2,52 +2,44 @@
 import { useMemo, useState } from "react";
 import {
   DEFAULT_CONFIG, FREQUENCIES, fmtDate, money, price, schedule, startOf,
-  type SimConfig,
+  type Mode, type SimConfig,
 } from "@/lib/help/sim";
 import { APP_NAME } from "@/lib/help/types";
 
-/** The flows merchants ask about most, made playable instead of described.
+/** The two flows merchants confuse, side by side and playable.
  *
- *  It replaced a set of screenshots. Screenshots of an admin go stale the week after they
- *  are taken and cannot answer "what if we ran it fortnightly at 20 percent", which is the
- *  actual question underneath most of these tickets. Change a number here and the widget,
- *  the checkout and the order schedule all move together, which is the part that is hard
- *  to hold in your head and easy to get wrong on a call. */
+ *  The USER flow is what the customer does: one page, one choice, one checkout. The BACKEND
+ *  flow is what {APP_NAME} creates in Shopify off the back of it, which is several orders
+ *  over several months. Merchants read the second and assume the first went wrong, and the
+ *  specific moment that happens is checkout: the parent order and the first delivery's order
+ *  appear together, and that reads as a duplicate.
+ *
+ *  So both modes are shown at once rather than behind a toggle. "What is the difference
+ *  between prepaid and pay as you go" is answered by putting them next to each other. */
 export default function Simulator({ seed, compact }: { seed?: Partial<SimConfig>; compact?: boolean } = {}) {
   const [c, setC] = useState<SimConfig>({ ...DEFAULT_CONFIG, ...seed });
   const set = <K extends keyof SimConfig>(k: K, v: SimConfig[K]) => setC({ ...c, [k]: v });
 
-  const p = useMemo(() => price(c), [c]);
-  const orders = useMemo(() => schedule(c), [c]);
-  const immediate = orders.filter((o) => o.immediate).length;
+  const prepaid = useMemo(() => ({ p: price({ ...c, mode: "prepaid" }), rows: schedule(c, "prepaid") }), [c]);
+  const payg = useMemo(() => ({ p: price({ ...c, mode: "payg" }), rows: schedule(c, "payg") }), [c]);
 
   return (
     <section>
       {compact ? (
-        <>
-          <h2 className="hc-h2">Simulate it</h2>
-          <p className="hc-blurb">
-            Change anything below and the checkout and the orders move with it. Useful for
-            answering &ldquo;what would fortnightly at 10 percent look like&rdquo; without a call.
-          </p>
-        </>
+        <h2 className="hc-h2">Simulate it</h2>
       ) : (
         <>
           <p className="hc-eyebrow">Simulate</p>
-          <h1 className="hc-h1">What a subscription actually does</h1>
-          <p className="hc-blurb">
-            Set it up the way you are thinking of selling it. The widget, the checkout and the orders
-            {" "}{APP_NAME} creates in the background all move together, so you can see what a frequency
-            or a discount does before you commit to it.
-          </p>
+          <h1 className="hc-h1">One checkout, several orders</h1>
         </>
       )}
+      <p className="hc-blurb">
+        Set a plan up the way you are thinking of selling it. Below it: what the customer does,
+        then what {APP_NAME} creates in your Shopify admin once they have done it, on both payment
+        types. Change anything and both move.
+      </p>
 
-      <div className="hc-simbar">
-        <label className="hc-field">
-          <span>Product</span>
-          <input value={c.productName} onChange={(e) => set("productName", e.target.value)} maxLength={60} />
-        </label>
+      <div className="hc-simbar hc-simbar-row">
         <label className="hc-field hc-simnum">
           <span>One-time price</span>
           <input type="number" min={1} step={10} value={c.unitPrice}
@@ -69,13 +61,6 @@ export default function Simulator({ seed, compact }: { seed?: Partial<SimConfig>
           <input type="number" min={0} max={90} value={c.discountPct}
             onChange={(e) => set("discountPct", Math.min(90, Math.max(0, +e.target.value || 0)))} />
         </label>
-        <label className="hc-field">
-          <span>Payment</span>
-          <select value={c.mode} onChange={(e) => set("mode", e.target.value as SimConfig["mode"])}>
-            <option value="prepaid">Prepaid, paid upfront</option>
-            <option value="payg">Pay as you go</option>
-          </select>
-        </label>
         <label className="hc-field hc-simnum">
           <span>Lead time, days</span>
           <input type="number" min={0} max={30} value={c.leadDays}
@@ -88,126 +73,50 @@ export default function Simulator({ seed, compact }: { seed?: Partial<SimConfig>
         </label>
       </div>
 
-      {/* ---------- stage 1: the product page ---------- */}
-      {!compact && <h2 className="hc-h2">1 · What the customer sees on the product page</h2>}
-      {!compact && <div className="hc-widget">
-        <p className="hc-wprod">{c.productName}</p>
-        <label className="hc-wopt">
-          <input type="radio" readOnly checked={false} />
-          <span className="hc-woptl">One time purchase</span>
-          <b>{money(p.oneTimePerDelivery)}</b>
-        </label>
-        <label className="hc-wopt on">
-          <input type="radio" readOnly checked />
-          <span className="hc-woptl">
-            Subscribe and save
-            {c.discountPct > 0 && <em className="hc-wsave">Save {c.discountPct}%</em>}
-            <small>
-              {FREQUENCIES.find((f) => f.days === c.everyDays)?.label.toLowerCase()},
-              {" "}{c.deliveries} {c.deliveries === 1 ? "delivery" : "deliveries"}
-            </small>
+      {/* ------------------------------------------------ the customer's side */}
+      <h2 className="hc-h2">What the customer does</h2>
+      <p className="hc-note">One page, one choice, one payment. They never see any of the backend flow below.</p>
+      <ol className="hc-userflow">
+        <li>
+          <b>Opens the product page</b>
+          <span>Sees the one-time price at {money(c.unitPrice)}, and a subscription option beside it.</span>
+        </li>
+        <li>
+          <b>Picks the subscription</b>
+          <span>
+            {FREQUENCIES.find((f) => f.days === c.everyDays)?.label.toLowerCase()}, {c.deliveries} deliveries,
+            {" "}{money(prepaid.p.perDelivery)} each instead of {money(c.unitPrice)}.
           </span>
-          <b>
-            {money(p.perDelivery)}
-            {c.discountPct > 0 && <s>{money(p.oneTimePerDelivery)}</s>}
-          </b>
-        </label>
-        <div className="hc-wtotal">
-          <span>{c.mode === "prepaid" ? "Charged today" : "Charged today, first delivery"}</span>
-          <b>{money(p.chargedNow)}</b>
-        </div>
-        {p.chargedLater > 0 && (
-          <div className="hc-wtotal sub">
-            <span>Then {money(p.perDelivery)} per delivery, {c.deliveries - 1} more</span>
-            <b>{money(p.chargedLater)}</b>
-          </div>
-        )}
-        {p.savings > 0 && <p className="hc-wnote">Customer saves {money(p.savings)} over {money(p.oneTimeTotal)} at the one-time price.</p>}
-      </div>}
+        </li>
+        <li>
+          <b>Chooses how to pay</b>
+          <span>Prepaid, {money(prepaid.p.chargedNow)} now for the whole run. Or pay as you go, {money(payg.p.chargedNow)} now and the rest per delivery.</span>
+        </li>
+        <li>
+          <b>Checks out once</b>
+          <span>That is the last action they take. Every delivery after this happens on its own.</span>
+        </li>
+      </ol>
 
-      {/* ---------- stage 2: checkout ---------- */}
-      <h2 className="hc-h2">{compact ? "What checkout collects" : "2 · What checkout collects"}</h2>
-      <div className="hc-cards hc-simcards">
-        <div className="hc-simcard">
-          <b>{money(p.chargedNow)}</b>
-          <span>charged at checkout</span>
-          <p>{c.mode === "prepaid"
-            ? "The whole run is paid now and sits as store credit against this subscription. Each delivery draws it down as its order is created."
-            : "Only the first delivery is paid now. Every later one is invoiced ahead of its own lead time."}</p>
-        </div>
-        <div className="hc-simcard">
-          <b>{c.deliveries}</b>
-          <span>deliveries on the contract</span>
-          <p>The contract holds the timeline. It is not an order and it never ships; it is the record the deliveries are generated from.</p>
-        </div>
-        <div className="hc-simcard">
-          <b>{orders.length + 1}</b>
-          <span>Shopify orders in total</span>
-          <p>One parent that takes the money, plus one child per delivery. This is the count that surprises people, and it is by design.</p>
-        </div>
-      </div>
+      {/* ------------------------------------------------ the store's side */}
+      <h2 className="hc-h2">What {APP_NAME} creates in your Shopify admin</h2>
+      <p className="hc-blurb hc-flowlede">
+        That one checkout becomes <b>{c.deliveries + 1} Shopify orders</b>: a parent that takes the money,
+        and one child per delivery that actually ships. The parent and the first child are created
+        <b> in the same moment</b>, which is the thing most often reported to us as a duplicate order.
+      </p>
 
-      {/* ---------- stage 3: the orders ---------- */}
-      <h2 className="hc-h2">{compact ? `The orders ${APP_NAME} creates` : `3 · The orders ${APP_NAME} creates in Shopify`}</h2>
-
-      <div className="hc-parent">
-        <div className="hc-ohead">
-          <span className="hc-otag warn">ORDER 1 · PARENT</span>
-          <b>{money(p.chargedNow)}</b>
-        </div>
-        <p>Created at checkout. Collects the payment and holds the contract.</p>
-        <ul className="hc-oflags">
-          <li>Carries a helper line item, not the real product</li>
-          <li>Auto fulfilled, shipping not required</li>
-          <li>Moves no stock</li>
-          <li>Filter it out of revenue and inventory reports, or you will count the money twice</li>
-        </ul>
-      </div>
-
-      {immediate > 0 && (
-        <p className="hc-simwarn">
-          {immediate === 1 ? "One delivery is" : `${immediate} deliveries are`} already inside the
-          {" "}{c.leadDays}-day lead time, so {immediate === 1 ? "its order is" : "their orders are"} created
-          straight away. That is the case merchants report as a duplicate order: it is the first delivery,
-          not a second charge. Push the first delivery date out to see the normal pattern.
-        </p>
-      )}
-
-      <div className="hc-otable">
-        <table className="hc-table">
-          <thead>
-            <tr>
-              <th>Delivery</th>
-              <th>Delivery date</th>
-              {c.mode === "payg" && <th>Invoice sent</th>}
-              <th>Order created</th>
-              <th>Amount</th>
-              <th>Paid</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.map((o) => (
-              <tr key={o.n}>
-                <td><span className="hc-otag ok">ORDER {o.n + 1}</span> Delivery {o.n}</td>
-                <td>{fmtDate(o.deliveryDate)}</td>
-                {c.mode === "payg" && <td>{o.invoicedOn ? fmtDate(o.invoicedOn) : "At checkout"}</td>}
-                <td>{fmtDate(o.createdOn)}{o.immediate && <em className="hc-onow">immediately</em>}</td>
-                <td className="hc-num">{money(o.amount)}</td>
-                <td>{o.paidAtCheckout
-                  ? <span className="hc-pill p-w">Paid</span>
-                  : <span className="hc-pill p-l">On invoice</span>}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="hc-modecols">
+        <ModeColumn mode="prepaid" c={c} p={prepaid.p} rows={prepaid.rows} />
+        <ModeColumn mode="payg" c={c} p={payg.p} rows={payg.rows} />
       </div>
 
       <ul className="hc-oflags hc-childnote">
-        <li>Each child order carries the <b>real product</b> and is left unfulfilled, so your 3PL ships it</li>
-        <li>Each carries the shipping, which is why shipping is charged on the delivery and not on the parent</li>
-        <li>Orders appear <b>{c.leadDays} {c.leadDays === 1 ? "day" : "days"} before</b> the delivery date. That is
-          {" "}<code>time_to_delivery</code>, a per-store setting. Tell us the number your warehouse needs</li>
-        {c.mode === "payg" && <li>An <b>unpaid</b> pay as you go delivery cannot be pushed, by us or by you. That is what stops anything shipping unpaid</li>}
+        <li>The <b>parent</b> carries a helper line, not the real product. It is auto fulfilled, moves no stock, and must be filtered out of revenue and inventory reports or the money is counted twice</li>
+        <li>Each <b>child</b> carries the real product, is left unfulfilled, and carries the shipping. Your 3PL ships these</li>
+        <li>Children after the first appear <b>{c.leadDays} {c.leadDays === 1 ? "day" : "days"} before</b> their delivery date.
+          That is <code>time_to_delivery</code>, a per-store setting. Tell us what your warehouse needs</li>
+        <li>On pay as you go an <b>unpaid</b> delivery cannot be pushed, by us or by you. That is what stops anything shipping unpaid</li>
       </ul>
 
       <p className="hc-note hc-simfoot">
@@ -215,5 +124,51 @@ export default function Simulator({ seed, compact }: { seed?: Partial<SimConfig>
         it does not read your catalogue, your shipping rates or your tax settings.
       </p>
     </section>
+  );
+}
+
+function ModeColumn({ mode, c, p, rows }: {
+  mode: Mode; c: SimConfig;
+  p: ReturnType<typeof price>; rows: ReturnType<typeof schedule>;
+}) {
+  const prepaid = mode === "prepaid";
+  return (
+    <div className="hc-modecol">
+      <div className="hc-modehead">
+        <b>{prepaid ? "Prepaid" : "Pay as you go"}</b>
+        <span>{prepaid
+          ? `${money(p.chargedNow)} taken at checkout, the whole run`
+          : `${money(p.chargedNow)} taken at checkout, one delivery`}</span>
+      </div>
+
+      <ol className="hc-orders">
+        <li className="hc-order parent">
+          <span className="hc-otag warn">PARENT</span>
+          <b>{money(p.chargedNow)}</b>
+          <em>At checkout · takes the money, ships nothing</em>
+        </li>
+        {rows.map((o) => (
+          <li key={o.n} className={"hc-order" + (o.withParent ? " together" : "")}>
+            <span className="hc-otag ok">CHILD {o.n}</span>
+            <b>{money(o.amount)}</b>
+            <em>
+              {o.withParent
+                ? <><strong>At checkout, with the parent</strong> · delivers {fmtDate(o.deliveryDate)}</>
+                : <>Created {fmtDate(o.createdOn)} · delivers {fmtDate(o.deliveryDate)}</>}
+            </em>
+            {!o.paidAtCheckout && o.invoicedOn && (
+              <em className="hc-oinv">Invoice sent {fmtDate(o.invoicedOn)}, and it cannot be pushed until it is paid</em>
+            )}
+            {o.early && <em className="hc-oinv">Its lead window has already passed, so it is cut now too</em>}
+          </li>
+        ))}
+      </ol>
+
+      <p className="hc-modefoot">
+        {prepaid
+          ? `All ${c.deliveries} paid up front. Each child draws down the store credit as it is created.`
+          : `${money(p.chargedLater)} still to collect, one invoice per delivery.`}
+      </p>
+    </div>
   );
 }
