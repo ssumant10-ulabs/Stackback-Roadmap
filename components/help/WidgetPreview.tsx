@@ -258,31 +258,32 @@ export default function WidgetPreview({
             </button>
             {open && chosen && (
               <span className="hc-wbreak">
-                {/* The reference order: what it lists at, what comes off, what the item is,
-                    what shipping costs, and only then the number they pay. */}
+                {/* Per delivery, in the order a customer checks it. Quoting the whole run
+                    here repeats the headline total on three rows and reads as a mistake. */}
                 <span style={{ color: t.text.secondary }}>
-                  MRP<s style={{ color: t.text.muted }}>{money(listPrice * (chosen.endless ? 1 : chosen.deliveries))}</s>
+                  MRP<s style={{ color: t.text.muted }}>{money(listPrice)}</s>
                 </span>
                 <span style={{ color: t.colors.savings }}>
-                  {chosen.discountPct}% OFF
-                  <b>&minus;{money((listPrice - chosen.perDelivery) * (chosen.endless ? 1 : chosen.deliveries))}</b>
+                  {chosen.discountPct}% OFF<b>&minus;{money(listPrice - chosen.perDelivery)}</b>
                 </span>
                 <span style={{ color: t.text.primary, fontWeight: 600 }}>
-                  {chosen.endless ? productName : `${chosen.deliveries} x ${productName}`}
-                  <b>{money(chosen.endless ? chosen.perDelivery : chosen.total)}</b>
+                  1 x {productName}<b>{money(chosen.perDelivery)}</b>
                 </span>
                 <span style={{ color: t.text.secondary }}>
                   Shipping
                   <b style={{ color: shippingRate > 0 ? t.text.primary : t.colors.savings }}>
-                    {shippingRate > 0 ? `${money(shippingRate)}/delivery` : "Free"}
+                    {shippingRate > 0 ? money(shippingRate) : "Free"}
                   </b>
                 </span>
                 <span className="hc-wtotalrow" style={{ color: t.text.primary, borderColor: t.borders.default }}>
-                  {chosen.endless ? "Total per delivery" : "Total"}
-                  <b>{money(chosen.endless
-                    ? chosen.perDelivery + shippingRate
-                    : chosen.total + shippingRate * chosen.deliveries)}</b>
+                  Total per delivery<b>{money(chosen.perDelivery + shippingRate)}</b>
                 </span>
+                {!chosen.endless && (
+                  <span style={{ color: t.text.muted }}>
+                    {chosen.deliveries} deliveries
+                    <b>{money((chosen.perDelivery + shippingRate) * chosen.deliveries)}</b>
+                  </span>
+                )}
               </span>
             )}
           </span>

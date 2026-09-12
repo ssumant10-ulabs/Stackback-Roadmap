@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import {
   DEFAULT_ANSWERS, QUESTIONS, asLines, complete, parseBands, parseFreebies, parseList,
   reconcileModes, visible, writeBands, writeFreebies,
-  type Answers, type Field,
+  type Answers, type Field, type Freebie,
 } from "@/lib/help/questions";
 import { CATEGORY_BY_ID, SCALE_BY_ID, freqWord } from "@/lib/help/categories";
 import { drawPlanSheet } from "@/lib/help/sheet-png";
@@ -255,29 +255,56 @@ function FieldRow({ f, value, answers, onChange, onFreebies, readOnly }: {
       <div className="hc-frow">
         <span className="hc-flabel">{f.label}</span>
         <div className="hc-bands">
-          {runs.map((r) => (
-            <div key={r} className="hc-band">
-              <span>{r} deliveries</span>
-              <label className="hc-bandrate">
-                <input type="number" min={0} max={90}
-                  value={Number.isFinite(bands[r]) ? String(bands[r]) : ""} placeholder="0"
-                  onChange={(e) => {
-                    const next = { ...bands };
-                    const n = parseInt(e.target.value, 10);
-                    if (Number.isFinite(n)) next[r] = n; else delete next[r];
-                    onChange(writeBands(next));
-                  }} />
-                <i>%</i>
-              </label>
-              <label className="hc-bandfree">
-                <input type="checkbox" checked={freebies.includes(r)}
-                  onChange={(e) => onFreebies(writeFreebies(
-                    e.target.checked ? [...freebies, r] : freebies.filter((x) => x !== r),
-                  ))} />
-                <span>Freebie</span>
-              </label>
-            </div>
-          ))}
+          {runs.map((r) => {
+            const free = freebies.find((x) => x.run === r);
+            const put = (next: Freebie[]) => onFreebies(writeFreebies(next));
+            return (
+              <div key={r} className={"hc-band" + (free ? " open" : "")}>
+                <div className="hc-bandtop">
+                  <span>{r} deliveries</span>
+                  <label className="hc-bandrate">
+                    <input type="number" min={0} max={90}
+                      value={Number.isFinite(bands[r]) ? String(bands[r]) : ""} placeholder="0"
+                      onChange={(e) => {
+                        const next = { ...bands };
+                        const n = parseInt(e.target.value, 10);
+                        if (Number.isFinite(n)) next[r] = n; else delete next[r];
+                        onChange(writeBands(next));
+                      }} />
+                    <i>%</i>
+                  </label>
+                  <label className="hc-bandfree">
+                    <input type="checkbox" checked={Boolean(free)}
+                      onChange={(e) => put(e.target.checked
+                        ? [...freebies, { run: r, delivery: 1, product: "" }]
+                        : freebies.filter((x) => x.run !== r))} />
+                    <span>Freebie</span>
+                  </label>
+                </div>
+
+                {free && (
+                  <div className="hc-bandgift">
+                    {/* Which delivery and which product, because "there is a freebie" is not
+                        an instruction anybody can build from. */}
+                    <label>
+                      <span>On delivery</span>
+                      <input type="number" min={1} max={r} value={String(free.delivery)}
+                        onChange={(e) => {
+                          const d = Math.min(r, Math.max(1, parseInt(e.target.value, 10) || 1));
+                          put(freebies.map((x) => (x.run === r ? { ...x, delivery: d } : x)));
+                        }} />
+                    </label>
+                    <label className="hc-bandwhat">
+                      <span>What they get</span>
+                      <input type="text" value={free.product} maxLength={80}
+                        placeholder="Sampler pack"
+                        onChange={(e) => put(freebies.map((x) => (x.run === r ? { ...x, product: e.target.value } : x)))} />
+                    </label>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
         {f.help && <p className="hc-fhelp">{f.help}</p>}
       </div>

@@ -387,13 +387,13 @@
 .hc-part.on { background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
 .hc-part:focus-visible { outline: 2px solid var(--brand-deep); outline-offset: 1px; }
 
-.hc-body.solo { grid-template-columns: minmax(0, 1fr); max-width: 1460px; }
+.hc-body.solo { grid-template-columns: minmax(0, 1fr); max-width: 1560px; }
 .hc-nav.hidden { display: none; }
 
 /* ---------------------------------------------------------------- query form */
 .hc-form {
   background: var(--card); border: 1px solid var(--border); border-radius: 13px;
-  padding: 17px 18px 18px; box-shadow: var(--shadow); max-width: 640px; margin-bottom: 8px;
+  padding: 18px 20px 20px; box-shadow: var(--shadow); margin-bottom: 8px;
 }
 .hc-formh { margin: 0 0 14px; font-size: 14.5px; }
 .hc-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 13px; position: relative; }
@@ -669,7 +669,7 @@
   font-style: normal; width: 21px; height: 21px; border-radius: 50%; display: grid; place-items: center;
   background: var(--brand); color: var(--brand-ink); font-size: 11.5px; font-weight: 700;
 }
-.hc-qblurb { margin: 0 0 12px; font-size: 12.5px; line-height: 1.6; color: var(--hc-muted); max-width: var(--hc-measure); }
+.hc-qblurb { margin: 0 0 12px; font-size: 12.5px; line-height: 1.6; color: var(--hc-muted); max-width: 62ch; }
 .hc-frow { margin-bottom: 13px; }
 .hc-flabel { display: block; font-size: 12.5px; font-weight: 650; color: var(--ink-2); margin-bottom: 6px; }
 .hc-fchoices { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 7px; }
@@ -697,8 +697,8 @@
 /* ---------------------------------------------------------------- widget preview
    The widget draws in the store's brand and its own type, deliberately outside this page's
    palette: it is the thing being judged, so it must not borrow our colours or our font. */
-.hc-wgrid { display: grid; grid-template-columns: minmax(300px, 420px) minmax(0, 1fr); gap: 22px; align-items: start; }
-.hc-wstage { background: var(--sunken); border-radius: 14px; padding: 18px; }
+.hc-wgrid { display: grid; grid-template-columns: minmax(360px, 520px) minmax(0, 1fr); gap: 18px; align-items: start; }
+.hc-wstage { background: var(--sunken); border-radius: 14px; padding: 20px; }
 .hc-wshell {
   padding: 15px; display: flex; flex-direction: column; gap: 11px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -786,7 +786,7 @@
 }
 
 /* ---------------------------------------------------------------- form: suggester, bands */
-.hc-formgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(330px, 420px); gap: 20px; align-items: start; }
+.hc-formgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, 460px); gap: 18px; align-items: start; }
 .hc-bands { display: flex; flex-wrap: wrap; gap: 8px; }
 .hc-band { display: flex; align-items: center; gap: 7px; border: 1px solid var(--border-2); border-radius: 10px; padding: 7px 11px; background: var(--page); }
 .hc-band > span { font-size: 12px; color: var(--ink-2); white-space: nowrap; }
@@ -916,3 +916,16 @@
 .hc-modekey.warn { background: var(--hc-limit-soft); color: var(--hc-limit); }
 
 .hc-wtotalrow { border-top: 1px solid; padding-top: 7px; margin-top: 2px; font-weight: 700; }
+
+/* ---------------------------------------------------------------- freebie detail */
+.hc-band { min-width: 172px; }
+.hc-band.open { border-color: var(--brand-deep); background: var(--card-2); }
+.hc-bandtop { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.hc-bandtop > span { font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+.hc-bandgift { display: flex; gap: 8px; margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--border); }
+.hc-bandgift label { display: flex; flex-direction: column; gap: 3px; }
+.hc-bandgift span { font-size: 10.5px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; color: var(--hc-muted); }
+.hc-bandgift input { appearance: none; font: inherit; font-size: 12.5px; padding: 5px 8px; border: 1px solid var(--border-2); border-radius: 7px; background: var(--page); color: var(--ink); width: 62px; }
+.hc-bandgift input:focus { outline: 2px solid var(--brand-deep); outline-offset: 1px; }
+.hc-bandwhat { flex: 1 1 auto; }
+.hc-bandwhat input { width: 100%; }

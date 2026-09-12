@@ -67,8 +67,6 @@ export const QUESTIONS: Question[] = [
       },
       { id: "variants_detail", kind: "list", label: "Which variants", placeholder: "250g, 500g",
         help: "Separate them with commas.", showWhen: { field: "variants", is: ["some"] } },
-      { id: "unit_price", kind: "number", label: "One-time price of one delivery", suffix: "\u20b9",
-        help: "What a customer pays today without a subscription. Everything downstream is priced off it." },
     ],
   },
   {
@@ -142,32 +140,16 @@ export const QUESTIONS: Question[] = [
         showWhen: { field: "shipping_charged", is: ["yes"] } },
     ],
   },
-  {
-    id: "stack",
-    topic: "other",
-    title: "Your product page",
-    blurb: "One thing that changes what we build rather than what we price.",
-    fields: [
-      {
-        id: "builder", kind: "choice", label: "Is the product page built with a page builder",
-        help: "PageFly, GemPages and the rest publish straight to live rather than to a theme copy, so we tell you before touching one.",
-        options: [
-          { value: "no", label: "No, it is the theme" },
-          { value: "yes", label: "Yes" },
-        ],
-      },
-    ],
-  },
 ];
 
 export type Answers = Record<string, string | string[]>;
 
 export const DEFAULT_ANSWERS: Answers = {
   brand_name: "", category: "", scale: "",
-  scope_kind: "products", scope_detail: "", variants: "all", unit_price: "750",
+  scope_kind: "products", scope_detail: "", variants: "all",
   every_days: ["30"], deliveries: "3, 6",
   tiered: "no", discount_min: "10", discount_max: "20", bands: "", freebies: "",
-  modes: ["prepaid", "payg"], shipping_charged: "no", builder: "no",
+  modes: ["prepaid", "payg"], shipping_charged: "no",
 };
 
 export function autopayOnly(a: Answers): boolean {
@@ -240,11 +222,25 @@ export function asLines(a: Answers): { question: string; answer: string }[] {
 }
 
 
-/** Run lengths that carry a freebie, stored as "3,12" so they survive a reload in one field. */
-export const parseFreebies = (v: string | string[] | undefined): number[] =>
-  String(v ?? "").split(",").map((x) => parseInt(x.trim(), 10)).filter((n) => Number.isFinite(n));
+/** A freebie against a run length: which delivery it lands on, and what it is.
+ *
+ *  Stored as "6@1:Sampler pack" per run so the whole set survives a reload in one field, and
+ *  so the answer that reaches us says which delivery rather than leaving somebody to ask. */
+export interface Freebie { run: number; delivery: number; product: string }
 
-export const writeFreebies = (list: number[]) => [...new Set(list)].sort((a, b) => a - b).join(",");
+export function parseFreebies(v: string | string[] | undefined): Freebie[] {
+  return String(v ?? "").split("|").flatMap((chunk) => {
+    const m = chunk.match(/^(\d+)@(\d+):(.*)$/);
+    if (!m) return [];
+    return [{ run: +m[1], delivery: +m[2], product: m[3] }];
+  });
+}
+
+export const writeFreebies = (list: Freebie[]) =>
+  list.map((f) => `${f.run}@${f.delivery}:${f.product.replace(/[|]/g, " ")}`).join("|");
+
+export const freebieRuns = (v: string | string[] | undefined): number[] =>
+  parseFreebies(v).map((f) => f.run);
 
 /** Pay as you go and pay per delivery both collect per delivery. Offering both asks a
  *  customer to choose between being invoiced and being charged, which nobody does. */

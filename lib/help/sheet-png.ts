@@ -7,7 +7,7 @@
  *
  *  So this draws the sheet itself. More code, but it cannot hang, it needs no dependency,
  *  and the output is identical everywhere because nothing is inherited from the page. */
-import { parseBands, parseList, type Answers } from "./questions";
+import { parseBands, parseFreebies, parseList, type Answers } from "./questions";
 import type { WidgetSettings } from "./widget";
 import { ALL_TOGGLES } from "./widget";
 import { CATEGORY_BY_ID, SCALE_BY_ID, freqWord } from "./categories";
@@ -153,7 +153,9 @@ function render(t: Ctx, a: Answers, dry: boolean, settings?: WidgetSettings): nu
   }
   if (draw) rule(t);
   t.y += 20;
+  const gifts = parseFreebies(a.freebies);
   const note = `One-time price ${money(price)} per delivery.` +
+    (gifts.length ? ` Freebies: ${gifts.map((g) => `${g.product || "a gift"} on delivery ${g.delivery} of the ${g.run}-run`).join("; ")}.` : "") +
     (freqs.length > 1 ? ` Customers can also pick ${freqs.slice(1).join(" or ").toLowerCase()}.` : "");
   t.y += draw ? wrap(t, note, PAD, W - PAD * 2, 12.5, MUTED) : 20;
   t.y += 22;
@@ -164,7 +166,7 @@ function render(t: Ctx, a: Answers, dry: boolean, settings?: WidgetSettings): nu
     ["Variants", a.variants === "all" ? "Every variant" : "Selected only", a.variants === "some" ? String(a.variants_detail || "") : ""],
     ["Payment", modes.join(", ") || "Not set"],
     ["Shipping", shipping],
-    ["Page builder", a.builder === "yes" ? "Yes, flag before touching it" : "No, it is the theme"],
+
   ];
   const colW = (W - PAD * 2 - 26) / 2;
   for (let i = 0; i < facts.length; i += 2) {

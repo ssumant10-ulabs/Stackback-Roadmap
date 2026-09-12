@@ -5,7 +5,7 @@ import { QUERY_TOPIC_NAME } from "@/lib/help/topics";
 import { parseSettings, type WidgetSettings } from "@/lib/help/widget";
 import { APP_NAME } from "@/lib/help/types";
 import { DEFAULT_CONFIG, money, planOptions, type SimConfig } from "@/lib/help/sim";
-import { DEFAULT_ANSWERS, parseBands, parseFreebies, parseList, parseNames, type Answers } from "@/lib/help/questions";
+import { DEFAULT_ANSWERS, freebieRuns, parseBands, parseList, parseNames, type Answers } from "@/lib/help/questions";
 import { modeDiscounts } from "@/lib/help/categories";
 import type { LoggedQuery, PlanRec, StoreRecord } from "@/lib/sanity/queries";
 import PlanForm from "./PlanForm";
@@ -166,7 +166,7 @@ export default function Brief({ store, open, answered, connected }: {
             onSubscribe={() => go(3)}
             rates={rates}
             shippingRate={answers.shipping_charged === "yes" ? Number(answers.shipping_rate) || 0 : 0}
-            freebieRuns={parseFreebies(answers.freebies)}
+            freebieRuns={freebieRuns(answers.freebies)}
           />
 
           <div className="hc-stepnav">
