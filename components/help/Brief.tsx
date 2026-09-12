@@ -73,7 +73,6 @@ export default function Brief({ store, open, answered, connected }: {
         ? (bands[runs[0]] ?? (Number(answers.discount_max) || 0))
         : Number(answers.discount_max) || 0,
       productName: names[0] || "Dummy product",
-      unitPrice: Number(answers.unit_price) || prev.unitPrice,
     }));
     const modes = Array.isArray(answers.modes) ? answers.modes : [];
     setSettings((s) => ({

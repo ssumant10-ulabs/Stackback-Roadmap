@@ -8,6 +8,7 @@
  *  So this draws the sheet itself. More code, but it cannot hang, it needs no dependency,
  *  and the output is identical everywhere because nothing is inherited from the page. */
 import { parseBands, parseFreebies, parseList, type Answers } from "./questions";
+import { DEFAULT_CONFIG } from "./sim";
 import type { WidgetSettings } from "./widget";
 import { ALL_TOGGLES } from "./widget";
 import { CATEGORY_BY_ID, SCALE_BY_ID, freqWord } from "./categories";
@@ -101,7 +102,10 @@ function render(t: Ctx, a: Answers, dry: boolean, settings?: WidgetSettings): nu
   const bands = parseBands(a.bands);
   const tiered = a.tiered === "yes";
   const flat = Number(a.discount_pct) || 0;
-  const price = Number(a.unit_price) || 0;
+  /* The form stopped asking for a price: the preview is of a dummy product, and a real one
+   * invited a figure nobody could check. The sheet quotes the same illustrative price the
+   * widget does, and says so. */
+  const price = DEFAULT_CONFIG.unitPrice;
   const freqs = (Array.isArray(a.every_days) ? a.every_days : []).map((d) => freqWord(Number(d)));
   const modes = (Array.isArray(a.modes) ? a.modes : []).map((m) => MODE_NAME[m] || m);
   const shipping = a.shipping_charged !== "yes" ? "Free on every delivery"
@@ -154,7 +158,7 @@ function render(t: Ctx, a: Answers, dry: boolean, settings?: WidgetSettings): nu
   if (draw) rule(t);
   t.y += 20;
   const gifts = parseFreebies(a.freebies);
-  const note = `One-time price ${money(price)} per delivery.` +
+  const note = `Priced against an illustrative ${money(price)} per delivery.` +
     (gifts.length ? ` Freebies: ${gifts.map((g) => `${g.product || "a gift"} on delivery ${g.delivery} of the ${g.run}-run`).join("; ")}.` : "") +
     (freqs.length > 1 ? ` Customers can also pick ${freqs.slice(1).join(" or ").toLowerCase()}.` : "");
   t.y += draw ? wrap(t, note, PAD, W - PAD * 2, 12.5, MUTED) : 20;
