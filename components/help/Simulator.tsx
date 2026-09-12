@@ -32,10 +32,38 @@ export default function Simulator({ config, onConfig }: {
   return (
     <section>
       <p className="hc-blurb hc-flowlede">
-        One checkout becomes <b>{c.deliveries + 1} Shopify orders</b> and <b>one subscription</b>.
-        The parent order and the first delivery&rsquo;s order are written <b>at the same minute</b>,
-        which is the pair most often reported to us as a duplicate.
+        Checkout creates <b>two orders</b>, whatever the run length, and one subscription. Everything
+        after that appears later, and only when it is paid for.
       </p>
+
+      <ol className="hc-atcheckout">
+        <li>
+          <span className="hc-otag warn">PARENT</span>
+          <b>Holds the subscription</b>
+          <p>
+            Carries the contract details, not the real product. <b>Auto fulfilled by default</b> and
+            marked <b>shipping not required</b>, so your warehouse and inventory system do not pick it
+            up. Filter it out of revenue reports or the money is counted twice.
+          </p>
+        </li>
+        <li>
+          <span className="hc-otag ok">CHILD 1</span>
+          <b>The real order</b>
+          <p>
+            The one that ships. Written in the same minute as the parent, which is the pair most often
+            reported to us as a duplicate. It is not: one takes the money, one carries the goods.
+          </p>
+        </li>
+        <li className="hc-later">
+          <span className="hc-otag muted">LATER</span>
+          <b>Nothing else exists yet</b>
+          <p>
+            Each remaining delivery&rsquo;s order is created <b>{c.leadDays} days before its delivery
+            date</b>, and only if that delivery is <b>paid for</b>. That is the whole difference between
+            the two columns below.
+          </p>
+        </li>
+      </ol>
 
       <div className="hc-simbar hc-simbar-order">
         <label className="hc-field hc-simnum">
@@ -77,8 +105,8 @@ export default function Simulator({ config, onConfig }: {
           <ul className="hc-oflags hc-childnote">
             <li>The <b>parent</b> carries a helper line, not the real product. It is auto fulfilled, moves no stock, and must be filtered out of revenue and inventory reports or the money is counted twice</li>
             <li>Each <b>child</b> carries the real product, is left unfulfilled, and carries the shipping. Your 3PL ships these</li>
-            <li>Children after the first appear <b>{c.leadDays} {c.leadDays === 1 ? "day" : "days"} before</b> their delivery date.
-              That is <code>time_to_delivery</code>, a per-store setting</li>
+            <li>Orders after the first two appear <b>{c.leadDays} {c.leadDays === 1 ? "day" : "days"} before</b> their
+              delivery date, not at checkout. That is <code>time_to_delivery</code>, a per-store setting</li>
             <li>On pay as you go, <b>no Shopify order exists</b> for an unpaid delivery. It is not an unpaid order sitting in your admin, it is not there at all, which is what stops anything shipping unpaid</li>
           </ul>
         </>
@@ -100,7 +128,9 @@ function OrdersColumn({ mode, c, p, rows }: {
 }) {
   const prepaid = mode === "prepaid";
   const base = 44521;
-  const live = rows.filter((r) => r.paidAtCheckout).length;
+  // Exists today, not paid for. Prepaid pays for the whole run at checkout and still has two
+  // orders, which is the thing this column is here to show.
+  const live = rows.filter((r) => r.existsToday).length;
   return (
     <div className="hc-modecol">
       <div className="hc-modehead">
@@ -108,6 +138,7 @@ function OrdersColumn({ mode, c, p, rows }: {
         <span>
           {money(p.chargedNow)} at checkout ·{" "}
           <b>{live + 1} of {c.deliveries + 1}</b> orders exist today
+          {prepaid ? ", the rest arrive on schedule" : ", the rest wait on payment"}
         </span>
       </div>
 
@@ -126,18 +157,26 @@ function OrdersColumn({ mode, c, p, rows }: {
               <td><Tag>parent</Tag></td>
             </tr>
             {rows.map((o) => (
-              <tr key={o.n} className={o.withParent ? "hc-togetherrow" : o.paidAtCheckout ? "" : "hc-pendingrow"}>
-                <td>{o.paidAtCheckout ? <b>#{base + o.n}</b> : <span className="hc-noorder">none</span>}</td>
+              <tr key={o.n} className={o.withParent ? "hc-togetherrow" : o.existsToday ? "" : "hc-pendingrow"}>
+                <td>{o.existsToday ? <b>#{base + o.n}</b> : <span className="hc-noorder">none yet</span>}</td>
                 <td>
-                  {o.paidAtCheckout ? fmtDate(o.createdOn) : <b className="hc-await">Waits for payment</b>}
+                  {o.existsToday
+                    ? fmtDate(o.createdOn)
+                    : <b className={o.paidAtCheckout ? "hc-sched" : "hc-await"}>
+                        {o.paidAtCheckout ? `Due ${fmtDate(o.createdOn)}` : "Waits for payment"}
+                      </b>}
                   {o.withParent
                     ? <em className="hc-same">same minute as the parent</em>
                     : <em>delivers {fmtDate(o.deliveryDate)}</em>}
                 </td>
                 <td className="hc-num">{money(o.amount)}</td>
-                <td>{o.paidAtCheckout ? <><Dot tone="ok" />Paid</> : <><Dot tone="warn" />Invoice {fmtDate(o.invoicedOn ?? o.createdOn)}</>}</td>
-                <td>{o.paidAtCheckout ? <><Dot tone="warn" />Unfulfilled<em>your 3PL ships this</em></> : <span className="hc-noorder">no order yet</span>}</td>
                 <td>{o.paidAtCheckout
+                  ? <><Dot tone="ok" />Paid</>
+                  : <><Dot tone="warn" />Invoice {fmtDate(o.invoicedOn ?? o.createdOn)}</>}</td>
+                <td>{o.existsToday
+                  ? <><Dot tone="warn" />Unfulfilled<em>your 3PL ships this</em></>
+                  : <span className="hc-noorder">not created yet</span>}</td>
+                <td>{o.existsToday
                   ? <><Tag>child</Tag><Tag>subscription</Tag></>
                   : <span className="hc-noorder">&mdash;</span>}</td>
               </tr>
@@ -148,8 +187,8 @@ function OrdersColumn({ mode, c, p, rows }: {
 
       <p className={"hc-modekey " + (prepaid ? "ok" : "warn")}>
         {prepaid
-          ? <>All {c.deliveries} are <b>already paid</b>, so every order is created on schedule, {c.leadDays} days before its delivery, drawing down the store credit.</>
-          : <>Only the first is paid. Each later delivery is invoiced {3 + c.leadDays} days ahead, and the order reaches Shopify <b>only once that invoice is paid</b>.</>}
+          ? <>Every delivery is <b>already paid</b>, so each order is created automatically {c.leadDays} days before its delivery, drawing down the store credit. Nothing is waiting on the customer.</>
+          : <>Only the first is paid. Each later delivery is invoiced {3 + c.leadDays} days ahead, and its order reaches Shopify <b>only once that invoice is paid</b>. An unpaid delivery has no order at all.</>}
       </p>
     </div>
   );

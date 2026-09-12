@@ -4,11 +4,14 @@
  *   - one checkout creates a parent order that collects the money, plus one child order
  *     per delivery, and the parent never ships (it carries a helper line and is
  *     auto-fulfilled, which is why it must be filtered out of revenue reports);
- *   - the parent order and the FIRST child order are created together, at checkout. This is
- *     the single most reported piece of confusion in the product: a merchant sees two orders
- *     appear at once and reads it as a duplicate or a double charge. It is neither;
- *   - every LATER child order is created `time_to_delivery` days before its delivery date,
- *     not on it, so the warehouse can pick. That is a per-store setting defaulting to 7;
+ *   - checkout creates exactly TWO orders, whatever the run length. The parent carries the
+ *     subscription contract details and is auto-fulfilled and marked shipping-not-required so
+ *     a warehouse or inventory system does not pick it up. The first child is the real order,
+ *     the one that ships. A merchant sees two appear at once and reads it as a duplicate;
+ *   - no other order exists yet. Each later delivery's order is created `time_to_delivery`
+ *     days before its delivery date, and ONLY IF that delivery is paid for. Prepaid has paid
+ *     for all of them at checkout, so they appear on schedule. Pay as you go has not, so each
+ *     one waits on its invoice. The lead time is a per-store setting defaulting to 7;
  *   - on prepaid the whole run is paid at checkout and sits as store credit, debited as
  *     each child order is created;
  *   - on pay as you go only the first delivery is paid at checkout. Each later one is
@@ -118,6 +121,9 @@ export interface ChildOrder {
   withParent: boolean;
   /** A later delivery whose lead window has already passed, so its order is cut now too. */
   early: boolean;
+  /** Does a Shopify order exist for this delivery today? Being paid for is necessary and
+   *  not sufficient: a prepaid delivery three months out is paid and has no order. */
+  existsToday: boolean;
   /** PAYG only: when the invoice for this delivery goes out. */
   invoicedOn: Date | null;
   amount: number;
@@ -154,15 +160,19 @@ export function schedule(c: SimConfig, mode: Mode = c.mode): ChildOrder[] {
     const atCheckout = i === 0;
     const due = addDays(deliveryDate, -c.leadDays);
     const createdOn = atCheckout ? today : (due <= today ? today : due);
+    const paid = mode === "prepaid" || i === 0;
     return {
       n: i + 1,
       deliveryDate,
       createdOn,
       withParent: atCheckout,
       early: !atCheckout && due <= today,
+      // Paid and inside the lead window. Prepaid pays for everything up front, which is why
+      // "paid" on its own was the wrong test and made the whole run look like it exists.
+      existsToday: atCheckout || (paid && due <= today),
       invoicedOn: mode === "payg" && i > 0 ? addDays(due, -3) : null,
       amount: p.perDelivery,
-      paidAtCheckout: mode === "prepaid" || i === 0,
+      paidAtCheckout: paid,
     };
   });
 }

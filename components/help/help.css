@@ -790,8 +790,6 @@
 .hc-bands { display: flex; flex-wrap: wrap; gap: 8px; }
 .hc-band { display: flex; align-items: center; gap: 7px; border: 1px solid var(--border-2); border-radius: 10px; padding: 7px 11px; background: var(--page); }
 .hc-band > span { font-size: 12px; color: var(--ink-2); white-space: nowrap; }
-.hc-band input { width: 54px; appearance: none; font: inherit; font-size: 13px; text-align: right; padding: 4px 6px; border: 1px solid var(--border-2); border-radius: 7px; background: var(--card); color: var(--ink); }
-.hc-band input:focus { outline: 2px solid var(--brand-deep); outline-offset: 1px; }
 .hc-band i { font-style: normal; font-size: 12px; color: var(--hc-muted); }
 
 /* ---------------------------------------------------------------- widget additions */
@@ -902,7 +900,7 @@
 .hc-bandrate input:focus { outline: 2px solid var(--brand-deep); outline-offset: 1px; }
 .hc-bandrate i { font-style: normal; font-size: 12px; color: var(--hc-muted); }
 .hc-bandfree { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 11.5px; color: var(--hc-muted); }
-.hc-bandfree input { accent-color: var(--brand-deep); margin: 0; }
+.hc-bandfree input { appearance: auto; accent-color: var(--brand-deep); margin: 0; width: auto; height: auto; }
 
 @media (max-width: 1199px) { .hc-formgrid { grid-template-columns: minmax(0, 1fr); } }
 
@@ -929,3 +927,13 @@
 .hc-bandgift input:focus { outline: 2px solid var(--brand-deep); outline-offset: 1px; }
 .hc-bandwhat { flex: 1 1 auto; }
 .hc-bandwhat input { width: 100%; }
+
+/* ---------------------------------------------------------------- what checkout creates */
+.hc-atcheckout { list-style: none; margin: 0 0 20px; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; }
+.hc-atcheckout li { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 13px 14px; box-shadow: var(--shadow); }
+.hc-atcheckout li.hc-later { background: var(--sunken); box-shadow: none; border-style: dashed; }
+.hc-atcheckout b { display: block; font-size: 13.5px; font-weight: 700; margin: 8px 0 4px; }
+.hc-atcheckout p { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--ink-2); }
+.hc-atcheckout p b { display: inline; margin: 0; font-size: inherit; color: var(--ink); }
+.hc-otag.muted { color: var(--hc-muted); background: var(--sunken); border: 1px solid var(--border-2); }
+.hc-sched { color: var(--hc-you); font-weight: 650; }
