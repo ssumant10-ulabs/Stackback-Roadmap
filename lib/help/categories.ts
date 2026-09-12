@@ -93,18 +93,18 @@ export const SCALES: ScaleBand[] = [
   },
   {
     id: "established", label: "1,000 to 5,000 orders a month", hint: "Established",
-    modes: ["prepaid", "payg", "auto_debit"],
-    why: "All three, with AutoPay worth turning on. Chasing invoices is becoming a job, and the Razorpay setup pays for itself at this volume.",
+    modes: ["prepaid", "auto_debit"],
+    why: "Prepaid, and AutoPay in place of pay as you go. Chasing invoices is becoming a job at this volume, and the Razorpay setup pays for itself. Offering both per-delivery options asks a customer to choose between being invoiced and being charged, which nobody does.",
   },
   {
     id: "large", label: "5,000 to 20,000 orders a month", hint: "Large",
-    modes: ["auto_debit", "payg", "prepaid"],
+    modes: ["auto_debit", "prepaid"],
     why: "AutoPay regardless, and it should be the default a customer sees. At this volume manual collection is a headcount decision rather than a preference. Prepaid becomes optional: keep it if your customers like the discount, drop it if the refund handling on cancellations is costing you more than it earns.",
     autopayFirst: true,
   },
   {
     id: "enterprise", label: "Over 20,000 orders a month", hint: "Enterprise",
-    modes: ["auto_debit", "payg", "prepaid"],
+    modes: ["auto_debit", "prepaid"],
     why: "AutoPay regardless. Nothing else collects reliably at this scale, and every prepaid cancellation is a refund somebody has to process. Prepaid is optional and usually kept only for a long-run plan where the discount does real work.",
     autopayFirst: true,
   },

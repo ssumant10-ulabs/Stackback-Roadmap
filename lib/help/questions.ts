@@ -14,6 +14,9 @@ export interface Field {
   suffix?: string;
   showWhen?: { field: string; is: string[] };
   optional?: boolean;
+  /** Pay per delivery runs until the customer stops it, so a run length is meaningless when
+   *  it is the only thing on offer. */
+  hideWhenAutopayOnly?: boolean;
 }
 
 export interface Question {
@@ -84,7 +87,8 @@ export const QUESTIONS: Question[] = [
         ],
       },
       { id: "deliveries", kind: "list", label: "Run lengths", placeholder: "3, 6, 12", suffix: "deliveries",
-        help: "Separate them with commas. Each becomes a plan a customer can choose." },
+        help: "Separate them with commas. Each becomes a plan a customer can choose.",
+        hideWhenAutopayOnly: true },
     ],
   },
   {
@@ -105,11 +109,8 @@ export const QUESTIONS: Question[] = [
         ],
       },
       { id: "bands", kind: "bands", label: "Prepaid rate per run length",
-        help: "The prepaid rate for each run you offered. Pay per delivery and pay as you go scale down from it.",
-        showWhen: { field: "tiered", is: ["yes"] } },
-      { id: "freebie", kind: "text", label: "Freebie on pay as you go", optional: true,
-        placeholder: "A sampler with the first delivery",
-        help: "Optional, and often worth more than another two points off. Pay as you go is where a free item does the most work." },
+        help: "The prepaid rate for each run you offered, and whether that run carries a freebie. Pay per delivery and pay as you go scale down from the rate.",
+        showWhen: { field: "tiered", is: ["yes"] }, hideWhenAutopayOnly: true },
     ],
   },
   {
@@ -120,81 +121,41 @@ export const QUESTIONS: Question[] = [
     fields: [
       {
         id: "modes", kind: "multi", label: "Accept",
+        help: "Pay as you go and pay per delivery are alternatives, not a pair: both collect per delivery, one by asking and one automatically. Picking one unticks the other.",
         options: [
           { value: "prepaid", label: "Prepaid", hint: "The whole run paid at checkout." },
           { value: "payg", label: "Pay as you go", hint: "A payment link before every delivery." },
-          { value: "auto_debit", label: "Pay per delivery", hint: "Charged automatically. Needs Razorpay connected." },
+          { value: "auto_debit", label: "Pay per delivery", hint: "Charged automatically, and it runs until they stop it. Needs Razorpay." },
         ],
       },
       {
-        id: "cod", kind: "choice", label: "Cash on delivery",
-        help: "COD cannot back a subscription: there is no stored instrument to charge for delivery two.",
+        id: "shipping_charged", kind: "choice", label: "Is shipping charged on a subscription delivery",
         options: [
-          { value: "no", label: "Subscriptions are prepaid only" },
-          { value: "first", label: "COD on the first delivery, then a payment link" },
+          { value: "no", label: "No, always free" },
+          { value: "yes", label: "Yes, on smaller orders" },
         ],
       },
-      {
-        id: "shipping_kind", kind: "choice", label: "Shipping on a subscription delivery",
-        options: [
-          { value: "free", label: "Always free" },
-          { value: "threshold", label: "Free above a cart value" },
-          { value: "flat", label: "A flat rate every time" },
-        ],
-      },
-      { id: "shipping_rate", kind: "number", label: "The rate", suffix: "\u20b9 per delivery",
-        showWhen: { field: "shipping_kind", is: ["threshold", "flat"] } },
-      { id: "shipping_threshold", kind: "number", label: "Free above", suffix: "\u20b9 cart value",
-        showWhen: { field: "shipping_kind", is: ["threshold"] } },
-      {
-        id: "cancellation", kind: "choice", label: "If a prepaid customer wants out mid-run",
-        help: "Whatever you pick here is what the widget shows as your cancellation policy.",
-        options: [
-          { value: "refund", label: "Refund the deliveries they have not had" },
-          { value: "credit", label: "Store credit for the remainder" },
-          { value: "none", label: "Run it to the end, no refund" },
-        ],
-      },
+      { id: "shipping_rate", kind: "number", label: "What it costs", suffix: "\u20b9 per delivery",
+        showWhen: { field: "shipping_charged", is: ["yes"] } },
+      { id: "shipping_threshold", kind: "number", label: "Charged on orders below", suffix: "\u20b9",
+        help: "Above this the delivery ships free.",
+        showWhen: { field: "shipping_charged", is: ["yes"] } },
     ],
   },
   {
     id: "stack",
     topic: "other",
-    title: "Your stack",
-    blurb: "Four things that change what we build rather than what we price. Each of them has held up a go-live for somebody.",
+    title: "Your product page",
+    blurb: "One thing that changes what we build rather than what we price.",
     fields: [
       {
-        id: "checkout", kind: "choice", label: "Checkout",
-        help: "A third-party checkout intercepts the cart, and subscriptions need Shopify's own checkout to create the contract.",
+        id: "builder", kind: "choice", label: "Is the product page built with a page builder",
+        help: "PageFly, GemPages and the rest publish straight to live rather than to a theme copy, so we tell you before touching one.",
         options: [
-          { value: "shopify", label: "Shopify's own" },
-          { value: "gokwik", label: "GoKwik" },
-          { value: "shopflo", label: "Shopflo" },
-          { value: "other", label: "Something else" },
+          { value: "no", label: "No, it is the theme" },
+          { value: "yes", label: "Yes" },
         ],
       },
-      {
-        id: "builder", kind: "choice", label: "Page builder on the product page",
-        help: "Page builders publish straight to live, so we tell you before touching one.",
-        options: [
-          { value: "none", label: "None, it is the theme" },
-          { value: "pagefly", label: "PageFly" },
-          { value: "gempages", label: "GemPages" },
-          { value: "other", label: "Something else" },
-        ],
-      },
-      {
-        id: "wms", kind: "choice", label: "Who picks and ships",
-        help: "A WMS pulls orders on its own schedule, which has to agree with when we create them.",
-        options: [
-          { value: "inhouse", label: "In house" },
-          { value: "shiprocket", label: "Shiprocket" },
-          { value: "unicommerce", label: "Unicommerce" },
-          { value: "other", label: "Another 3PL or WMS" },
-        ],
-      },
-      { id: "lead_days", kind: "number", label: "Days of notice your warehouse needs", suffix: "days",
-        help: "We create each delivery's order this far ahead. Default 7; several stores run 5 or 10." },
     ],
   },
 ];
@@ -205,12 +166,17 @@ export const DEFAULT_ANSWERS: Answers = {
   brand_name: "", category: "", scale: "",
   scope_kind: "products", scope_detail: "", variants: "all", unit_price: "750",
   every_days: ["30"], deliveries: "3, 6",
-  tiered: "no", discount_min: "10", discount_max: "20", bands: "", freebie: "",
-  modes: ["prepaid", "payg"], cod: "no", shipping_kind: "free", cancellation: "refund",
-  checkout: "shopify", builder: "none", wms: "inhouse", lead_days: "7",
+  tiered: "no", discount_min: "10", discount_max: "20", bands: "", freebies: "",
+  modes: ["prepaid", "payg"], shipping_charged: "no", builder: "no",
 };
 
+export function autopayOnly(a: Answers): boolean {
+  const m = Array.isArray(a.modes) ? a.modes : [];
+  return m.length === 1 && m[0] === "auto_debit";
+}
+
 export function visible(f: Field, a: Answers): boolean {
+  if (f.hideWhenAutopayOnly && autopayOnly(a)) return false;
   if (!f.showWhen) return true;
   const v = a[f.showWhen.field];
   return typeof v === "string" && f.showWhen.is.includes(v);
@@ -271,4 +237,20 @@ export function asLines(a: Answers): { question: string; answer: string }[] {
       return { question: `${q.title}: ${f.label}`, answer: text };
     }),
   ).filter((l) => l.answer.trim());
+}
+
+
+/** Run lengths that carry a freebie, stored as "3,12" so they survive a reload in one field. */
+export const parseFreebies = (v: string | string[] | undefined): number[] =>
+  String(v ?? "").split(",").map((x) => parseInt(x.trim(), 10)).filter((n) => Number.isFinite(n));
+
+export const writeFreebies = (list: number[]) => [...new Set(list)].sort((a, b) => a - b).join(",");
+
+/** Pay as you go and pay per delivery both collect per delivery. Offering both asks a
+ *  customer to choose between being invoiced and being charged, which nobody does. */
+export function reconcileModes(next: string[], prev: string[]): string[] {
+  const added = next.find((m) => !prev.includes(m));
+  if (added === "payg") return next.filter((m) => m !== "auto_debit");
+  if (added === "auto_debit") return next.filter((m) => m !== "payg");
+  return next;
 }

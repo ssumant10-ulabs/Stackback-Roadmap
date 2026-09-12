@@ -5,7 +5,7 @@ import { QUERY_TOPIC_NAME } from "@/lib/help/topics";
 import { parseSettings, type WidgetSettings } from "@/lib/help/widget";
 import { APP_NAME } from "@/lib/help/types";
 import { DEFAULT_CONFIG, money, planOptions, type SimConfig } from "@/lib/help/sim";
-import { DEFAULT_ANSWERS, parseBands, parseList, parseNames, type Answers } from "@/lib/help/questions";
+import { DEFAULT_ANSWERS, parseBands, parseFreebies, parseList, parseNames, type Answers } from "@/lib/help/questions";
 import { modeDiscounts } from "@/lib/help/categories";
 import type { LoggedQuery, PlanRec, StoreRecord } from "@/lib/sanity/queries";
 import PlanForm from "./PlanForm";
@@ -82,9 +82,7 @@ export default function Brief({ store, open, answered, connected }: {
       hide_payg: !modes.includes("payg"),
       hide_auto_debit: !modes.includes("auto_debit"),
       // The line only ever says shipping is free. When it is not, there is no line.
-      hide_free_shipping_line: answers.shipping_kind !== "free",
-      promo_line: typeof answers.freebie === "string" && answers.freebie.trim()
-        ? answers.freebie.trim() : s.promo_line,
+      hide_free_shipping_line: false,
     }));
   }, [answers, runs, bands]);
 
@@ -167,7 +165,8 @@ export default function Brief({ store, open, answered, connected }: {
             compareAt={Math.round(cfg.unitPrice * 1.22)}
             onSubscribe={() => go(3)}
             rates={rates}
-            cancellation={String(answers.cancellation || "refund")}
+            shippingRate={answers.shipping_charged === "yes" ? Number(answers.shipping_rate) || 0 : 0}
+            freebieRuns={parseFreebies(answers.freebies)}
           />
 
           <div className="hc-stepnav">

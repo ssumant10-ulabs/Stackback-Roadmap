@@ -13,7 +13,7 @@ import type { PlanOption } from "@/lib/help/sim";
  *  the only thing that makes twenty switches legible on a call. */
 export default function WidgetPreview({
   s, onChange, unitPrice, compareAt, plans, productName, variantLine, currency = "₹", onSubscribe,
-  rates, cancellation,
+  rates, shippingRate = 0, freebieRuns = [],
 }: {
   s: WidgetSettings;
   onChange: (next: WidgetSettings) => void;
@@ -25,7 +25,9 @@ export default function WidgetPreview({
   /** Discount by payment type: prepaid the most, pay as you go the least. The card shows the
    *  rate for whatever the customer has selected, because that is what they would be charged. */
   rates?: Record<string, number>;
-  cancellation?: string;
+  /** Charged per delivery below the threshold. Zero means shipping is free. */
+  shippingRate?: number;
+  freebieRuns?: number[];
 }) {
   const t = s.theme;
   const [hot, setHot] = useState<string | null>(null);
@@ -59,13 +61,29 @@ export default function WidgetPreview({
    * and the number in the bar can never disagree with the tab that is selected. */
   const shift = rates && rates.prepaid > 0 && activeModeId
     ? (rates[activeModeId] ?? rates.prepaid) / rates.prepaid : 1;
-  const shown = plans.map((p) => {
+  /* Pay per delivery runs until the customer stops it, so it is one plan with no run length
+   * rather than a set of commitments. Offering "12 deliveries of a thing that never ends" is
+   * the kind of detail that makes a widget look like it was built by somebody who had not
+   * used the product. */
+  const endless = activeModeId === "auto_debit";
+  const source = endless ? plans.slice(0, 1) : plans;
+  const shown = source.map((p) => {
     const pct = Math.round(p.discountPct * shift);
     const per = unitPrice * (1 - pct / 100);
-    return { ...p, discountPct: pct, perDelivery: per, total: per * p.deliveries };
+    return {
+      ...p,
+      discountPct: pct, perDelivery: per,
+      total: per * p.deliveries,
+      endless,
+      freebie: !endless && freebieRuns.includes(p.deliveries),
+    };
   });
   const chosen = shown[picked] ?? shown[0];
   const best = shown.reduce((m, p) => Math.max(m, p.discountPct), 0);
+
+  /* What the customer reads as the "was" price. Compare-at when the store sets one and the
+   * setting says to use it, otherwise the one-time price. */
+  const listPrice = s.use_compare_at_price_for_discount_label && compareAt ? compareAt : unitPrice;
 
   const radius = t.shape.radius;
   const lit = (tag: string) => (hot === tag ? " sb-lit" : "");
@@ -168,8 +186,16 @@ export default function WidgetPreview({
                     {on && <i style={{ background: t.colors.subscriptionAccent }} />}
                   </span>
                   <span className="hc-wplanl">
-                    <b style={{ color: t.text.primary }}>{s.card_shows_option_title ? "Subscribe and save" : plan.title}</b>
-                    <em style={{ color: t.text.secondary }}>{plan.schedule}</em>
+                    <b style={{ color: t.text.primary }}>
+                      {s.card_shows_option_title ? "Subscribe and save"
+                        : plan.endless ? `Delivered ${freqPhrase(plan.everyDays)}` : plan.title}
+                    </b>
+                    <em style={{ color: t.text.secondary }}>
+                      {plan.endless ? "Runs until you stop it" : plan.schedule}
+                    </em>
+                    {plan.freebie && (
+                      <em style={{ color: t.colors.savings, fontWeight: 600 }}>Includes a free gift</em>
+                    )}
                   </span>
                   <span className="hc-wplanr">
                     {s.tag_shows_per_delivery_price && (
@@ -188,9 +214,11 @@ export default function WidgetPreview({
             })}
           </div>
 
-          {!s.hide_free_shipping_line && (
+          {/* The line only ever announces free shipping. When it is charged, the summary
+              carries the figure and there is nothing to announce. */}
+          {!s.hide_free_shipping_line && shippingRate === 0 && (
             <p className={"hc-wship" + lit("shipping-line")} style={{ color: t.colors.savings }}>
-              <i style={{ background: t.colors.savings }} />Free shipping on every delivery
+              <i style={{ background: t.colors.savings }} />Free Shipping
             </p>
           )}
           </>)}
@@ -223,30 +251,38 @@ export default function WidgetPreview({
             <em style={{ color: t.text.secondary }}>{chosen?.schedule}</em>
             <button type="button" className="hc-wtotalbtn" onClick={() => setOpen((v) => !v)}
               style={{ color: t.text.primary }} aria-expanded={open}>
-              {s.tag_shows_per_delivery_price
-                ? `${money(chosen?.perDelivery ?? 0)}/delivery`
-                : `${money(chosen?.total ?? 0)} total`}
+              {chosen?.endless || s.tag_shows_per_delivery_price
+                ? `${money((chosen?.perDelivery ?? 0) + shippingRate)}/delivery`
+                : `${money((chosen?.total ?? 0) + shippingRate * (chosen?.deliveries ?? 0))} total`}
               <i className="hc-wcaret" style={{ borderBottomColor: t.text.muted, transform: open ? "rotate(180deg)" : "none" }} />
             </button>
             {open && chosen && (
               <span className="hc-wbreak">
-                {/* Show the arithmetic, not just its result. "Before discount" on its own
-                    invites the reader to check it and find they cannot. */}
+                {/* The reference order: what it lists at, what comes off, what the item is,
+                    what shipping costs, and only then the number they pay. */}
                 <span style={{ color: t.text.secondary }}>
-                  {chosen.deliveries} x {money(chosen.perDelivery)}
-                  <b style={{ color: t.text.primary }}>{money(chosen.total)}</b>
-                </span>
-                <span style={{ color: t.text.muted }}>
-                  Same at the one-time price
-                  <b>{money(unitPrice * chosen.deliveries)}</b>
+                  MRP<s style={{ color: t.text.muted }}>{money(listPrice * (chosen.endless ? 1 : chosen.deliveries))}</s>
                 </span>
                 <span style={{ color: t.colors.savings }}>
-                  You save {chosen.discountPct}%
-                  <b>{money((unitPrice - chosen.perDelivery) * chosen.deliveries)}</b>
+                  {chosen.discountPct}% OFF
+                  <b>&minus;{money((listPrice - chosen.perDelivery) * (chosen.endless ? 1 : chosen.deliveries))}</b>
                 </span>
-                {!s.hide_free_shipping_line && (
-                  <span className={lit("shipping-line")} style={{ color: t.colors.savings }}>Shipping<b>Free</b></span>
-                )}
+                <span style={{ color: t.text.primary, fontWeight: 600 }}>
+                  {chosen.endless ? productName : `${chosen.deliveries} x ${productName}`}
+                  <b>{money(chosen.endless ? chosen.perDelivery : chosen.total)}</b>
+                </span>
+                <span style={{ color: t.text.secondary }}>
+                  Shipping
+                  <b style={{ color: shippingRate > 0 ? t.text.primary : t.colors.savings }}>
+                    {shippingRate > 0 ? `${money(shippingRate)}/delivery` : "Free"}
+                  </b>
+                </span>
+                <span className="hc-wtotalrow" style={{ color: t.text.primary, borderColor: t.borders.default }}>
+                  {chosen.endless ? "Total per delivery" : "Total"}
+                  <b>{money(chosen.endless
+                    ? chosen.perDelivery + shippingRate
+                    : chosen.total + shippingRate * chosen.deliveries)}</b>
+                </span>
               </span>
             )}
           </span>
@@ -334,3 +370,8 @@ function Tab({ t, on, label, sub, onClick, accentWord, className = "" }: {
     </button>
   );
 }
+
+
+const freqPhrase = (d: number) =>
+  d === 7 ? "Every Week" : d === 14 ? "Every 2 Weeks" : d === 30 ? "Every Month"
+  : d === 60 ? "Every 2 Months" : `Every ${d} Days`;

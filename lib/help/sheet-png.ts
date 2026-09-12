@@ -104,10 +104,8 @@ function render(t: Ctx, a: Answers, dry: boolean, settings?: WidgetSettings): nu
   const price = Number(a.unit_price) || 0;
   const freqs = (Array.isArray(a.every_days) ? a.every_days : []).map((d) => freqWord(Number(d)));
   const modes = (Array.isArray(a.modes) ? a.modes : []).map((m) => MODE_NAME[m] || m);
-  const shipping = a.shipping_kind === "free" ? "Free on every delivery"
-    : a.shipping_kind === "threshold"
-      ? `${money(Number(a.shipping_rate) || 0)} per delivery, free above ${money(Number(a.shipping_threshold) || 0)}`
-      : `${money(Number(a.shipping_rate) || 0)} per delivery`;
+  const shipping = a.shipping_charged !== "yes" ? "Free on every delivery"
+    : `${money(Number(a.shipping_rate) || 0)} per delivery on orders below ${money(Number(a.shipping_threshold) || 0)}`;
   const scopeLine = a.scope_kind === "products" ? "Named products"
     : a.scope_kind === "collection" ? "A collection" : "All products";
 
@@ -166,6 +164,7 @@ function render(t: Ctx, a: Answers, dry: boolean, settings?: WidgetSettings): nu
     ["Variants", a.variants === "all" ? "Every variant" : "Selected only", a.variants === "some" ? String(a.variants_detail || "") : ""],
     ["Payment", modes.join(", ") || "Not set"],
     ["Shipping", shipping],
+    ["Page builder", a.builder === "yes" ? "Yes, flag before touching it" : "No, it is the theme"],
   ];
   const colW = (W - PAD * 2 - 26) / 2;
   for (let i = 0; i < facts.length; i += 2) {

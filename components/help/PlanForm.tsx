@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import {
-  DEFAULT_ANSWERS, QUESTIONS, asLines, complete, parseBands, parseList, visible, writeBands,
+  DEFAULT_ANSWERS, QUESTIONS, asLines, complete, parseBands, parseFreebies, parseList,
+  reconcileModes, visible, writeBands, writeFreebies,
   type Answers, type Field,
 } from "@/lib/help/questions";
 import { CATEGORY_BY_ID, SCALE_BY_ID, freqWord } from "@/lib/help/categories";
@@ -44,7 +45,16 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
     try { localStorage.setItem(DRAFT, JSON.stringify({ answers: a })); }
     catch { /* the answer is still in the box */ }
   };
-  const set = (id: string, v: string | string[]) => { const next = { ...answers, [id]: v }; onAnswers(next); save(next); };
+  const set = (id: string, v: string | string[]) => {
+    // Pay as you go and pay per delivery both collect per delivery, one by asking and one
+    // automatically. Offering both asks a customer to choose between those, which nobody
+    // does, so ticking either unticks the other.
+    const value = id === "modes" && Array.isArray(v)
+      ? reconcileModes(v, Array.isArray(answers.modes) ? answers.modes : [])
+      : v;
+    const next = { ...answers, [id]: value };
+    onAnswers(next); save(next);
+  };
 
   const cat = CATEGORY_BY_ID.get(String(answers.category || ""));
   const done = complete(answers);
@@ -52,7 +62,7 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
   const applySuggestion = () => {
     const sc = SCALE_BY_ID.get(String(answers.scale || ""));
     if (!cat && !sc) return;
-    if (!cat) { const next = { ...answers, modes: sc!.modes }; onAnswers(next); save(next); return; }
+    if (!cat) { const next = { ...answers, modes: reconcileModes(sc!.modes, []) }; onAnswers(next); save(next); return; }
     const bands: Record<number, number> = {};
     cat.deliveries.forEach((d, i) => { bands[d] = cat.discounts[i] ?? cat.discounts[cat.discounts.length - 1]; });
     const next: Answers = {
@@ -62,7 +72,7 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
       tiered: cat.discounts.length > 1 ? "yes" : "no",
       bands: writeBands(bands),
       discount_pct: String(cat.discounts[0]),
-      ...(sc ? { modes: sc.modes } : {}),
+      ...(sc ? { modes: reconcileModes(sc.modes, []) } : {}),
     };
     onAnswers(next); save(next);
   };
@@ -110,6 +120,7 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
             {q.fields.filter((f) => visible(f, answers)).map((f) => (
               <FieldRow key={f.id} f={f} answers={answers} value={answers[f.id]}
                 onChange={(v) => set(f.id, v)}
+                onFreebies={(v) => set("freebies", v)}
                 readOnly={f.id === "brand_name" && Boolean(storeName)} />
             ))}
           </fieldset>
@@ -148,7 +159,34 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
           </section>
         )}
 
-        {scale && (
+        {scale && cat && (
+          <section className="hc-sugblock">
+            <h3>{scale.hint}</h3>
+            <p className="hc-sugwhy">{scale.why}</p>
+            <ul className="hc-sugoffers">
+              {scale.modes.map((m) => {
+                const rate = MODE_RATE[m];
+                const runs = m === "auto_debit" ? null : cat.deliveries;
+                return (
+                  <li key={m}>
+                    <b>{MODE_NAME[m]}</b>
+                    <span>
+                      {runs
+                        ? runs.map((d, i) => `${Math.round(cat.discounts[i] * rate)}% at ${d}`).join(", ")
+                        : `${Math.round(cat.discounts[0] * rate)}% off, no run length`}
+                    </span>
+                    <em>{m === "auto_debit"
+                      ? "One plan that runs until they stop it."
+                      : m === "prepaid" ? "Best rate, because they carry the whole run."
+                      : "Lowest rate, and where a freebie does the most work."}</em>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
+
+        {scale && !cat && (
           <section className="hc-sugblock">
             <h3>{scale.hint}</h3>
             <ul className="hc-sugfacts">
@@ -172,9 +210,11 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
   );
 }
 
-function FieldRow({ f, value, answers, onChange, readOnly }: {
+function FieldRow({ f, value, answers, onChange, onFreebies, readOnly }: {
   f: Field; value: string | string[] | undefined; answers: Answers;
-  onChange: (v: string | string[]) => void; readOnly?: boolean;
+  onChange: (v: string | string[]) => void;
+  onFreebies: (v: string) => void;
+  readOnly?: boolean;
 }) {
   if (f.kind === "choice" || f.kind === "multi") {
     const multi = f.kind === "multi";
@@ -202,10 +242,11 @@ function FieldRow({ f, value, answers, onChange, readOnly }: {
   }
 
   if (f.kind === "bands") {
-    // One rate per run length the client actually offered, so the bands cannot describe a
-    // plan that does not exist, which is how a discount ends up promised and unbuildable.
+    // One rate per run the client actually offered, so the bands cannot describe a plan that
+    // does not exist, which is how a discount ends up promised and unbuildable.
     const runs = parseList(answers.deliveries);
     const bands = parseBands(value);
+    const freebies = parseFreebies(answers.freebies);
     if (!runs.length) {
       return <div className="hc-frow"><span className="hc-flabel">{f.label}</span>
         <p className="hc-fhelp">Add the run lengths above first, and a rate appears for each.</p></div>;
@@ -215,18 +256,27 @@ function FieldRow({ f, value, answers, onChange, readOnly }: {
         <span className="hc-flabel">{f.label}</span>
         <div className="hc-bands">
           {runs.map((r) => (
-            <label key={r} className="hc-band">
+            <div key={r} className="hc-band">
               <span>{r} deliveries</span>
-              <input type="number" min={0} max={90} value={Number.isFinite(bands[r]) ? String(bands[r]) : ""}
-                placeholder="0"
-                onChange={(e) => {
-                  const next = { ...bands };
-                  const n = parseInt(e.target.value, 10);
-                  if (Number.isFinite(n)) next[r] = n; else delete next[r];
-                  onChange(writeBands(next));
-                }} />
-              <i>%</i>
-            </label>
+              <label className="hc-bandrate">
+                <input type="number" min={0} max={90}
+                  value={Number.isFinite(bands[r]) ? String(bands[r]) : ""} placeholder="0"
+                  onChange={(e) => {
+                    const next = { ...bands };
+                    const n = parseInt(e.target.value, 10);
+                    if (Number.isFinite(n)) next[r] = n; else delete next[r];
+                    onChange(writeBands(next));
+                  }} />
+                <i>%</i>
+              </label>
+              <label className="hc-bandfree">
+                <input type="checkbox" checked={freebies.includes(r)}
+                  onChange={(e) => onFreebies(writeFreebies(
+                    e.target.checked ? [...freebies, r] : freebies.filter((x) => x !== r),
+                  ))} />
+                <span>Freebie</span>
+              </label>
+            </div>
           ))}
         </div>
         {f.help && <p className="hc-fhelp">{f.help}</p>}
@@ -252,3 +302,7 @@ function FieldRow({ f, value, answers, onChange, readOnly }: {
 const MODE_NAME: Record<string, string> = {
   prepaid: "Prepaid", payg: "Pay as you go", auto_debit: "Pay per delivery",
 };
+
+/** The category's discounts are quoted at the prepaid rate. The other two scale off it, the
+ *  same split the form takes as a lowest and a most. */
+const MODE_RATE: Record<string, number> = { prepaid: 1, auto_debit: 0.75, payg: 0.5 };

@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import type { Feature, FeatureBand, Node as TaskNode } from "@/lib/types";
 import { IcCaretDown, IcLink, IcPlus, IcTrash } from "../icons";
@@ -105,7 +105,7 @@ function Detail({ f, task }: { f: Feature; task: TaskNode | null }) {
 
 /* -------------------------------------------------------------------- on the board card */
 
-function BoardCard({ f, task }: { f: Feature; task: TaskNode }) {
+function BoardCard({ f, task, landed }: { f: Feature; task: TaskNode; landed?: boolean }) {
   const s = useStore();
   const ui = useAppUi();
   const [open, setOpen] = useState(false);
@@ -120,8 +120,17 @@ function BoardCard({ f, task }: { f: Feature; task: TaskNode }) {
      offered one. */
   const topLevel = s.moveTargets(task.id).isTopLevel;
 
+  /* A promoted card arrives in the other column, often off screen. The flash used to be
+     applied by hand two frames after the promote, which raced React's commit and painted
+     the element that was about to unmount. Owning it here means the card that actually
+     mounts is the one that lights up. */
+  const me = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (landed && me.current) me.current.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [landed]);
+
   return (
-    <article className={`fb-card${open ? " open" : ""}`}>
+    <article ref={me} className={`fb-card${open ? " open" : ""}${landed ? " landed" : ""}`} data-feature-id={f.id}>
       <div className="fb-head" onClick={() => setOpen(!open)}>
         <div className="fb-line1">
           {f.ref && <span className="fb-ref">{f.ref}</span>}
@@ -169,7 +178,7 @@ function BoardCard({ f, task }: { f: Feature; task: TaskNode }) {
 
 /* ---------------------------------------------------------------- not on the board card */
 
-function OffCard({ f }: { f: Feature }) {
+function OffCard({ f, onLand }: { f: Feature; onLand: (id: string) => void }) {
   const s = useStore();
   const ui = useAppUi();
   const [open, setOpen] = useState(false);
@@ -178,15 +187,17 @@ function OffCard({ f }: { f: Feature }) {
 
   /* Promote and assign in one gesture. Once it is on the board the card leaves this column,
      so an owner picker that only appears over there would mean finding the thing again just
-     to say whose it is. */
+     to say whose it is. The card is flashed where it lands, because otherwise the only
+     evidence of the move is a number changing in two column headers. */
   const put = (p: number) => {
     if (!s.moveFeatureToBoard(f.id, p)) return;
     const t = s.featureTask(f);
     if (t && row.current) ui.openAssignee(t.id, row.current);
+    onLand(f.id);
   };
 
   return (
-    <article className={`fb-card off${open ? " open" : ""}`}>
+    <article className={`fb-card off${open ? " open" : ""}`} data-feature-id={f.id}>
       <div className="fb-head" onClick={() => setOpen(!open)}>
         <div className="fb-line1">
           {f.ref && <span className="fb-ref">{f.ref}</span>}
@@ -264,6 +275,9 @@ export function Features() {
   /* Done starts folded. It is 14 of the 60 and it is history, not work, so open by default
      it was a third of the scroll for the one group nobody is looking for. */
   const [shut, setShut] = useState<Record<string, boolean>>({ done: true });
+  /* Which card just arrived on the board, so it can be found in the column it moved to. */
+  const [landed, setLanded] = useState<string | null>(null);
+  const onLand = (id: string) => { setLanded(id); setTimeout(() => setLanded((c) => (c === id ? null : c)), 2000); };
 
   /* The header's own team/person filter is deliberately off on this view (it prunes the
      task tree, which is not what a feature list needs), so the dimensions live here where
@@ -399,7 +413,7 @@ export function Features() {
           </header>
           {!off.length && <p className="fb-empty">{anyFilter ? "Nothing here matches the filters." : "Everything is on the board."}</p>}
           <div className="fb-grid">
-            {off.map((f) => <OffCard key={f.id} f={f} />)}
+            {off.map((f) => <OffCard key={f.id} f={f} onLand={onLand} />)}
           </div>
         </section>
 
@@ -425,7 +439,7 @@ export function Features() {
                 </button>
                 {!folded(g.id) && (
                   <div className="fb-grid">
-                    {g.items.map(({ f, task }) => <BoardCard key={f.id} f={f} task={task} />)}
+                    {g.items.map(({ f, task }) => <BoardCard key={f.id} f={f} task={task} landed={landed === f.id} />)}
                   </div>
                 )}
               </div>

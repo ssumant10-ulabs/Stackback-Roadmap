@@ -73,7 +73,9 @@ export default function RoadmapApp() {
 
   const ui: AppUi = useMemo(() => ({
     openAssignee(nodeId, anchor) {
-      setAssignPop({ nodeId, ...place(anchor, 260, 340) });
+      /* Matches .assign-pop max-height, so a card near the bottom flips the picker above
+         the anchor instead of running its Done bar off the window. */
+      setAssignPop({ nodeId, ...place(anchor, 260, 520) });
       setFilterPop(null); setDatesPop(null); setMovePop(null);
     },
     openDates(nodeId, anchor) {

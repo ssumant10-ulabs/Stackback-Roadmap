@@ -146,10 +146,10 @@ function OrdersColumn({ mode, c, p, rows }: {
         </table>
       </div>
 
-      <p className="hc-modefoot">
+      <p className={"hc-modekey " + (prepaid ? "ok" : "warn")}>
         {prepaid
-          ? `All ${c.deliveries} are paid, so every order is created on schedule, ${c.leadDays} days before its delivery, drawing down the store credit.`
-          : `Only the first is paid. Each later delivery is invoiced ${3 + c.leadDays} days ahead, and the order is pushed to Shopify ONLY once that invoice is paid.`}
+          ? <>All {c.deliveries} are <b>already paid</b>, so every order is created on schedule, {c.leadDays} days before its delivery, drawing down the store credit.</>
+          : <>Only the first is paid. Each later delivery is invoiced {3 + c.leadDays} days ahead, and the order reaches Shopify <b>only once that invoice is paid</b>.</>}
       </p>
     </div>
   );
