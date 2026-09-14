@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
 import { UserButton } from "./UserButton";
-import { Logo, IcActivity, IcRoadmap, IcSettings, ThemeIcon } from "./icons";
+import { Logo, IcActivity, IcHelp, IcRoadmap, IcSettings, ThemeIcon } from "./icons";
 import { PilotsLog } from "./views/PilotsLog";
 import { PilotsStats } from "./views/PilotsStats";
 import { PilotsRequests } from "./views/PilotsRequests";
@@ -42,6 +42,7 @@ export default function PilotsApp() {
             </a>
             <div className="top-actions">
               <a className="btn ghost" href="/" title="Back to the roadmap"><IcRoadmap /><span>Roadmap</span></a>
+              <a className="btn ghost" href="/help" title="Help Center: a store's plans, the how-to videos and the answers"><IcHelp /><span>Help Center</span></a>
               <SaveState />
               <span className="icon-group">
                 <button className="ibtn" data-tip="Activity" aria-label="Activity" onClick={() => s.setActivityOpen(true)}><IcActivity /></button>
