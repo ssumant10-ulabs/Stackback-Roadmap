@@ -28,14 +28,23 @@ export function RmItem({ task, railVar, showWave, inflight }: { task: Node; rail
         <ReorderBtns id={task.id} up={m.up} down={m.down} />
       </div>
       {lv.length > 0 && <div className="rm-inflight">{lv.map((x, i) => <span key={i}>▸ {x}</span>)}</div>}
+      {/* Two rows, not one. The chips and the owners were competing for 257px of card with
+          the progress readout, and the owners lost: `flex:1` on a flex-wrap container handed
+          them a 30px column, so five avatars stacked vertically and the count fell off the
+          edge. Dates get their own line and the owners get the full width of the next one. */}
       <div className="rm-item-foot">
-        {showWave && <span className="rm-wave-chip">{waveWord(task.priority)}</span>}
-        <DateChip node={task} variant="hide" />
-        {task.deadline && <span className="rm-date-chip" title="Deadline">Due {task.deadline}</span>}
-        {task.handover && <span className="rm-date-chip" title="Handover timeline">Handover {task.handover}</span>}
-        <span className="assignees"><OwnerAvatars task={task} /></span>
-        <MiniBar pct={pct} />
-        <span className="rm-mini-lbl">{lbl}</span>
+        {(showWave || task.deadline || task.handover || task.start || task.end || task.tat) && (
+          <div className="rm-item-chips">
+            {showWave && <span className="rm-wave-chip">{waveWord(task.priority)}</span>}
+            <DateChip node={task} variant="hide" />
+            {task.deadline && <span className="rm-date-chip" title="Deadline">Due {task.deadline}</span>}
+            {task.handover && <span className="rm-date-chip" title="Handover timeline">Handover {task.handover}</span>}
+          </div>
+        )}
+        <div className="rm-item-stat">
+          <span className="assignees"><OwnerAvatars task={task} /></span>
+          <span className="rm-prog"><MiniBar pct={pct} /><span className="rm-mini-lbl">{lbl}</span></span>
+        </div>
       </div>
     </div>
   );

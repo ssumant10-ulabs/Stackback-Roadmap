@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import { RosterPicker } from "./RosterPicker";
-import { IcClose } from "./icons";
+import { IcCheck, IcClose } from "./icons";
 import type { Node } from "@/lib/types";
 
 function findNode(nodes: Node[], id: string): Node | null {
@@ -19,6 +19,10 @@ export function AssigneePopover({ pos, nodeId, onClose }: { pos: { left: number;
   const ref = useRef<HTMLDivElement>(null);
   const [custom, setCustom] = useState("");
   const [type, setType] = useState<"person" | "team">("person");
+  /* Every toggle here is already saved the moment it is made, which is exactly the problem:
+     nothing on screen said so, so promoting a feature and picking an owner ended with no
+     sign the owner had stuck. The chip below confirms the write and Done closes it. */
+  const [saved, setSaved] = useState(0);
   const node = findNode(s.tasks, nodeId);
 
   useEffect(() => {
@@ -32,16 +36,22 @@ export function AssigneePopover({ pos, nodeId, onClose }: { pos: { left: number;
   }, [onClose]);
 
   if (!node) return null;
-  const addCustom = () => { const v = custom.trim(); if (!v) return; s.toggleAssignee(nodeId, v, type === "team"); setCustom(""); };
+  const mark = () => setSaved((n) => n + 1);
+  const toggle = (name: string, isTeam: boolean) => { s.toggleAssignee(nodeId, name, isTeam); mark(); };
+  const addCustom = () => { const v = custom.trim(); if (!v) return; toggle(v, type === "team"); setCustom(""); };
+  const owners = node.assignees || [];
 
   return (
-    <div className="popover open" ref={ref} style={{ left: pos.left, top: pos.top }}>
+    <div className="popover assign-pop open" ref={ref} style={{ left: pos.left, top: pos.top }}>
       <button className="icon-btn pop-close" aria-label="Close" onClick={onClose}><IcClose /></button>
       {/* Named, not just "Assign owners". The picker can be opened from a card that has
           since moved out of view, most obviously right after a feature is promoted onto the
           board, and an unnamed popover then looks like it belongs to whatever is underneath it. */}
       <h4 className="pop-title">Assign owners<span>{node.title}</span></h4>
-      <RosterPicker assignees={node.assignees} onToggle={(name, isTeam) => s.toggleAssignee(nodeId, name, isTeam)} />
+      {/* The roster scrolls; the confirm bar below does not. Without that the picker grew
+          past the bottom of the window on a card low down the page and Done went with it. */}
+      <div className="ap-body">
+      <RosterPicker assignees={node.assignees} onToggle={toggle} />
       <div className="assignee-custom">
         <input type="text" placeholder="Add someone" value={custom} onChange={(e) => setCustom(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustom(); } }} />
@@ -50,6 +60,15 @@ export function AssigneePopover({ pos, nodeId, onClose }: { pos: { left: number;
           <button type="button" className={type === "team" ? "active" : ""} onClick={() => setType("team")}>Team</button>
         </div>
         <button className="btn" type="button" onClick={addCustom}>Add</button>
+      </div>
+      </div>
+      <div className="assignee-done">
+        <span className={`assignee-saved${saved ? " on" : ""}`} aria-live="polite">
+          {saved
+            ? <><IcCheck />Saved · {owners.length} assigned</>
+            : owners.length === 0 ? "Nobody assigned yet" : `${owners.length} assigned`}
+        </span>
+        <button className="btn primary sm" type="button" onClick={onClose}>Done</button>
       </div>
     </div>
   );
