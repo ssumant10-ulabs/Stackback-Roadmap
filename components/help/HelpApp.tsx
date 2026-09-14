@@ -11,6 +11,7 @@ import Insights from "./Insights";
 import Article from "./Article";
 import Brief from "./Brief";
 import Internal from "./Internal";
+import HowTo from "./HowTo";
 import Simulator from "./Simulator";
 import type { LoggedQuery, StoreRecord, StoreSummary } from "@/lib/sanity/queries";
 import { helpFont } from "./font";
@@ -23,12 +24,13 @@ type View =
   | { kind: "insights" }
   | { kind: "queries"; step: number }
   | { kind: "sim" }
-  | { kind: "internal" };
+  | { kind: "internal" }
+  | { kind: "howto" };
 
 /** The Help Centre is two parts, and they answer different questions.
  *  Queries is live and incomplete by nature: what came in, what we answered.
  *  Help Centre is the settled corpus: the FAQs, the order flow, the simulator. */
-type Part = "queries" | "help" | "internal";
+type Part = "queries" | "howto" | "help" | "internal";
 
 /** Topics where the question underneath is usually "what would that actually do", which
  *  a simulator answers and a paragraph does not. */
@@ -59,6 +61,7 @@ function parseHash(): View {
   }
   if (route === "sim") return { kind: "sim" };
   if (route === "internal") return { kind: "internal" };
+  if (route === "howto") return { kind: "howto" };
   return { kind: "home" };
 }
 
@@ -105,7 +108,8 @@ export default function HelpApp({
       : v.kind === "search" ? `#/search/${encodeURIComponent(v.q)}`
       : v.kind === "queries" ? (v.step > 1 ? `#/queries/${v.step}` : "#/queries")
       : v.kind === "sim" ? "#/sim"
-      : v.kind === "internal" ? "#/internal" : "#/insights";
+      : v.kind === "internal" ? "#/internal"
+      : v.kind === "howto" ? "#/howto" : "#/insights";
     if (window.location.hash !== h) window.location.hash = h; else setView(v);
     setNavOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -148,7 +152,9 @@ export default function HelpApp({
 
   const submit = (e: React.FormEvent) => { e.preventDefault(); go(q.trim() ? { kind: "search", q: q.trim() } : { kind: "home" }); };
 
-  const part: Part = view.kind === "queries" ? "queries" : view.kind === "internal" ? "internal" : "help";
+  const part: Part = view.kind === "queries" ? "queries"
+    : view.kind === "howto" ? "howto"
+    : view.kind === "internal" ? "internal" : "help";
   const cat = view.kind === "cat" ? COUNTS.find((c) => c.id === view.id) : undefined;
   const risky = ARTICLES.filter((a) => RISK_STATUSES.includes(a.status)).length;
 
@@ -165,6 +171,8 @@ export default function HelpApp({
         <div className="hc-parts" role="tablist" aria-label="Help Centre parts">
           <button role="tab" aria-selected={part === "queries"} className={"hc-part" + (part === "queries" ? " on" : "")}
             onClick={() => go({ kind: "queries", step: 1 })}>Your plans</button>
+          <button role="tab" aria-selected={part === "howto"} className={"hc-part" + (part === "howto" ? " on" : "")}
+            onClick={() => go({ kind: "howto" })}>How to</button>
           <button role="tab" aria-selected={part === "help"} className={"hc-part" + (part === "help" ? " on" : "")}
             onClick={() => go({ kind: "home" })}>Help Centre</button>
           {auth.internal && (
@@ -243,6 +251,7 @@ export default function HelpApp({
             ? <Internal store={store} stores={stores} connected={sanityConnected} getToken={auth.getToken} />
             : <div className="hc-empty"><p>The internal tab needs a ULABS account.</p></div>)}
           {view.kind === "sim" && <Simulator />}
+          {view.kind === "howto" && <HowTo />}
           {view.kind === "home" && <Home go={go} internal={auth.internal} onAsk={setChatSeed} answered={answered.length} />}
           {view.kind === "cat" && cat && (
             <section>
