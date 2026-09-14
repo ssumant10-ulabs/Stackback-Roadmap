@@ -67,6 +67,7 @@ function parseHash(): View {
 
 export default function HelpApp({
   answered, openQueries, store, stores, sanityConnected, theme: initialTheme, embedded,
+  onExit, exitLabel,
 }: {
   answered: LoggedQuery[];
   openQueries: LoggedQuery[];
@@ -78,6 +79,11 @@ export default function HelpApp({
    *  signed-in user. Dropping our own chrome is the difference between a tab and an app
    *  bolted inside an app. */
   embedded?: boolean;
+  /** The way out, shown beside the parts. Somebody who came here to look something up is
+   *  still in the middle of whatever they were doing in the host, and the lit button up in
+   *  the header is a long way from where their eyes are. */
+  onExit?: () => void;
+  exitLabel?: string;
 }) {
   const auth = useOptionalAuth();
   const [view, setView] = useState<View>({ kind: "home" });
@@ -174,6 +180,15 @@ export default function HelpApp({
             <Logo />
             <span className="hc-brandname"><b>{APP_NAME}</b><span className="hc-brandsuffix"> Help Centre</span></span>
           </a>
+        )}
+
+        {onExit && (
+          <div className="hc-parts hc-partsback">
+            <button type="button" className="hc-part hc-partback" onClick={onExit}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6L8.5 12l6 6" /></svg>
+              {exitLabel || "Back"}
+            </button>
+          </div>
         )}
 
         <div className="hc-parts" role="tablist" aria-label="Help Centre parts">
