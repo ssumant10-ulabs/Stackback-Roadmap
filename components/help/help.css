@@ -672,7 +672,7 @@
 .hc-qblurb { margin: 0 0 12px; font-size: 12.5px; line-height: 1.6; color: var(--hc-muted); max-width: 62ch; }
 .hc-frow { margin-bottom: 13px; }
 .hc-flabel { display: block; font-size: 12.5px; font-weight: 650; color: var(--ink-2); margin-bottom: 6px; }
-.hc-fchoices { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 7px; }
+.hc-fchoices { display: grid; grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr)); gap: 7px; }
 .hc-fchoice {
   display: flex; gap: 9px; align-items: flex-start; cursor: pointer;
   border: 1px solid var(--border-2); border-radius: 10px; padding: 10px 11px; background: var(--page);
@@ -684,7 +684,7 @@
 .hc-fchoice em { display: block; font-style: normal; font-weight: 400; font-size: 11.5px; color: var(--hc-muted); margin-top: 3px; line-height: 1.5; }
 .hc-finput { display: flex; align-items: center; gap: 8px; }
 .hc-finput input {
-  flex: 1 1 auto; max-width: 420px; appearance: none; font: inherit; font-size: 13.5px;
+  flex: 1 1 auto; min-width: 0; appearance: none; font: inherit; font-size: 13.5px;
   padding: 9px 11px; border: 1px solid var(--border-2); border-radius: 9px;
   background: var(--page); color: var(--ink);
 }
@@ -697,8 +697,11 @@
 /* ---------------------------------------------------------------- widget preview
    The widget draws in the store's brand and its own type, deliberately outside this page's
    palette: it is the thing being judged, so it must not borrow our colours or our font. */
-.hc-wgrid { display: grid; grid-template-columns: minmax(360px, 520px) minmax(0, 1fr); gap: 18px; align-items: start; }
-.hc-wstage { background: var(--sunken); border-radius: 14px; padding: 20px; }
+.hc-wgrid { display: grid; grid-template-columns: minmax(380px, 600px) minmax(0, 1fr); gap: 18px; align-items: start; }
+.hc-wstage {
+  background: var(--sunken); border-radius: 14px; padding: 20px;
+  position: sticky; top: 78px; max-height: calc(100vh - 96px); overflow-y: auto;
+}
 .hc-wshell {
   padding: 15px; display: flex; flex-direction: column; gap: 11px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -782,7 +785,7 @@
 @media (max-width: 767px) {
   .hc-steps-nav { grid-template-columns: minmax(0, 1fr); }
   .hc-steps-nav em { display: none; }
-  .hc-fchoices { grid-template-columns: minmax(0, 1fr); }
+  .hc-fchoices { grid-template-columns: minmax(0, 1fr) !important; }
 }
 
 /* ---------------------------------------------------------------- form: suggester, bands */
@@ -937,3 +940,28 @@
 .hc-atcheckout p b { display: inline; margin: 0; font-size: inherit; color: var(--ink); }
 .hc-otag.muted { color: var(--hc-muted); background: var(--sunken); border: 1px solid var(--border-2); }
 .hc-sched { color: var(--hc-you); font-weight: 650; }
+
+/* ---------------------------------------------------------------- form field grid
+   Two columns, so a percentage and a brand name stop claiming the width of a product list.
+   A field declares its own span; anything unmarked takes the row, which is the safe default
+   for a choice group with hints under each option. */
+.hc-qfields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 20px; align-items: start; }
+.hc-frow.full { grid-column: 1 / -1; }
+.hc-frow.half { grid-column: span 1; }
+.hc-frow { min-width: 0; }
+.hc-finput { display: flex; align-items: center; gap: 9px; }
+.hc-finput input { min-width: 0; }
+
+/* A half-width group keeps two options side by side, unless they carry hints, which need
+   the room to be read rather than skimmed. */
+.hc-frow.half .hc-fchoices { grid-template-columns: repeat(min(var(--cols, 2), 2), minmax(0, 1fr)); }
+.hc-frow.half .hc-fchoices:has(em) { grid-template-columns: minmax(0, 1fr); }
+
+@media (max-width: 899px) {
+  .hc-qfields { grid-template-columns: minmax(0, 1fr); }
+  .hc-frow.half { grid-column: 1 / -1; }
+}
+
+/* An empty suggester is a line, not a tall blank card beside a full form. */
+.hc-suggest.empty { padding: 13px 16px; gap: 6px; }
+.hc-suggest.empty .hc-note { margin: 0; }

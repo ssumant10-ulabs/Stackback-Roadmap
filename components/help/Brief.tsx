@@ -34,13 +34,15 @@ const STEPS = [
  *  the storefront, then see what they do in your admin. Running them together on one page
  *  meant somebody could scroll past the questions to the pretty part and never come back,
  *  which is the exact failure this is meant to fix. */
-export default function Brief({ store, open, answered, connected }: {
+export default function Brief({ store, open, answered, connected, step, onStep }: {
   store: StoreRecord | null;
   open: LoggedQuery[];
   answered: LoggedQuery[];
   connected: boolean;
+  /** The step lives in the address, so a client can be sent straight to their plans. */
+  step: number;
+  onStep: (n: number) => void;
 }) {
-  const [step, setStep] = useState(1);
   const [answers, setAnswers] = useState<Answers>(DEFAULT_ANSWERS);
   const [settings, setSettings] = useState<WidgetSettings>(() => parseSettings(store?.widgetSettings));
   const [cfg, setCfg] = useState<SimConfig>(() => ({ ...DEFAULT_CONFIG }));
@@ -102,7 +104,7 @@ export default function Brief({ store, open, answered, connected }: {
   );
   const plans = useMemo(() => planOptions(cfg, runs, bands, settings.schedule_text_format),
     [cfg, runs, bands, settings.schedule_text_format]);
-  const go = (n: number) => { setStep(n); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const go = (n: number) => { onStep(n); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
   return (
     <section>

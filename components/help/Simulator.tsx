@@ -136,9 +136,9 @@ function OrdersColumn({ mode, c, p, rows }: {
       <div className="hc-modehead">
         <b>{prepaid ? "Prepaid" : "Pay as you go"}</b>
         <span>
-          {money(p.chargedNow)} at checkout ·{" "}
-          <b>{live + 1} of {c.deliveries + 1}</b> orders exist today
-          {prepaid ? ", the rest arrive on schedule" : ", the rest wait on payment"}
+          <b>{live + 1} of {c.deliveries + 1}</b> orders exist today.
+          {" "}{money(p.chargedNow)} taken at checkout,{" "}
+          {prepaid ? "the rest arrive on schedule." : "the rest wait on payment."}
         </span>
       </div>
 

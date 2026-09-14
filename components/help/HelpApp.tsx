@@ -21,7 +21,7 @@ type View =
   | { kind: "cat"; id: string }
   | { kind: "search"; q: string }
   | { kind: "insights" }
-  | { kind: "queries" }
+  | { kind: "queries"; step: number }
   | { kind: "sim" }
   | { kind: "internal" };
 
@@ -51,7 +51,12 @@ function parseHash(): View {
   if (route.startsWith("cat/")) return { kind: "cat", id: decodeURIComponent(route.slice(4)) };
   if (route.startsWith("search/")) return { kind: "search", q: decodeURIComponent(route.slice(7)) };
   if (route === "insights") return { kind: "insights" };
-  if (route === "queries") return { kind: "queries" };
+  if (route.startsWith("queries")) {
+    // #/queries/2 is step two. Without the step in the address a client cannot be sent
+    // straight to their plans, and neither can a screenshot.
+    const n = parseInt(route.split("/")[1] || "1", 10);
+    return { kind: "queries", step: n >= 1 && n <= 3 ? n : 1 };
+  }
   if (route === "sim") return { kind: "sim" };
   if (route === "internal") return { kind: "internal" };
   return { kind: "home" };
@@ -98,7 +103,7 @@ export default function HelpApp({
   const go = useCallback((v: View) => {
     const h = v.kind === "home" ? "#/" : v.kind === "cat" ? `#/cat/${v.id}`
       : v.kind === "search" ? `#/search/${encodeURIComponent(v.q)}`
-      : v.kind === "queries" ? "#/queries"
+      : v.kind === "queries" ? (v.step > 1 ? `#/queries/${v.step}` : "#/queries")
       : v.kind === "sim" ? "#/sim"
       : v.kind === "internal" ? "#/internal" : "#/insights";
     if (window.location.hash !== h) window.location.hash = h; else setView(v);
@@ -159,7 +164,7 @@ export default function HelpApp({
 
         <div className="hc-parts" role="tablist" aria-label="Help Centre parts">
           <button role="tab" aria-selected={part === "queries"} className={"hc-part" + (part === "queries" ? " on" : "")}
-            onClick={() => go({ kind: "queries" })}>Your plans</button>
+            onClick={() => go({ kind: "queries", step: 1 })}>Your plans</button>
           <button role="tab" aria-selected={part === "help"} className={"hc-part" + (part === "help" ? " on" : "")}
             onClick={() => go({ kind: "home" })}>Help Centre</button>
           {auth.internal && (
@@ -231,7 +236,8 @@ export default function HelpApp({
 
         <main className="hc-main" id="hc-main" tabIndex={-1}>
           {view.kind === "queries" && (
-            <Brief store={store} open={openQueries} answered={answered} connected={sanityConnected} />
+            <Brief store={store} open={openQueries} answered={answered} connected={sanityConnected}
+              step={view.step} onStep={(n) => go({ kind: "queries", step: n })} />
           )}
           {view.kind === "internal" && (auth.internal
             ? <Internal store={store} stores={stores} connected={sanityConnected} getToken={auth.getToken} />
@@ -342,7 +348,7 @@ function Home({ go, internal, onAsk, answered }: {
       <div className="hc-askrow">
         <p>Not finding it?</p>
         <button className="hc-btn primary" onClick={() => onAsk("")}>Ask the chat</button>
-        <button className="hc-btn" onClick={() => go({ kind: "queries" })}>
+        <button className="hc-btn" onClick={() => go({ kind: "queries", step: 1 })}>
           {answered > 0 ? `Raise a query, or read ${answered} answered` : "See your plans"}
         </button>
       </div>

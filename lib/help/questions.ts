@@ -17,6 +17,9 @@ export interface Field {
   /** Pay per delivery runs until the customer stops it, so a run length is meaningless when
    *  it is the only thing on offer. */
   hideWhenAutopayOnly?: boolean;
+  /** How much of the row this field takes. A brand name and a percentage do not need the
+   *  width of a product list, and giving it to them leaves the form full of dead space. */
+  span?: "full" | "half";
 }
 
 export interface Question {
@@ -33,7 +36,7 @@ export const QUESTIONS: Question[] = [
     title: "Your brand",
     blurb: "So the answers file against the right store, and so the suggestions beside this form know what sells in your category.",
     fields: [
-      { id: "brand_name", kind: "text", label: "Brand name", placeholder: "As your customers know it" },
+      { id: "brand_name", kind: "text", span: "half", label: "Brand name", placeholder: "As your customers know it" },
       { id: "category", kind: "choice", label: "Category",
         options: CATEGORIES.map((c) => ({ value: c.id, label: c.label })) },
       { id: "scale", kind: "choice", label: "Roughly how many orders a month",
@@ -54,18 +57,18 @@ export const QUESTIONS: Question[] = [
           { value: "all", label: "All products", hint: "Fastest, and the one we most often talk stores out of." },
         ],
       },
-      { id: "scope_detail", kind: "list", label: "Which ones",
+      { id: "scope_detail", kind: "list", span: "full", label: "Which ones",
         placeholder: "Cold brew 250g, Single origin 500g, Sampler",
         help: "Separate them with commas.",
         showWhen: { field: "scope_kind", is: ["products", "collection"] } },
       {
-        id: "variants", kind: "choice", label: "Variants",
+        id: "variants", kind: "choice", span: "half", label: "Variants",
         options: [
           { value: "all", label: "Every variant carries it" },
           { value: "some", label: "Only some sizes or packs" },
         ],
       },
-      { id: "variants_detail", kind: "list", label: "Which variants", placeholder: "250g, 500g",
+      { id: "variants_detail", kind: "list", span: "half", label: "Which variants", placeholder: "250g, 500g",
         help: "Separate them with commas.", showWhen: { field: "variants", is: ["some"] } },
     ],
   },
@@ -84,7 +87,7 @@ export const QUESTIONS: Question[] = [
           { value: "60", label: "Every 2 months" },
         ],
       },
-      { id: "deliveries", kind: "list", label: "Run lengths", placeholder: "3, 6, 12", suffix: "deliveries",
+      { id: "deliveries", kind: "list", span: "half", label: "Run lengths", placeholder: "3, 6, 12", suffix: "deliveries",
         help: "Separate them with commas. Each becomes a plan a customer can choose.",
         hideWhenAutopayOnly: true },
     ],
@@ -95,12 +98,12 @@ export const QUESTIONS: Question[] = [
     title: "Discount",
     blurb: "What a subscriber saves. Prepaid carries the most, because they have handed over the whole run and taken the risk. Pay as you go carries the least, because nothing is committed and you are wearing the collection cost.",
     fields: [
-      { id: "discount_min", kind: "number", label: "Lowest you would go", suffix: "%",
+      { id: "discount_min", kind: "number", span: "half", label: "Lowest you would go", suffix: "%",
         help: "What pay as you go gets." },
-      { id: "discount_max", kind: "number", label: "Most you would give", suffix: "%",
+      { id: "discount_max", kind: "number", span: "half", label: "Most you would give", suffix: "%",
         help: "What prepaid gets. Pay per delivery lands between the two." },
       {
-        id: "tiered", kind: "choice", label: "Does a longer run earn more",
+        id: "tiered", kind: "choice", span: "half", label: "Does a longer run earn more",
         options: [
           { value: "no", label: "One rate per payment type" },
           { value: "yes", label: "A better rate on longer runs too" },
@@ -133,9 +136,9 @@ export const QUESTIONS: Question[] = [
           { value: "yes", label: "Yes, on smaller orders" },
         ],
       },
-      { id: "shipping_rate", kind: "number", label: "What it costs", suffix: "\u20b9 per delivery",
+      { id: "shipping_rate", kind: "number", span: "half", label: "What it costs", suffix: "\u20b9 per delivery",
         showWhen: { field: "shipping_charged", is: ["yes"] } },
-      { id: "shipping_threshold", kind: "number", label: "Charged on orders below", suffix: "\u20b9",
+      { id: "shipping_threshold", kind: "number", span: "half", label: "Charged on orders below", suffix: "\u20b9",
         help: "Above this the delivery ships free.",
         showWhen: { field: "shipping_charged", is: ["yes"] } },
     ],

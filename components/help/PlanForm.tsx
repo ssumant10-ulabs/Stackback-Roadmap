@@ -117,12 +117,14 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
           <fieldset key={q.id} className="hc-qblock">
             <legend><i>{i + 1}</i>{q.title}</legend>
             <p className="hc-qblurb">{q.blurb}</p>
+            <div className="hc-qfields">
             {q.fields.filter((f) => visible(f, answers)).map((f) => (
               <FieldRow key={f.id} f={f} answers={answers} value={answers[f.id]}
                 onChange={(v) => set(f.id, v)}
                 onFreebies={(v) => set("freebies", v)}
                 readOnly={f.id === "brand_name" && Boolean(storeName)} />
             ))}
+            </div>
           </fieldset>
         ))}
 
@@ -140,11 +142,11 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
         {result && <p className={"hc-result " + (result.ok ? "ok" : "bad")} role="status" data-noexport="true">{result.msg}</p>}
       </div>
 
-      <aside className="hc-suggest">
+      <aside className={"hc-suggest" + (!cat && !scale ? " empty" : "")}>
         <p className="hc-suggesth">What similar stores run</p>
 
         {!cat && !scale && (
-          <p className="hc-note">Pick a category and a size above, and this fills in with what works for them.</p>
+          <p className="hc-note">Pick a category and a size, and this fills in.</p>
         )}
 
         {cat && (
@@ -220,9 +222,11 @@ function FieldRow({ f, value, answers, onChange, onFreebies, readOnly }: {
     const multi = f.kind === "multi";
     const list = Array.isArray(value) ? value : [];
     return (
-      <div className="hc-frow">
+      <div className={"hc-frow " + (f.span || "full")}>
         <span className="hc-flabel">{f.label}</span>
-        <div className="hc-fchoices">
+        {/* Columns that divide the option count evenly, so a group never ends on an orphan
+            row. Eight categories read as 4 and 4; five sizes read as one row of five. */}
+        <div className="hc-fchoices" style={{ "--cols": evenCols(f.options?.length || 1) } as React.CSSProperties}>
           {f.options?.map((o) => {
             const on = multi ? list.includes(o.value) : value === o.value;
             return (
@@ -248,11 +252,11 @@ function FieldRow({ f, value, answers, onChange, onFreebies, readOnly }: {
     const bands = parseBands(value);
     const freebies = parseFreebies(answers.freebies);
     if (!runs.length) {
-      return <div className="hc-frow"><span className="hc-flabel">{f.label}</span>
+      return <div className="hc-frow full"><span className="hc-flabel">{f.label}</span>
         <p className="hc-fhelp">Add the run lengths above first, and a rate appears for each.</p></div>;
     }
     return (
-      <div className="hc-frow">
+      <div className="hc-frow full">
         <span className="hc-flabel">{f.label}</span>
         <div className="hc-bands">
           {runs.map((r) => {
@@ -312,7 +316,7 @@ function FieldRow({ f, value, answers, onChange, onFreebies, readOnly }: {
   }
 
   return (
-    <div className="hc-frow">
+    <div className={"hc-frow " + (f.span || "full")}>
       <label className="hc-flabel" htmlFor={`f-${f.id}`}>{f.label}</label>
       <span className="hc-finput">
         <input id={`f-${f.id}`} type={f.kind === "number" ? "number" : "text"}
@@ -324,6 +328,13 @@ function FieldRow({ f, value, answers, onChange, onFreebies, readOnly }: {
       {f.help && <p className="hc-fhelp">{f.help}</p>}
     </div>
   );
+}
+
+/** The largest column count up to five that divides evenly, so no group leaves one option
+ *  stranded on a row of its own. */
+function evenCols(n: number): number {
+  for (const c of [5, 4, 3, 2]) if (n % c === 0) return Math.min(c, n);
+  return n <= 5 ? n : 4;
 }
 
 const MODE_NAME: Record<string, string> = {
