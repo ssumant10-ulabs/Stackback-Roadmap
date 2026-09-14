@@ -1025,3 +1025,13 @@
 .hc.embedded .hc-htlist,
 .hc.embedded .hc-wstage { top: 12px; }
 .hc.embedded .hc-searchwrap { max-width: 420px; }
+
+/* The way back to the host, given the same pill as the parts so it reads as one strip,
+   but its own group: a tablist should only hold tabs, and this one is never selected. */
+.hc-partsback { margin-right: -4px; }
+.hc-partback { display: inline-flex; align-items: center; gap: 5px; }
+.hc-partback svg {
+  width: 13px; height: 13px; fill: none; stroke: currentColor;
+  stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+}
+.hc-partback:hover { background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
