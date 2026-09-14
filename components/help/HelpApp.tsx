@@ -66,7 +66,7 @@ function parseHash(): View {
 }
 
 export default function HelpApp({
-  answered, openQueries, store, stores, sanityConnected, theme: initialTheme,
+  answered, openQueries, store, stores, sanityConnected, theme: initialTheme, embedded,
 }: {
   answered: LoggedQuery[];
   openQueries: LoggedQuery[];
@@ -74,6 +74,10 @@ export default function HelpApp({
   stores: StoreSummary[];
   sanityConnected: boolean;
   theme: "light" | "dark";
+  /** Rendered inside another screen, which already has a header, a theme control and a
+   *  signed-in user. Dropping our own chrome is the difference between a tab and an app
+   *  bolted inside an app. */
+  embedded?: boolean;
 }) {
   const auth = useOptionalAuth();
   const [view, setView] = useState<View>({ kind: "home" });
@@ -82,6 +86,8 @@ export default function HelpApp({
   const [navOpen, setNavOpen] = useState(false);
   const [chatSeed, setChatSeed] = useState<string | null>(null);
   const [theme, setTheme] = useState<"light" | "dark">(initialTheme);
+
+  useEffect(() => { if (embedded) setTheme(initialTheme); }, [embedded, initialTheme]);
   const boxRef = useRef<HTMLInputElement>(null);
 
   /* The hash is the address of what you are reading, so a merchant can send a colleague a
@@ -159,14 +165,16 @@ export default function HelpApp({
   const risky = ARTICLES.filter((a) => RISK_STATUSES.includes(a.status)).length;
 
   return (
-    <div className={`hc ${helpFont.variable}`} data-hc-theme={theme}>
+    <div className={`hc ${helpFont.variable}` + (embedded ? " embedded" : "")} data-hc-theme={theme}>
       <a className="hc-skip" href="#hc-main">Skip to the answers</a>
       <header className="hc-top">
-        <a className="hc-brand" href="#/" aria-label="StackBack Help Centre, overview"
-          onClick={(e) => { e.preventDefault(); go({ kind: "home" }); }}>
-          <Logo />
-          <span className="hc-brandname"><b>{APP_NAME}</b><span className="hc-brandsuffix"> Help Centre</span></span>
-        </a>
+        {!embedded && (
+          <a className="hc-brand" href="#/" aria-label="StackBack Help Centre, overview"
+            onClick={(e) => { e.preventDefault(); go({ kind: "home" }); }}>
+            <Logo />
+            <span className="hc-brandname"><b>{APP_NAME}</b><span className="hc-brandsuffix"> Help Centre</span></span>
+          </a>
+        )}
 
         <div className="hc-parts" role="tablist" aria-label="Help Centre parts">
           <button role="tab" aria-selected={part === "queries"} className={"hc-part" + (part === "queries" ? " on" : "")}
@@ -199,18 +207,21 @@ export default function HelpApp({
           <kbd className="hc-kbd">/</kbd>
         </form>
 
-        <div className="hc-topright">
-          <button className="hc-btn ghost hc-theme" onClick={flipTheme}
-            aria-label={`Switch to ${theme === "light" ? "dark" : "light"} theme`}>
-            {theme === "light"
-              ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" /></svg>
-              : <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2" /><path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4L17 7M7 17l-1.6 1.6" /></svg>}
-          </button>
-          {auth.internal && <button className="hc-btn hc-int" onClick={() => go({ kind: "insights" })}>Insights</button>}
-          {auth.available && (auth.internal
-            ? <button className="hc-btn ghost" onClick={auth.signOut} title={auth.user?.email || ""}>Internal · sign out</button>
-            : <button className="hc-btn ghost" onClick={auth.signIn}>ULABS sign in</button>)}
-        </div>
+        {!embedded && (
+          <div className="hc-topright">
+            <button className="hc-btn ghost hc-theme" onClick={flipTheme}
+              aria-label={`Switch to ${theme === "light" ? "dark" : "light"} theme`}>
+              {theme === "light"
+                ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" /></svg>
+                : <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2" /><path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4L17 7M7 17l-1.6 1.6" /></svg>}
+            </button>
+            {auth.internal && <button className="hc-btn hc-int" onClick={() => go({ kind: "insights" })}>Insights</button>}
+            {auth.available && (auth.internal
+              ? <button className="hc-btn ghost" onClick={auth.signOut} title={auth.user?.email || ""}>Internal · sign out</button>
+              : <button className="hc-btn ghost" onClick={auth.signIn}>ULABS sign in</button>)}
+          </div>
+        )}
+
         {/* The topic rail only exists on the Help Centre part, so neither does its toggle. */}
         {part === "help" && (
           <button className="hc-navtoggle hc-btn ghost" onClick={() => setNavOpen((v) => !v)} aria-expanded={navOpen}>

@@ -1008,3 +1008,20 @@
   .hc-htgrid { grid-template-columns: minmax(0, 1fr); }
   .hc-htplayer, .hc-htlist { position: static; max-height: none; }
 }
+
+/* ---------------------------------------------------------------- embedded in pilots
+   Inside the pilots screen the host owns the page: its own header, its own theme control,
+   its own background and scroll. So drop the full-height ground and the sticky offsets that
+   assume our header is the one at the top. */
+.hc.embedded { min-height: 0; background: transparent; }
+.hc.embedded .hc-top {
+  position: static; padding: 0 0 14px; border-bottom: 1px solid var(--border);
+  background: transparent; backdrop-filter: none;
+}
+.hc.embedded .hc-body { padding: 20px 0 40px; max-width: none; }
+.hc.embedded .hc-nav,
+.hc.embedded .hc-suggest,
+.hc.embedded .hc-htplayer,
+.hc.embedded .hc-htlist,
+.hc.embedded .hc-wstage { top: 12px; }
+.hc.embedded .hc-searchwrap { max-width: 420px; }
