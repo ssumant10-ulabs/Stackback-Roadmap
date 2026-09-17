@@ -10,7 +10,7 @@
 import { parseBands, parseFreebies, parseList, type Answers } from "./questions";
 import { DEFAULT_CONFIG } from "./sim";
 import type { WidgetSettings } from "./widget";
-import { ALL_TOGGLES } from "./widget";
+import { ALL_TOGGLES, DEFAULT_WIDGET, toggleOn } from "./widget";
 import { CATEGORY_BY_ID, SCALE_BY_ID, freqWord } from "./categories";
 
 const W = 880;
@@ -242,7 +242,11 @@ function render(t: Ctx, a: Answers, dry: boolean, settings?: WidgetSettings): nu
       .filter(({ d, v }) => {
         if (d.kind === "text") return Boolean(String(v || "").trim());
         if (d.kind === "select") return true;
-        return v === true;
+        if (d.kind === "number") return Number(v) > 0;
+        // Differs from the default, in either direction. `v === true` was right only while
+        // every switch was phrased as a removal; a positively phrased one is a decision when
+        // it is turned OFF, and that row would have gone missing from the export.
+        return v !== DEFAULT_WIDGET[d.key];
       });
     t.y += 10;
     if (draw) label(t, "Widget settings");
@@ -257,7 +261,8 @@ function render(t: Ctx, a: Answers, dry: boolean, settings?: WidgetSettings): nu
           text(t, d.label, PAD, 13, 600, INK);
           const val = d.kind === "select"
             ? (d.options?.find((o) => o.value === v)?.label ?? String(v))
-            : d.kind === "text" ? String(v) : "On";
+            : d.kind === "text" || d.kind === "number" ? String(v)
+              : toggleOn(settings, d) ? "On" : "Off";
           text(t, val, W - PAD, 13, 400, SOFT, "right");
         }
         t.y += 13;

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { TOGGLE_GROUPS, type WidgetSettings } from "@/lib/help/widget";
+import { TOGGLE_GROUPS, setToggle, toggleOn, type WidgetSettings } from "@/lib/help/widget";
 import type { PlanOption } from "@/lib/help/sim";
 
 /** The storefront widget, rendered from the settings object.
@@ -34,11 +34,15 @@ export default function WidgetPreview({
   const [intent, setIntent] = useState<"onetime" | "subscribe" | "bundle">(
     s.default_intent === "onetime" ? "onetime" : "subscribe",
   );
-  const [mode, setMode] = useState<string>(s.default_payment_mode);
+  /* The setting spells it `pay_as_you_go` and the tab list calls it `payg`, so taking the
+     setting raw meant the dropdown never selected anything and it always fell to prepaid. */
+  const modeOf = (m: string) => (m === "pay_as_you_go" ? "payg" : m);
+  const [mode, setMode] = useState<string>(modeOf(s.default_payment_mode));
   const [picked, setPicked] = useState(0);
   const [open, setOpen] = useState(s.summary_expanded_by_default);
 
   useEffect(() => { setOpen(s.summary_expanded_by_default); }, [s.summary_expanded_by_default]);
+  useEffect(() => { setMode(modeOf(s.default_payment_mode)); }, [s.default_payment_mode]);
   useEffect(() => { if (picked >= plans.length) setPicked(0); }, [plans.length, picked]);
 
   /* Indian grouping either way: 1,058.00, never 1058.00. */
@@ -221,6 +225,17 @@ export default function WidgetPreview({
               <i style={{ background: t.colors.savings }} />Free Shipping
             </p>
           )}
+          {/* Charged shipping is where the compare-at figure lives. It is display only: it
+              never touches the rate, the total or checkout. */}
+          {shippingRate > 0 && (
+            <p className={"hc-wship" + lit("shipping-line")} style={{ color: t.text.secondary }}>
+              <i style={{ background: t.text.muted }} />
+              {s.compare_at_shipping_price > shippingRate && (
+                <s style={{ color: t.text.muted }}>{money(s.compare_at_shipping_price)}</s>
+              )}
+              {money(shippingRate)}/delivery
+            </p>
+          )}
           </>)}
 
           <div className="hc-wfootline" style={{ borderColor: t.borders.default }}>
@@ -304,38 +319,49 @@ export default function WidgetPreview({
       <div className="hc-wtoggles">
         <p className="hc-brandnote">Colours are set from your brand colours when we build.</p>
         <p className="hc-wtogglesh">What the customer sees</p>
-        <p className="hc-note hc-wtoggleshelp">Hover a setting to see what it changes in the preview.</p>
+        <p className="hc-note hc-wtoggleshelp">
+          Every setting on the Purchase Options block, hover one to see what it changes.
+          Nine of them are stored as <code>hide_…</code> and read here as what they switch{" "}
+          <i>on</i>, so nothing on this screen is a double negative. The field under each row is
+          the one we set on your store.
+        </p>
 
         {TOGGLE_GROUPS.map((g) => (
           <div key={g.title} className="hc-tgroup">
             <p className="hc-tgrouph">{g.title}<em>{g.items.length}</em></p>
-            <p className="hc-tgroups">{g.source}</p>
-            {g.items.map((d) => (
-              <label key={String(d.key)} className={"hc-wtoggle" + (d.kind ? " wide" : "")}
-                onMouseOver={() => setHot(d.touches)} onMouseOut={() => setHot(null)}
-                onFocus={() => setHot(d.touches)} onBlur={() => setHot(null)}>
-                {!d.kind && (
-                  <input type="checkbox" checked={Boolean(s[d.key])}
-                    onChange={(e) => onChange({ ...s, [d.key]: e.target.checked })} />
-                )}
-                <span>
-                  {d.label}
-                  <code>{d.path}</code>
-                  {d.kind === "select" && (
-                    <select value={String(s[d.key] ?? "")}
-                      onChange={(e) => onChange({ ...s, [d.key]: e.target.value })}>
-                      {d.options?.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
+            <div className="hc-tgrid">
+              {g.items.map((d) => (
+                <label key={String(d.key)} className={"hc-wtoggle" + (d.kind ? " wide" : "")}
+                  onMouseOver={() => setHot(d.touches)} onMouseOut={() => setHot(null)}
+                  onFocus={() => setHot(d.touches)} onBlur={() => setHot(null)}>
+                  {!d.kind && (
+                    <input type="checkbox" checked={toggleOn(s, d)}
+                      onChange={(e) => onChange(setToggle(s, d, e.target.checked))} />
                   )}
-                  {d.kind === "text" && (
-                    <input type="text" value={String(s[d.key] ?? "")} maxLength={120}
-                      placeholder="Leave empty to hide it"
-                      onChange={(e) => onChange({ ...s, [d.key]: e.target.value })} />
-                  )}
-                  <em>{d.help}</em>
-                </span>
-              </label>
-            ))}
+                  <span>
+                    {d.label}
+                    <code>{d.path}</code>
+                    {d.kind === "select" && (
+                      <select value={String(s[d.key] ?? "")}
+                        onChange={(e) => onChange({ ...s, [d.key]: e.target.value })}>
+                        {d.options?.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                    )}
+                    {d.kind === "text" && (
+                      <input type="text" value={String(s[d.key] ?? "")} maxLength={120}
+                        placeholder="Leave empty to hide it"
+                        onChange={(e) => onChange({ ...s, [d.key]: e.target.value })} />
+                    )}
+                    {d.kind === "number" && (
+                      <input type="number" min={0} step={1} value={Number(s[d.key] ?? 0)}
+                        onChange={(e) => onChange({ ...s, [d.key]: Math.max(0, Number(e.target.value) || 0) })} />
+                    )}
+                    <em>{d.help}</em>
+                    {d.note && <b className="hc-wtnote">{d.note}</b>}
+                  </span>
+                </label>
+              ))}
+            </div>
           </div>
         ))}
       </div>

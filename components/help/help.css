@@ -765,7 +765,7 @@
 .hc-wtogglesh { margin: 0 0 3px; font-size: 14px; font-weight: 700; }
 .hc-wtoggleshelp { margin: 0 0 14px; }
 .hc-tgroup + .hc-tgroup { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
-.hc-tgrouph { display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 1px; font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.hc-tgrouph { display: flex; gap: 8px; align-items: baseline; margin: 0 0 8px; font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 .hc-tgrouph em { font-style: normal; font-weight: 600; color: var(--hc-muted); }
 .hc-tgroups { margin: 0 0 8px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10.5px; color: var(--hc-muted); word-break: break-all; }
 .hc-wtoggle { display: flex; gap: 10px; align-items: flex-start; padding: 8px 7px; margin: 0 -7px; cursor: pointer; border-radius: 8px; }
@@ -800,8 +800,19 @@
 .hc-wship { margin: 0; display: flex; align-items: center; gap: 7px; font-size: .84em; font-weight: 600; }
 .hc-wship i { width: 6px; height: 6px; border-radius: 50%; flex: none; }
 .hc-brandnote { margin: 0 0 14px; padding: 10px 12px; background: var(--sunken); border-radius: 9px; font-size: 12px; line-height: 1.55; color: var(--ink-2); }
+/* Twenty-four settings in one column was a tower nobody read to the bottom of. The plain
+   switches pair up; anything with a control of its own takes the full width so its dropdown
+   or field is not squeezed into half a card. */
+.hc-tgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 10px; }
+.hc-tgrid > .wide { grid-column: 1 / -1; }
+@media (max-width: 1199px) { .hc-tgrid { grid-template-columns: minmax(0, 1fr); } }
+
 .hc-wtoggle.wide { display: block; }
-.hc-wtoggle select, .hc-wtoggle input[type=text] {
+.hc-wtnote { display: block; font-size: 11.5px; font-weight: 600; color: var(--hc-muted); margin-top: 4px; }
+.hc-wtoggleshelp code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .92em; }
+.hc-wtoggleshelp i { font-style: normal; font-weight: 700; }
+.hc-wship s { margin-right: 6px; font-weight: 500; }
+.hc-wtoggle select, .hc-wtoggle input[type=text], .hc-wtoggle input[type=number] {
   display: block; width: 100%; margin-top: 6px; appearance: none; font: inherit; font-size: 12.5px;
   padding: 7px 9px; border: 1px solid var(--border-2); border-radius: 8px; background: var(--page); color: var(--ink);
 }
