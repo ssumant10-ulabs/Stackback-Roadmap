@@ -16,7 +16,7 @@ import type { PlanOption } from "@/lib/help/sim";
  *  the only thing that makes twenty switches legible on a call. */
 export default function WidgetPreview({
   s, onChange, unitPrice, compareAt, plans, productName, variantLine, currency = "₹", onSubscribe,
-  rates, shippingRate = 0, freebieRuns = [],
+  rates, shippingRate = 0, freebieRuns = [], scale = "",
 }: {
   s: WidgetSettings;
   onChange: (next: WidgetSettings) => void;
@@ -31,6 +31,10 @@ export default function WidgetPreview({
   /** Charged per delivery below the threshold. Zero means shipping is free. */
   shippingRate?: number;
   freebieRuns?: number[];
+  /** Step one's scale band. Hiding the StackBack credit is a plan entitlement, not a
+   *  preference, so below the band that carries it the row is locked rather than absent:
+   *  a control that vanishes reads as a bug, one that is locked reads as a price. */
+  scale?: string;
 }) {
   const t = s.theme;
   const [hot, setHot] = useState<string | null>(null);
@@ -40,6 +44,9 @@ export default function WidgetPreview({
   /* The setting spells it `pay_as_you_go` and the tab list calls it `payg`, so taking the
      setting raw meant the dropdown never selected anything and it always fell to prepaid. */
   const modeOf = (m: string) => (m === "pay_as_you_go" ? "payg" : m);
+  const SCALE_ORDER = ["early", "growing", "established", "large", "enterprise"];
+  const locked = (from?: string) =>
+    Boolean(from) && SCALE_ORDER.indexOf(scale) < SCALE_ORDER.indexOf(from as string);
   const [mode, setMode] = useState<string>(modeOf(s.default_payment_mode));
   const [picked, setPicked] = useState(0);
   const [open, setOpen] = useState(s.summary_expanded_by_default);
@@ -323,21 +330,22 @@ export default function WidgetPreview({
         <p className="hc-brandnote">Colours are set from your brand colours when we build.</p>
         <p className="hc-wtogglesh">What the customer sees</p>
         <p className="hc-note hc-wtoggleshelp">
-          Every setting on the Purchase Options block, hover one to see what it changes.
-          Nine of them are stored as <code>hide_…</code> and read here as what they switch{" "}
-          <i>on</i>, so nothing on this screen is a double negative. The field under each row is
-          the one we set on your store.
+          Every setting on the Purchase Options block. Hover a row to see what it changes in the
+          preview, and the <b>i</b> for what it does. Nine are stored as <code>hide_…</code> and
+          read here as what they switch{" "}<i>on</i>, so nothing on this screen is a double
+          negative; the field under each row is the one we set on your store.
         </p>
 
         {TOGGLE_GROUPS.map((g) => (
           <div key={g.title} className="hc-tgroup">
             <p className="hc-tgrouph">{g.title}<em>{settingCount(g)}</em></p>
             <div className="hc-tgrid">
-              {g.items.map((d) => (d.kind === "checks" ? (
+              {g.items.filter((d) => !d.showWhen || String(s[d.showWhen.key]) === d.showWhen.is)
+                .map((d) => (d.kind === "checks" ? (
                 <div key={String(d.key)} className="hc-wtoggle wide hc-wchecks"
                   onMouseOver={() => setHot(d.touches)} onMouseOut={() => setHot(null)}>
                   <span>
-                    {d.label}
+                    {d.label}<Tip help={d.help} note={d.note} />
                     <span className="hc-wcheckrow">
                       {d.checks?.map((c) => {
                         const sub: ToggleDef = { ...d, key: c.key, invert: c.invert, kind: undefined };
@@ -350,20 +358,18 @@ export default function WidgetPreview({
                         );
                       })}
                     </span>
-                    <em>{d.help}</em>
-                    {d.note && <b className="hc-wtnote">{d.note}</b>}
                   </span>
                 </div>
               ) : (
-                <label key={String(d.key)} className={"hc-wtoggle" + (d.kind ? " wide" : "")}
+                <label key={String(d.key)} className={"hc-wtoggle" + (d.kind ? " wide" : "") + (locked(d.gatedFromScale) ? " locked" : "")}
                   onMouseOver={() => setHot(d.touches)} onMouseOut={() => setHot(null)}
                   onFocus={() => setHot(d.touches)} onBlur={() => setHot(null)}>
                   {!d.kind && (
-                    <input type="checkbox" checked={toggleOn(s, d)}
+                    <input type="checkbox" checked={toggleOn(s, d)} disabled={locked(d.gatedFromScale)}
                       onChange={(e) => onChange(setToggle(s, d, e.target.checked))} />
                   )}
                   <span>
-                    {d.label}
+                    {d.label}<Tip help={d.help} note={d.note} />
                     <code>{d.path}</code>
                     {d.kind === "matrix" && (
                       <select value={matrixValue(s, d)}
@@ -386,8 +392,6 @@ export default function WidgetPreview({
                       <input type="number" min={0} step={1} value={Number(s[d.key] ?? 0)}
                         onChange={(e) => onChange({ ...s, [d.key]: Math.max(0, Number(e.target.value) || 0) })} />
                     )}
-                    <em>{d.help}</em>
-                    {d.note && <b className="hc-wtnote">{d.note}</b>}
                   </span>
                 </label>
               )))}
@@ -396,6 +400,21 @@ export default function WidgetPreview({
         ))}
       </div>
     </div>
+  );
+}
+
+/** The explanation, on demand. Twenty-four paragraphs stacked under twenty-four controls
+ *  is a wall nobody reads; the same words behind an "i" are there when a question is asked
+ *  on the call. Hover or focus, so it is reachable from the keyboard as well as the mouse. */
+function Tip({ help, note }: { help: string; note?: string }) {
+  return (
+    <span className="hc-tip">
+      <button type="button" className="hc-tipb" aria-label={note ? `${help} ${note}` : help}>i</button>
+      <span className="hc-tipbox" role="tooltip">
+        {help}
+        {note && <b>{note}</b>}
+      </span>
+    </span>
   );
 }
 

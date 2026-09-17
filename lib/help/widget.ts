@@ -28,14 +28,17 @@ export interface WidgetSettings {
   hide_payg: boolean;
   /** The explorer calls this "pay per delivery", not AutoPay. Same field. */
   hide_auto_debit: boolean;
-  /** The codebase offers only these two. */
-  default_payment_mode: "prepaid" | "pay_as_you_go";
+  /** `auto_debit` is OURS, not the product's: the stored enum is prepaid | pay_as_you_go.
+   *  Asked for on 2026-09-17, so the field has to grow before this can be set on a store. */
+  default_payment_mode: "prepaid" | "pay_as_you_go" | "auto_debit";
   default_intent: "auto" | "subscribe" | "bundle" | "onetime";
   hide_onetime_option: boolean;
   hide_intent_selector: boolean;
   tab_discount_format: "percentage" | "amount";
-  /** Codebase enum. "cadence" is "1 delivery every 2 weeks". */
-  schedule_text_format: "frequency-deliveries" | "cadence" | "none";
+  /** Codebase enum plus "custom". "cadence" is "1 delivery every 2 weeks"; "custom" takes the
+   *  line below and is ours, not the product's, same as `auto_debit` above. */
+  schedule_text_format: "frequency-deliveries" | "cadence" | "none" | "custom";
+  schedule_text_custom: string;
   card_shows_option_title: boolean;
   tag_shows_per_delivery_price: boolean;
   freebie_label_shows_value: boolean;
@@ -75,6 +78,7 @@ export const DEFAULT_WIDGET: WidgetSettings = {
   hide_intent_selector: false,
   tab_discount_format: "percentage",
   schedule_text_format: "cadence",
+  schedule_text_custom: "",
   card_shows_option_title: false,
   tag_shows_per_delivery_price: false,
   freebie_label_shows_value: false,
@@ -82,10 +86,10 @@ export const DEFAULT_WIDGET: WidgetSettings = {
   hide_product_row: false,
   bundle_selector_tabs: false,
   group_bundle_variants: false,
-  hide_price_decimals: false,
+  hide_price_decimals: true,
   compare_at_shipping_price: 0,
   summary_expanded_by_default: false,
-  hide_free_shipping_line: false,
+  hide_free_shipping_line: true,
   direct_checkout: true,
   promo_line: "",
   hide_branding: false,
@@ -155,6 +159,10 @@ export interface ToggleDef {
   invert?: boolean;
   /** Shown when the setting is real but this preview cannot draw it. */
   note?: string;
+  /** A plan entitlement rather than a preference: the row is locked below this scale band. */
+  gatedFromScale?: string;
+  /** Only rendered while another setting holds a given value. */
+  showWhen?: { key: keyof WidgetSettings; is: string };
 }
 
 /** Whether the row's checkbox is ticked, which is not the stored value for an inverted one. */
@@ -209,9 +217,14 @@ export const TOGGLE_GROUPS: ToggleGroup[] = [
           { key: "hide_auto_debit", path: "hide_auto_debit", label: "Pay per delivery (AutoPay)", invert: true },
         ],
         help: "Prepaid is paid in full at checkout, pay as you go sends a link before every delivery, pay per delivery charges automatically. Each is ignored for a plan whose every schedule is that one mode, and AutoPay is already hidden on its own when Razorpay is not connected. These come from the payment types you picked in step one; a change here is a preview override." },
-      { key: "default_payment_mode", label: "Preselected when both are offered", path: "default_payment_mode", touches: "mode-prepaid", kind: "select",
-        options: [{ value: "prepaid", label: "Prepaid" }, { value: "pay_as_you_go", label: "Pay as you go" }],
-        help: "Falls back to whichever mode is actually offered. The codebase offers only these two here; AutoPay is never the preselected one." },
+      { key: "default_payment_mode", label: "Preselected when several are offered", path: "default_payment_mode", touches: "mode-prepaid", kind: "select",
+        options: [
+          { value: "prepaid", label: "Prepaid" },
+          { value: "pay_as_you_go", label: "Pay as you go" },
+          { value: "auto_debit", label: "Pay per delivery (AutoPay)" },
+        ],
+        help: "Falls back to whichever mode is actually offered.",
+        note: "AutoPay is not in the stored enum yet: the field takes prepaid or pay_as_you_go, so this needs a product change before we can set it on a store." },
     ],
   },
   {
@@ -223,8 +236,13 @@ export const TOGGLE_GROUPS: ToggleGroup[] = [
           { value: "frequency-deliveries", label: "Every 2 weeks \u00b7 6 deliveries" },
           { value: "cadence", label: "1 delivery every 2 weeks" },
           { value: "none", label: "No second line" },
+          { value: "custom", label: "Something you write" },
         ],
-        help: "Build-your-own cards ignore cadence, but none hides their line too." },
+        help: "Build-your-own cards ignore cadence, but none hides their line too.",
+        note: "Your own line is not in the stored enum yet, so it needs a product change before we can set it on a store." },
+      { key: "schedule_text_custom", label: "Your second line", path: "schedule_text_custom", touches: "plan-card", kind: "text",
+        showWhen: { key: "schedule_text_format", is: "custom" },
+        help: "The same line on every card. Leave it empty and the card falls back to the cadence." },
       { key: "card_shows_option_title", label: "Use the option title as the plan name", path: "card_shows_option_title", touches: "plan-card",
         help: "Worth it when your plan names mean something to the customer." },
       { key: "tag_shows_per_delivery_price", label: "Show the per-delivery price on the tag", path: "tag_shows_per_delivery_price", touches: "plan-card",
@@ -278,12 +296,14 @@ export const TOGGLE_GROUPS: ToggleGroup[] = [
     title: "Checkout and footer",
     source: "portal-templates.ts / widget-templates.ts",
     items: [
-      { key: "direct_checkout", label: "Skip the cart and go straight to checkout", path: "direct_checkout", touches: "cta",
+      { key: "direct_checkout", label: "Skip the cart and go straight to Shopify checkout", path: "direct_checkout", touches: "cta",
         help: "Theme block only. Fewer steps, and no chance to add anything else. Portal drawers and edit flows are unaffected." },
       { key: "promo_line", label: "Promo line", path: "promo_line", touches: "promo", kind: "text",
         help: "One line above the button. Start it with an emoji if you want an icon. Empty means it does not render." },
       { key: "hide_branding", label: 'Show "Powered by StackBack"', path: "hide_branding", touches: "branding", invert: true,
-        help: "Off removes the credit. If the cancellation policy link is hidden too, the whole footer row goes with it." },
+        gatedFromScale: "large",
+        help: "Off removes the credit. If the cancellation policy link is hidden too, the whole footer row goes with it.",
+        note: "Removing it is a plan entitlement, so it is only available from 5,000 orders a month up." },
     ],
   },
 ];

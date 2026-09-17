@@ -189,12 +189,16 @@ export function planOptions(
   c: SimConfig,
   runs: number[] = [c.deliveries],
   bands: Record<number, number> = {},
-  format: "frequency-deliveries" | "cadence" | "none" = "frequency-deliveries",
+  format: "frequency-deliveries" | "cadence" | "none" | "custom" = "frequency-deliveries",
+  /** Used only by "custom", and an empty one falls back to the cadence rather than to a
+   *  blank line, so half-finished copy never reaches a client on a call. */
+  customLine = "",
 ): PlanOption[] {
   const freq = freqWord(c.everyDays);
 
   const line = (deliveries: number) => {
     if (format === "none") return "";
+    if (format === "custom") return customLine.trim() || `1 delivery ${freq.toLowerCase()}`;
     // The codebase's own wording for each format. "cadence" is what a client asked for and
     // what the widget already supports; inventing a third phrasing here would just be wrong.
     if (format === "cadence") return `1 delivery ${freq.toLowerCase()}`;

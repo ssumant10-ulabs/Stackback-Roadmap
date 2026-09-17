@@ -1058,3 +1058,32 @@
 .hc-wcheckrow label:hover { color: var(--ink); }
 .hc-wcheckrow input { accent-color: var(--brand-deep); flex: none; margin: 0; }
 .hc-wcheckrow code { display: inline; margin: 0 0 0 1px; font-size: 10.5px; color: var(--hc-muted); }
+
+/* ---------------------------------------------------------------- setting tooltips
+   The help text used to sit under every control, which turned twenty-four settings into a
+   wall of paragraphs. It is the same words, behind an "i", so the screen reads as a list of
+   decisions and the explanation is one hover away when somebody asks on the call. */
+.hc-tip { position: relative; display: inline-flex; vertical-align: middle; margin-left: 6px; }
+.hc-tipb {
+  appearance: none; border: 1px solid var(--border-2); background: var(--page); color: var(--hc-muted);
+  width: 15px; height: 15px; border-radius: 50%; padding: 0; cursor: help;
+  font: inherit; font-size: 10px; font-weight: 700; font-style: italic; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+}
+.hc-tipb:hover, .hc-tip:focus-within .hc-tipb { border-color: var(--brand-deep); color: var(--brand-deep); }
+.hc-tipbox {
+  position: absolute; left: -8px; top: calc(100% + 7px);
+  width: max-content; max-width: 290px; z-index: 40;
+  background: var(--ink); color: var(--page); border-radius: 9px; padding: 9px 11px;
+  font-size: 12px; font-weight: 450; line-height: 1.5; text-transform: none; letter-spacing: 0;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .28);
+  opacity: 0; visibility: hidden; transition: opacity .12s;
+}
+.hc-tipbox b { display: block; margin-top: 6px; font-weight: 700; opacity: .85; }
+.hc-tip:hover .hc-tipbox, .hc-tip:focus-within .hc-tipbox { opacity: 1; visibility: visible; }
+/* A row in the right-hand column would push its box off the card. */
+.hc-tgrid > *:nth-child(even) .hc-tipbox { left: auto; right: -8px; }
+
+/* An entitlement, not a preference: locked reads as a price, missing reads as a bug. */
+.hc-wtoggle.locked { opacity: .62; }
+.hc-wtoggle.locked input { cursor: not-allowed; }
