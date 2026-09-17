@@ -331,9 +331,7 @@ export default function WidgetPreview({
         <p className="hc-wtogglesh">What the customer sees</p>
         <p className="hc-note hc-wtoggleshelp">
           Every setting on the Purchase Options block. Hover a row to see what it changes in the
-          preview, and the <b>i</b> for what it does. Nine are stored as <code>hide_…</code> and
-          read here as what they switch{" "}<i>on</i>, so nothing on this screen is a double
-          negative; the field under each row is the one we set on your store.
+          preview, and the <b>i</b> for what it does.
         </p>
 
         {TOGGLE_GROUPS.map((g) => (
@@ -345,7 +343,7 @@ export default function WidgetPreview({
                 <div key={String(d.key)} className="hc-wtoggle wide hc-wchecks"
                   onMouseOver={() => setHot(d.touches)} onMouseOut={() => setHot(null)}>
                   <span>
-                    {d.label}<Tip help={d.help} note={d.note} />
+                    {d.label}<Tip help={d.help} note={d.note} path={d.path} />
                     <span className="hc-wcheckrow">
                       {d.checks?.map((c) => {
                         const sub: ToggleDef = { ...d, key: c.key, invert: c.invert, kind: undefined };
@@ -353,7 +351,7 @@ export default function WidgetPreview({
                           <label key={String(c.key)}>
                             <input type="checkbox" checked={toggleOn(s, sub)}
                               onChange={(e) => onChange(setToggle(s, sub, e.target.checked))} />
-                            {c.label}<code>{c.path}</code>
+                            {c.label}
                           </label>
                         );
                       })}
@@ -369,8 +367,7 @@ export default function WidgetPreview({
                       onChange={(e) => onChange(setToggle(s, d, e.target.checked))} />
                   )}
                   <span>
-                    {d.label}<Tip help={d.help} note={d.note} />
-                    <code>{d.path}</code>
+                    {d.label}<Tip help={d.help} note={d.note} path={d.path} />
                     {d.kind === "matrix" && (
                       <select value={matrixValue(s, d)}
                         onChange={(e) => onChange(applyMatrix(s, d, e.target.value))}>
@@ -406,13 +403,17 @@ export default function WidgetPreview({
 /** The explanation, on demand. Twenty-four paragraphs stacked under twenty-four controls
  *  is a wall nobody reads; the same words behind an "i" are there when a question is asked
  *  on the call. Hover or focus, so it is reachable from the keyboard as well as the mouse. */
-function Tip({ help, note }: { help: string; note?: string }) {
+function Tip({ help, note, path }: { help: string; note?: string; path?: string }) {
   return (
     <span className="hc-tip">
       <button type="button" className="hc-tipb" aria-label={note ? `${help} ${note}` : help}>i</button>
       <span className="hc-tipbox" role="tooltip">
         {help}
         {note && <b>{note}</b>}
+        {/* The field we set on the store. Off the row, because a merchant reading twenty-four
+            snake_case identifiers is reading our plumbing, but still one hover away for
+            whoever is configuring it afterwards. */}
+        {path && <i>{path}</i>}
       </span>
     </span>
   );
