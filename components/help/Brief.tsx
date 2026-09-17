@@ -82,8 +82,6 @@ export default function Brief({ store, open, answered, connected, step, onStep }
       hide_prepaid: !modes.includes("prepaid"),
       hide_payg: !modes.includes("payg"),
       hide_auto_debit: !modes.includes("auto_debit"),
-      // The line only ever says shipping is free. When it is not, there is no line.
-      hide_free_shipping_line: false,
     }));
   }, [answers, runs, bands]);
 
@@ -102,8 +100,8 @@ export default function Brief({ store, open, answered, connected, step, onStep }
     () => modeDiscounts(Number(answers.discount_min) || 0, Number(answers.discount_max) || 0),
     [answers.discount_min, answers.discount_max],
   );
-  const plans = useMemo(() => planOptions(cfg, runs, bands, settings.schedule_text_format),
-    [cfg, runs, bands, settings.schedule_text_format]);
+  const plans = useMemo(() => planOptions(cfg, runs, bands, settings.schedule_text_format, settings.schedule_text_custom),
+    [cfg, runs, bands, settings.schedule_text_format, settings.schedule_text_custom]);
   const go = (n: number) => { onStep(n); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
   return (
@@ -168,6 +166,7 @@ export default function Brief({ store, open, answered, connected, step, onStep }
             rates={rates}
             shippingRate={answers.shipping_charged === "yes" ? Number(answers.shipping_rate) || 0 : 0}
             freebieRuns={freebieRuns(answers.freebies)}
+            scale={String(answers.scale || "")}
           />
 
           <div className="hc-stepnav">

@@ -1,6 +1,9 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { TOGGLE_GROUPS, type WidgetSettings } from "@/lib/help/widget";
+import {
+  TOGGLE_GROUPS, applyMatrix, matrixValue, setToggle, settingCount, toggleOn,
+  type ToggleDef, type WidgetSettings,
+} from "@/lib/help/widget";
 import type { PlanOption } from "@/lib/help/sim";
 
 /** The storefront widget, rendered from the settings object.
@@ -13,7 +16,7 @@ import type { PlanOption } from "@/lib/help/sim";
  *  the only thing that makes twenty switches legible on a call. */
 export default function WidgetPreview({
   s, onChange, unitPrice, compareAt, plans, productName, variantLine, currency = "₹", onSubscribe,
-  rates, shippingRate = 0, freebieRuns = [],
+  rates, shippingRate = 0, freebieRuns = [], scale = "",
 }: {
   s: WidgetSettings;
   onChange: (next: WidgetSettings) => void;
@@ -28,17 +31,28 @@ export default function WidgetPreview({
   /** Charged per delivery below the threshold. Zero means shipping is free. */
   shippingRate?: number;
   freebieRuns?: number[];
+  /** Step one's scale band. Hiding the StackBack credit is a plan entitlement, not a
+   *  preference, so below the band that carries it the row is locked rather than absent:
+   *  a control that vanishes reads as a bug, one that is locked reads as a price. */
+  scale?: string;
 }) {
   const t = s.theme;
   const [hot, setHot] = useState<string | null>(null);
   const [intent, setIntent] = useState<"onetime" | "subscribe" | "bundle">(
     s.default_intent === "onetime" ? "onetime" : "subscribe",
   );
-  const [mode, setMode] = useState<string>(s.default_payment_mode);
+  /* The setting spells it `pay_as_you_go` and the tab list calls it `payg`, so taking the
+     setting raw meant the dropdown never selected anything and it always fell to prepaid. */
+  const modeOf = (m: string) => (m === "pay_as_you_go" ? "payg" : m);
+  const SCALE_ORDER = ["early", "growing", "established", "large", "enterprise"];
+  const locked = (from?: string) =>
+    Boolean(from) && SCALE_ORDER.indexOf(scale) < SCALE_ORDER.indexOf(from as string);
+  const [mode, setMode] = useState<string>(modeOf(s.default_payment_mode));
   const [picked, setPicked] = useState(0);
   const [open, setOpen] = useState(s.summary_expanded_by_default);
 
   useEffect(() => { setOpen(s.summary_expanded_by_default); }, [s.summary_expanded_by_default]);
+  useEffect(() => { setMode(modeOf(s.default_payment_mode)); }, [s.default_payment_mode]);
   useEffect(() => { if (picked >= plans.length) setPicked(0); }, [plans.length, picked]);
 
   /* Indian grouping either way: 1,058.00, never 1058.00. */
@@ -221,6 +235,17 @@ export default function WidgetPreview({
               <i style={{ background: t.colors.savings }} />Free Shipping
             </p>
           )}
+          {/* Charged shipping is where the compare-at figure lives. It is display only: it
+              never touches the rate, the total or checkout. */}
+          {shippingRate > 0 && (
+            <p className={"hc-wship" + lit("shipping-line")} style={{ color: t.text.secondary }}>
+              <i style={{ background: t.text.muted }} />
+              {s.compare_at_shipping_price > shippingRate && (
+                <s style={{ color: t.text.muted }}>{money(s.compare_at_shipping_price)}</s>
+              )}
+              {money(shippingRate)}/delivery
+            </p>
+          )}
           </>)}
 
           <div className="hc-wfootline" style={{ borderColor: t.borders.default }}>
@@ -304,42 +329,93 @@ export default function WidgetPreview({
       <div className="hc-wtoggles">
         <p className="hc-brandnote">Colours are set from your brand colours when we build.</p>
         <p className="hc-wtogglesh">What the customer sees</p>
-        <p className="hc-note hc-wtoggleshelp">Hover a setting to see what it changes in the preview.</p>
+        <p className="hc-note hc-wtoggleshelp">
+          Every setting on the Purchase Options block. Hover a row to see what it changes in the
+          preview, and the <b>i</b> for what it does.
+        </p>
 
         {TOGGLE_GROUPS.map((g) => (
           <div key={g.title} className="hc-tgroup">
-            <p className="hc-tgrouph">{g.title}<em>{g.items.length}</em></p>
-            <p className="hc-tgroups">{g.source}</p>
-            {g.items.map((d) => (
-              <label key={String(d.key)} className={"hc-wtoggle" + (d.kind ? " wide" : "")}
-                onMouseOver={() => setHot(d.touches)} onMouseOut={() => setHot(null)}
-                onFocus={() => setHot(d.touches)} onBlur={() => setHot(null)}>
-                {!d.kind && (
-                  <input type="checkbox" checked={Boolean(s[d.key])}
-                    onChange={(e) => onChange({ ...s, [d.key]: e.target.checked })} />
-                )}
-                <span>
-                  {d.label}
-                  <code>{d.path}</code>
-                  {d.kind === "select" && (
-                    <select value={String(s[d.key] ?? "")}
-                      onChange={(e) => onChange({ ...s, [d.key]: e.target.value })}>
-                      {d.options?.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
+            <p className="hc-tgrouph">{g.title}<em>{settingCount(g)}</em></p>
+            <div className="hc-tgrid">
+              {g.items.filter((d) => !d.showWhen || String(s[d.showWhen.key]) === d.showWhen.is)
+                .map((d) => (d.kind === "checks" ? (
+                <div key={String(d.key)} className="hc-wtoggle wide hc-wchecks"
+                  onMouseOver={() => setHot(d.touches)} onMouseOut={() => setHot(null)}>
+                  <span>
+                    {d.label}<Tip help={d.help} note={d.note} path={d.path} />
+                    <span className="hc-wcheckrow">
+                      {d.checks?.map((c) => {
+                        const sub: ToggleDef = { ...d, key: c.key, invert: c.invert, kind: undefined };
+                        return (
+                          <label key={String(c.key)}>
+                            <input type="checkbox" checked={toggleOn(s, sub)}
+                              onChange={(e) => onChange(setToggle(s, sub, e.target.checked))} />
+                            {c.label}
+                          </label>
+                        );
+                      })}
+                    </span>
+                  </span>
+                </div>
+              ) : (
+                <label key={String(d.key)} className={"hc-wtoggle" + (d.kind ? " wide" : "") + (locked(d.gatedFromScale) ? " locked" : "")}
+                  onMouseOver={() => setHot(d.touches)} onMouseOut={() => setHot(null)}
+                  onFocus={() => setHot(d.touches)} onBlur={() => setHot(null)}>
+                  {!d.kind && (
+                    <input type="checkbox" checked={toggleOn(s, d)} disabled={locked(d.gatedFromScale)}
+                      onChange={(e) => onChange(setToggle(s, d, e.target.checked))} />
                   )}
-                  {d.kind === "text" && (
-                    <input type="text" value={String(s[d.key] ?? "")} maxLength={120}
-                      placeholder="Leave empty to hide it"
-                      onChange={(e) => onChange({ ...s, [d.key]: e.target.value })} />
-                  )}
-                  <em>{d.help}</em>
-                </span>
-              </label>
-            ))}
+                  <span>
+                    {d.label}<Tip help={d.help} note={d.note} path={d.path} />
+                    {d.kind === "matrix" && (
+                      <select value={matrixValue(s, d)}
+                        onChange={(e) => onChange(applyMatrix(s, d, e.target.value))}>
+                        {d.matrix?.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                    )}
+                    {d.kind === "select" && (
+                      <select value={String(s[d.key] ?? "")}
+                        onChange={(e) => onChange({ ...s, [d.key]: e.target.value })}>
+                        {d.options?.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                    )}
+                    {d.kind === "text" && (
+                      <input type="text" value={String(s[d.key] ?? "")} maxLength={120}
+                        placeholder="Leave empty to hide it"
+                        onChange={(e) => onChange({ ...s, [d.key]: e.target.value })} />
+                    )}
+                    {d.kind === "number" && (
+                      <input type="number" min={0} step={1} value={Number(s[d.key] ?? 0)}
+                        onChange={(e) => onChange({ ...s, [d.key]: Math.max(0, Number(e.target.value) || 0) })} />
+                    )}
+                  </span>
+                </label>
+              )))}
+            </div>
           </div>
         ))}
       </div>
     </div>
+  );
+}
+
+/** The explanation, on demand. Twenty-four paragraphs stacked under twenty-four controls
+ *  is a wall nobody reads; the same words behind an "i" are there when a question is asked
+ *  on the call. Hover or focus, so it is reachable from the keyboard as well as the mouse. */
+function Tip({ help, note, path }: { help: string; note?: string; path?: string }) {
+  return (
+    <span className="hc-tip">
+      <button type="button" className="hc-tipb" aria-label={note ? `${help} ${note}` : help}>i</button>
+      <span className="hc-tipbox" role="tooltip">
+        {help}
+        {note && <b>{note}</b>}
+        {/* The field we set on the store. Off the row, because a merchant reading twenty-four
+            snake_case identifiers is reading our plumbing, but still one hover away for
+            whoever is configuring it afterwards. */}
+        {path && <i>{path}</i>}
+      </span>
+    </span>
   );
 }
 
