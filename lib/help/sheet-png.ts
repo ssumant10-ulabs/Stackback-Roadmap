@@ -10,7 +10,7 @@
 import { parseBands, parseFreebies, parseList, type Answers } from "./questions";
 import { DEFAULT_CONFIG } from "./sim";
 import type { WidgetSettings } from "./widget";
-import { ALL_TOGGLES, DEFAULT_WIDGET, toggleOn } from "./widget";
+import { DEFAULT_WIDGET, EXPORT_ROWS, matrixValue, toggleOn } from "./widget";
 import { CATEGORY_BY_ID, SCALE_BY_ID, freqWord } from "./categories";
 
 const W = 880;
@@ -237,12 +237,13 @@ function render(t: Ctx, a: Answers, dry: boolean, settings?: WidgetSettings): nu
   if (settings) {
     // Only what was changed from the default. A list of twenty rows all reading "off" tells
     // the reader nothing; the three that are on are the decisions somebody made.
-    const changed = ALL_TOGGLES
+    const changed = EXPORT_ROWS
       .map((d) => ({ d, v: settings[d.key] }))
       .filter(({ d, v }) => {
         if (d.kind === "text") return Boolean(String(v || "").trim());
         if (d.kind === "select") return true;
         if (d.kind === "number") return Number(v) > 0;
+        if (d.kind === "matrix") return true;
         // Differs from the default, in either direction. `v === true` was right only while
         // every switch was phrased as a removal; a positively phrased one is a decision when
         // it is turned OFF, and that row would have gone missing from the export.
@@ -259,7 +260,9 @@ function render(t: Ctx, a: Answers, dry: boolean, settings?: WidgetSettings): nu
         t.y += 19;
         if (draw) {
           text(t, d.label, PAD, 13, 600, INK);
-          const val = d.kind === "select"
+          const val = d.kind === "matrix"
+            ? (d.matrix?.find((o) => o.value === matrixValue(settings, d))?.label ?? "")
+            : d.kind === "select"
             ? (d.options?.find((o) => o.value === v)?.label ?? String(v))
             : d.kind === "text" || d.kind === "number" ? String(v)
               : toggleOn(settings, d) ? "On" : "Off";

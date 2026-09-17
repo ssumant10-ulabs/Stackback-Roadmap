@@ -1,6 +1,9 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { TOGGLE_GROUPS, setToggle, toggleOn, type WidgetSettings } from "@/lib/help/widget";
+import {
+  TOGGLE_GROUPS, applyMatrix, matrixValue, setToggle, settingCount, toggleOn,
+  type ToggleDef, type WidgetSettings,
+} from "@/lib/help/widget";
 import type { PlanOption } from "@/lib/help/sim";
 
 /** The storefront widget, rendered from the settings object.
@@ -328,9 +331,30 @@ export default function WidgetPreview({
 
         {TOGGLE_GROUPS.map((g) => (
           <div key={g.title} className="hc-tgroup">
-            <p className="hc-tgrouph">{g.title}<em>{g.items.length}</em></p>
+            <p className="hc-tgrouph">{g.title}<em>{settingCount(g)}</em></p>
             <div className="hc-tgrid">
-              {g.items.map((d) => (
+              {g.items.map((d) => (d.kind === "checks" ? (
+                <div key={String(d.key)} className="hc-wtoggle wide hc-wchecks"
+                  onMouseOver={() => setHot(d.touches)} onMouseOut={() => setHot(null)}>
+                  <span>
+                    {d.label}
+                    <span className="hc-wcheckrow">
+                      {d.checks?.map((c) => {
+                        const sub: ToggleDef = { ...d, key: c.key, invert: c.invert, kind: undefined };
+                        return (
+                          <label key={String(c.key)}>
+                            <input type="checkbox" checked={toggleOn(s, sub)}
+                              onChange={(e) => onChange(setToggle(s, sub, e.target.checked))} />
+                            {c.label}<code>{c.path}</code>
+                          </label>
+                        );
+                      })}
+                    </span>
+                    <em>{d.help}</em>
+                    {d.note && <b className="hc-wtnote">{d.note}</b>}
+                  </span>
+                </div>
+              ) : (
                 <label key={String(d.key)} className={"hc-wtoggle" + (d.kind ? " wide" : "")}
                   onMouseOver={() => setHot(d.touches)} onMouseOut={() => setHot(null)}
                   onFocus={() => setHot(d.touches)} onBlur={() => setHot(null)}>
@@ -341,6 +365,12 @@ export default function WidgetPreview({
                   <span>
                     {d.label}
                     <code>{d.path}</code>
+                    {d.kind === "matrix" && (
+                      <select value={matrixValue(s, d)}
+                        onChange={(e) => onChange(applyMatrix(s, d, e.target.value))}>
+                        {d.matrix?.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                    )}
                     {d.kind === "select" && (
                       <select value={String(s[d.key] ?? "")}
                         onChange={(e) => onChange({ ...s, [d.key]: e.target.value })}>
@@ -360,7 +390,7 @@ export default function WidgetPreview({
                     {d.note && <b className="hc-wtnote">{d.note}</b>}
                   </span>
                 </label>
-              ))}
+              )))}
             </div>
           </div>
         ))}

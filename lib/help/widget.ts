@@ -137,9 +137,17 @@ export interface ToggleDef {
   path: string;
   help: string;
   touches: string;
-  /** Absent for a boolean. */
-  kind?: "select" | "text" | "number";
+  /** Absent for a plain boolean. */
+  kind?: "select" | "text" | "number" | "checks" | "matrix";
   options?: { value: string; label: string }[];
+  /** kind "checks": several switches that answer ONE question, on one row under one
+   *  explanation. Three rows each saying "ignored when it is the only mode offered" is
+   *  three readings of the same sentence. */
+  checks?: { key: keyof WidgetSettings; path: string; label: string; invert?: boolean }[];
+  /** kind "matrix": one dropdown over the real combinations of two fields, labelled with
+   *  what the customer actually reads. A format select plus a wording checkbox is a 2x2 the
+   *  merchant has to hold in their head; the four strings are the thing being chosen. */
+  matrix?: { value: string; label: string; set: Partial<WidgetSettings> }[];
   /** The stored field is a `hide_*`, so the row is checked when the field is false. Ten of
    *  the twenty-four settings are phrased as a removal, which is why half of this screen used
    *  to read as a list of things to switch off. The field name stays visible under each row,
@@ -182,24 +190,25 @@ export const TOGGLE_GROUPS: ToggleGroup[] = [
           { value: "bundle", label: "Bundle & Save" }, { value: "onetime", label: "One-time" },
         ],
         help: "Which tab is pre-selected when the widget loads. Auto takes subscribe, then bundle, then one-time. A mode the product does not offer falls back to auto." },
-      { key: "hide_intent_selector", label: "Show the purchase-mode tab bar", path: "hide_intent_selector", touches: "tabs", invert: true,
-        help: "Off hides the whole top tab row: the customer sees only the mode above and cannot switch." },
-      { key: "hide_onetime_option", label: "Show the One-time tab", path: "hide_onetime_option", touches: "tab-onetime", invert: true,
-        help: "Off makes the product subscription-only. Ignored when one-time is the only mode available, so the product can never become unbuyable." },
-      { key: "bundle_selector_tabs", label: "Show bundle choices as tabs, not a dropdown", path: "bundle_selector_tabs", touches: "tab-bundle",
-        help: "When a variant belongs to several bundles of the same type, they appear as a segmented bar instead of a select." },
+      { key: "hide_intent_selector", label: "Tabs the customer sees", path: "hide_intent_selector", touches: "tabs", kind: "checks",
+        checks: [
+          { key: "hide_intent_selector", path: "hide_intent_selector", label: "The tab bar itself", invert: true },
+          { key: "hide_onetime_option", path: "hide_onetime_option", label: "One-time", invert: true },
+        ],
+        help: "Without the bar the customer sees only the mode above and cannot switch. Without One-time the product is subscription-only, and that is ignored when one-time is the only mode there is, so it can never become unbuyable." },
     ],
   },
   {
     title: "How it is paid for",
     source: "widget-templates.ts",
     items: [
-      { key: "hide_prepaid", label: "Prepaid", path: "hide_prepaid", touches: "mode-prepaid", invert: true,
-        help: "Paid in full at checkout. Ignored for a plan whose every schedule is prepaid-only. Set from the payment types you picked in step one; a change here is a preview override." },
-      { key: "hide_payg", label: "Pay as you go", path: "hide_payg", touches: "mode-payg", invert: true,
-        help: "A payment link before every delivery. Ignored for a plan whose every schedule is pay-as-you-go only. Set from step one, same as prepaid." },
-      { key: "hide_auto_debit", label: "Pay per delivery (AutoPay)", path: "hide_auto_debit", touches: "mode-auto", invert: true,
-        help: "Charged automatically before every delivery. Already hidden on its own when Razorpay is not connected; this hides it on top of that. Set from step one, same as prepaid." },
+      { key: "hide_prepaid", label: "Methods on the widget", path: "hide_prepaid", touches: "mode-prepaid", kind: "checks",
+        checks: [
+          { key: "hide_prepaid", path: "hide_prepaid", label: "Prepaid", invert: true },
+          { key: "hide_payg", path: "hide_payg", label: "Pay as you go", invert: true },
+          { key: "hide_auto_debit", path: "hide_auto_debit", label: "Pay per delivery (AutoPay)", invert: true },
+        ],
+        help: "Prepaid is paid in full at checkout, pay as you go sends a link before every delivery, pay per delivery charges automatically. Each is ignored for a plan whose every schedule is that one mode, and AutoPay is already hidden on its own when Razorpay is not connected. These come from the payment types you picked in step one; a change here is a preview override." },
       { key: "default_payment_mode", label: "Preselected when both are offered", path: "default_payment_mode", touches: "mode-prepaid", kind: "select",
         options: [{ value: "prepaid", label: "Prepaid" }, { value: "pay_as_you_go", label: "Pay as you go" }],
         help: "Falls back to whichever mode is actually offered. The codebase offers only these two here; AutoPay is never the preselected one." },
@@ -228,11 +237,15 @@ export const TOGGLE_GROUPS: ToggleGroup[] = [
     title: "Prices and discounts",
     source: "widget-templates.ts / portal-templates.ts",
     items: [
-      { key: "tab_discount_format", label: "Discount on the tab reads as", path: "tab_discount_format", touches: "tabs", kind: "select",
-        options: [{ value: "percentage", label: "Up to 20% off" }, { value: "amount", label: "Up to \u20b9200 off" }],
-        help: "Bundle amounts follow the current selection; before anything is picked the percentage is shown." },
-      { key: "tab_badge_shows_plan_discount", label: 'Tab badge reads "Extra 20% off"', path: "tab_badge_shows_plan_discount", touches: "tabs",
-        help: "For a store already running a sitewide sale, so the subscription saving reads as on top of it. Only the tab badge changes; the cards keep their own basis." },
+      { key: "tab_discount_format", label: "The badge on the Subscribe tab reads", path: "tab_discount_format / tab_badge_shows_plan_discount",
+        touches: "tabs", kind: "matrix",
+        matrix: [
+          { value: "up-pct", label: "Up to 20% off", set: { tab_discount_format: "percentage", tab_badge_shows_plan_discount: false } },
+          { value: "up-amt", label: "Up to \u20b9200 off", set: { tab_discount_format: "amount", tab_badge_shows_plan_discount: false } },
+          { value: "extra-pct", label: "Extra 20% off", set: { tab_discount_format: "percentage", tab_badge_shows_plan_discount: true } },
+          { value: "extra-amt", label: "Extra \u20b9200 off", set: { tab_discount_format: "amount", tab_badge_shows_plan_discount: true } },
+        ],
+        help: "Extra is for a store already running a sitewide sale, so the subscription saving reads as on top of it. Only this badge changes; the cards keep their own basis. Bundle amounts follow the current selection, and before anything is picked the percentage shows." },
       { key: "use_compare_at_price_for_discount_label", label: "Calculate savings off the compare-at price", path: "use_compare_at_price_for_discount_label", touches: "price",
         help: "Widens the displayed saving. Single-product subscriptions only, and it falls back to the selling price when compare-at is missing or lower." },
       { key: "hide_price_decimals", label: "Show price decimals", path: "hide_price_decimals", touches: "price", invert: true,
@@ -252,8 +265,12 @@ export const TOGGLE_GROUPS: ToggleGroup[] = [
       { key: "compare_at_shipping_price", label: "Compare-at shipping price", path: "compare_at_shipping_price", touches: "shipping-line", kind: "number",
         help: "What shipping would normally cost, struck through beside what you charge. Store currency, not cents. Display only, and 0 hides it.",
         note: "Only renders where shipping is charged. Your plans are free-shipping, so the preview will not show it." },
-      { key: "group_bundle_variants", label: "Group bundle products by variant", path: "group_bundle_variants", touches: "tab-bundle",
-        help: "Combines variants of one product into a single row with a variant picker.",
+      { key: "bundle_selector_tabs", label: "Bundles", path: "bundle_selector_tabs", touches: "tab-bundle", kind: "checks",
+        checks: [
+          { key: "bundle_selector_tabs", path: "bundle_selector_tabs", label: "Show the bundle choice as tabs, not a dropdown" },
+          { key: "group_bundle_variants", path: "group_bundle_variants", label: "Group products by variant" },
+        ],
+        help: "Tabs apply when a variant belongs to several bundles of the same type. Grouping combines variants of one product into a single row with a variant picker.",
         note: "Mix & match bundles only, which this preview does not draw." },
     ],
   },
@@ -272,3 +289,30 @@ export const TOGGLE_GROUPS: ToggleGroup[] = [
 ];
 
 export const ALL_TOGGLES = TOGGLE_GROUPS.flatMap((g) => g.items);
+
+/** Settings, not rows. Four rows carry more than one switch, and a group header that counted
+ *  rows would say four where the store has six fields set. */
+export const settingCount = (g: ToggleGroup) =>
+  g.items.reduce((n, d) => n + (d.kind === "checks" ? (d.checks?.length ?? 1) : d.kind === "matrix" ? Object.keys(d.matrix?.[0]?.set || {}).length : 1), 0);
+
+/** Which option of a matrix row the settings currently sit on. */
+export function matrixValue(s: WidgetSettings, d: ToggleDef): string {
+  const hit = d.matrix?.find((o) => Object.entries(o.set).every(([k, v]) => s[k as keyof WidgetSettings] === v));
+  return hit?.value ?? d.matrix?.[0]?.value ?? "";
+}
+
+export function applyMatrix(s: WidgetSettings, d: ToggleDef, value: string): WidgetSettings {
+  const hit = d.matrix?.find((o) => o.value === value);
+  return hit ? { ...s, ...hit.set } : s;
+}
+
+/** One row per stored field, for the exported sheet. A screen can put three switches on a
+ *  line because they are one question; a document that lists what we set on the store cannot,
+ *  or the reader has to work out which of the three a value belongs to. */
+export const EXPORT_ROWS: ToggleDef[] = ALL_TOGGLES.flatMap((d): ToggleDef[] =>
+  d.kind === "checks"
+    ? (d.checks || []).map((c) => ({
+        ...d, kind: undefined, checks: undefined,
+        key: c.key, path: c.path, label: `${d.label}: ${c.label}`, invert: c.invert,
+      }))
+    : [d]);

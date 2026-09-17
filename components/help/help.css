@@ -1046,3 +1046,15 @@
   stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
 }
 .hc-partback:hover { background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
+
+/* A merged row: several switches answering one question, so they sit on a line under one
+   explanation rather than repeating it three times. */
+.hc-wchecks { cursor: default; }
+.hc-wcheckrow { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 7px; }
+.hc-wcheckrow label {
+  display: flex; align-items: center; gap: 7px; cursor: pointer;
+  font-size: 12.5px; font-weight: 600; color: var(--ink-2);
+}
+.hc-wcheckrow label:hover { color: var(--ink); }
+.hc-wcheckrow input { accent-color: var(--brand-deep); flex: none; margin: 0; }
+.hc-wcheckrow code { display: inline; margin: 0 0 0 1px; font-size: 10.5px; color: var(--hc-muted); }
