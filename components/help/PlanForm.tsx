@@ -7,6 +7,7 @@ import {
 } from "@/lib/help/questions";
 import { CATEGORY_BY_ID, SCALE_BY_ID, freqWord } from "@/lib/help/categories";
 import { drawPlanSheet } from "@/lib/help/sheet-png";
+import OrderImport from "./OrderImport";
 import type { PilotStore } from "@/lib/types";
 import { CATEGORY_DEFAULTS, categoryIdFor } from "@/lib/help/categories";
 import type { WidgetSettings } from "@/lib/help/widget";
@@ -171,6 +172,18 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
       </div>
 
       <aside className={"hc-suggest" + (!cat && !scale ? " empty" : "")}>
+        <OrderImport onApply={({ everyDays, runs, products }) => {
+          const next: Answers = {
+            ...answers,
+            every_days: [String(everyDays)],
+            ...(runs.length ? { deliveries: runs.join(", ") } : {}),
+            ...(products.length && !String(answers.scope_detail || "").trim()
+              ? { scope_kind: "products", scope_detail: products.join(", ") }
+              : {}),
+          };
+          onAnswers(next); save(next);
+        }} />
+
         <p className="hc-suggesth">What similar stores run</p>
 
         {!cat && !scale && (
