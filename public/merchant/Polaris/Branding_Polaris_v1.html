@@ -1,0 +1,888 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Branding and Selling (Polaris web components v1)</title>
+<script src="https://cdn.shopify.com/shopifycloud/polaris.js"></script>
+<style>
+  :root{
+    --p-ink:#303030; --p-muted:#616161; --p-faint:#8a8a8a;
+    --p-line:#e3e3e3; --p-line2:#ebebeb; --p-surface:#fff; --p-sunken:#f7f7f7;
+    --p-primary:#303030; --p-success:#29845a; --p-success-bg:#cdfee1;
+    --p-link:#005bd3; --p-attn-bg:#ffefcf; --p-attn:#8a6116;
+    --p-crit:#8e1f0b; --p-crit-bg:#fedad1; --p-info-bg:#eaf4ff; --p-info:#00527c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#f1f1f1;font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--p-ink)}
+  html{scrollbar-gutter:stable}
+  [hidden]{display:none !important}
+
+  /* Shopify admin shell, carried verbatim from the locked screens. */
+  .admin{display:flex;min-height:100vh}
+  .navL{flex:none;width:232px;background:#ebebeb;border-right:1px solid var(--p-line);padding:10px 8px;display:flex;flex-direction:column;gap:1px;position:sticky;top:0;align-self:flex-start;height:100vh;overflow:auto}
+  .navItem{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;color:var(--p-ink);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
+  .navItem:hover{background:#dedede}
+  .navItem .ico{width:18px;height:18px;flex:none;color:#4a4a4a}
+  .navItem .ct{margin-left:auto;font-size:12px;color:var(--p-muted);background:#e0e0e0;border-radius:8px;padding:0 7px;line-height:18px}
+  .navSec{color:var(--p-muted);font-size:13px;font-weight:500;display:flex;align-items:center;height:30px;padding:0 8px;margin-top:6px}
+  .navSec .chev{margin-left:auto;color:var(--p-faint)}
+  .navApp{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;font-weight:600;background:#fff;box-shadow:0 1px 0 rgba(0,0,0,.04);margin-top:2px}
+  .navApp .logo{width:20px;height:20px;border-radius:5px;background:var(--p-primary);display:grid;place-items:center;color:#fff;font-size:11px;flex:none}
+  .navApp .dot{margin-left:auto;width:6px;height:6px;border-radius:50%;background:#8a8a8a}
+  .navSub{display:flex;align-items:center;height:30px;padding:0 8px 0 34px;border-radius:8px;color:var(--p-muted);font-size:13px;cursor:pointer;text-decoration:none}
+  .navSub:hover{background:#dedede;color:var(--p-ink)}
+  .navSub.sel{color:var(--p-ink);font-weight:500}
+  .navGap{flex:1}
+  .appmain{flex:1;min-width:0;display:flex;flex-direction:column}
+  .appbar{height:52px;background:#fff;border-bottom:1px solid var(--p-line);display:flex;align-items:center;gap:10px;padding:0 18px}
+  .appbar .logo{width:24px;height:24px;border-radius:6px;background:var(--p-primary);display:grid;place-items:center;color:#fff;font-size:12px}
+  .appbar .name{font-weight:650;font-size:14px}
+  .appbar .more{margin-left:auto;color:var(--p-muted);font-size:20px;cursor:pointer;letter-spacing:1px}
+</style>
+<script>if(/bare/.test(location.search+location.hash))document.documentElement.classList.add("bare");</script>
+<style>html.bare .navL,html.bare .appbar{display:none!important}html.bare .admin{min-height:0}html.bare,html.bare body{background:#f1f1f1}</style>
+</head>
+<body>
+<div class="admin">
+
+  <aside class="navL">
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8.5 10 3l7 5.5V16a1 1 0 0 1-1 1h-3v-5H7v5H4a1 1 0 0 1-1-1z"/></svg>Home</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="13" rx="2"/><path d="M7 8h6M7 11h6"/></svg>Orders<span class="ct">127</span></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h12v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M7 6V5a3 3 0 0 1 6 0v1"/></svg>Products</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="7" r="3"/><path d="M4 16c0-3 2.7-5 6-5s6 2 6 5"/></svg>Customers</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 15V9m4 6V5m4 10v-4m4 4V7"/></svg>Growth</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="3"/><path d="M12 12l4 4M13.5 6.5 16 4"/></svg>Discounts</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="12" rx="2"/><path d="M7 8h6M7 11h4"/></svg>Content</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="6"/><path d="M4 10h12M10 4c2 2 2 10 0 12M10 4c-2 2-2 10 0 12"/></svg>Markets</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 16h12M6 16V9m4 7V5m4 11v-4"/></svg>Analytics</div>
+    <div class="navSec">Sales channels<span class="chev">&#8250;</span></div>
+    <div class="navSec">Apps<span class="chev">&#8250;</span></div>
+    <div class="navApp"><span class="logo">&#9670;</span>StackBack Subscrip&hellip;<span class="dot"></span></div>
+    <div class="navSub">Plans</div>
+    <a class="navSub" href="Subscriptions_Polaris_v1.html">Subscriptions</a>
+    <a class="navSub" href="Orders_Polaris_v5.html">Orders</a>
+    <a class="navSub" href="PaymentReminders_Polaris_v6.html">Payment reminders</a>
+    <a class="navSub" href="Inventory_Polaris_v4.html">Inventory</a>
+    <div class="navSub">Customers</div>
+    <div class="navSub" data-jump="widgetPage">Widget</div>
+    <div class="navSub">Portal</div>
+    <div class="navSub">Landing pages</div>
+    <div class="navSub">Analytics</div>
+    <div class="navSub sel">Settings</div>
+    <div class="navSub">Billing</div>
+    <div class="navGap"></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m7-7h-2M5 10H3m12.5-5-1.5 1.5M6 14l-1.5 1.5m11 0L14 14M6 6 4.5 4.5"/></svg>Settings</div>
+  </aside>
+
+  <div class="appmain">
+    <div class="appbar"><span class="logo">&#9670;</span><span class="name">StackBack Subscriptions &amp; More</span><span class="more">&ctdot;</span></div>
+
+    <style>
+      .swrap{padding:0 0 12px}
+      .setGrid{display:grid;grid-template-columns:206px minmax(0,1fr);gap:16px;align-items:start}
+      @media(max-width:920px){.setGrid{grid-template-columns:1fr}}
+      .rail{background:#fff;border:1px solid var(--p-line);border-radius:12px;padding:8px;position:sticky;top:12px}
+      .railSearch{display:flex;align-items:center;gap:7px;border:1px solid var(--p-line);border-radius:8px;padding:6px 9px;font-size:12.5px;color:var(--p-faint);margin-bottom:6px}
+      .railItem{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:8px;font-size:13px;cursor:pointer;color:var(--p-ink);border:0;background:none;font-family:inherit;width:100%;text-align:left}
+      .railItem:hover{background:#f3f3f3}
+      .railItem.sel{background:#e8e8e8;font-weight:600}
+      .railItem .ct{margin-left:auto;font-size:11px;color:var(--p-faint);font-weight:500}
+      .railSep{height:1px;background:var(--p-line2);margin:6px 4px}
+      .panel[hidden]{display:none}
+      .pHead{margin:0 0 3px;font-size:17px;font-weight:650;letter-spacing:-.2px}
+      .pSub{color:var(--p-muted);font-size:13px;margin:0 0 14px;line-height:1.6;max-width:720px}
+
+      .two{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+      .two .main{flex:1 1 400px;min-width:0}
+      .two .side{flex:0 0 268px;position:sticky;top:12px}
+
+      /* ---------- group + two-column setting grid, matching the reviewed Help Centre pattern ---------- */
+      .gHd{display:flex;gap:8px;align-items:baseline;margin:0 0 7px;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+      .gHd em{font-style:normal;font-weight:600;color:var(--p-faint)}
+      .gHd .rt{margin-left:auto;text-transform:none;letter-spacing:0}
+      .tgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 12px}
+      .tgrid > .wide{grid-column:1 / -1}
+      @media(max-width:1199px){.tgrid{grid-template-columns:minmax(0,1fr)}}
+      .tg{display:flex;gap:10px;align-items:flex-start;padding:8px 7px;margin:0 -7px;cursor:pointer;border-radius:8px}
+      .tg:hover{background:var(--p-sunken)}
+      .tg.wide{display:block}
+      .tg.lit{background:#eef5ff}
+      .tg > input{margin-top:2px;accent-color:var(--p-primary);flex:none;width:15px;height:15px}
+      .tg > span, .tg .lbl{font-size:12.5px;font-weight:620;line-height:1.4;display:block}
+      .tg.locked{opacity:.62;cursor:not-allowed}
+      .tg select,.tg input[type=text],.tg input[type=number]{display:block;width:100%;margin-top:6px;appearance:none;font:inherit;font-size:12.5px;padding:7px 9px;border:1px solid #b5b5b5;border-radius:8px;background:#fff;color:var(--p-ink)}
+      .checkrow{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:7px}
+      .checkrow label{display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--p-muted)}
+      .checkrow label:hover{color:var(--p-ink)}
+      .checkrow input{accent-color:var(--p-primary);width:15px;height:15px}
+
+      /* tooltip, not a paragraph under every control */
+      .tip{position:relative;display:inline-flex;vertical-align:middle;margin-left:6px}
+      .tipb{appearance:none;border:1px solid #b5b5b5;background:#fff;color:var(--p-faint);width:15px;height:15px;border-radius:50%;padding:0;cursor:help;font:inherit;font-size:10px;font-weight:700;font-style:italic;line-height:1;display:flex;align-items:center;justify-content:center}
+      .tipb:hover,.tip:focus-within .tipb{border-color:var(--p-primary);color:var(--p-primary)}
+      .tipbox{position:absolute;left:-8px;top:calc(100% + 7px);width:max-content;max-width:290px;z-index:60;background:#1a1a1a;color:#fff;border-radius:9px;padding:9px 11px;font-size:12px;font-weight:450;line-height:1.5;text-transform:none;letter-spacing:0;box-shadow:0 8px 24px rgba(0,0,0,.28);opacity:0;visibility:hidden;transition:opacity .12s}
+      .tip:hover .tipbox,.tip:focus-within .tipbox{opacity:1;visibility:visible}
+      .tipbox b{display:block;margin-top:6px;font-weight:700;color:#ffd97a}
+      .tipbox i{display:block;margin-top:6px;font-style:normal;font-family:ui-monospace,Menlo,monospace;font-size:10.5px;opacity:.6}
+      .tgrid > :nth-child(2n) .tipbox{left:auto;right:-8px}
+
+      /* ---------- fetch from site ---------- */
+      .fetch{border:1px solid var(--p-line);border-radius:11px;background:linear-gradient(180deg,#fbfaff,#fff);padding:14px 15px;margin:0 0 14px}
+      .fetch .ttl{font-weight:650;font-size:13.5px;display:flex;align-items:center;gap:8px}
+      .fetch p{margin:4px 0 11px;font-size:12.5px;color:var(--p-muted);line-height:1.55;max-width:540px}
+      .fetchRow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+      .fetchRow input{flex:1 1 240px;min-width:190px;font:inherit;font-size:12.5px;padding:7px 10px;border:1px solid #b5b5b5;border-radius:8px}
+      .fetched{display:flex;gap:7px;flex-wrap:wrap;margin-top:11px;align-items:center}
+      .fchip{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--p-line);border-radius:8px;padding:4px 8px;font-size:11.5px;color:var(--p-muted)}
+      .fchip i{width:13px;height:13px;border-radius:4px;border:1px solid rgba(0,0,0,.12);display:block}
+      .fchip b{font-weight:650;color:var(--p-ink)}
+      .conf{font-size:9.5px;font-weight:700;letter-spacing:.3px;border-radius:4px;padding:1px 5px}
+      .conf.direct{background:var(--p-success-bg);color:#0f5132}
+      .conf.derived{background:var(--p-attn-bg);color:var(--p-attn)}
+
+      /* ---------- themes ---------- */
+      .themeBar{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 14px}
+      .themeCard{flex:0 0 auto;min-width:172px;border:1px solid var(--p-line);border-radius:11px;background:#fff;padding:10px 12px;cursor:pointer;text-align:left;font-family:inherit}
+      .themeCard.sel{border-color:var(--p-primary);box-shadow:0 0 0 1px var(--p-primary) inset}
+      .themeCard .nm{font-weight:650;font-size:13px;display:flex;align-items:center;gap:7px}
+      .themeCard .df{font-size:9.5px;font-weight:700;background:#e8e8e8;color:var(--p-muted);border-radius:4px;padding:1px 5px;letter-spacing:.3px}
+      .themeCard .used{font-size:11.5px;color:var(--p-muted);margin-top:3px}
+      .themeCard .dots{display:flex;gap:3px;margin-top:8px}
+      .themeCard .dots i{width:17px;height:17px;border-radius:5px;border:1px solid rgba(0,0,0,.08);display:block}
+      .themeAdd{flex:0 0 auto;min-width:126px;border:1px dashed #c4c4c4;border-radius:11px;background:#fff;color:var(--p-muted);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;display:grid;place-items:center;padding:10px}
+      .themeAdd:hover{background:#fafafa;color:var(--p-ink)}
+
+      /* ---------- colour rows ---------- */
+      .cRow{display:flex;gap:10px 12px;align-items:center;padding:9px 0;border-bottom:1px solid var(--p-line2);flex-wrap:wrap}
+      .cRow:last-child{border-bottom:0}
+      .cRow .sw{width:38px;height:38px;border-radius:9px;border:1px solid var(--p-line);flex:none;position:relative;overflow:hidden;cursor:pointer}
+      .cRow .sw input{position:absolute;inset:-6px;width:150%;height:150%;border:0;padding:0;cursor:pointer;opacity:0}
+      .cRow .mid{flex:1 1 160px;min-width:0}
+      .cRow .nm{font-size:12.5px;font-weight:620;display:flex;align-items:center;gap:4px;flex-wrap:wrap;overflow-wrap:anywhere}
+      .cRow .hx{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--p-faint);margin-top:2px;overflow-wrap:anywhere}
+      .cRow input.hex{font-family:ui-monospace,Menlo,monospace;font-size:12px;border:1px solid #b5b5b5;border-radius:8px;padding:7px 9px;width:96px;text-transform:uppercase;background:#fff;color:var(--p-ink);flex:0 0 96px}
+
+      .seg{display:inline-flex;border:1px solid var(--p-line);border-radius:9px;background:#f1f1f1;padding:2px;gap:2px}
+      .seg button{appearance:none;border:0;background:transparent;font:inherit;font-size:12.5px;font-weight:600;padding:6px 13px;cursor:pointer;color:var(--p-muted);border-radius:7px}
+      .seg button.on{background:var(--p-primary);color:#fff}
+      .sRow{display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--p-line2)}
+      .sRow:last-child{border-bottom:0}
+      .sRow .mid{flex:1;min-width:0}
+      .sRow .nm{font-size:12.5px;font-weight:620}
+      .num{font-size:12.5px;border:1px solid #b5b5b5;border-radius:8px;padding:6px 8px;width:72px;text-align:right;background:#fff;font-family:inherit}
+
+      /* ---------- applies-to ---------- */
+      .appliesGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+      .aCard{border:1px solid var(--p-line);border-radius:10px;padding:11px 12px;background:#fff}
+      .aCard .t{font-size:12.5px;font-weight:650;display:flex;align-items:center;gap:7px}
+      .aCard .n{font-size:11.5px;color:var(--p-muted);margin-top:3px;line-height:1.5}
+      .aCard .tick{width:14px;height:14px;border-radius:50%;background:var(--p-success);color:#fff;font-size:9px;display:grid;place-items:center;flex:none}
+
+      /* ---------- preview, real derivation ---------- */
+      .pvHd{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--p-faint);margin:0 0 8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+      .pvHd .sb{font-size:9.5px;background:#ededed;color:var(--p-muted);border-radius:5px;padding:1px 6px;letter-spacing:.3px}
+      .sbw{background:var(--sb-bg);border-radius:var(--sb-radius-outer);padding:12px;color:var(--sb-text);font-size:calc(13px * var(--sb-font-scale));border:var(--sb-surface-border-width) solid var(--sb-border);box-shadow:var(--sb-surface-shadow)}
+      .sbAnn{background:var(--sb-primary);color:var(--sb-on-primary);border-radius:var(--sb-radius-in);padding:7px 10px;font-size:calc(11px * var(--sb-font-scale));font-weight:600;text-align:center;margin-bottom:10px}
+      .sbTabs{display:flex;gap:5px;margin-bottom:10px}
+      .sbTab{flex:1;text-align:center;padding:6px 4px;border-radius:var(--sb-radius-sm);border:1px solid var(--sb-border);background:transparent;color:var(--sb-text-50);font-size:calc(11px * var(--sb-font-scale));font-weight:650}
+      .sbTab.on{background:var(--sb-selected-bg);border-color:var(--sb-border-strong);color:var(--sb-text)}
+      .sbTile{background:var(--sb-tile-bg);border:1px solid var(--sb-border);border-radius:var(--sb-radius-in);padding:8px 10px;margin-bottom:8px;display:flex;align-items:center;gap:9px;font-size:calc(11.5px * var(--sb-font-scale))}
+      .sbTile .ph{width:28px;height:28px;border-radius:var(--sb-radius-sm);background:var(--sb-muted);flex:none}
+      .sbOpt{border:1px solid var(--sb-border);border-radius:var(--sb-radius-in);padding:9px 11px;margin-bottom:7px;display:flex;align-items:center;gap:9px;background:var(--sb-bg)}
+      .sbOpt.sel{background:var(--sb-selected-bg);border-color:var(--sb-border-strong)}
+      .sbRadio{width:15px;height:15px;border-radius:50%;border:1.5px solid var(--sb-border-strong);flex:none;position:relative}
+      .sbOpt.sel .sbRadio:after{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--sb-primary)}
+      .sbOpt .nm{font-weight:650;font-size:calc(12.5px * var(--sb-font-scale))}
+      .sbOpt .sub{color:var(--sb-text-50);font-size:calc(11px * var(--sb-font-scale));margin-top:1px}
+      .sbOpt .pr{margin-left:auto;text-align:right;font-weight:700;font-size:calc(12.5px * var(--sb-font-scale));white-space:nowrap}
+      .sbPill{display:inline-block;background:var(--sb-accent);color:var(--sb-on-accent);font-size:calc(9.5px * var(--sb-font-scale));font-weight:700;border-radius:999px;padding:1px 6px;margin-left:6px;white-space:nowrap}
+      .sbShip{font-size:calc(11px * var(--sb-font-scale));color:var(--sb-text-50);margin:9px 0 0}
+      .sbCta{margin-top:10px;background:var(--sb-primary);color:var(--sb-on-primary);border-radius:var(--sb-radius);padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+      .sbCta.outline{background:transparent;border:1.5px solid var(--sb-primary);color:var(--sb-primary)}
+      .sbCta .lbl{font-weight:700;font-size:calc(13px * var(--sb-font-scale))}
+      .sbCta .sv{font-size:calc(10.5px * var(--sb-font-scale));color:var(--sb-on-primary-subtle);margin-top:1px}
+      .sbCta.outline .sv{color:var(--sb-text-50)}
+      .sbCta .amt{font-weight:700;font-size:calc(13px * var(--sb-font-scale));color:var(--sb-on-primary-accent);white-space:nowrap}
+      .sbCta.outline .amt{color:var(--sb-primary)}
+      .sbFoot{text-align:center;font-size:calc(10px * var(--sb-font-scale));color:var(--sb-text-50);margin-top:9px}
+      .pvLit{outline:2px solid #005bd3;outline-offset:2px;border-radius:6px}
+
+      .dChip{display:inline-flex;align-items:center;gap:5px;font-family:ui-monospace,Menlo,monospace;font-size:10.5px;background:#f4f4f4;border-radius:5px;padding:2px 6px;margin:3px 4px 0 0;color:#4a4a4a}
+      .dChip i{width:10px;height:10px;border-radius:3px;border:1px solid rgba(0,0,0,.12);display:block}
+      .note{font-size:11.5px;color:var(--p-faint);margin:9px 2px 0;line-height:1.6}
+      .note b{color:var(--p-muted);font-weight:640}
+
+      .warnRow{display:flex;gap:9px;align-items:flex-start;background:#fffaf0;border:1px solid #f0e0bd;border-radius:9px;padding:9px 11px;font-size:12px;color:#5c4a23;line-height:1.55;margin-top:10px}
+      .warnRow code{font-family:ui-monospace,Menlo,monospace;font-size:11px;background:#fff;padding:1px 4px;border-radius:4px}
+
+      .btn{appearance:none;border:1px solid #b5b5b5;background:#fff;border-radius:8px;padding:7px 13px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--p-ink)}
+      .btn:hover{background:#f6f6f6}
+      .btn.p{background:var(--p-primary);border-color:var(--p-primary);color:#fff}
+      .btn.p:hover{background:#1a1a1a}
+      .btn.sm{padding:5px 10px;font-size:12px}
+      code.c{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;background:#f2f2f2;padding:1px 5px;border-radius:4px}
+
+      .inhBox{border:1px solid var(--p-line);border-radius:10px;background:var(--p-sunken);padding:12px 14px;display:flex;align-items:center;gap:13px;flex-wrap:wrap}
+      .inhBox .tx{flex:1;min-width:230px;font-size:12.5px;color:var(--p-muted);line-height:1.6}
+      .inhBox .tx b{color:var(--p-ink);font-weight:640}
+      .miniSw{display:flex;gap:4px}
+      .miniSw i{width:21px;height:21px;border-radius:6px;border:1px solid rgba(0,0,0,.1);display:block}
+      .absent{font-size:12px;color:var(--p-muted);line-height:1.75;margin:0}
+      .absent code{font-family:ui-monospace,Menlo,monospace;font-size:11px;background:#f2f2f2;padding:1px 5px;border-radius:4px;color:#4a4a4a}
+
+      .stageHd{background:#111;color:#fff;padding:9px 24px;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+      .stageHd .pill{background:#333;color:#c9c9c9;font-size:9.5px;padding:2px 7px;border-radius:5px;letter-spacing:.3px}
+      .stageHd .pill.ok{background:#173a28;color:#8fe3b4}
+      .routeWrap{background:#1a1a1a;color:#e8e8e8;padding:20px 24px 26px}
+      .routeWrap h3{margin:0 0 3px;font-size:13px;font-weight:650;color:#fff}
+      .routeWrap .rsub{font-size:12px;color:#9a9a9a;margin:0 0 15px;max-width:860px;line-height:1.6}
+      .rGrid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+      @media(max-width:900px){.rGrid{grid-template-columns:1fr}}
+      .rCol h4{margin:0 0 9px;font-size:10.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#8a8a8a}
+      .rTree{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;line-height:1.95;color:#d4d4d4;background:#232323;border:1px solid #333;border-radius:10px;padding:13px 15px;overflow:auto}
+      .rTree .n{color:#8a8a8a} .rTree .add{color:#7ee0a8} .rTree .gone{color:#f0918a;text-decoration:line-through;opacity:.75}
+      .rNote{font-size:11.5px;color:#9a9a9a;margin-top:11px;line-height:1.65;max-width:740px}
+      .rNote b{color:#e8e8e8;font-weight:640}
+    </style>
+
+    <!-- ================= SETTINGS ================= -->
+    <s-page heading="Settings" inline-size="large">
+      <s-button slot="secondary-actions" id="btnRevert">Revert</s-button>
+      <s-button slot="primary-action" variant="primary">Save</s-button>
+
+      <div class="swrap">
+        <div class="setGrid">
+          <div class="rail">
+            <div class="railSearch"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg> Search settings</div>
+            <button class="railItem sel" data-g="branding">Branding <span class="ct">9</span></button>
+            <button class="railItem" data-g="selling">Selling <span class="ct">18</span></button>
+            <div class="railSep"></div>
+            <button class="railItem" data-g="orders">Orders and scheduling</button>
+            <button class="railItem" data-g="payments">Payments</button>
+            <button class="railItem" data-g="shipping">Shipping</button>
+            <button class="railItem" data-g="policies">Policies</button>
+            <div class="railSep"></div>
+            <button class="railItem" data-g="notifs">Customer notifications</button>
+            <button class="railItem" data-g="alerts">Admin alert delivery</button>
+            <button class="railItem" data-g="integrations">Integrations</button>
+          </div>
+
+          <div>
+            <!-- ============ BRANDING ============ -->
+            <div class="panel" data-p="branding">
+              <h2 class="pHead">Branding</h2>
+              <p class="pSub">Six colours and three shape controls. Every widget, landing page and section reads them, so a widget you add next month is already themed. Borders, tints and the colour of text on a coloured surface are worked out from these, never set by hand.</p>
+
+              <div class="fetch">
+                <div class="ttl">Start from your website <s-badge tone="info">Recommended</s-badge></div>
+                <p>We read your homepage and take the colours from real elements: the canvas behind your cards, your Add to Cart button, your sale badge and your body copy. You can change any of them afterwards.</p>
+                <div class="fetchRow">
+                  <input type="text" id="siteUrl" value="thebasicswoman.com" spellcheck="false">
+                  <button class="btn p" id="btnFetch">Fetch my colours</button>
+                  <button class="btn" id="btnManual">Set them manually</button>
+                </div>
+                <div class="fetched" id="fetched" hidden></div>
+              </div>
+
+              <div class="themeBar" id="themeBar"></div>
+
+              <div class="two"><div class="main">
+
+              <s-section>
+                <div class="gHd">Colours <em id="cCount">6</em><span class="rt"><s-badge>Applies everywhere</s-badge></span></div>
+                <div id="gColours"></div>
+                <div class="warnRow" id="tileWarn">
+                  <span>
+                    <b>Naming to settle before build.</b> The field behind <b>Text colour</b> is <code>Product_Tile</code>, whose schema title is "Body Text" and which drives <code>--sb-text</code>. The actual product card surface is <code>Product_Tile_Background</code>. One of the two names has to change or somebody will wire the wrong one.
+                  </span>
+                </div>
+              </s-section>
+
+              <s-section>
+                <div class="gHd">Shape and size <em>3</em></div>
+                <div id="gShape"></div>
+              </s-section>
+
+              <s-section>
+                <div class="gHd">Where this applies</div>
+                <div class="appliesGrid" id="applies"></div>
+              </s-section>
+
+              <s-section>
+                <div class="gHd">Worked out for you <em id="dCount">8</em><span class="rt"><s-badge tone="info">Not settable</s-badge></span></div>
+                <div id="gDerived"></div>
+              </s-section>
+
+              </div>
+              <div class="side" id="asideBrand">
+                <div class="pvHd">Live preview <span class="sb" id="pvWho">Store default</span></div>
+                <div class="sbw" id="prevA"></div>
+                <p class="note" id="noteA"></p>
+              </div></div>
+            </div>
+
+            <!-- ============ SELLING ============ -->
+            <div class="panel" data-p="selling" hidden>
+              <h2 class="pHead">Selling</h2>
+              <p class="pSub">Eighteen settings that are store policy rather than per-placement taste, grouped by what a merchant decides first. Hover a row to see what it changes. A template that cannot honour a setting does not draw it, and the stored value is left alone.</p>
+              <div class="two">
+                <div class="main" id="sellBody"></div>
+                <div class="side">
+                  <div class="pvHd">Live preview <span class="sb">Storefront tokens</span></div>
+                  <div class="sbw" id="prevB"></div>
+                  <p class="note" id="noteB"></p>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel" data-p="orders" hidden><h2 class="pHead">Orders and scheduling</h2><p class="pSub">Order timing, placement mode, PAYG timing, and the out-of-stock policy. Shipped today, untouched by this spec.</p></div>
+            <div class="panel" data-p="payments" hidden><h2 class="pHead">Payments</h2><p class="pSub">Providers, and the Retry failed payments cap that Payment Reminders reads its denominator from. Shipped today, untouched.</p></div>
+            <div class="panel" data-p="shipping" hidden><h2 class="pHead">Shipping</h2><p class="pSub">Zones, rate conditions and countries. Partially shipped.</p></div>
+            <div class="panel" data-p="policies" hidden><h2 class="pHead">Policies</h2><p class="pSub">Cancellation policy, read by the widget footer popup. Shipped today, untouched.</p></div>
+            <div class="panel" data-p="notifs" hidden><h2 class="pHead">Customer notifications</h2><p class="pSub">Ten canonical templates on email and WhatsApp. Moved in from its own nav item per the locked IA.</p></div>
+            <div class="panel" data-p="alerts" hidden><h2 class="pHead">Admin alert delivery</h2><p class="pSub">Which alerts reach the merchant and by which channel. Backend exists, no screen yet.</p></div>
+            <div class="panel" data-p="integrations" hidden><h2 class="pHead">Integrations</h2><p class="pSub">WhatsApp Cloud API, SES, and checkout compatibility for GoKwik and Shopflo.</p></div>
+          </div>
+        </div>
+      </div>
+
+    </s-page>
+
+    <!-- ================= WIDGET ================= -->
+    <div class="stageHd" id="widgetPage">Widget instance <span class="pill">What is left once Branding and Selling are global</span> <span class="pill ok" id="leafPill">2 controls</span></div>
+
+    <s-page heading="Refill plan widget" inline-size="large">
+      <s-link slot="breadcrumb-actions" href="#">Widget</s-link>
+      <s-button slot="secondary-actions">Preview on storefront</s-button>
+      <s-button slot="primary-action" variant="primary">Save</s-button>
+
+      <div class="swrap">
+        <div class="two">
+          <div class="main">
+            <s-section>
+              <div class="gHd">Placement <em>2</em></div>
+              <div class="sRow"><div class="mid"><div class="nm">Template</div><div class="hx" style="font-size:11.5px;color:var(--p-muted);margin-top:2px">Decides which controls exist. Six templates share one schema and each drops what it cannot render.</div></div>
+                <select class="selx" id="tmplPick" style="font:inherit;font-size:12.5px;padding:7px 9px;border:1px solid #b5b5b5;border-radius:8px;background:#fff;min-width:200px">
+                  <option value="subscription-widget">Subscription Widget</option>
+                  <option value="single-plan">Single Plan</option>
+                  <option value="prepaid-only">Prepaid Only</option>
+                  <option value="payg-only">PAYG Only</option>
+                  <option value="multi-frequency">Multi-Frequency</option>
+                  <option value="multi-delivery">Multi-Delivery</option>
+                  <option value="purchase-options">Purchase Options (master)</option>
+                </select></div>
+              <div class="sRow"><div class="mid"><div class="nm">Active on</div><div class="hx" style="font-size:11.5px;color:var(--p-muted);margin-top:2px">14 plans</div></div><button class="btn">Manage</button></div>
+            </s-section>
+
+            <s-section>
+              <div class="gHd">Appearance<span class="rt"><s-badge>From Settings</s-badge></span></div>
+              <div class="inhBox">
+                <span class="miniSw" id="miniSw"></span>
+                <span class="tx">Using <b>Store default</b>. All nine values come from Settings, Branding. <b>A widget holds no colour of its own</b>, so it can never disagree with the page it sits on.</span>
+                <button class="btn sm" data-jump="top">Edit the theme</button>
+              </div>
+            </s-section>
+
+            <s-section>
+              <div class="gHd">This widget <em id="leafCount">2</em><span class="rt"><s-badge tone="info">Copy and layout only</s-badge></span></div>
+              <div class="tgrid" id="gLeaf"></div>
+            </s-section>
+
+            <s-section>
+              <div class="gHd">Not shown on this template<span class="rt"><s-badge>Absent, not disabled</s-badge></span></div>
+              <p class="absent" id="absentList"></p>
+            </s-section>
+          </div>
+
+          <div class="side">
+            <div class="pvHd">This widget <span class="sb">Resolved</span></div>
+            <div class="sbw" id="prevC"></div>
+            <p class="note">Every colour here came from Settings. Change one there and this moves with it, with nothing to fall out of sync.</p>
+          </div>
+        </div>
+      </div>
+    </s-page>
+
+    <!-- ================= ROUTES ================= -->
+    <div class="routeWrap">
+      <h3>The route</h3>
+      <p class="rsub">The locked twelve-item nav does not move. Branding and Selling are groups inside Settings, which the IA already carries as MOVED IN. A theme becomes a row, so adding one is a row rather than a migration.</p>
+      <div class="rGrid">
+        <div class="rCol"><h4>Today</h4><div class="rTree">
+/app/settings <span class="n">5 flat tabs, no search</span>
+&nbsp;&nbsp;<span class="n">tab</span> brand-settings <span class="n">logo + 2 colours</span>
+/app/widgets/:templateKey <span class="n">19 to 48 fields, colours in each</span>
+/app/portal-settings/customize <span class="n">its own 3 colours</span>
+/app/landing-pages/customize/... <span class="n">its own colours block</span>
+
+<span class="n">three colour models, no shared row</span>
+        </div></div>
+        <div class="rCol"><h4>After</h4><div class="rTree">
+&nbsp;&nbsp;<span class="add">/app/settings/branding</span> <span class="n">theme list + fetch</span>
+&nbsp;&nbsp;<span class="add">/app/settings/branding/:themeId</span> <span class="n">9 values</span>
+&nbsp;&nbsp;<span class="add">/app/settings/selling</span> <span class="n">18 settings</span>
+&nbsp;&nbsp;<span class="add">/app/settings/orders|payments|shipping|policies</span>
+&nbsp;&nbsp;<span class="add">/app/settings/notifications|alerts|integrations</span>
+
+<span class="add">shop_themes</span> <span class="n">one row per theme</span>
+shop_widgets.custom_settings <span class="n">copy + layout only</span>
+shop_landing_pages.<span class="add">theme_id</span> <span class="n">one foreign key</span>
+<span class="gone">colours on widgets, portal, landing pages</span>
+        </div></div>
+      </div>
+      <p class="rNote"><b>One decision still blocks this.</b> Master <code style="color:#d4d4d4">purchase-options</code> reads the nested <code style="color:#d4d4d4">theme.*</code> shape through <code style="color:#d4d4d4">buildWidgetCSSVars</code>, while the six subscription templates read flat <code style="color:#d4d4d4">Brand_*</code> through <code style="color:#d4d4d4">buildSubscriptionWidgetCSSVars</code>. Until those converge, Branding has to write two shapes and one theme still produces two behaviours. Everything else on this page works either way.</p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ==========================================================================================
+   EDIT HERE. Three maps: THEMES (palette rows), SELL_GROUPS (the global behaviour settings,
+   vocabulary carried from lib/help/widget.ts as shipped on /pilots#/queries/2), and TEMPLATES
+   (what each widget template keeps, mirroring withoutFields() in widget-templates.ts).
+
+   The derivation below is a port of app/portal/utils/subscription-widget-theme.ts, so the
+   preview cannot flatter the design: contrast flips exactly where the shipped widget flips it.
+   ========================================================================================== */
+
+var THEMES = [
+  { id:'default', name:'Store default', isDefault:true,
+    v:{ corners:'Semi', corners_custom_pct:12, font_size:'Medium', surface_style:'Stroke',
+        Brand_Primary:'#414217', Brand_Secondary:'#F7941D', Brand_Accent:'#FF4D8D',
+        Product_Tile:'#1A1A1A', Widget_Background:'#FFF8E3', Product_Tile_Background:'#FFFFFF' } },
+  { id:'festive', name:'Festive', isDefault:false,
+    v:{ corners:'Rounded', corners_custom_pct:20, font_size:'Medium', surface_style:'Shadow',
+        Brand_Primary:'#B42318', Brand_Secondary:'#FFE8C2', Brand_Accent:'#E3A23E',
+        Product_Tile:'#2B2B2B', Widget_Background:'#FFFAF3', Product_Tile_Background:'#FFFFFF' } }
+];
+var activeTheme='default';
+
+/* Live read of the merchant's own theme settings. GET /api/brand-colours is a route in this
+   same app (lib/brand/extract.ts does the reading), so the pilot tracking screen can call the
+   identical endpoint. Shopify's Dawn lineage writes the theme-editor colours into a :root and
+   .color-scheme-N block in the page HTML, so this is the merchant's configured palette rather
+   than pixels sampled off a screenshot. */
+var API = '/api/brand-colours';
+
+function fchip(hex, source, confidence){
+  var tag = confidence==='theme' ? 'THEME' : confidence==='derived' ? 'WORKED OUT' : 'GUESSED';
+  var cls = confidence==='theme' ? 'direct' : 'derived';
+  return '<span class="fchip"><i style="background:'+hex+'"></i><b>'+hex+'</b> '+esc(source)
+       + ' <span class="conf '+cls+'">'+tag+'</span></span>';
+}
+
+function fetchMsg(html){ document.getElementById('fetched').hidden=false;
+  document.getElementById('fetched').innerHTML = html; }
+
+async function doFetch(){
+  var btn=document.getElementById('btnFetch'), url=document.getElementById('siteUrl').value.trim();
+  if(!url) return;
+  btn.disabled=true; btn.textContent='Reading your site...';
+  fetchMsg('<span style="font-size:12px;color:var(--p-muted)">Reading '+esc(url)+'</span>');
+  try{
+    var r = await fetch(API+'?url='+encodeURIComponent(url));
+    var d = await r.json();
+    if(!d.ok){
+      fetchMsg('<span style="font-size:12px;font-weight:650;color:var(--p-crit)">'+esc(d.error||'That site could not be read.')+'</span>');
+      return;
+    }
+    var v=cur();
+    d.tokens.forEach(function(t){ v[t.key]=t.hex; });
+    if(d.corners) v.corners=d.corners;
+    if(d.cornersCustomPx) v.corners_custom_pct=d.cornersCustomPx;
+
+    var head = d.method==='dawn'
+      ? 'Read from your theme settings on '+esc(url)
+      : 'That theme does not publish its colour settings, so these are read from the stylesheet. Check them.';
+    var extra = [];
+    if(d.fontBody) extra.push('Body font <b>'+esc(d.fontBody.split(',')[0])+'</b>');
+    if(d.corners) extra.push('Corners <b>'+d.corners+(d.cornersCustomPx?' '+d.cornersCustomPx+'px':'')+'</b>');
+    fetchMsg('<span style="font-size:12px;font-weight:650">'+head+'</span>'
+      + d.tokens.map(function(t){ return fchip(t.hex,t.source,t.confidence); }).join('')
+      + (extra.length ? '<div style="flex-basis:100%;font-size:11.5px;color:var(--p-muted);margin-top:4px">'+extra.join(' &middot; ')+'</div>' : '')
+      + (d.notes && d.notes.length ? '<div style="flex-basis:100%;font-size:11.5px;color:var(--p-attn);margin-top:2px">'+esc(d.notes.join(' '))+'</div>' : ''));
+    renderBranding();
+  } catch(e){
+    fetchMsg('<span style="font-size:12px;color:var(--p-crit)">Could not reach the colour reader. It runs as an API route in this app, so the static preview alone cannot serve it.</span>');
+  } finally {
+    btn.disabled=false; btn.textContent='Fetch my colours';
+  }
+}
+
+var COLOURS = [
+  ['Brand_Primary','Primary brand colour','CTA button, announcement bar, numbered steps and selected outlines. Use a darker colour: the text that sits on it is picked for contrast, not chosen by you.'],
+  ['Brand_Secondary','Secondary brand colour','The fill of a selected option card. Use a light colour.'],
+  ['Brand_Accent','Accent colour (deals)','Discount badges, offer pills and the savings amount in the CTA. Text on it switches to black or white on its own.'],
+  ['Product_Tile','Text colour','Your main readable copy: labels, prices and descriptions. This one does not auto-adjust, so pick something that reads on your background.'],
+  ['Widget_Background','Background colour','Card surfaces, containers and popups. A light tint of one of your brand colours works well.'],
+  ['Product_Tile_Background','Product tile colour','The product card surface. Only drawn by templates that render product cards.']
+];
+
+/* ---------- ported derivation ---------- */
+var CORNER_RADIUS_PX={Sharp:0,Semi:12,Rounded:20}, FONT_SIZE_SCALE={Small:85,Medium:100,Large:115};
+function hexToRgb(h){h=String(h).replace('#','');if(h.length===3)h=h.split('').map(function(c){return c+c}).join('');var n=parseInt(h,16);return [(n>>16)&255,(n>>8)&255,n&255];}
+function rgbToHex(r){return '#'+r.map(function(v){return Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,'0')}).join('');}
+function mixHex(a,b,t){var A=hexToRgb(a),B=hexToRgb(b);return rgbToHex([0,1,2].map(function(i){return A[i]*t+B[i]*(1-t)}));}
+function relLum(h){var c=hexToRgb(h).map(function(v){var x=v/255;return x<=0.03928?x/12.92:Math.pow((x+0.055)/1.055,2.4)});return 0.2126*c[0]+0.7152*c[1]+0.0722*c[2];}
+function contrast(a,b){var hi=Math.max(relLum(a),relLum(b)),lo=Math.min(relLum(a),relLum(b));return (hi+0.05)/(lo+0.05);}
+function readableOn(bg){return contrast('#000000',bg)>=contrast('#ffffff',bg)?'#111111':'#ffffff';}
+function buildVars(s){
+  var radius = s.corners==='Custom' ? Math.max(0,Math.round(s.corners_custom_pct||12))
+             : (CORNER_RADIUS_PX[s.corners]!=null?CORNER_RADIUS_PX[s.corners]:12);
+  var fs=FONT_SIZE_SCALE[s.font_size]||100, primary=s.Brand_Primary||'#041101', accent=s.Brand_Accent||'#95e534';
+  var onP=readableOn(primary);
+  return {'--sb-primary':primary,'--sb-on-primary':onP,'--sb-on-primary-subtle':mixHex(onP,primary,0.62),
+    '--sb-on-primary-accent':contrast(accent,primary)>=2.5?accent:onP,'--sb-accent':accent,'--sb-on-accent':readableOn(accent),
+    '--sb-bg':s.Widget_Background||'#ffffff','--sb-selected-bg':s.Brand_Secondary||'#fcfbfc',
+    '--sb-text':s.Product_Tile||'#041101','--sb-text-50':(s.Product_Tile||'#041101')+'80',
+    '--sb-tile-bg':s.Product_Tile_Background||'#ffffff','--sb-muted':'#f8fafc','--sb-border':'#c4c4c4',
+    '--sb-border-strong':primary,'--sb-radius':radius+'px','--sb-radius-outer':Math.min(radius,30)+'px',
+    '--sb-radius-in':Math.max(2,radius-2)+'px','--sb-radius-sm':Math.max(2,radius-4)+'px',
+    '--sb-font-scale':String(fs/100),
+    '--sb-surface-border-width':s.surface_style==='Stroke'?'1px':'0px',
+    '--sb-surface-shadow':s.surface_style==='Shadow'?'0 4px 20px rgba(0,0,0,0.12)':'none'};
+}
+
+/* ---------- the 18 global selling settings ---------- */
+var SELL={ default_intent:'subscribe', hide_intent_selector:false, hide_onetime_option:false,
+  hide_prepaid:false, hide_payg:false, hide_auto_debit:false, default_payment_mode:'prepaid',
+  schedule_text_format:'cadence', card_shows_option_title:false, tag_shows_per_delivery_price:false,
+  freebie_label_shows_value:false, tab_discount_format:'percentage', tab_badge_shows_plan_discount:false,
+  use_compare_at_price_for_discount_label:false, hide_price_decimals:true,
+  direct_checkout:true, hide_free_shipping_line:false, hide_branding:false };
+
+var LEAF={ style_variant:'Dropdown', promo_line:'', tab_label_subscribe:'', tab_label_onetime:'',
+  tab_label_bundle:'', policy_link_label:'', hide_product_row:false, summary_expanded_by_default:false,
+  compare_at_shipping_price:0, bundle_selector_tabs:false, group_bundle_variants:false };
+
+function B(key,label,help,opt){var d={k:'bool',key:key,label:label,help:help};if(opt)for(var i in opt)d[i]=opt[i];return d;}
+function S(key,label,help,options,note){return {k:'select',key:key,label:label,help:help,options:options,note:note};}
+function T(key,label,help){return {k:'text',key:key,label:label,help:help};}
+function N(key,label,help){return {k:'num',key:key,label:label,help:help};}
+function K(label,help,checks,touch){return {k:'checks',label:label,help:help,checks:checks,touches:touch};}
+function M(label,help,matrix,touch){return {k:'matrix',label:label,help:help,matrix:matrix,touches:touch};}
+
+var SELL_GROUPS=[
+  { title:'What can be bought', items:[
+    S('default_intent','Opens on','Which tab is pre-selected when the widget loads. Auto takes subscribe, then bundle, then one-time. A mode the product does not offer falls back to auto.',
+      [['subscribe','Subscribe and Save'],['onetime','One-time']],
+      'The one setting that is per template. Subscription widgets offer subscribe or one-time; master also offers auto and bundle, so one global value cannot serve both enums.'),
+    K('Tabs the customer sees','Without the bar the customer sees only the mode above and cannot switch. Without One-time the product is subscription-only, and that is ignored when one-time is the only mode there is, so it can never become unbuyable.',
+      [['hide_intent_selector','The tab bar itself',1],['hide_onetime_option','One-time',1]],'tabs')
+  ]},
+  { title:'How it is paid for', items:[
+    K('Methods on the widget','Prepaid is paid in full at checkout, pay as you go sends a link before every delivery, pay per delivery charges automatically. Each is ignored for a plan whose every schedule is that one mode, and AutoPay is already hidden on its own when Razorpay is not connected.',
+      [['hide_prepaid','Prepaid',1],['hide_payg','Pay as you go',1],['hide_auto_debit','Pay per delivery (AutoPay)',1]],'ann'),
+    S('default_payment_mode','Preselected when several are offered','Falls back to whichever mode is actually offered.',
+      [['prepaid','Prepaid'],['pay_as_you_go','Pay as you go']],
+      'AutoPay is not in the stored enum yet, so it cannot be preselected on any store until the field grows.')
+  ]},
+  { title:'The plan cards', items:[
+    S('schedule_text_format','Second line on a card','Build-your-own cards ignore cadence, but none hides their line too.',
+      [['frequency-deliveries','Every 2 weeks, 6 deliveries'],['cadence','1 delivery every 2 weeks'],['none','No second line']],null,'card'),
+    B('card_shows_option_title','Use the option title as the plan name','Worth it when your plan names mean something to the customer. Options with no title fall back to the automatic text.',{touches:'card'}),
+    B('tag_shows_per_delivery_price','Show the per-delivery price on the tag','Replaces your tag label with that option’s discounted per-delivery price, on every subscription option including untagged ones. Bundle cards are unaffected.',{touches:'card'}),
+    B('freebie_label_shows_value','Advertise freebies by value, not count','Worth ₹1,200 rather than 3 free gifts, summed across every delivery. Falls back to the count when a gift price cannot be read.',{touches:'card'})
+  ]},
+  { title:'Prices and discounts', items:[
+    M('The badge on the Subscribe tab reads','Extra is for a store already running a sitewide sale, so the subscription saving reads as on top of it. Only this badge changes; the cards keep their own basis.',
+      [['up-pct','Up to 20% off',{tab_discount_format:'percentage',tab_badge_shows_plan_discount:false}],
+       ['up-amt','Up to ₹200 off',{tab_discount_format:'amount',tab_badge_shows_plan_discount:false}],
+       ['extra-pct','Extra 20% off',{tab_discount_format:'percentage',tab_badge_shows_plan_discount:true}],
+       ['extra-amt','Extra ₹200 off',{tab_discount_format:'amount',tab_badge_shows_plan_discount:true}]],'pill'),
+    B('use_compare_at_price_for_discount_label','Calculate savings off the compare-at price','Widens the displayed saving. Single-product subscriptions only, and it falls back to the selling price when compare-at is missing or lower.',{touches:'price'}),
+    B('hide_price_decimals','Show price decimals','Off truncates rather than rounds, so 1,399.99 shows as 1,399. Leave decimals on unless your prices are whole numbers.',{invert:1,touches:'price'})
+  ]},
+  { title:'Checkout and footer', items:[
+    B('direct_checkout','Skip the cart and go straight to Shopify checkout','Fewer steps, and no chance to add anything else. Portal drawers and edit flows are unaffected.',{touches:'cta'}),
+    B('hide_free_shipping_line','Say so when shipping is free','Turn off if free shipping is already said elsewhere on the page. A plan whose shipping actually costs something still shows its line either way.',{invert:1,touches:'ship'}),
+    B('hide_branding','Show "Powered by StackBack"','Removing the credit is a plan entitlement, not a preference.',{invert:1,gated:1,touches:'foot'})
+  ]}
+];
+
+/* ---------- per template ---------- */
+var LEAF_DEFS={
+  style_variant:S('style_variant','Schedule picker style','Dropdown, Grid, List or Collapsible. This is what the widget IS, so it can only live on the placement.',[['Dropdown','Dropdown'],['Grid','Grid'],['List','List'],['Collapsible','Collapsible']]),
+  promo_line:T('promo_line','Promo line','Announcement bar text. Separate messages with a semicolon to rotate them every 2 seconds. Copy, so it belongs to the placement that shows it.'),
+  tab_label_subscribe:T('tab_label_subscribe','Subscribe tab label','Blank keeps the built-in label, which highlights "Save" in the accent colour. A custom label renders as one plain span and loses that accent.'),
+  tab_label_onetime:T('tab_label_onetime','One-time tab label','Blank keeps the built-in label.'),
+  tab_label_bundle:T('tab_label_bundle','Bundle tab label','Blank keeps the built-in label.'),
+  policy_link_label:T('policy_link_label','Policy link label','Renames the footer link and the popup it opens. Whether the link appears at all is decided by whether a cancellation policy exists in Settings.'),
+  hide_product_row:B('hide_product_row','Show the product row','Image, title and quantity stepper. Off fixes quantity at 1. The drawer answers this differently because it draws its own header, so it is a fact of the placement.',{invert:1}),
+  summary_expanded_by_default:B('summary_expanded_by_default','Open the price breakdown by default','Shows the full breakdown without a click. Shoppers can still collapse it.'),
+  compare_at_shipping_price:N('compare_at_shipping_price','Compare-at shipping price','What shipping would normally cost, struck through beside what you charge. Store currency, not cents. Display only, and 0 hides it.'),
+  bundle_selector_tabs:B('bundle_selector_tabs','Show the bundle choice as tabs, not a dropdown','Applies when a variant belongs to several bundles of the same type.'),
+  group_bundle_variants:B('group_bundle_variants','Group products by variant','Combines variants of one product into a single row with a variant picker. Mix and match only.')
+};
+
+var TEMPLATES={
+  'subscription-widget':{leaf:['style_variant','promo_line'],drop:[]},
+  'single-plan':{leaf:[],drop:[
+    ['style_variant','one fixed two-card layout, which IS the widget'],
+    ['promo_line','no announcement bar in this design'],
+    ['hide_free_shipping_line','no shipping row rendered'],
+    ['tag_shows_per_delivery_price','no option tags, the per-delivery price is always shown'],
+    ['tab_discount_format','savings only ever render as an amount']]},
+  'prepaid-only':{leaf:['style_variant','promo_line'],drop:[
+    ['default_payment_mode','one payment mode by definition'],
+    ['hide_prepaid','hiding it would leave nothing to buy']]},
+  'payg-only':{leaf:['style_variant','promo_line'],drop:[
+    ['default_payment_mode','one payment mode by definition'],
+    ['hide_payg','hiding it would leave nothing to buy']]},
+  'multi-frequency':{leaf:['style_variant','promo_line'],drop:[]},
+  'multi-delivery':{leaf:['style_variant','promo_line'],drop:[]},
+  'purchase-options':{leaf:['promo_line','tab_label_subscribe','tab_label_onetime','tab_label_bundle',
+    'policy_link_label','hide_product_row','summary_expanded_by_default','compare_at_shipping_price',
+    'bundle_selector_tabs','group_bundle_variants'],drop:[['style_variant','master has one fixed layout']]}
+};
+var activeTemplate='subscription-widget';
+
+/* ================= render helpers ================= */
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]});}
+function theme(id){for(var i=0;i<THEMES.length;i++)if(THEMES[i].id===id)return THEMES[i];return THEMES[0];}
+function cur(){return theme(activeTheme).v;}
+function tip(help,note,path){
+  return '<span class="tip"><button type="button" class="tipb" aria-label="'+esc(help)+'">i</button>'
+    +'<span class="tipbox" role="tooltip">'+help+(note?'<b>'+note+'</b>':'')+(path?'<i>'+esc(path)+'</i>':'')+'</span></span>';
+}
+function on(d,store){return d.invert ? !store[d.key] : !!store[d.key];}
+
+function fieldHTML(d,store,scope){
+  var t=d.touches?' data-touch="'+d.touches+'"':'';
+  if(d.k==='checks'){
+    return '<div class="tg wide"'+t+'><span class="lbl">'+d.label+tip(d.help,d.note,d.checks.map(function(c){return c[0]}).join('  '))
+      +'<span class="checkrow">'+d.checks.map(function(c){
+        var v=c[2]?!store[c[0]]:!!store[c[0]];
+        return '<label><input type="checkbox" '+(v?'checked':'')+' data-chk="'+c[0]+'" data-scope="'+scope+'"'+(c[2]?' data-inv="1"':'')+'>'+c[1]+'</label>';
+      }).join('')+'</span></span></div>';
+  }
+  if(d.k==='matrix'){
+    var curv=d.matrix.filter(function(m){return Object.keys(m[2]).every(function(k){return store[k]===m[2][k]})})[0]||d.matrix[0];
+    return '<label class="tg wide"'+t+'><span class="lbl">'+d.label+tip(d.help,d.note,Object.keys(d.matrix[0][2]).join('  '))
+      +'<select data-mtx="1">'+d.matrix.map(function(m){return '<option value="'+m[0]+'"'+(m===curv?' selected':'')+'>'+m[1]+'</option>'}).join('')+'</select></span></label>';
+  }
+  if(d.k==='select'){
+    return '<label class="tg wide"'+t+'><span class="lbl">'+d.label+tip(d.help,d.note,d.key)
+      +'<select data-sel="'+d.key+'" data-scope="'+scope+'">'+d.options.map(function(o){
+        return '<option value="'+o[0]+'"'+(store[d.key]===o[0]?' selected':'')+'>'+o[1]+'</option>'}).join('')+'</select></span></label>';
+  }
+  if(d.k==='text'){
+    return '<label class="tg wide"'+t+'><span class="lbl">'+d.label+tip(d.help,d.note,d.key)
+      +'<input type="text" maxlength="120" placeholder="Leave empty to hide it" value="'+esc(store[d.key])+'" data-txt="'+d.key+'" data-scope="'+scope+'"></span></label>';
+  }
+  if(d.k==='num'){
+    return '<label class="tg wide"'+t+'><span class="lbl">'+d.label+tip(d.help,d.note,d.key)
+      +'<input type="number" min="0" step="1" value="'+(store[d.key]||0)+'" data-num2="'+d.key+'" data-scope="'+scope+'"></span></label>';
+  }
+  return '<label class="tg'+(d.gated?' locked':'')+'"'+t+'><input type="checkbox" '+(on(d,store)?'checked':'')
+    +(d.gated?' disabled':'')+' data-chk="'+d.key+'" data-scope="'+scope+'"'+(d.invert?' data-inv="1"':'')+'>'
+    +'<span>'+d.label+tip(d.help,d.gated?'Available from the Scale band up.':d.note,d.key)+'</span></label>';
+}
+
+/* ================= branding ================= */
+function renderThemeBar(){
+  document.getElementById('themeBar').innerHTML=THEMES.map(function(t){
+    var used=t.id==='default'?'Every widget, section and page':'1 landing page';
+    return '<button class="themeCard '+(t.id===activeTheme?'sel':'')+'" data-theme="'+t.id+'">'
+      +'<span class="nm">'+t.name+(t.isDefault?' <span class="df">DEFAULT</span>':'')+'</span>'
+      +'<span class="used">'+used+'</span><span class="dots">'
+      +['Brand_Primary','Brand_Secondary','Brand_Accent','Widget_Background','Product_Tile']
+        .map(function(k){return '<i style="background:'+t.v[k]+'"></i>'}).join('')+'</span></button>';
+  }).join('')+'<button class="themeAdd">+ Add a theme</button>';
+}
+
+function renderColours(){
+  var v=cur();
+  document.getElementById('gColours').innerHTML=COLOURS.map(function(c){
+    var extra = c[0]==='Product_Tile'
+      ? '<s-badge tone="warning">Schema says Body Text</s-badge>'
+      : (c[0]==='Product_Tile_Background' ? '<s-badge>Product-card templates only</s-badge>' : '');
+    return '<div class="cRow" data-touch="'+({Brand_Primary:'cta',Brand_Secondary:'card',Brand_Accent:'pill',Product_Tile:'price',Widget_Background:'bg',Product_Tile_Background:'tile'}[c[0]])+'">'
+      +'<span class="sw" style="background:'+v[c[0]]+'"><input type="color" value="'+v[c[0]]+'" data-col="'+c[0]+'"></span>'
+      +'<span class="mid"><span class="nm">'+c[1]+tip(c[2],null,c[0])+' '+extra+'</span>'
+      +'<span class="hx">'+c[0]+'</span></span>'
+      +'<input class="hex" value="'+v[c[0]]+'" data-hex="'+c[0]+'"></div>';
+  }).join('');
+}
+
+function segHTML(key,opts,val){
+  return '<div class="seg">'+opts.map(function(o){
+    return '<button data-seg="'+key+'" data-v="'+o+'" class="'+(val===o?'on':'')+'">'+o+'</button>'}).join('')+'</div>';
+}
+function renderShape(){
+  var v=cur();
+  var html='<div class="sRow"><span class="mid"><span class="nm">Corners'
+    +tip('Sharp is 0, Semi is 12, Rounded is 20. Inner radii step down from it, and large surfaces cap at 30 so a tall card does not become a lozenge.',null,'corners')
+    +'</span></span>'+segHTML('corners',['Sharp','Semi','Rounded','Custom'],v.corners)+'</div>';
+  if(v.corners==='Custom'){
+    html+='<div class="sRow"><span class="mid"><span class="nm">Custom radius'
+      +tip('The admin renders a percent suffix here and the code reads it as pixels. 100 fully rounds the inner cards.','The label is wrong, not the behaviour. Worth fixing before self-serve.','corners_custom_pct')
+      +'</span></span><input class="num" type="number" data-num="corners_custom_pct" value="'+v.corners_custom_pct+'"><span style="font-size:12px;font-weight:700;color:var(--p-attn)">px</span></div>';
+  }
+  html+='<div class="sRow"><span class="mid"><span class="nm">Surface style'
+    +tip('Stroke gives a hairline border, Shadow a soft lift, None neither. One control across every card and popup.',null,'surface_style')
+    +'</span></span>'+segHTML('surface_style',['Stroke','Shadow','None'],v.surface_style)+'</div>';
+  html+='<div class="sRow"><span class="mid"><span class="nm">Font size'
+    +tip('Small is 85 percent, Medium 100, Large 115. One scale multiplies every size in the widget.',null,'font_size')
+    +'</span></span>'+segHTML('font_size',['Small','Medium','Large'],v.font_size)+'</div>';
+  document.getElementById('gShape').innerHTML=html;
+}
+
+function renderApplies(){
+  var rows=[['Widget','7 templates','Purchase Options plus the six subscription widgets'],
+            ['Landing pages','4 published','Each page may pick a different theme'],
+            ['Sections','Not live yet','Will take the theme of the page they sit in'],
+            ['Customer portal','1 portal','Joins once its own three colours are retired'],
+            ['Emails','10 templates','Uses the primary colour and the logo']];
+  document.getElementById('applies').innerHTML=rows.map(function(r){
+    return '<div class="aCard"><div class="t"><span class="tick">&#10003;</span>'+r[0]+'</div>'
+      +'<div class="n"><b>'+r[1]+'</b><br>'+r[2]+'</div></div>'}).join('');
+}
+
+function renderDerived(){
+  var v=buildVars(cur());
+  var show=[['--sb-on-primary','text on the CTA'],['--sb-on-accent','text on a deal pill'],
+    ['--sb-on-primary-subtle','the CTA sub-line'],['--sb-on-primary-accent','the CTA price'],
+    ['--sb-text-50','cadence subtitles'],['--sb-radius-in','inner radius'],
+    ['--sb-radius-outer','large surfaces, capped at 30'],['--sb-font-scale','type multiplier']];
+  document.getElementById('gDerived').innerHTML='<div>'+show.map(function(d){
+    var val=v[d[0]], sw=/^#/.test(val)?'<i style="background:'+val+'"></i>':'';
+    return '<span class="dChip" title="'+d[1]+'">'+sw+d[0]+' '+val+'</span>'}).join('')+'</div>'
+    +'<div class="warnRow" style="margin-top:11px"><span><b>Two that are not derived.</b> <code>--sb-border</code> is a hardcoded <code>#c4c4c4</code> and <code>--sb-text-secondary</code> a hardcoded <code>#6b6b6b</code> in the shipped mapping. The themer tells a merchant borders adapt. They do not, so either the copy or the code has to change.</span></div>';
+}
+
+/* ================= selling ================= */
+function renderSelling(){
+  document.getElementById('sellBody').innerHTML=SELL_GROUPS.map(function(g){
+    var count=g.items.reduce(function(n,d){return n+(d.k==='checks'?d.checks.length:d.k==='matrix'?Object.keys(d.matrix[0][2]).length:1)},0);
+    return '<s-section><div class="gHd">'+g.title+' <em>'+count+'</em></div><div class="tgrid">'
+      +g.items.map(function(d){return fieldHTML(d,SELL,'sell')}).join('')+'</div></s-section>';
+  }).join('');
+}
+
+/* ================= widget leaf ================= */
+function renderLeaf(){
+  var t=TEMPLATES[activeTemplate];
+  document.getElementById('gLeaf').innerHTML = t.leaf.length
+    ? t.leaf.map(function(k){return fieldHTML(LEAF_DEFS[k],LEAF,'leaf')}).join('')
+    : '<p class="absent" style="grid-column:1/-1">Nothing to set. This template takes its appearance from Settings, Branding and its behaviour from Settings, Selling. Assign it to some plans and it is done.</p>';
+  document.getElementById('leafCount').textContent=t.leaf.length;
+  document.getElementById('leafPill').textContent=t.leaf.length+(t.leaf.length===1?' control':' controls');
+  document.getElementById('absentList').innerHTML = (t.drop.length
+    ? t.drop.map(function(d){return '<code>'+d[0]+'</code>, '+d[1]}).join('<br>')
+    : 'Nothing dropped. This template can render every shared control.')
+    + '<br><br>Every other setting is held once in Settings. A template that is structurally unable to honour one does not draw it, and the stored value is never touched.';
+}
+
+/* ================= preview ================= */
+function previewHTML(store,s){
+  var tabs = store.hide_intent_selector ? '' :
+    '<div class="sbTabs" data-el="tabs">'+(store.hide_onetime_option?'':'<span class="sbTab">One-time</span>')
+    +'<span class="sbTab on">Subscribe</span></div>';
+  var amt = store.tab_discount_format==='amount' ? '₹200' : '20%';
+  var word = store.tab_badge_shows_plan_discount ? 'Extra ' : 'Save ';
+  var price = store.hide_price_decimals ? '₹1,399' : '₹1,399.00';
+  var sec = store.schedule_text_format==='none' ? ''
+    : store.schedule_text_format==='cadence' ? '1 delivery every 2 weeks' : 'Every 2 weeks, 6 deliveries';
+  var name = store.card_shows_option_title ? 'Fortnightly Refill' : 'Every 2 weeks';
+  var tagTxt = store.tag_shows_per_delivery_price ? price : (word+amt);
+  return (s.ann!==false?'<div class="sbAnn" data-el="ann">'+(LEAF.promo_line||'Subscribe and save on every delivery')+'</div>':'')
+    + tabs
+    + (s.tile?'<div class="sbTile" data-el="tile"><span class="ph"></span><span>Daily Greens, 60 caps</span></div>':'')
+    + '<div class="sbOpt sel" data-el="card"><span class="sbRadio"></span><span><span class="nm">'+name
+      +'<span class="sbPill" data-el="pill">'+tagTxt+'</span></span><span class="sub">'+sec+'</span></span>'
+      +'<span class="pr" data-el="price">'+price+'</span></div>'
+    + '<div class="sbOpt"><span class="sbRadio"></span><span><span class="nm">Every month</span><span class="sub">'
+      +(store.schedule_text_format==='none'?'':store.schedule_text_format==='cadence'?'1 delivery every month':'Every month, 6 deliveries')
+      +'</span></span><span class="pr">'+(store.hide_price_decimals?'₹1,499':'₹1,499.00')+'</span></div>'
+    + (store.hide_free_shipping_line?'':'<p class="sbShip" data-el="ship">Free shipping on this plan</p>')
+    + '<div class="sbCta" data-el="cta"><span><span class="lbl">'+(store.direct_checkout?'Buy now':'Add to cart')
+      +'</span><span class="sv">You save on every delivery</span></span><span class="amt">'+price+'</span></div>'
+    + (store.hide_branding?'':'<p class="sbFoot" data-el="foot">Powered by StackBack</p>');
+}
+
+function paint(){
+  var def=theme('default').v, act=cur();
+  var a=document.getElementById('prevA'), b=document.getElementById('prevB'), c=document.getElementById('prevC');
+  function setv(el,v){var vars=buildVars(v);for(var k in vars)el.style.setProperty(k,vars[k]);}
+  setv(a,act); a.innerHTML=previewHTML(SELL,{tile:true});
+  setv(b,def); b.innerHTML=previewHTML(SELL,{tile:false});
+  setv(c,def); c.innerHTML=previewHTML(SELL,{tile:activeTemplate==='purchase-options'});
+
+  document.getElementById('pvWho').textContent=theme(activeTheme).name;
+  document.getElementById('miniSw').innerHTML=['Brand_Primary','Brand_Secondary','Brand_Accent','Widget_Background','Product_Tile']
+    .map(function(k){return '<i style="background:'+def[k]+'"></i>'}).join('');
+
+  var v=buildVars(act);
+  document.getElementById('noteA').innerHTML='<b>Contrast is worked out, not chosen.</b> Text on the CTA resolved to <code class="c">'
+    +v['--sb-on-primary']+'</code> against <code class="c">'+act.Brand_Primary+'</code>. Pick a lighter primary and it flips on its own.';
+  document.getElementById('noteB').innerHTML='Drawn with the <b>Store default</b> theme. Behaviour settings change what the customer sees; none of them touch colour.';
+}
+
+function renderBranding(){ renderThemeBar(); renderColours(); renderShape(); renderApplies(); renderDerived(); paint(); }
+
+/* ================= wiring ================= */
+document.addEventListener('input',function(e){
+  var t=e.target,v=cur();
+  var ck=t.getAttribute('data-col');
+  if(ck){ v[ck]=t.value.toUpperCase(); renderColours(); paint(); return; }
+  var hk=t.getAttribute('data-hex');
+  if(hk && /^#[0-9a-f]{6}$/i.test(t.value)){ v[hk]=t.value.toUpperCase(); renderColours(); paint(); return; }
+  var nk=t.getAttribute('data-num'); if(nk){ v[nk]=Number(t.value); paint(); return; }
+  var tx=t.getAttribute('data-txt');
+  if(tx){ (t.getAttribute('data-scope')==='leaf'?LEAF:SELL)[tx]=t.value; paint(); return; }
+  var n2=t.getAttribute('data-num2');
+  if(n2){ (t.getAttribute('data-scope')==='leaf'?LEAF:SELL)[n2]=Math.max(0,Number(t.value)||0); paint(); return; }
+});
+
+document.addEventListener('change',function(e){
+  var t=e.target;
+  if(t.hasAttribute&&t.hasAttribute('data-mtx')){
+    var lbl=t.closest('.tg').querySelector('.lbl').childNodes[0].nodeValue;
+    var g=SELL_GROUPS.filter(function(gr){return gr.items.some(function(d){return d.k==='matrix'&&d.label===lbl})})[0];
+    var d=g&&g.items.filter(function(x){return x.label===lbl})[0];
+    var hit=d&&d.matrix.filter(function(m){return m[0]===t.value})[0];
+    if(hit){ for(var k in hit[2]) SELL[k]=hit[2][k]; paint(); }
+    return;
+  }
+  var sk=t.getAttribute('data-sel');
+  if(sk){ (t.getAttribute('data-scope')==='leaf'?LEAF:SELL)[sk]=t.value; paint(); return; }
+  var chk=t.getAttribute('data-chk');
+  if(chk){ var store=t.getAttribute('data-scope')==='leaf'?LEAF:SELL;
+    store[chk]=t.hasAttribute('data-inv')?!t.checked:t.checked; paint(); return; }
+  if(t.id==='tmplPick'){ activeTemplate=t.value; renderLeaf(); paint(); return; }
+});
+
+document.addEventListener('click',function(e){
+  var b=e.target.closest('button'); if(!b) return;
+  if(b.classList.contains('railItem')){
+    document.querySelectorAll('.railItem').forEach(function(x){x.classList.toggle('sel',x===b)});
+    document.querySelectorAll('.panel').forEach(function(p){p.hidden=p.dataset.p!==b.dataset.g});
+    return;
+  }
+  if(b.hasAttribute('data-theme')){ activeTheme=b.getAttribute('data-theme'); renderBranding(); return; }
+  if(b.hasAttribute('data-seg')){ cur()[b.getAttribute('data-seg')]=b.getAttribute('data-v'); renderShape(); paint(); return; }
+  if(b.id==='btnFetch'){ doFetch(); return; }
+  if(b.id==='btnManual'){ document.getElementById('fetched').hidden=true; return; }
+  var j=b.getAttribute('data-jump');
+  if(j){ (j==='top'?document.body:document.getElementById(j)).scrollIntoView({behavior:'smooth',block:'start'}); }
+});
+
+/* hover a setting, light up what it touches */
+document.addEventListener('mouseover',function(e){
+  var r=e.target.closest('[data-touch]'); if(!r) return;
+  document.querySelectorAll('[data-el]').forEach(function(x){
+    x.classList.toggle('pvLit', x.getAttribute('data-el')===r.getAttribute('data-touch')); });
+});
+document.addEventListener('mouseout',function(e){
+  if(e.target.closest('[data-touch]')) document.querySelectorAll('.pvLit').forEach(function(x){x.classList.remove('pvLit')});
+});
+
+renderBranding();
+renderSelling();
+renderLeaf();
+</script>
+</body>
+</html>

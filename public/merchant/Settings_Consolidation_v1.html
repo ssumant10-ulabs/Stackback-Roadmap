@@ -1,0 +1,638 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Settings consolidation</title>
+<style>
+  :root{
+    --p-ink:#303030; --p-muted:#616161; --p-faint:#8a8a8a;
+    --p-line:#e3e3e3; --p-line2:#ebebeb; --p-surface:#fff;
+    --p-primary:#303030; --p-success:#29845a; --p-success-bg:#cdfee1;
+    --p-link:#005bd3; --p-attn-bg:#ffefcf; --p-attn:#8a6116;
+    --p-crit:#8e1f0b; --p-crit-bg:#fedad1;
+    --p-info-bg:#eaf4ff; --p-info:#00527c;
+    --p-bg:#f7f7f7; --p-hover:#fafafa;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--p-bg);font:13px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--p-ink)}
+
+  /* ---------- spec chrome (not part of the product) ---------- */
+  .spec{max-width:1360px;margin:0 auto;padding:0 20px 80px}
+  .specbar{background:#1a1a1a;color:#fff;padding:14px 20px;position:sticky;top:0;z-index:200;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+  .specbar h1{margin:0;font-size:14px;font-weight:650;letter-spacing:.1px}
+  .specbar .sub{font-size:12px;color:#b5b5b5;max-width:760px}
+  .topTabs{display:flex;gap:2px;background:#2b2b2b;border-radius:9px;padding:3px;width:100%;order:9;margin-top:2px;overflow-x:auto}
+  .topTabs button{appearance:none;border:0;background:transparent;color:#c9c9c9;font:inherit;font-size:12.5px;
+    font-weight:650;padding:7px 15px;border-radius:7px;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:7px}
+  .topTabs button.on{background:#fff;color:#1a1a1a}
+  .topTabs button:hover:not(.on){color:#fff}
+  .topTabs .n{font-size:11px;opacity:.72;font-weight:600}
+
+  h2.secH{font-size:19px;font-weight:650;letter-spacing:-.25px;margin:34px 0 4px}
+  h3.subH{font-size:15px;font-weight:650;margin:26px 0 8px}
+  p.specP{color:var(--p-muted);margin:0 0 14px;font-size:13.5px;line-height:1.7;max-width:900px}
+  p.specP strong{color:var(--p-ink);font-weight:650}
+  .lede{font-size:14.5px;color:var(--p-ink);max-width:900px;line-height:1.7;margin:0 0 18px}
+
+  .card{background:var(--p-surface);border:1px solid var(--p-line);border-radius:12px;overflow:hidden}
+  .cardHd{padding:12px 16px;border-bottom:1px solid var(--p-line2);font-weight:650;font-size:13.5px;display:flex;align-items:center;gap:10px}
+  .cardHd .hint{font-weight:450;color:var(--p-faint);font-size:12px;margin-left:auto}
+  .cardBd{padding:16px}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  @media(max-width:1000px){.grid2,.grid3,.grid4{grid-template-columns:1fr}}
+
+  table.t{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff}
+  table.t th{text-align:left;font-weight:650;color:var(--p-muted);font-size:11px;letter-spacing:.4px;text-transform:uppercase;
+    padding:9px 12px;border-bottom:1px solid var(--p-line);background:#fbfbfb;position:sticky;top:0;z-index:2}
+  table.t td{padding:9px 12px;border-bottom:1px solid var(--p-line2);vertical-align:top}
+  table.t tr:hover td{background:var(--p-hover)}
+  table.t td.k{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:#1a1a1a;white-space:nowrap}
+  table.t td.note{color:var(--p-muted)}
+
+  .tag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.3px;padding:2px 7px;border-radius:5px;white-space:nowrap}
+  .t-brand{background:#efe8ff;color:#5b21b6}
+  .t-selling{background:var(--p-info-bg);color:var(--p-info)}
+  .t-place{background:#e8f6ee;color:var(--p-success)}
+  .t-del{background:var(--p-crit-bg);color:var(--p-crit)}
+  .t-ov{background:var(--p-attn-bg);color:var(--p-attn)}
+  .t-no{background:#f0f0f0;color:#6a6a6a}
+  .t-bug{background:var(--p-crit-bg);color:var(--p-crit)}
+  .t-new{background:#e8f6ee;color:var(--p-success)}
+
+  .stat{background:#fff;border:1px solid var(--p-line);border-radius:12px;padding:16px 18px}
+  .stat .n{font-size:30px;font-weight:660;letter-spacing:-1px;line-height:1.05}
+  .stat .l{font-size:12.5px;color:var(--p-muted);margin-top:6px;line-height:1.5}
+  .stat.bad .n{color:var(--p-crit)}
+  .stat.good .n{color:var(--p-success)}
+
+  .callout{border-left:3px solid var(--p-attn);background:#fffaf0;padding:13px 16px;border-radius:0 10px 10px 0;margin:16px 0;font-size:13px;color:#5c4a23;max-width:920px;line-height:1.65}
+  .callout.crit{border-left-color:var(--p-crit);background:#fff6f4;color:#7a2718}
+  .callout.ok{border-left-color:var(--p-success);background:#f4fbf7;color:#1f5f43}
+  .callout b{font-weight:660}
+
+  .flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;margin:18px 0}
+  .lay{flex:1;min-width:170px;background:#fff;border:1px solid var(--p-line);padding:14px 16px;position:relative}
+  .lay:first-child{border-radius:12px 0 0 12px}
+  .lay:last-child{border-radius:0 12px 12px 0}
+  .lay + .lay{border-left:0}
+  .lay .no{font-size:10.5px;font-weight:700;color:var(--p-faint);letter-spacing:.5px}
+  .lay .nm{font-weight:650;font-size:13.5px;margin-top:3px}
+  .lay .ds{font-size:12px;color:var(--p-muted);margin-top:5px;line-height:1.5}
+  .lay .st{font-size:11px;color:var(--p-faint);margin-top:8px;font-family:ui-monospace,Menlo,monospace}
+  .lay.hi{background:#faf7ff;border-color:#d9cdf5}
+
+  /* ---------- product mock (Polaris-native) ---------- */
+  .mock{background:#fff;border:1px solid var(--p-line);border-radius:12px;overflow:hidden}
+  .mockTop{background:#fbfbfb;border-bottom:1px solid var(--p-line);padding:9px 14px;font-size:11px;color:var(--p-faint);
+    letter-spacing:.4px;text-transform:uppercase;font-weight:650}
+  .setWrap{display:flex;min-height:420px}
+  .setRail{width:230px;border-right:1px solid var(--p-line);padding:10px;background:#fbfbfb;flex-shrink:0}
+  .setSearch{display:flex;align-items:center;gap:7px;border:1px solid var(--p-line);background:#fff;border-radius:8px;
+    padding:6px 9px;font-size:12px;color:var(--p-faint);margin-bottom:8px}
+  .setItem{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:7px;font-size:12.5px;cursor:pointer;color:var(--p-ink)}
+  .setItem:hover{background:#f1f1f1}
+  .setItem.sel{background:#e8e8e8;font-weight:640}
+  .setItem .nu{margin-left:auto;font-size:9.5px;font-weight:700;background:#e8f6ee;color:var(--p-success);padding:1px 5px;border-radius:4px;letter-spacing:.3px}
+  .setItem .ct{margin-left:auto;font-size:11px;color:var(--p-faint)}
+  .setBody{flex:1;padding:18px 20px;min-width:0}
+  .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:#c9c9c9}
+  .dot.ok{background:var(--p-success)} .dot.warn{background:#e0a33a} .dot.new{background:#7c3aed}
+
+  .fld{display:flex;align-items:flex-start;gap:14px;padding:11px 0;border-bottom:1px solid var(--p-line2)}
+  .fld:last-child{border-bottom:0}
+  .fldL{flex:1;min-width:0}
+  .fldL .t{font-size:13px;font-weight:550}
+  .fldL .h{font-size:12px;color:var(--p-muted);margin-top:2px;line-height:1.5}
+  .fldR{flex-shrink:0;display:flex;align-items:center;gap:8px}
+  .sw{width:34px;height:20px;border-radius:10px;background:#d4d4d4;position:relative;flex-shrink:0}
+  .sw.on{background:var(--p-primary)}
+  .sw:after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.15s}
+  .sw.on:after{left:16px}
+  .sel2{border:1px solid #b5b5b5;border-radius:8px;padding:5px 10px;font-size:12.5px;background:#fff;min-width:150px}
+  .swatch{width:22px;height:22px;border-radius:6px;border:1px solid var(--p-line);flex-shrink:0}
+  .inh{font-size:10.5px;font-weight:650;color:var(--p-faint);background:#f2f2f2;padding:2px 6px;border-radius:4px;letter-spacing:.2px}
+  .inh.ov{background:var(--p-attn-bg);color:var(--p-attn)}
+
+  .btn{appearance:none;border:1px solid #b5b5b5;background:#fff;border-radius:8px;padding:6px 12px;font:inherit;
+    font-size:12.5px;font-weight:600;cursor:pointer;color:var(--p-ink)}
+  .btn:hover{background:#f6f6f6}
+  .btn.p{background:var(--p-primary);border-color:var(--p-primary);color:#fff}
+  .btn.p:hover{background:#1a1a1a}
+
+  .emptyOv{border:1px dashed #c9c9c9;border-radius:10px;padding:22px;text-align:center;color:var(--p-muted);font-size:12.5px;line-height:1.6}
+
+  .filters{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
+  .filters button{appearance:none;border:1px solid var(--p-line);background:#fff;border-radius:20px;padding:5px 13px;
+    font:inherit;font-size:12px;font-weight:600;cursor:pointer;color:var(--p-muted)}
+  .filters button.on{background:var(--p-primary);border-color:var(--p-primary);color:#fff}
+  .filters button:hover:not(.on){background:#f2f2f2;color:var(--p-ink)}
+
+  .scroll{max-height:640px;overflow:auto;border:1px solid var(--p-line);border-radius:12px}
+  .panel[hidden]{display:none}
+  .foot{margin-top:40px;padding-top:18px;border-top:1px solid var(--p-line);color:var(--p-faint);font-size:12px;line-height:1.7}
+  code.c{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;background:#f2f2f2;padding:1px 5px;border-radius:4px;color:#1a1a1a}
+  ul.ls{margin:0 0 14px;padding-left:20px;color:var(--p-muted);font-size:13px;line-height:1.75;max-width:900px}
+  ul.ls li{margin-bottom:5px}
+  ul.ls b{color:var(--p-ink);font-weight:640}
+  ol.ls{margin:0 0 14px;padding-left:20px;color:var(--p-muted);font-size:13px;line-height:1.75;max-width:900px}
+  ol.ls li{margin-bottom:8px}
+  ol.ls b{color:var(--p-ink);font-weight:640}
+</style>
+
+<div class="specbar">
+  <h1>StackBack, settings consolidation</h1>
+  <div class="sub">Spec SET-01 v1 &middot; one global layer for tokens and settings, with scoped overrides &middot; built on the locked twelve-item nav (IA-01, D2026-0727) and the purchase-options settings grid &middot; 2026-09-17</div>
+  <div class="topTabs" id="tabs"></div>
+</div>
+
+<div class="spec">
+
+<!-- ============================ 1. PROBLEM ============================ -->
+<section class="panel" data-p="prob">
+  <h2 class="secH">1. What the grid actually found</h2>
+  <p class="lede">The purchase-options widget has <b>48 settings</b>. They are stored in <b>two different tables</b>, edited on <b>two different screens</b>, and read by <b>four different surfaces</b> that do not agree on which store wins. That produces 81 editable controls for 48 decisions, and the extra 33 are not redundancy, they are a second opinion the merchant cannot see.</p>
+
+  <div class="grid4" style="margin:18px 0 8px">
+    <div class="stat bad"><div class="n">81</div><div class="l">editable controls today, across the widget editor and the portal customize screen</div></div>
+    <div class="stat bad"><div class="n">13 / 13</div><div class="l">of the dual-stored flags are defective: 8 dead, 4 silently divergent, 1 OR-locked</div></div>
+    <div class="stat bad"><div class="n">12 / 20</div><div class="l">theme tokens the drawer sticky bar ignores, because it renders outside the themed wrapper</div></div>
+    <div class="stat bad"><div class="n">26</div><div class="l">colours hardcoded in CSS modules that no setting can reach</div></div>
+  </div>
+
+  <h3 class="subH">The eight places a value can come from</h3>
+  <p class="specP">Every row below can decide what a customer sees. Nothing in the admin tells a merchant which one won.</p>
+  <div class="scroll" style="max-height:none">
+    <table class="t">
+      <thead><tr><th style="width:26px">#</th><th style="width:190px">Store</th><th style="width:300px">Where the value lives</th><th>Reaches</th><th style="width:130px">Status</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><b>Shop brand</b></td><td class="k">settings brand cols + Shopify brand sync</td><td>Portal colour seed, every email template</td><td><span class="tag t-brand">keep, promote</span></td></tr>
+        <tr><td>2</td><td><b>Portal global</b></td><td class="k">shop_portal_settings.custom_settings.global</td><td>Portal chrome: fonts, three colours, announcement bar, nav visibility</td><td><span class="tag t-brand">split</span></td></tr>
+        <tr><td>3</td><td><b>Portal shop</b></td><td class="k">shop_portal_settings.custom_settings.shop</td><td>Portal Shop page content, banners, welcome copy</td><td><span class="tag t-place">stays local</span></td></tr>
+        <tr><td>4</td><td><b>Portal widget (P)</b></td><td class="k">shop_portal_settings.custom_settings.widget</td><td>Portal drawer widget, OG landing plan picker and sticky bar</td><td><span class="tag t-del">retire</span></td></tr>
+        <tr><td>5</td><td><b>Widget instance (W)</b></td><td class="k">shop_widgets.custom_settings</td><td>The PDP theme block</td><td><span class="tag t-ov">becomes override only</span></td></tr>
+        <tr><td>6</td><td><b>Landing page</b></td><td class="k">shop_landing_pages.custom_settings</td><td>One landing page</td><td><span class="tag t-ov">becomes override only</span></td></tr>
+        <tr><td>7</td><td><b>Theme block Liquid</b></td><td class="k">react-purchase-options-test.liquid data-hide-*</td><td>PDP only, OR-ed with the widget store so the app cannot turn it off</td><td><span class="tag t-del">remove</span></td></tr>
+        <tr><td>8</td><td><b>Hardcoded CSS</b></td><td class="k">26 values across 11 module files</td><td>PDP and drawer both, unreachable from any screen</td><td><span class="tag t-bug">tokenise</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 class="subH">Three defect classes, all of them caused by the same thing</h3>
+  <div class="grid3" style="margin-bottom:8px">
+    <div class="card"><div class="cardHd" style="color:var(--p-crit)">Dead controls, 8</div><div class="cardBd" style="font-size:12.5px;color:var(--p-muted);line-height:1.65">
+      <code class="c">default_intent</code>, <code class="c">default_payment_mode</code>, <code class="c">hide_onetime_option</code>, <code class="c">hide_intent_selector</code>, <code class="c">bundle_selector_tabs</code>, <code class="c">promo_line</code>, <code class="c">hide_free_shipping_line</code> and <code class="c">direct_checkout</code> are editable on the portal customize screen, save cleanly, and change nothing. The drawer never reads them.
+      <div style="margin-top:9px;color:var(--p-crit);font-weight:600">A control that saves and does nothing is worse than a missing one. The merchant believes the change landed.</div>
+    </div></div>
+    <div class="card"><div class="cardHd" style="color:var(--p-crit)">Silent divergence, 4</div><div class="cardBd" style="font-size:12.5px;color:var(--p-muted);line-height:1.65">
+      <code class="c">use_compare_at_price_for_discount_label</code>, <code class="c">tab_discount_format</code> and <code class="c">tag_shows_per_delivery_price</code> exist in both stores and both are live, so the PDP and the drawer can show different discount maths for the same product. <code class="c">freebie_label_shows_value</code> is read by the landing page but ignored by the drawer.
+      <div style="margin-top:9px;color:var(--p-crit);font-weight:600">Nobody sees this in the admin. It only shows up as a customer complaint.</div>
+    </div></div>
+    <div class="card"><div class="cardHd" style="color:var(--p-crit)">Locked open, 1</div><div class="cardBd" style="font-size:12.5px;color:var(--p-muted);line-height:1.65">
+      <code class="c">group_bundle_variants</code> is OR-ed across both stores, so the widget editor cannot switch it off while the portal copy is on. The three <code class="c">hide_*</code> payment flags have the same shape against a theme-editor checkbox.
+      <div style="margin-top:9px;color:var(--p-crit);font-weight:600">An OR across two stores means one of the two screens is a decoration.</div>
+    </div></div>
+  </div>
+
+  <div class="callout crit"><b>The cause is one decision, not thirteen bugs.</b> The schema is already single-source: <code class="c">widget-templates.ts</code> spreads the portal appearance schema rather than copying it, and says so in a comment. What was duplicated is the <b>values</b>, into <code class="c">shop_widgets.custom_settings</code> and <code class="c">shop_portal_settings.custom_settings.widget</code>, with each reader picking a side. Every defect above is downstream of that one split. Fixing the thirteen individually would leave the mechanism that produced them.</div>
+
+  <h3 class="subH">And three settings that never did anything at all</h3>
+  <p class="specP"><code class="c">theme.chrome.borderVisible</code>, <code class="c">theme.chrome.borderColor</code> and <code class="c">theme.chrome.shadow</code> compile to <code class="c">--sb-chrome-border</code> and <code class="c">--sb-shadow</code>, which have <b>zero uses anywhere in the app</b>. The landing template's own <code class="c">colors</code>, <code class="c">typography</code> and <code class="c">layout</code> blocks have zero readers too: <code class="c">buildLandingCSSVars</code> adds only alert variables on top of the widget theme and never consults them. Six schema blocks, no consumer.</p>
+</section>
+
+<!-- ============================ 2. MODEL ============================ -->
+<section class="panel" data-p="model" hidden>
+  <h2 class="secH">2. The model: one resolver, four layers, one test</h2>
+  <p class="lede">Stop asking "which store holds this setting". Ask "at what scope is this decision true", and let one resolver walk the layers. A value is never held in two places at the same level, and the layer a value came from is always visible.</p>
+
+  <div class="flow">
+    <div class="lay"><div class="no">LAYER 1</div><div class="nm">Product default</div><div class="ds">Shipped by us. What the widget does before a merchant touches anything.</div><div class="st">widget_templates.default_settings</div></div>
+    <div class="lay hi"><div class="no">LAYER 2, NEW</div><div class="nm">Brand and Selling</div><div class="ds">The store's answer. Set once in Settings, read by every surface. This is where 36 of the 48 settings live.</div><div class="st">shop_settings.brand / .selling</div></div>
+    <div class="lay"><div class="no">LAYER 3</div><div class="nm">Surface</div><div class="ds">Widget, Portal or Landing Pages as a class. Present in the resolver, deliberately empty at launch.</div><div class="st">reserved</div></div>
+    <div class="lay"><div class="no">LAYER 4</div><div class="nm">Placement</div><div class="ds">This widget instance, this landing page. Holds its own copy, plus any override it has explicitly taken.</div><div class="st">shop_widgets / shop_landing_pages</div></div>
+  </div>
+
+  <div class="callout ok"><b>Nearest layer wins. Nothing is OR-ed, ever.</b> The three OR-ed reads in the current build (the <code class="c">hide_*</code> payment flags against the theme block, <code class="c">group_bundle_variants</code> across both stores) become plain precedence. An OR is what makes a setting impossible to switch off from the screen that appears to own it.</div>
+
+  <h3 class="subH">The test that decides where a setting lives</h3>
+  <p class="specP">One question, asked of every setting: <b>would this store ever want a different answer on two placements?</b></p>
+  <div class="grid3">
+    <div class="card"><div class="cardHd"><span class="tag t-no">NO</span> Global, no override</div><div class="cardBd" style="font-size:12.5px;color:var(--p-muted);line-height:1.7">
+      The answer is a fact about the store, not a choice per placement. Whether your prices carry decimals. Whether your discounts are calculated off compare-at. Whether you are on a plan that lets you remove the branding.
+      <div style="margin-top:10px"><b style="color:var(--p-ink)">12 settings.</b> One control, in Settings. No override row is offered anywhere, because offering one is how the current mess started.</div>
+    </div></div>
+    <div class="card"><div class="cardHd"><span class="tag t-ov">RARELY</span> Global, opt-in override</div><div class="cardBd" style="font-size:12.5px;color:var(--p-muted);line-height:1.7">
+      Usually one answer, but a flash sale page in different colours or a bundle widget that opens on Bundle is legitimate. The global value is authoritative until a placement explicitly takes the override.
+      <div style="margin-top:10px"><b style="color:var(--p-ink)">24 settings, in 8 groups.</b> Overrides are taken by group, never by single key.</div>
+    </div></div>
+    <div class="card"><div class="cardHd"><span class="tag t-place">YES</span> Placement only</div><div class="cardBd" style="font-size:12.5px;color:var(--p-muted);line-height:1.7">
+      Copy, and layout facts of the placement itself. A tab label. Whether the product row shows, which the drawer already answers differently because it draws its own header.
+      <div style="margin-top:10px"><b style="color:var(--p-ink)">9 settings.</b> No global control exists. The leaf is already the right scope.</div>
+    </div></div>
+  </div>
+
+  <h3 class="subH">Overrides are taken by group, not by key</h3>
+  <p class="specP">A placement cannot override <code class="c">theme.borders.strong</code> on its own. It overrides <b>Surfaces</b>, and all five keys move together. Per-key overriding is exactly what produced a PDP and a drawer that disagree on one flag with no way to see it. Group overrides keep a placement readable: it either matches the store or it visibly does not.</p>
+
+  <div class="grid2">
+    <div class="card"><div class="cardHd">The 8 override groups <span class="hint">24 of the 36 global keys</span></div>
+      <table class="t">
+        <tbody>
+          <tr><td style="width:150px"><b>Colors</b></td><td class="note">primary, subscription accent, savings</td><td style="width:36px;text-align:right">3</td></tr>
+          <tr><td><b>Surfaces</b></td><td class="note">widget background, muted, input, border, strong border</td><td style="text-align:right">5</td></tr>
+          <tr><td><b>Text</b></td><td class="note">primary, secondary, muted</td><td style="text-align:right">3</td></tr>
+          <tr><td><b>Component style</b></td><td class="note">tab, CTA, badge, selected card</td><td style="text-align:right">4</td></tr>
+          <tr><td><b>Purchase modes</b></td><td class="note">prepaid, pay as you go, AutoPay, preselected</td><td style="text-align:right">4</td></tr>
+          <tr><td><b>Opens on</b></td><td class="note">default tab, tab bar, one-time</td><td style="text-align:right">3</td></tr>
+          <tr><td><b>Plan card name</b></td><td class="note">use the option title</td><td style="text-align:right">1</td></tr>
+          <tr><td><b>Promo line</b></td><td class="note">the line above the button</td><td style="text-align:right">1</td></tr>
+        </tbody>
+      </table>
+      <div style="padding:10px 14px;font-size:11.5px;color:var(--p-faint);border-top:1px solid var(--p-line2)">The number beside each group is how many stored keys it moves. Take the group and all of them move together, which is the point.</div>
+    </div>
+    <div class="card"><div class="cardHd">One resolver, and it returns its own provenance</div><div class="cardBd">
+      <div style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;line-height:1.85;background:#fbfbfb;border:1px solid var(--p-line2);border-radius:8px;padding:13px;color:#1a1a1a;overflow:auto">
+resolve(shop, surface, placementId)<br>
+&nbsp;&nbsp;=&gt; Record&lt;key, { value, from }&gt;<br><br>
+<span style="color:var(--p-faint)">// from: "default" | "brand" | "selling"</span><br>
+<span style="color:var(--p-faint)">//     | "surface" | "placement"</span>
+      </div>
+      <p class="specP" style="margin:13px 0 0;font-size:12.5px">Returning the layer alongside the value is what makes the admin honest. Every control renders an <span class="inh">INHERITED</span> or <span class="inh ov">OVERRIDDEN</span> marker from <code class="c">from</code> rather than from a guess, and a storefront debug header can print the same thing. The current build cannot answer "why is this widget purple" without reading four files.</p>
+    </div></div>
+  </div>
+
+  <h3 class="subH">A setting renders only where it can take effect</h3>
+  <p class="specP">Scope is already owned by the widget <b>category</b> in code: master, subscription, bundle, bundle-fixed, bundle-mix-and-match, onetime. <code class="c">group_bundle_variants</code> is meaningless outside mix and match; <code class="c">bundle_selector_tabs</code> outside bundles; <code class="c">compare_at_shipping_price</code> on a free-shipping plan. These do not get a global control and they do not appear on placements that cannot use them. This is the second half of the simplification: the reason the current screens feel long is partly that they show every setting to every placement.</p>
+</section>
+
+<!-- ============================ 3. WHERE ============================ -->
+<section class="panel" data-p="where" hidden>
+  <h2 class="secH">3. Where it lives in the locked sitemap</h2>
+  <p class="lede">The twelve-item nav does not move. Every change is inside <b>Settings</b>, plus one card added to the three storefront items. The IA already committed to this direction: <code class="c">/settings branding</code> is marked <b>MOVED IN</b> in IA-02 as the single source for tokens duplicated between Settings and Portal Settings, gated on a data audit. This spec is that audit answered, and one item further: <b>Selling</b> beside Branding, because commerce behaviour is duplicated the same way the tokens are.</p>
+
+  <div class="grid2">
+    <div>
+      <h3 class="subH" style="margin-top:6px">Settings, grouped rail</h3>
+      <div class="mock">
+        <div class="mockTop">Settings &middot; Polaris-native</div>
+        <div class="setWrap">
+          <div class="setRail">
+            <div class="setSearch">Search settings</div>
+            <div class="setItem sel"><span class="dot new"></span>Branding <span class="ct">17</span></div>
+            <div class="setItem"><span class="dot new"></span>Selling <span class="ct">19</span></div>
+            <div class="setItem"><span class="dot ok"></span>Orders and scheduling</div>
+            <div class="setItem"><span class="dot ok"></span>Payments</div>
+            <div class="setItem"><span class="dot warn"></span>Shipping</div>
+            <div class="setItem"><span class="dot ok"></span>Policies</div>
+            <div class="setItem"><span class="dot warn"></span>Customer notifications</div>
+            <div class="setItem"><span class="dot"></span>Admin alert delivery</div>
+            <div class="setItem"><span class="dot warn"></span>Integrations</div>
+          </div>
+          <div class="setBody">
+            <div style="font-weight:650;font-size:15px">Branding</div>
+            <div style="color:var(--p-muted);font-size:12.5px;margin-top:3px">How StackBack looks on your storefront, in your customer portal and in your emails. Set once here.</div>
+
+            <div class="card" style="margin-top:14px"><div class="cardHd">Colours <span class="hint">3 tokens</span></div><div class="cardBd" style="padding:4px 16px">
+              <div class="fld"><div class="fldL"><div class="t">Primary</div><div class="h">Buttons, selected states, strong borders</div></div><div class="fldR"><span class="swatch" style="background:#0f172a"></span><code class="c">#0f172a</code></div></div>
+              <div class="fld"><div class="fldL"><div class="t">Subscription accent</div><div class="h">The Save tag and subscription highlights</div></div><div class="fldR"><span class="swatch" style="background:#7c3aed"></span><code class="c">#7c3aed</code></div></div>
+              <div class="fld"><div class="fldL"><div class="t">Savings</div><div class="h">Discount badges and savings lines</div></div><div class="fldR"><span class="swatch" style="background:#16a34a"></span><code class="c">#16a34a</code></div></div>
+            </div></div>
+
+            <div class="card" style="margin-top:14px"><div class="cardHd">Status colours <span class="hint">new, 8 tokens</span></div><div class="cardBd" style="padding:4px 16px">
+              <div class="fld"><div class="fldL"><div class="t">Warning</div><div class="h">Shipping prompts, incomplete states</div></div><div class="fldR"><span class="swatch" style="background:#d97706"></span><code class="c">#d97706</code></div></div>
+              <div class="fld"><div class="fldL"><div class="t">Reward</div><div class="h">Freebie and tier-unlocked notices</div></div><div class="fldR"><span class="swatch" style="background:#b45309"></span><code class="c">#b45309</code></div></div>
+              <div class="fld"><div class="fldL"><div class="t">Danger</div><div class="h">Failed payment, over-limit</div></div><div class="fldR"><span class="swatch" style="background:#ef4444"></span><code class="c">#ef4444</code></div></div>
+            </div></div>
+
+            <div style="margin-top:12px;font-size:12px;color:var(--p-faint)">Surfaces, Text, Shape, Type scale, Component style and Portal chrome follow below.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <h3 class="subH" style="margin-top:6px">A widget instance, after</h3>
+      <div class="mock">
+        <div class="mockTop">Widget &rsaquo; Subscription purchase options 1</div>
+        <div style="padding:18px 20px">
+          <div class="card"><div class="cardHd">Placement</div><div class="cardBd" style="padding:4px 16px">
+            <div class="fld"><div class="fldL"><div class="t">Category</div><div class="h">Decides scope and which theme block renders it</div></div><div class="fldR"><span class="sel2">Subscriptions</span></div></div>
+            <div class="fld"><div class="fldL"><div class="t">Active on</div><div class="h">14 plans</div></div><div class="fldR"><button class="btn">Manage</button></div></div>
+          </div></div>
+
+          <div class="card" style="margin-top:14px"><div class="cardHd">Copy <span class="hint">this widget only</span></div><div class="cardBd" style="padding:4px 16px">
+            <div class="fld"><div class="fldL"><div class="t">Subscribe tab label</div><div class="h">Empty keeps the built-in label and its accented Save</div></div><div class="fldR"><span class="sel2" style="color:var(--p-faint)">Subscribe &amp; Save</span></div></div>
+            <div class="fld"><div class="fldL"><div class="t">Show the product row</div><div class="h">Image, title and quantity. Off fixes quantity at 1</div></div><div class="fldR"><span class="sw on"></span></div></div>
+            <div class="fld"><div class="fldL"><div class="t">Open the price breakdown by default</div><div class="h"></div></div><div class="fldR"><span class="sw"></span></div></div>
+          </div></div>
+
+          <div class="card" style="margin-top:14px"><div class="cardHd">Overrides <span class="hint">0 of 8 groups</span></div><div class="cardBd">
+            <div class="emptyOv">
+              Inheriting all <b>36 settings</b> from Settings &rsaquo; Branding and Settings &rsaquo; Selling.<br>
+              <div style="margin-top:12px"><button class="btn">+ Override a group</button></div>
+            </div>
+          </div></div>
+        </div>
+      </div>
+
+      <h3 class="subH">A flash-sale landing page that has taken one</h3>
+      <div class="mock">
+        <div class="mockTop">Landing Pages &rsaquo; Festive flash</div>
+        <div style="padding:18px 20px">
+          <div class="card"><div class="cardHd">Overrides <span class="hint">1 of 8 groups</span></div><div class="cardBd" style="padding:4px 16px">
+            <div class="fld"><div class="fldL"><div class="t">Colours <span class="inh ov" style="margin-left:6px">OVERRIDDEN</span></div><div class="h">Primary <code class="c">#B42318</code>, accent <code class="c">#E3A23E</code>, savings <code class="c">#16a34a</code></div></div><div class="fldR"><button class="btn">Reset to store</button></div></div>
+            <div class="fld"><div class="fldL"><div class="t" style="color:var(--p-faint)">Surfaces, Text, Component style, Purchase modes, Opens on, Plan card name, Promo line</div><div class="h"><span class="inh">INHERITED</span> from Settings</div></div><div class="fldR"><button class="btn">+ Override a group</button></div></div>
+          </div></div>
+          <p class="specP" style="margin:12px 2px 0;font-size:12.5px">The screen shows what differs, not what matches. A merchant scanning five landing pages sees at a glance which one is off-brand, which no amount of per-key control ever gave them.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="subH">What this does to the three storefront items</h3>
+  <div class="scroll" style="max-height:none">
+    <table class="t">
+      <thead><tr><th style="width:150px">Nav item</th><th style="width:110px">Controls today</th><th style="width:110px">Controls after</th><th>What changes</th></tr></thead>
+      <tbody>
+        <tr><td><b>Widget</b></td><td>48</td><td><b>5</b> + overrides</td><td class="note">Keeps placement and copy. Loses the 20 theme keys and 19 selling flags to Settings. Gains an override card that is empty by default. The screen stops being a settings screen and becomes an assignment screen, which is what the IA already says it is short of.</td></tr>
+        <tr><td><b>Portal</b></td><td>33 + 12</td><td><b>12</b> + overrides</td><td class="note">Keeps Shop page content, banners, welcome copy, nav and CTA visibility, custom CSS. Loses the entire widget tab, which is the 33 controls that produced 13 of 13 defects. Already named in IA-02 as "no longer a settings screen".</td></tr>
+        <tr><td><b>Landing Pages</b></td><td>per template</td><td>content only <span class="tag t-ov">+ overrides</span></td><td class="note">Keeps hero, banners, FAQ, promo cards, sections, sale windows. The dead <code class="c">colors</code>, <code class="c">typography</code> and <code class="c">layout</code> blocks are deleted rather than wired, because the page already reads the widget theme.</td></tr>
+        <tr><td><b>Settings</b></td><td>5 tabs</td><td><b>9 rail groups</b></td><td class="note">Branding and Selling join the grouped rail already specced in IA-02. Brand Settings, which exists today as a tab with logo and two colours, is absorbed into Branding rather than sitting beside it.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout"><b>Nothing here needs a nav change, and that is deliberate.</b> IA-01 considered a Storefront parent holding Widget, Portal and Landing Pages on the grounds that all three share one token pipeline, and rejected it so performance marketing keeps one-click access. Consolidating the tokens under Settings gets the benefit that parent was reaching for without reopening a locked decision.</div>
+</section>
+
+<!-- ============================ 4. GRID ============================ -->
+<section class="panel" data-p="grid" hidden>
+  <h2 class="secH">4. All 48 settings, classified</h2>
+  <p class="specP">Every setting in the grid, with where it lands and why. Filter by destination or by defect. <b>Keys marked with a defect are wrong today regardless of this refactor</b>, and several are one-line fixes worth taking before the move.</p>
+  <div class="filters" id="filters"></div>
+  <div class="scroll">
+    <table class="t">
+      <thead><tr><th style="width:290px">Setting</th><th style="width:130px">Lands in</th><th style="width:150px">Override</th><th>Why, and what is wrong with it today</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+  <div id="count" style="margin-top:10px;font-size:12px;color:var(--p-faint)"></div>
+</section>
+
+<!-- ============================ 5. CSS ============================ -->
+<section class="panel" data-p="css" hidden>
+  <h2 class="secH">5. The 26 hardcoded colours</h2>
+  <p class="lede">These are not settings and never were, which is why no amount of settings work has touched them. They are the reason a merchant who sets their brand colour still sees slate blue and amber in the shipping estimator and the freebie notice. <b>Seven of them already have a token</b> that the CSS simply does not use.</p>
+
+  <div class="grid4" style="margin:18px 0 8px">
+    <div class="stat good"><div class="n">7</div><div class="l">already have a token in <code class="c">ALERT_DEFAULTS</code>, exact hex match. Wire them, add nothing</div></div>
+    <div class="stat bad"><div class="n">8</div><div class="l">are bugs: a wrong fallback where the correct token exists and differs</div></div>
+    <div class="stat"><div class="n">11</div><div class="l">need new tokens, six of them, all status or chrome</div></div>
+    <div class="stat good"><div class="n">12</div><div class="l">theme keys the sticky bar starts honouring once its CSS scope moves up one level</div></div>
+  </div>
+
+  <h3 class="subH">Already tokenised, not wired</h3>
+  <p class="specP"><code class="c">buildLandingCSSVars</code> defines <code class="c">--sb-alert-warning: #d97706</code>, <code class="c">--sb-alert-warning-subtle: #fef3c7</code>, <code class="c">--sb-alert-warning-border: #fde68a</code>, <code class="c">--sb-alert-reward: #b45309</code>, <code class="c">--sb-alert-reward-subtle: #fffbeb</code> and <code class="c">--sb-alert-reward-border: #fde68a</code>. The CSS modules below hardcode those exact hex values instead of reading them. Promote the alert block from the landing builder into <code class="c">buildWidgetCSSVars</code> so every surface gets it, then replace the literals.</p>
+  <div class="scroll" style="max-height:none;margin-bottom:22px">
+    <table class="t">
+      <thead><tr><th style="width:300px">File</th><th style="width:230px">Hardcoded</th><th style="width:250px">Token that already holds it</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td class="k">ScheduleCard.module.css:181-183</td><td class="k">#fffbeb / #b45309 / #fde68a</td><td class="k">--sb-alert-reward-subtle / -reward / -reward-border</td><td class="note">Exact match, all three</td></tr>
+        <tr><td class="k">ScheduleCard.module.css:232-236</td><td class="k">#b45309 / #fffbeb / #fde68a</td><td class="k">same three</td><td class="note">Exact match, all three</td></tr>
+        <tr><td class="k">ShippingEstimator.module.css:32</td><td class="k">#d97706</td><td class="k">--sb-alert-warning</td><td class="note">Exact</td></tr>
+        <tr><td class="k">ShippingEstimator.module.css:42</td><td class="k">#fef3c7 / #d97706 / #fde68a</td><td class="k">--sb-alert-warning-subtle / -warning / -warning-border</td><td class="note">Exact, all three</td></tr>
+        <tr><td class="k">ShippingEstimator.module.css:64</td><td class="k">#d97706</td><td class="k">--sb-alert-warning</td><td class="note">Exact</td></tr>
+        <tr><td class="k">ShippingEstimator.module.css:75, 77</td><td class="k">#fffbeb / #fde68a</td><td class="k">--sb-alert-reward-subtle / -reward-border</td><td class="note">Exact</td></tr>
+        <tr><td class="k">StickyBar.module.css:45</td><td class="k">#d97706</td><td class="k">--sb-alert-warning</td><td class="note">Exact, <code class="c">.rowValueAmber</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 class="subH">Wrong fallbacks, which read as design decisions and are not</h3>
+  <div class="scroll" style="max-height:none;margin-bottom:22px">
+    <table class="t">
+      <thead><tr><th style="width:300px">Where</th><th style="width:170px">Uses</th><th style="width:170px">Should be</th><th>Why it matters</th></tr></thead>
+      <tbody>
+        <tr><td class="k">--sb-border fallback, 5 of 26 uses</td><td class="k">#cbd5e1</td><td class="k">#e2e8f0</td><td class="note">Two different greys for one token, so a merchant who changes the border colour sees five elements not move</td></tr>
+        <tr><td class="k">--sb-muted fallback, 15 of 27 uses</td><td class="k">#f1f5f9</td><td class="k">#f8fafc</td><td class="note">The schema default is <code class="c">#f8fafc</code>. Fifteen rules disagree with it</td></tr>
+        <tr><td class="k">--sb-savings-subtle fallback</td><td class="k">#f0fdf4, 5 uses</td><td class="k">#16a34a1a</td><td class="note">The derived value is the brand green at 10 percent. The literal is a fixed mint that ignores the brand</td></tr>
+        <tr><td class="k">PurchaseOptionsWidget.module.css:117</td><td class="k">#c0c8d4</td><td class="k">--sb-text-muted</td><td class="note">Footer text, close to <code class="c">#94a3b8</code> but not it</td></tr>
+        <tr><td class="k">ScheduleCard.module.css:33</td><td class="k">#fff</td><td class="k">--sb-bg</td><td class="note">Breaks on a dark PDP, which the token system already supports</td></tr>
+        <tr><td class="k">DrawerShell.module.css:16-17</td><td class="k">#e2e8f0</td><td class="k">--sb-border</td><td class="note">Correct value, hardcoded, so it stops being correct the moment the merchant changes it</td></tr>
+        <tr><td class="k">ScheduleCard:139, BundleProducts:164</td><td class="k">#cbd5e1</td><td class="k">--sb-border-strong at reduced alpha</td><td class="note">Disabled states, currently a literal grey unrelated to the palette</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 class="subH">Genuinely new, six tokens</h3>
+  <div class="scroll" style="max-height:none">
+    <table class="t">
+      <thead><tr><th style="width:230px">New token</th><th style="width:150px">Value</th><th style="width:260px">Replaces</th><th>Home</th></tr></thead>
+      <tbody>
+        <tr><td class="k">--sb-danger</td><td class="k">#ef4444</td><td class="note">BundleProducts:115, ShippingEstimator:127, StickyBar:46 (<code class="c">#b42318</code>)</td><td>Settings &rsaquo; Branding &rsaquo; Status colours</td></tr>
+        <tr><td class="k">--sb-savings-strong</td><td class="k">#15803d</td><td class="note">PaymentToggle:90 green chip text</td><td>Derived from savings, not separately set</td></tr>
+        <tr><td class="k">--sb-savings-border</td><td class="k">#bbf7d0</td><td class="note">PaymentToggle:59, PlanDropdown:72 green chip borders</td><td>Derived from savings</td></tr>
+        <tr><td class="k">--sb-overlay</td><td class="k">rgba(0,0,0,.5)</td><td class="note">DrawerShell:9</td><td>Not merchant-facing, fixed</td></tr>
+        <tr><td class="k">--sb-toast-bg / -text</td><td class="k">#0f172a / #ffffff</td><td class="note">Toast:13-18, 49, 53 (both carry <code class="c">!important</code>)</td><td>Derived from primary</td></tr>
+        <tr><td class="k">--sb-accent-grad / --sb-savings-grad</td><td class="k">#a855f7 / #22c55e</td><td class="note">BundleModePicker:28, BundleProducts:16 gradient second stops</td><td>Derived, lighter stop of accent and savings</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout crit" style="margin-top:22px"><b>The one that is not a colour.</b> <code class="c">PortalDrawerManager.tsx:152-167</code> draws the drawer's one-time Add To Cart button with inline styles: <code class="c">#0f172a</code> background, <code class="c">#fff</code> text, <code class="c">12px</code> radius, disabled state <code class="c">#e2e8f0</code> on <code class="c">#94a3b8</code>. It is the only CTA in the product that bypasses the widget's own button entirely, which is also why <code class="c">theme.components.ctaButton</code> has no effect in the drawer. Tokenising the colour does not fix it. The button has to go through the widget's CTA path.</div>
+</section>
+
+<!-- ============================ 6. PLAN ============================ -->
+<section class="panel" data-p="plan" hidden>
+  <h2 class="secH">6. What it takes, in the order it has to happen</h2>
+  <p class="lede">Six steps. The first two are worth doing whether or not the rest lands, because they fix live defects. Nothing here needs a nav change and nothing needs a migration that a pilot store can notice, as long as step 3 runs the way it is written.</p>
+
+  <ol class="ls" style="max-width:none">
+    <li><b>Take the free fixes first, before any refactor.</b> Two blank-field bugs save <code class="c">0</code> rather than the default: <code class="c">theme.shape.radius</code> gives square corners and <code class="c">theme.typography.fontScale</code> gives invisible text, both at <code class="c">app.widgets.$templateKey.tsx:188</code>. Move the drawer sticky bar inside the themed wrapper and 12 theme keys start working. Wire the 7 alert colours that already have tokens. None of this depends on the settings model.</li>
+
+    <li><b>Delete what has no reader.</b> Three <code class="c">theme.chrome.*</code> keys, the landing <code class="c">colors</code> / <code class="c">typography</code> / <code class="c">layout</code> blocks. They are schema, defaults and admin controls for behaviour that does not exist. Deleting them shrinks the problem before it is modelled, and removes six blocks from the grid below.</li>
+
+    <li><b>Run the resolver read-only, in parallel, for a week.</b> Build <code class="c">resolve()</code> over the four layers, seed the Brand and Selling layer from whichever store currently wins on each key, and have it log every disagreement with what production actually served. The answer to "which of Settings or Portal Settings is authoritative today", which IA-02 gated the Branding move on, is a diff, not a meeting. 22 pilot stores across 10 live ones is enough sample to settle it in days.</li>
+
+    <li><b>Cut the write path over.</b> Settings &rsaquo; Branding and Settings &rsaquo; Selling become the only screens that write those 36 keys. The portal widget tab stops writing and then stops rendering. <code class="c">shop_widgets.custom_settings</code> keeps only the placement keys plus any override a placement has taken. The old blobs stay on disk unread until the diff log has been clean for a full billing cycle.</li>
+
+    <li><b>Add the override card to the three leaf screens.</b> Empty by default, one group at a time, always with a Reset to store. This is the only new UI in the whole spec, and it is one component used three times.</li>
+
+    <li><b>Remove the theme-block checkboxes.</b> <code class="c">data-hide-prepaid</code>, <code class="c">data-hide-payg</code> and <code class="c">data-hide-auto-debit</code> in the Liquid are the last OR. They have to go after step 4, not before, or a merchant who set them in the theme editor loses the setting silently.</li>
+  </ol>
+
+  <h3 class="subH">What the merchant sees, before and after</h3>
+  <div class="scroll" style="max-height:none">
+    <table class="t">
+      <thead><tr><th style="width:300px">Question a merchant asks</th><th style="width:330px">Today</th><th>After</th></tr></thead>
+      <tbody>
+        <tr><td><b>Change my widget colour</b></td><td class="note">Set it in the widget editor, then set the same thing again in Portal Settings, then find the sticky bar did not follow either</td><td>One place, every surface follows, sticky bar included</td></tr>
+        <tr><td><b>Why does the drawer look different from the PDP</b></td><td class="note">No screen answers this. Three of the flags are genuinely live in both stores with different values</td><td class="note">The placement shows OVERRIDDEN, or it does not and they match</td></tr>
+        <tr><td><b>Turn off pay as you go</b></td><td class="note">Widget editor, plus a theme-editor checkbox that can override it back on with no indication</td><td class="note">Settings &rsaquo; Selling, one control, override per widget if a category genuinely differs</td></tr>
+        <tr><td><b>Run a flash sale in different colours</b></td><td class="note">Possible, but only by diverging every setting on that page with no record of what diverged</td><td class="note">Override Colours on that page. Seven groups stay inherited and visibly so</td></tr>
+        <tr><td><b>I set something and nothing happened</b></td><td class="note">Eight controls do exactly this</td><td class="note">Those eight no longer exist</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 class="subH">Open, and worth settling before build</h3>
+  <ul class="ls" style="max-width:none">
+    <li><b>Does Selling deserve its own rail item, or does it split across Orders, Payments and Policies?</b> The argument for its own item is that all 19 keys are storefront presentation and none of them changes what is charged. The argument against is that a merchant looking for "hide pay as you go" will try Payments first. Search covers the second case, which is the reason IA-02 specced search alongside the rail.</li>
+    <li><b>Does <code class="c">default_payment_mode</code> grow an <code class="c">auto_debit</code> value.</b> The stored enum is <code class="c">prepaid | pay_as_you_go</code>, so AutoPay cannot be preselected on any store today even though it renders. Already flagged on 2026-09-17 in the Help Centre widget model. Product change, not a settings change.</li>
+    <li><b>Whether Brand and Selling are one rail item or two.</b> Two is written here because 21 keys and 19 keys is a long single screen, and because Branding already exists in the IA by name. One item with two cards is defensible.</li>
+    <li><b>Where the surface layer gets used.</b> It is in the resolver and empty at launch. The first real case is likely "all bundle widgets open on Bundle", which is a category rule rather than a per-instance one. Leaving the layer present and unused costs nothing; adding it later costs a migration.</li>
+  </ul>
+
+  <div class="callout ok"><b>The measure of success is not fewer settings.</b> It is 48 settings with one home each, 12 of which a merchant sets once and can never diverge, and a leaf screen that shows what differs rather than what exists. The count of controls on the widget editor goes from 48 to 5. The count of decisions stays 48, because every one of them is a real decision somebody has to make.</div>
+</section>
+
+<div class="foot">
+  Spec SET-01 v1, 2026-09-17. Sources: <code class="c">purchase-options-settings-grid.xlsx</code> (Settings, Other inputs, Hardcoded styling, Legend), <code class="c">stackback-prepaid-main</code> baseline 2026-09-05 (<code class="c">portal-templates.ts</code>, <code class="c">widget-templates.ts</code>, <code class="c">widget-categories.ts</code>, <code class="c">widget-theme.ts</code>, <code class="c">landing-theme.ts</code>, <code class="c">drizzle/schema.ts</code>, <code class="c">app.settings.tsx</code>), <code class="c">IA_MerchantAdmin_v3.html</code> (locked twelve-item nav, Branding marked MOVED IN), <code class="c">lib/help/widget.ts</code> (the six approved setting groups and the checks / matrix / invert grammar this spec reuses).
+  <br><br>Every count on this page was read from those files, not estimated. Where a number differs from the grid it is because the grid counts rows and this counts stored fields.
+</div>
+</div>
+
+<script>
+/* ============== EDIT HERE. One row per setting. ==============
+   home:  brand | selling | place | del
+   ov:    group name, or "" for none
+   flag:  dead | diverge | or | bug | ""              */
+const S = [
+  // ---- theme tokens ----
+  ['theme.colors.primary','brand','Colors','', 'Buttons, selected states, strong borders. 11 CSS uses. The drawer sticky bar ignores it and falls back to #0f172a.'],
+  ['theme.colors.subscriptionAccent','brand','Colors','', 'The Save tag. 5 uses. Same sticky-bar fallback.'],
+  ['theme.colors.savings','brand','Colors','bug', 'Discount badges, 19 uses. Its subtle variant has two different fallbacks in CSS, #16a34a1a once and #f0fdf4 five times.'],
+  ['theme.surfaces.widgetBackground','brand','Surfaces','', '21 uses. Sticky bar falls back to #fff.'],
+  ['theme.surfaces.mutedSurface','brand','Surfaces','bug', '27 uses, but 15 of them fall back to #f1f5f9 while the schema default is #f8fafc.'],
+  ['theme.surfaces.inputBackground','brand','Surfaces','', 'Only 2 uses. Worth checking whether it earns a control at all.'],
+  ['theme.borders.default','brand','Surfaces','bug', '26 uses, 5 of them falling back to #cbd5e1 instead of #e2e8f0.'],
+  ['theme.borders.strong','brand','Surfaces','', '7 uses. Not read by the sticky bar.'],
+  ['theme.text.primary','brand','Text','', '25 uses. Sticky bar falls back to #0f172a.'],
+  ['theme.text.secondary','brand','Text','', '24 uses. Same.'],
+  ['theme.text.muted','brand','Text','', '18 uses. Same. The widget footer uses #c0c8d4 instead of it.'],
+  ['theme.shape.radius','brand','','bug', 'Drives four derived radii. A blank admin field saves 0, giving square corners everywhere.'],
+  ['theme.typography.fontScale','brand','','bug', '73 uses, the single highest-leverage token. A blank admin field saves 0, which makes every price and label invisible.'],
+  ['theme.components.ctaButton','brand','Component style','bug', 'Outline rules need a [data-cta-style] ancestor the drawer does not provide, so it does nothing there. The drawer CTA is an inline-styled button anyway.'],
+  ['theme.components.discountBadge','brand','Component style','', 'Reaches badge styling in three modules. Working.'],
+  ['theme.components.selectedCardState','brand','Component style','', 'Working.'],
+  ['theme.components.tabStyle','brand','Component style','', 'Working.'],
+  ['theme.chrome.borderVisible','del','','dead', 'Compiles to --sb-chrome-border, which has zero uses anywhere in app/. Delete.'],
+  ['theme.chrome.borderColor','del','','dead', 'Same variable, same zero uses. Delete.'],
+  ['theme.chrome.shadow','del','','dead', 'Compiles to --sb-shadow, zero uses. Delete.'],
+
+  // ---- selling ----
+  ['hide_prepaid','selling','Purchase modes','or', 'OR-ed with a theme-editor checkbox, so the app cannot switch it off. Category-level override is the legitimate case.'],
+  ['hide_payg','selling','Purchase modes','or', 'Same OR against data-hide-payg.'],
+  ['hide_auto_debit','selling','Purchase modes','or', 'Same OR. Already gated separately by whether Razorpay is connected, which is correct and stays.'],
+  ['default_payment_mode','selling','Purchase modes','dead', 'P copy dead. The stored enum is prepaid or pay_as_you_go, so AutoPay cannot be preselected at all.'],
+  ['default_intent','selling','Opens on','dead', 'P copy dead. Subscription widgets use a different two-value enum, which is a second divergence inside one key.'],
+  ['hide_intent_selector','selling','Opens on','dead', 'P copy dead.'],
+  ['hide_onetime_option','selling','Opens on','dead', 'P copy dead.'],
+  ['tab_discount_format','selling','','diverge', 'Live in both stores, so the PDP badge and the drawer badge can read differently. Pairs with tab_badge_shows_plan_discount as one four-way choice.'],
+  ['tab_badge_shows_plan_discount','selling','','', 'The other half of the badge matrix. Never set independently.'],
+  ['use_compare_at_price_for_discount_label','selling','','diverge', 'Live in both stores AND read by the OG landing, so three surfaces can show three discount figures for one product.'],
+  ['tag_shows_per_delivery_price','selling','','diverge', 'Live in both. Its portal-side description claims it applies to the product-page widget, which is a second copy of the same confusion in prose.'],
+  ['freebie_label_shows_value','selling','','diverge', 'The drawer ignores the P copy, the landing reads it. Partially live is the hardest kind to debug.'],
+  ['schedule_text_format','selling','','', 'Widget-only today, no P copy, which is why it has no defect. It is the model the other 13 should have followed.'],
+  ['hide_price_decimals','selling','','', 'Whether your prices carry decimals is a fact about the store. Truncates rather than rounds.'],
+  ['card_shows_option_title','selling','Plan card name','', 'Global default, overridable because whether plan names mean anything depends on the plans in that widget.'],
+  ['direct_checkout','selling','','dead', 'P copy editable but unused, and the schema title already admits it by saying theme block only.'],
+  ['hide_free_shipping_line','selling','','dead', 'P copy dead.'],
+  ['promo_line','selling','Promo line','dead', 'P copy dead, and it never renders in the drawer because the promo row is in a block-only section.'],
+  ['hide_branding','selling','','', 'A plan entitlement, not a preference. Locked below the Scale band. No override, ever.'],
+
+  // ---- placement ----
+  ['tab_label_onetime','place','','', 'Per-widget copy. No global equivalent needed.'],
+  ['tab_label_subscribe','place','','bug', 'A custom label loses the accented Save styling. Worth fixing while the field is being moved.'],
+  ['tab_label_bundle','place','','bug', 'Same accent loss.'],
+  ['policy_link_label','place','','', 'Footer copy, and the footer is block-only, so it never renders in the drawer.'],
+  ['hide_product_row','place','','', 'A layout fact of the placement. The drawer already answers it differently by drawing its own header, stepper and variant selector.'],
+  ['summary_expanded_by_default','place','','bug', 'The drawer never passes defaultExpanded, so it is always collapsed there regardless of the setting.'],
+  ['compare_at_shipping_price','place','','', 'Per-plan economics, and it only renders where shipping is actually charged.'],
+  ['bundle_selector_tabs','place','','dead', 'P copy dead. Renders only on bundle categories, so it should not appear on any other placement.'],
+  ['group_bundle_variants','place','','or', 'The only OR-ed key across both stores, so the widget editor cannot switch it off. Mix and match only.'],
+];
+
+const HOME = {
+  brand:  ['t-brand','Settings, Branding'],
+  selling:['t-selling','Settings, Selling'],
+  place:  ['t-place','The placement'],
+  del:    ['t-del','Delete'],
+};
+const FLAG = {
+  dead:   ['t-bug','dead copy'],
+  diverge:['t-bug','diverges'],
+  or:     ['t-bug','OR-locked'],
+  bug:    ['t-bug','bug'],
+};
+
+const FILTERS = [
+  ['all','Everything'],
+  ['brand','Settings, Branding'],
+  ['selling','Settings, Selling'],
+  ['place','The placement'],
+  ['del','Delete'],
+  ['ov','Override-eligible'],
+  ['defect','Broken today'],
+];
+
+let active = 'all';
+
+function match(r){
+  const [,home,ov,flag] = r;
+  if(active==='all') return true;
+  if(active==='ov') return !!ov;
+  if(active==='defect') return !!flag;
+  return home===active;
+}
+
+function render(){
+  const rows = S.filter(match);
+  document.getElementById('rows').innerHTML = rows.map(([k,home,ov,flag,note])=>{
+    const h = HOME[home];
+    const f = flag ? `<span class="tag ${FLAG[flag][0]}" style="margin-left:6px">${FLAG[flag][1]}</span>` : '';
+    const o = ov ? `<span class="tag t-ov">${ov}</span>` : `<span class="tag t-no">global only</span>`;
+    return `<tr>
+      <td class="k">${k}${f}</td>
+      <td><span class="tag ${h[0]}">${h[1]}</span></td>
+      <td>${home==='place'||home==='del' ? '<span class="tag t-no">n/a</span>' : o}</td>
+      <td class="note">${note}</td></tr>`;
+  }).join('');
+
+  const nOv = rows.filter(r=>r[2]).length, nBug = rows.filter(r=>r[3]).length;
+  document.getElementById('count').textContent =
+    `${rows.length} of ${S.length} settings shown. ${nOv} override-eligible, ${nBug} carrying a defect today.`;
+
+  document.querySelectorAll('#filters button').forEach(b=>b.classList.toggle('on', b.dataset.f===active));
+}
+
+document.getElementById('filters').innerHTML = FILTERS.map(([f,l])=>{
+  const n = f==='all' ? S.length : f==='ov' ? S.filter(r=>r[2]).length
+          : f==='defect' ? S.filter(r=>r[3]).length : S.filter(r=>r[1]===f).length;
+  return `<button data-f="${f}">${l} <span style="opacity:.6">${n}</span></button>`;
+}).join('');
+document.getElementById('filters').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if(!b) return;
+  active = b.dataset.f; render();
+});
+
+/* tabs */
+const TABS = [
+  ['prob','The problem','13 of 13 flags'],
+  ['model','The model','4 layers'],
+  ['where','Where it lives','12-item nav'],
+  ['grid','The grid','48 settings'],
+  ['css','Hardcoded CSS','26 values'],
+  ['plan','What it takes','6 steps'],
+];
+document.getElementById('tabs').innerHTML = TABS.map(([id,l,n],i)=>
+  `<button data-t="${id}" class="${i===0?'on':''}">${l} <span class="n">${n}</span></button>`).join('');
+document.getElementById('tabs').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if(!b) return;
+  document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('on', x===b));
+  document.querySelectorAll('.panel').forEach(p=>p.hidden = p.dataset.p !== b.dataset.t);
+  window.scrollTo({top:0});
+});
+
+render();
+</script>
