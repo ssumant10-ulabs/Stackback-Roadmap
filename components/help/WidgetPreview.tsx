@@ -5,6 +5,7 @@ import {
   type ToggleDef, type WidgetSettings,
 } from "@/lib/help/widget";
 import type { PlanOption } from "@/lib/help/sim";
+import BrandFetch from "./BrandFetch";
 
 /** The storefront widget, rendered from the settings object.
  *
@@ -327,7 +328,7 @@ export default function WidgetPreview({
       </div>
 
       <div className="hc-wtoggles">
-        <p className="hc-brandnote">Colours are set from your brand colours when we build.</p>
+        <BrandFetch theme={t} onTheme={(next) => onChange({ ...s, theme: next })} />
         <p className="hc-wtogglesh">What the customer sees</p>
         <p className="hc-note hc-wtoggleshelp">
           Every setting on the Purchase Options block. Hover a row to see what it changes in the
