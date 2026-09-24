@@ -29,9 +29,8 @@ export interface ClipGroup {
 
 export const CLIP_GROUPS: ClipGroup[] = [
   {
-    id: "setup", title: "Setting up", blurb: "Getting the store and the app ready. Do these once, in order.",
+    id: "setup", title: "Setting up StackBack", blurb: "Installing the app and setting its payment, shipping and tax rules. Do these once, in order.",
     clips: [
-      { id: "3c7e948e", title: "Shopify: Creating a Store", src: "https://t9016928151.p.clickup-attachments.com/t9016928151/3c7e948e-ccf1-4c92-a518-af4f9ce48472/3c7e948e-ccf1-4c92-a518-af4f9ce48472.webm?filename=Shopify%20-%20Creating%20a%20Store.webm" },
       { id: "430ca588", title: "Install and Setup", src: "https://t9016928151.p.clickup-attachments.com/t9016928151/430ca588-1e8a-4871-8802-3b07ab3888b6/430ca588-1e8a-4871-8802-3b07ab3888b6.webm?filename=Stackback%20-%20Install%20and%20Setup.webm" },
       { id: "eeea4461", title: "Payment, Shipping & Tax", src: "https://t9016928151.p.clickup-attachments.com/t9016928151/eeea4461-8bf2-4a8b-a129-e8693094b86a/eeea4461-8bf2-4a8b-a129-e8693094b86a.webm?filename=Stackback%20-%20Payment%2C%20Shipping%20%26%20Tax.webm" },
     ],

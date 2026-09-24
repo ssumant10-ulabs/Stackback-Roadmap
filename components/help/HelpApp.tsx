@@ -20,7 +20,6 @@ import { helpFont } from "./font";
 import "./help.css";
 
 type View =
-  | { kind: "faq" }
   | { kind: "home" }
   | { kind: "cat"; id: string }
   | { kind: "search"; q: string }
@@ -33,7 +32,7 @@ type View =
 /** The Help Centre is two parts, and they answer different questions.
  *  Queries is live and incomplete by nature: what came in, what we answered.
  *  Help Centre is the settled corpus: the FAQs, the order flow, the simulator. */
-type Part = "faq" | "queries" | "howto" | "help" | "internal";
+type Part = "queries" | "howto" | "help" | "internal";
 
 /** Topics where the question underneath is usually "what would that actually do", which
  *  a simulator answers and a paragraph does not. */
@@ -63,12 +62,10 @@ function parseHash(): View {
     return { kind: "queries", step: n >= 1 && n <= 3 ? n : 1 };
   }
   if (route === "sim") return { kind: "sim" };
-  if (route === "faq") return { kind: "faq" };
+  if (route === "faq") return { kind: "home" };
   if (route === "internal") return { kind: "internal" };
   if (route === "howto") return { kind: "howto" };
-  /* An empty address lands on the FAQs. They are the questions that actually come up, and
-     the 236-article overview is the thing you go to when the FAQ did not have it. */
-  return { kind: "faq" };
+  return { kind: "home" };
 }
 
 export default function HelpApp({
@@ -95,7 +92,11 @@ export default function HelpApp({
   pilots?: PilotStore[];
 }) {
   const auth = useOptionalAuth();
-  const [view, setView] = useState<View>({ kind: "faq" });
+  /* Inside the pilots screen the host is already behind AuthGate, so anyone looking at this
+     is signed in on a ULABS account and asking them to sign in again inside their own admin
+     is how the internal checklist ended up invisible to the team it was written for. */
+  const internal = auth.internal || Boolean(embedded);
+  const [view, setView] = useState<View>({ kind: "home" });
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<string | null>(null);
   const [navOpen, setNavOpen] = useState(false);
@@ -175,8 +176,7 @@ export default function HelpApp({
 
   const part: Part = view.kind === "queries" ? "queries"
     : view.kind === "howto" ? "howto"
-    : view.kind === "internal" ? "internal"
-    : view.kind === "faq" ? "faq" : "help";
+    : view.kind === "internal" ? "internal" : "help";
   const cat = view.kind === "cat" ? COUNTS.find((c) => c.id === view.id) : undefined;
   const risky = ARTICLES.filter((a) => RISK_STATUSES.includes(a.status)).length;
 
@@ -202,15 +202,13 @@ export default function HelpApp({
         )}
 
         <div className="hc-parts" role="tablist" aria-label="Help Centre parts">
-          <button role="tab" aria-selected={part === "faq"} className={"hc-part" + (part === "faq" ? " on" : "")}
-            onClick={() => go({ kind: "faq" })}>FAQs</button>
           <button role="tab" aria-selected={part === "queries"} className={"hc-part" + (part === "queries" ? " on" : "")}
             onClick={() => go({ kind: "queries", step: 1 })}>Your plans</button>
           <button role="tab" aria-selected={part === "howto"} className={"hc-part" + (part === "howto" ? " on" : "")}
             onClick={() => go({ kind: "howto" })}>How to</button>
           <button role="tab" aria-selected={part === "help"} className={"hc-part" + (part === "help" ? " on" : "")}
             onClick={() => go({ kind: "home" })}>Help Centre</button>
-          {auth.internal && (
+          {internal && (
             <button role="tab" aria-selected={part === "internal"} className={"hc-part hc-partint" + (part === "internal" ? " on" : "")}
               onClick={() => go({ kind: "internal" })}>Internal</button>
           )}
@@ -242,7 +240,7 @@ export default function HelpApp({
                 ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" /></svg>
                 : <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2" /><path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4L17 7M7 17l-1.6 1.6" /></svg>}
             </button>
-            {auth.internal && <button className="hc-btn hc-int" onClick={() => go({ kind: "insights" })}>Insights</button>}
+            {internal && <button className="hc-btn hc-int" onClick={() => go({ kind: "insights" })}>Insights</button>}
             {auth.available && (auth.internal
               ? <button className="hc-btn ghost" onClick={auth.signOut} title={auth.user?.email || ""}>Internal · sign out</button>
               : <button className="hc-btn ghost" onClick={auth.signIn}>ULABS sign in</button>)}
@@ -272,7 +270,7 @@ export default function HelpApp({
               <span>{c.name}</span><em aria-hidden="true">{c.n}</em>
             </button>
           ))}
-          {auth.internal && (
+          {internal && (
             <button className={"hc-navitem hc-navint" + (view.kind === "insights" ? " on" : "")}
               aria-label={`Insights, ${risky} answers carrying support risk`} onClick={() => go({ kind: "insights" })}>
               <span>Insights</span><em aria-hidden="true">{risky}</em>
@@ -285,13 +283,17 @@ export default function HelpApp({
             <Brief store={store} open={openQueries} answered={answered} connected={sanityConnected} pilots={pilots}
               step={view.step} onStep={(n) => go({ kind: "queries", step: n })} />
           )}
-          {view.kind === "internal" && (auth.internal
+          {view.kind === "internal" && (internal
             ? <Internal store={store} stores={stores} connected={sanityConnected} getToken={auth.getToken} />
             : <div className="hc-empty"><p>The internal tab needs a ULABS account.</p></div>)}
           {view.kind === "sim" && <Simulator />}
-          {view.kind === "faq" && <Faq onOpen={(a) => go({ kind: "cat", id: a.cat })} />}
-          {view.kind === "howto" && <HowTo internal={auth.internal} />}
-          {view.kind === "home" && <Home go={go} internal={auth.internal} onAsk={setChatSeed} answered={answered.length} />}
+          {view.kind === "howto" && <HowTo internal={internal} />}
+          {view.kind === "home" && (
+            <>
+              <Faq onOpen={(a) => go({ kind: "cat", id: a.cat })} />
+              <Home go={go} internal={internal} onAsk={setChatSeed} answered={answered.length} />
+            </>
+          )}
           {view.kind === "cat" && cat && (
             <section>
               <p className="hc-eyebrow">{cat.n} answers</p>
@@ -304,7 +306,7 @@ export default function HelpApp({
                   <span>Set a frequency, a discount and a run length, and watch the widget, the checkout and every order move together.</span>
                 </button>
               )}
-              <ArticleList list={ARTICLES.filter((a) => a.cat === cat.id)} open={open} setOpen={setOpen} internal={auth.internal} />
+              <ArticleList list={ARTICLES.filter((a) => a.cat === cat.id)} open={open} setOpen={setOpen} internal={internal} />
             </section>
           )}
           {view.kind === "search" && (
@@ -317,10 +319,10 @@ export default function HelpApp({
                   <button className="hc-btn primary" onClick={() => setChatSeed(view.q)}>Ask support instead</button>
                 </div>
               )}
-              <ArticleList list={hits.map((h) => h.art)} open={open} setOpen={setOpen} internal={auth.internal} showCat />
+              <ArticleList list={hits.map((h) => h.art)} open={open} setOpen={setOpen} internal={internal} showCat />
             </section>
           )}
-          {view.kind === "insights" && (auth.internal
+          {view.kind === "insights" && (internal
             ? <Insights />
             : <div className="hc-empty"><p>Insights is the internal layer. Sign in with a ULABS account to open it.</p></div>)}
 
@@ -332,7 +334,7 @@ export default function HelpApp({
         </main>
       </div>
 
-      <ChatDock seed={chatSeed} onSeedUsed={() => setChatSeed(null)} email={auth.user?.email} internal={auth.internal} />
+      <ChatDock seed={chatSeed} onSeedUsed={() => setChatSeed(null)} email={auth.user?.email} internal={internal} />
     </div>
   );
 }

@@ -75,10 +75,9 @@ export default function Simulator({ config, onConfig }: {
       </ol>
 
       <p className="hc-note hc-flowwas">
-        This changed in September 2026. It used to be two orders at checkout, a parent holding the
-        contract and a child holding delivery one, and merchants read the pair as a duplicate. If an
-        edit cannot be made on an order, or the subscription was created without a checkout, delivery
-        one still falls back to an order of its own.
+        The checkout order is tagged <code>parent</code>. Every delivery order after it is tagged{" "}
+        <code>child</code>. That is how you tell them apart in a report, and it is the same on all
+        three payment types.
       </p>
 
       <div className="hc-simbar hc-simbar-order">
@@ -208,6 +207,7 @@ function OrdersColumn({ mode, c, p, rows }: {
             <tr><th>Order</th><th>Created</th><th className="hc-num">Total</th><th>Payment</th><th>Fulfilment</th><th>Tags</th></tr>
           </thead>
           <tbody>
+            <tr className="hc-splitrow"><td colSpan={6}>Parent &middot; the checkout order</td></tr>
             <tr className="hc-parentrow">
               <td><b>#{base}</b></td>
               <td>{fmtDate(rows[0].createdOn)}<em>at checkout</em></td>
@@ -216,6 +216,7 @@ function OrdersColumn({ mode, c, p, rows }: {
               <td><Dot tone="ok" />Fulfilled<em>delivery 1 ships from here</em></td>
               <td className="hc-tagcell">{ORDER_TAGS[mode].parent.map((t) => <Tag key={t}>{t}</Tag>)}</td>
             </tr>
+            <tr className="hc-splitrow"><td colSpan={6}>Child &middot; one order per delivery after the first</td></tr>
             {rows.slice(1).map((o) => (
               <tr key={o.n} className={o.existsToday ? "" : "hc-pendingrow"}>
                 <td>{o.existsToday ? <b>#{base + o.n}</b> : <span className="hc-noorder">none yet</span>}</td>

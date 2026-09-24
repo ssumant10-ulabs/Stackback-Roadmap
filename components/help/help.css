@@ -1328,3 +1328,9 @@
 .hc-faqpath { margin: 10px 0 0; font-size: 11.5px; color: var(--hc-muted); font-family: ui-monospace, Menlo, monospace; }
 .hc-faqfull { margin-top: 10px; font-size: 12px; padding: 5px 11px; }
 @media (max-width: 719px) { .hc-faqphase { grid-template-columns: minmax(0, 1fr); } }
+
+/* Parent and child, said out loud in every column rather than left to the tags. */
+.hc-splitrow td {
+  padding: 12px 0 5px; font-size: 10.5px; font-weight: 700; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--hc-muted); border: 0;
+}
