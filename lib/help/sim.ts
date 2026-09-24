@@ -26,12 +26,14 @@ export type Mode = "prepaid" | "payg" | "autopay";
  *  from delivery-conversion.server.ts, plus autopay-order.server.ts for the Razorpay order.
  *  Delivery: the createorders payload in utils/scheduler.ts, identical for all three. */
 export const ORDER_TAGS: Record<Mode, { parent: string[]; delivery: string[] }> = {
-  /* Checked against four live orders on 2026-09-24. Two things this list used to get wrong.
-     A checkout order carries NO `subscription` tag: applyParentTags writes `parent`, the
-     payment tag and the id, and nothing else. And AutoPay DOES carry `pay-as-you-go`,
-     because autopay-order.server.ts writes `_payment_method: pay_as_you_go` and the same
-     applyParentTags then reads it: AutoPay is pay as you go with a mandate behind it. Its
-     `subscription` tag comes from the Razorpay order creation, not from the webhook. */
+  /* All six sets, checked against four live orders on 2026-09-24 and against the code that
+     writes each one. Two things this used to get wrong: a prepaid or pay-as-you-go checkout
+     order carries NO `subscription` tag, and AutoPay DOES carry `pay-as-you-go`, because
+     `payment-types.ts` maps auto_debit onto pay_as_you_go and applyParentTags reads that.
+
+     Delivery orders are identical across all three, because `createorders` in
+     `utils/scheduler.ts` places every one of them. AutoPay's FIRST order deliberately does
+     not go through it, which is exactly why that order has no `child` tag. */
   prepaid: {
     parent: ["parent", "id-<n>", "sb-delivery-1-converted", "sb-delivery-1-value-<amount>"],
     delivery: ["subscription", "automated", "scheduler", "child", "id-<n>"],
@@ -45,6 +47,13 @@ export const ORDER_TAGS: Record<Mode, { parent: string[]; delivery: string[] }> 
     delivery: ["subscription", "automated", "scheduler", "child", "id-<n>"],
   },
 };
+
+/** A bundle swaps `id-<n>` for `bundle-id-<n>` and adds `bundle`, on every row above. */
+export const BUNDLE_NOTE =
+  "A bundle carries `bundle` as well, and `bundle-id-<n>` in place of `id-<n>`.";
+
+/** Written to the CUSTOMER, not the order, and spelled differently on purpose. */
+export const CUSTOMER_TAGS = ["subscription-id-<n>", "bundle-id-<n> (bundles)"];
 
 export const MODE_LABEL: Record<Mode, string> = {
   prepaid: "Prepaid",

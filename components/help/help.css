@@ -1289,3 +1289,42 @@
 }
 .hc-msgnote { margin: 7px 0 0; font-size: 11.5px; color: var(--hc-muted); line-height: 1.5; }
 .hc-msgcopy { margin-top: 8px; font-size: 12px; padding: 5px 11px; }
+
+/* All six tag sets, because "the delivery tags are the same for all three" is a sentence
+   people have to take on trust and a table is not. */
+.hc-tagtable { margin: 14px 0 10px; }
+.hc-tagtableh { margin: 0 0 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-2); }
+.hc-tagtable table { width: 100%; border-collapse: collapse; }
+.hc-tagtable th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--hc-muted); padding: 0 10px 6px 0; font-weight: 700; }
+.hc-tagtable td { padding: 8px 10px 8px 0; border-top: 1px solid var(--border); vertical-align: top; font-size: 12.5px; font-weight: 650; }
+.hc-tagtable td em { display: block; font-style: normal; font-weight: 400; font-size: 11px; color: var(--hc-muted); }
+
+/* ---------------------------------------------------------------- FAQs
+   The front door. Two stages, because a merchant choosing plans and a merchant running a
+   live store are not asking the same questions, and mixing them is why 236 reads as a wall. */
+.hc-faq { max-width: 860px; }
+.hc-faqphase { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 16px 0 14px; }
+.hc-faqphaseb {
+  appearance: none; cursor: pointer; text-align: left; font: inherit;
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px;
+}
+.hc-faqphaseb b { display: block; font-size: 14px; font-weight: 700; }
+.hc-faqphaseb em { display: block; font-style: normal; font-size: 12px; color: var(--hc-muted); margin-top: 2px; }
+.hc-faqphaseb:hover { border-color: var(--border-2); }
+.hc-faqphaseb.on { border-color: var(--brand-deep); box-shadow: inset 0 0 0 1px var(--brand-deep); }
+.hc-faqblurb { margin: 0 0 18px; }
+.hc-faqgroup { margin-bottom: 20px; }
+.hc-faqgroup .hc-h3 { margin: 0 0 8px; }
+.hc-faqlist { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); }
+.hc-faqlist li { border-bottom: 1px solid var(--border); }
+.hc-faqq {
+  appearance: none; border: 0; background: none; cursor: pointer; font: inherit; width: 100%;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 11px 2px; text-align: left; font-size: 13.5px; font-weight: 620; color: var(--ink);
+}
+.hc-faqq:hover { color: var(--brand-deep); }
+.hc-faqlist li.on .hc-faqq { color: var(--brand-deep); }
+.hc-faqa { padding: 0 2px 14px; }
+.hc-faqpath { margin: 10px 0 0; font-size: 11.5px; color: var(--hc-muted); font-family: ui-monospace, Menlo, monospace; }
+.hc-faqfull { margin-top: 10px; font-size: 12px; padding: 5px 11px; }
+@media (max-width: 719px) { .hc-faqphase { grid-template-columns: minmax(0, 1fr); } }

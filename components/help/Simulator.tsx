@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import {
-  DEFAULT_CONFIG, MODE_LABEL, ORDER_TAGS, fmtDate, money, parentOrder, price, schedule, startOf,
+  BUNDLE_NOTE, CUSTOMER_TAGS, DEFAULT_CONFIG, MODE_LABEL, ORDER_TAGS, fmtDate, money, parentOrder, price, schedule, startOf,
   type Mode, type OrderLine, type SimConfig,
 } from "@/lib/help/sim";
 import { APP_NAME } from "@/lib/help/types";
@@ -131,6 +131,33 @@ export default function Simulator({ config, onConfig }: {
             <OrdersColumn mode="prepaid" c={c} p={prepaid.p} rows={prepaid.rows} />
             <OrdersColumn mode="payg" c={c} p={payg.p} rows={payg.rows} />
             <OrdersColumn mode="autopay" c={c} p={autopay.p} rows={autopay.rows} />
+          </div>
+
+          <div className="hc-tagtable">
+            <p className="hc-tagtableh">Every tag we write</p>
+            <table>
+              <thead><tr><th>Order</th><th>Tags</th></tr></thead>
+              <tbody>
+                {(["prepaid", "payg", "autopay"] as Mode[]).flatMap((m) => [
+                  <tr key={m + "-p"}>
+                    <td>{MODE_LABEL[m]}<em>checkout order</em></td>
+                    <td className="hc-tagcell">{ORDER_TAGS[m].parent.map((t) => <Tag key={t}>{t}</Tag>)}</td>
+                  </tr>,
+                  <tr key={m + "-c"}>
+                    <td>{MODE_LABEL[m]}<em>delivery order</em></td>
+                    <td className="hc-tagcell">{ORDER_TAGS[m].delivery.map((t) => <Tag key={t}>{t}</Tag>)}</td>
+                  </tr>,
+                ])}
+                <tr>
+                  <td>The customer<em>not the order</em></td>
+                  <td className="hc-tagcell">{CUSTOMER_TAGS.map((t) => <Tag key={t}>{t}</Tag>)}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p className="hc-note">
+              {BUNDLE_NOTE.replace(/`/g, "")} A live order also carries whatever the store&rsquo;s other
+              apps write, which is none of the above.
+            </p>
           </div>
 
           <ul className="hc-oflags hc-childnote">

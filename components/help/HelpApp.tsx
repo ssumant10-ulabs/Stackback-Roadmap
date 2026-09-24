@@ -12,6 +12,7 @@ import Insights from "./Insights";
 import Article from "./Article";
 import Brief from "./Brief";
 import Internal from "./Internal";
+import Faq from "./Faq";
 import HowTo from "./HowTo";
 import Simulator from "./Simulator";
 import type { LoggedQuery, StoreRecord, StoreSummary } from "@/lib/sanity/queries";
@@ -19,6 +20,7 @@ import { helpFont } from "./font";
 import "./help.css";
 
 type View =
+  | { kind: "faq" }
   | { kind: "home" }
   | { kind: "cat"; id: string }
   | { kind: "search"; q: string }
@@ -31,7 +33,7 @@ type View =
 /** The Help Centre is two parts, and they answer different questions.
  *  Queries is live and incomplete by nature: what came in, what we answered.
  *  Help Centre is the settled corpus: the FAQs, the order flow, the simulator. */
-type Part = "queries" | "howto" | "help" | "internal";
+type Part = "faq" | "queries" | "howto" | "help" | "internal";
 
 /** Topics where the question underneath is usually "what would that actually do", which
  *  a simulator answers and a paragraph does not. */
@@ -61,9 +63,12 @@ function parseHash(): View {
     return { kind: "queries", step: n >= 1 && n <= 3 ? n : 1 };
   }
   if (route === "sim") return { kind: "sim" };
+  if (route === "faq") return { kind: "faq" };
   if (route === "internal") return { kind: "internal" };
   if (route === "howto") return { kind: "howto" };
-  return { kind: "home" };
+  /* An empty address lands on the FAQs. They are the questions that actually come up, and
+     the 236-article overview is the thing you go to when the FAQ did not have it. */
+  return { kind: "faq" };
 }
 
 export default function HelpApp({
@@ -90,7 +95,7 @@ export default function HelpApp({
   pilots?: PilotStore[];
 }) {
   const auth = useOptionalAuth();
-  const [view, setView] = useState<View>({ kind: "home" });
+  const [view, setView] = useState<View>({ kind: "faq" });
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<string | null>(null);
   const [navOpen, setNavOpen] = useState(false);
@@ -170,7 +175,8 @@ export default function HelpApp({
 
   const part: Part = view.kind === "queries" ? "queries"
     : view.kind === "howto" ? "howto"
-    : view.kind === "internal" ? "internal" : "help";
+    : view.kind === "internal" ? "internal"
+    : view.kind === "faq" ? "faq" : "help";
   const cat = view.kind === "cat" ? COUNTS.find((c) => c.id === view.id) : undefined;
   const risky = ARTICLES.filter((a) => RISK_STATUSES.includes(a.status)).length;
 
@@ -196,6 +202,8 @@ export default function HelpApp({
         )}
 
         <div className="hc-parts" role="tablist" aria-label="Help Centre parts">
+          <button role="tab" aria-selected={part === "faq"} className={"hc-part" + (part === "faq" ? " on" : "")}
+            onClick={() => go({ kind: "faq" })}>FAQs</button>
           <button role="tab" aria-selected={part === "queries"} className={"hc-part" + (part === "queries" ? " on" : "")}
             onClick={() => go({ kind: "queries", step: 1 })}>Your plans</button>
           <button role="tab" aria-selected={part === "howto"} className={"hc-part" + (part === "howto" ? " on" : "")}
@@ -281,6 +289,7 @@ export default function HelpApp({
             ? <Internal store={store} stores={stores} connected={sanityConnected} getToken={auth.getToken} />
             : <div className="hc-empty"><p>The internal tab needs a ULABS account.</p></div>)}
           {view.kind === "sim" && <Simulator />}
+          {view.kind === "faq" && <Faq onOpen={(a) => go({ kind: "cat", id: a.cat })} />}
           {view.kind === "howto" && <HowTo internal={auth.internal} />}
           {view.kind === "home" && <Home go={go} internal={auth.internal} onAsk={setChatSeed} answered={answered.length} />}
           {view.kind === "cat" && cat && (
