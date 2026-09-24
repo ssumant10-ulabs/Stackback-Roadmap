@@ -94,7 +94,7 @@ export default function PilotsApp({ help }: { help: HelpData }) {
           )}
         </div>
         <main data-view={helpOpen ? "help" : tab}>
-          {helpOpen ? <HelpApp {...help} theme={resolvedTheme} embedded
+          {helpOpen ? <HelpApp {...help} theme={resolvedTheme} embedded pilots={s.pilots}
               onExit={() => setHelpOpen(false)} exitLabel="Pilot stores" />
             : tab === "log" ? <PilotsLog />
             : tab === "requests" ? <PilotsRequests />

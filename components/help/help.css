@@ -1212,3 +1212,14 @@
 
 .hc-flowwas { margin: -4px 0 16px; }
 .hc-orderafter { margin: 0 0 12px; }
+
+/* Pilot stores already on this setup. A category average is an argument; three of your own
+   stores running exactly this is a fact. */
+.hc-sugstores h3 { margin-bottom: 8px; }
+.hc-sugpilots { list-style: none; margin: 0 0 9px; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.hc-sugpilots li {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 7px 9px; background: var(--page); border: 1px solid var(--border-2); border-radius: 9px;
+}
+.hc-sugpilots b { font-size: 12.5px; font-weight: 700; }
+.hc-sugpilots span { font-size: 11.5px; color: var(--hc-muted); line-height: 1.45; }

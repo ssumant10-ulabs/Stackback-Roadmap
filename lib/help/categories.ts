@@ -138,3 +138,45 @@ export function modeDiscounts(min: number, max: number): Record<string, number> 
 export const MODE_LABEL: Record<string, string> = {
   prepaid: "Prepaid", payg: "Pay as you go", auto_debit: "Pay per delivery",
 };
+
+/* ---------------------------------------------------------------- per-category defaults
+
+   Two settings genuinely depend on what is being sold, and both were being left at their
+   global default and set by hand on the call.
+
+   `tag_shows_per_delivery_price` puts the per-delivery price on the plan tag. It is worth it
+   wherever the customer already thinks in a unit rate: supplements are priced per serving,
+   coffee per bag, pet food per month. It is noise on a low-ticket staple, where the saving is
+   the story and the per-delivery figure is small enough to look like the whole price.
+
+   `freebie_label_shows_value` is the opposite: it earns its place where a gift has a price
+   the customer recognises. */
+export const CATEGORY_DEFAULTS: Record<string, { tag_shows_per_delivery_price: boolean; freebie_label_shows_value: boolean }> = {
+  "coffee-tea":    { tag_shows_per_delivery_price: true,  freebie_label_shows_value: false },
+  supplements:     { tag_shows_per_delivery_price: true,  freebie_label_shows_value: true },
+  pet:             { tag_shows_per_delivery_price: true,  freebie_label_shows_value: false },
+  "personal-care": { tag_shows_per_delivery_price: false, freebie_label_shows_value: true },
+  "food-staples":  { tag_shows_per_delivery_price: false, freebie_label_shows_value: false },
+  beverages:       { tag_shows_per_delivery_price: true,  freebie_label_shows_value: false },
+  home:            { tag_shows_per_delivery_price: false, freebie_label_shows_value: false },
+  other:           { tag_shows_per_delivery_price: false, freebie_label_shows_value: false },
+};
+
+/** The pilot sheet writes categories in its own words ("Protein & Supplement Brands"), so a
+ *  store is matched on keywords rather than on an id neither sheet nor form agrees on. */
+const CATEGORY_WORDS: Record<string, RegExp> = {
+  "coffee-tea": /coffee|tea(?!m)/i,
+  supplements: /supplement|protein|nutrition|nutra|wellness/i,
+  pet: /pet|dog|cat\b/i,
+  "personal-care": /skin|hair|personal|bath|body|beauty/i,
+  "food-staples": /food|grocer|staple|snack|speciality|specialty/i,
+  beverages: /beverage|juice|kombucha|water|drink/i,
+  home: /home|clean|household/i,
+};
+
+export function categoryIdFor(text: string | null | undefined): string | null {
+  const t = (text || "").trim();
+  if (!t) return null;
+  for (const [id, re] of Object.entries(CATEGORY_WORDS)) if (re.test(t)) return id;
+  return null;
+}

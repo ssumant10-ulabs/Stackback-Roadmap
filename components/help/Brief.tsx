@@ -10,6 +10,8 @@ import { modeDiscounts } from "@/lib/help/categories";
 import type { LoggedQuery, PlanRec, StoreRecord } from "@/lib/sanity/queries";
 import PlanForm from "./PlanForm";
 import WidgetPreview from "./WidgetPreview";
+import type { PilotStore } from "@/lib/types";
+import { CATEGORY_DEFAULTS } from "@/lib/help/categories";
 import Simulator from "./Simulator";
 
 const MODE_LABEL: Record<string, string> = {
@@ -34,7 +36,7 @@ const STEPS = [
  *  the storefront, then see what they do in your admin. Running them together on one page
  *  meant somebody could scroll past the questions to the pretty part and never come back,
  *  which is the exact failure this is meant to fix. */
-export default function Brief({ store, open, answered, connected, step, onStep }: {
+export default function Brief({ store, open, answered, connected, step, onStep, pilots }: {
   store: StoreRecord | null;
   open: LoggedQuery[];
   answered: LoggedQuery[];
@@ -42,6 +44,8 @@ export default function Brief({ store, open, answered, connected, step, onStep }
   /** The step lives in the address, so a client can be sent straight to their plans. */
   step: number;
   onStep: (n: number) => void;
+  /** Pilot rows from the host, for the "stores on this setup" block. */
+  pilots?: PilotStore[];
 }) {
   const [answers, setAnswers] = useState<Answers>(DEFAULT_ANSWERS);
   const [settings, setSettings] = useState<WidgetSettings>(() => parseSettings(store?.widgetSettings));
@@ -82,6 +86,11 @@ export default function Brief({ store, open, answered, connected, step, onStep }
       hide_prepaid: !modes.includes("prepaid"),
       hide_payg: !modes.includes("payg"),
       hide_auto_debit: !modes.includes("auto_debit"),
+      /* Two settings depend on what is being sold rather than on how it is paid for, so the
+         category sets them and the call does not have to. A supplement is priced per serving
+         and a staple is not; putting a per-delivery figure on a low-ticket staple reads as
+         the whole price. Both stay editable in step two. */
+      ...(CATEGORY_DEFAULTS[String(answers.category || "")] ?? {}),
     }));
   }, [answers, runs, bands]);
 
@@ -138,7 +147,7 @@ export default function Brief({ store, open, answered, connected, step, onStep }
           settings={settings}
           answers={answers} onAnswers={setAnswers}
           storeId={store?._id ?? null} storeName={store?.name ?? null}
-          connected={connected} onDone={() => go(2)}
+          connected={connected} onDone={() => go(2)} pilots={pilots}
         />
       )}
 

@@ -7,6 +7,8 @@ import {
 } from "@/lib/help/questions";
 import { CATEGORY_BY_ID, SCALE_BY_ID, freqWord } from "@/lib/help/categories";
 import { drawPlanSheet } from "@/lib/help/sheet-png";
+import type { PilotStore } from "@/lib/types";
+import { CATEGORY_DEFAULTS, categoryIdFor } from "@/lib/help/categories";
 import type { WidgetSettings } from "@/lib/help/widget";
 
 const DRAFT = "sb-help-planform";
@@ -17,13 +19,39 @@ const DRAFT = "sb-help-planform";
  *  is "what does everyone else do", and having an answer on the page turns a two-day email
  *  round trip into a click. It proposes, it never fills, because a store's own repeat gap
  *  beats a category average every time and quietly overwriting their number would hide that. */
-export default function PlanForm({ answers, onAnswers, storeName, onDone, settings }: {
+export default function PlanForm({ answers, onAnswers, storeName, onDone, settings, pilots = [] }: {
   answers: Answers; onAnswers: (a: Answers) => void;
   /** Snapshotted into the export, so the picture records what was toggled as well as priced. */
   settings: WidgetSettings;
   storeId: string | null; storeName: string | null;
   connected: boolean; onDone: () => void;
+  /** Pilot rows, for naming stores already on this setup. */
+  pilots?: PilotStore[];
 }) {
+  /* Stores already on this setup, named. A category average is an argument; "three of your
+     own pilots run exactly this" is a fact, and it is the thing that ends the discussion on a
+     call. Matched on the sheet's own category wording, then narrowed by payment type once one
+     is chosen, because that is what makes two setups the same rather than adjacent. */
+  const like = (() => {
+    const id = String(answers.category || "");
+    if (!id || !pilots.length) return [] as PilotStore[];
+    const modes = Array.isArray(answers.modes) ? answers.modes : [];
+    const wantsPrepaid = modes.includes("prepaid");
+    const wantsPayg = modes.includes("payg");
+    return pilots
+      .filter((st) => categoryIdFor(st.category) === id)
+      .filter((st) => {
+        if (!modes.length) return true;
+        const pay = (st.paymentType || "").toLowerCase();
+        if (!pay || pay === "\u2014") return true;
+        if (pay.includes("both")) return true;
+        if (wantsPrepaid && pay.includes("prepaid")) return true;
+        if (wantsPayg && (pay.includes("payg") || pay.includes("pay as"))) return true;
+        return false;
+      })
+      .slice(0, 6);
+  })();
+
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
@@ -195,6 +223,27 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
               <li><span>Offer</span><b>{scale.modes.map((m) => MODE_NAME[m]).join(", ")}</b></li>
             </ul>
             <p className="hc-sugwhy">{scale.why}</p>
+          </section>
+        )}
+
+        {like.length > 0 && (
+          <section className="hc-sugblock hc-sugstores">
+            <h3>{like.length} pilot {like.length === 1 ? "store runs" : "stores run"} this</h3>
+            <ul className="hc-sugpilots">
+              {like.map((st) => (
+                <li key={st.id || st.name}>
+                  <b>{st.name}</b>
+                  <span>
+                    {[st.paymentType, st.frequency, st.discountMargin, st.shipping]
+                      .map((x) => (x || "").trim()).filter((x) => x && x !== "\u2014").join(" \u00b7 ") || "setup not logged yet"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="hc-sugwhy">
+              From the pilot sheet, matched on category{Array.isArray(answers.modes) && answers.modes.length ? " and payment type" : ""}.
+              Blank columns mean nobody has logged that store&rsquo;s setup, not that it has none.
+            </p>
           </section>
         )}
 

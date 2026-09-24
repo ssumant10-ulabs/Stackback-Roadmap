@@ -5,6 +5,7 @@ import { APP_NAME, APP_LOCATION, RISK_STATUSES, STATUS_LABEL, type HelpArticle }
 import { search, stripTags } from "@/lib/help/search";
 import { record } from "@/lib/help/log";
 import { Logo } from "@/components/icons";
+import type { PilotStore } from "@/lib/types";
 import { useOptionalAuth } from "./useOptionalAuth";
 import ChatDock from "./ChatDock";
 import Insights from "./Insights";
@@ -67,7 +68,7 @@ function parseHash(): View {
 
 export default function HelpApp({
   answered, openQueries, store, stores, sanityConnected, theme: initialTheme, embedded,
-  onExit, exitLabel,
+  onExit, exitLabel, pilots,
 }: {
   answered: LoggedQuery[];
   openQueries: LoggedQuery[];
@@ -84,6 +85,9 @@ export default function HelpApp({
    *  the header is a long way from where their eyes are. */
   onExit?: () => void;
   exitLabel?: string;
+  /** The pilot rows the host already holds, so the suggester can name stores on the same
+   *  setup instead of only quoting a category average. Absent on the standalone route. */
+  pilots?: PilotStore[];
 }) {
   const auth = useOptionalAuth();
   const [view, setView] = useState<View>({ kind: "home" });
@@ -270,7 +274,7 @@ export default function HelpApp({
 
         <main className="hc-main" id="hc-main" tabIndex={-1}>
           {view.kind === "queries" && (
-            <Brief store={store} open={openQueries} answered={answered} connected={sanityConnected}
+            <Brief store={store} open={openQueries} answered={answered} connected={sanityConnected} pilots={pilots}
               step={view.step} onStep={(n) => go({ kind: "queries", step: n })} />
           )}
           {view.kind === "internal" && (auth.internal
