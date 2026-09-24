@@ -47,12 +47,6 @@ export default function Internal({ store, stores, connected, getToken }: {
     return (
       <section>
         <p className="hc-eyebrow">Internal</p>
-        <h1 className="hc-h1">Store checklists</h1>
-        <div className="hc-empty">
-          <p>Not connected to the CMS yet, so there are no stores to track. The checklist below is the
-          spine every store gets measured against; it lives in the code, not in Sanity, so it is the same
-          for everybody.</p>
-        </div>
         <Spine />
       </section>
     );
@@ -158,10 +152,23 @@ function StoreTable({ stores }: { stores: StoreSummary[] }) {
 function Spine() {
   return (
     <>
-      <h2 className="hc-h2">The spine</h2>
+      <h1 className="hc-h1">Onboarding</h1>
+      <p className="hc-blurb">
+        Five phases, in order. Every store is measured against the same spine, and the message we
+        send at a step sits on that step.
+      </p>
+
+      <nav className="hc-tlnav" aria-label="Phases">
+        {CHECKLIST.map((phase, i) => (
+          <a key={phase.id} href={`#phase-${phase.id}`}>
+            <b>{i + 1}</b><span>{phase.title}</span><em>{phase.steps.length}</em>
+          </a>
+        ))}
+      </nav>
+
       <ol className="hc-timeline">
         {CHECKLIST.map((phase, pi) => (
-          <li key={phase.id} className="hc-tlphase">
+          <li key={phase.id} id={`phase-${phase.id}`} className="hc-tlphase">
             <span className="hc-tlnode" aria-hidden="true">{pi + 1}</span>
             <div className="hc-tlbody">
               <h3 className="hc-h2">{phase.title}<em>{phase.steps.length} steps</em></h3>

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { FAQ_SECTIONS, FAQ_COUNT, FAQ_JUMPS, resolveFaq } from "@/lib/help/faq";
+import { FAQ_SECTIONS, FAQ_COUNT, FAQ_JUMPS, FAQ_MEDIA, resolveFaq } from "@/lib/help/faq";
+import { ALL_CLIPS } from "@/lib/help/videos";
 import { STATUS_LABEL, type HelpArticle } from "@/lib/help/types";
 
 /** The front door. The questions that actually come up, split by whether the store is live.
@@ -17,12 +18,13 @@ export default function Faq({ onOpen, onJump }: {
   const [phase, setPhase] = useState<"pre" | "post">("pre");
   const [open, setOpen] = useState<string | null>(null);
   const section = FAQ_SECTIONS.find((s) => s.phase === phase) ?? FAQ_SECTIONS[0];
+  const slug = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   const { groups } = resolveFaq(section);
 
   return (
     <section className="hc-faq">
       <p className="hc-eyebrow">Frequently asked</p>
-      <h1 className="hc-h1">The {FAQ_COUNT} questions that come up</h1>
+      <h1 className="hc-h1">The questions that come up</h1>
       <p className="hc-blurb">
         Mined from the pilot conversations and the calls, and split by where you are. Every
         answer is the same one the Help Centre holds, so there is one version of it.
@@ -41,9 +43,15 @@ export default function Faq({ onOpen, onJump }: {
 
       <p className="hc-note hc-faqblurb">{section.blurb}</p>
 
+      <nav className="hc-faqnav" aria-label="Sections">
+        {groups.map((g) => (
+          <a key={g.title} href={`#faq-${slug(g.title)}`}>{g.title}<em>{g.articles.length}</em></a>
+        ))}
+      </nav>
+
       {groups.map((g) => (
-        <div key={g.title} className="hc-faqgroup">
-          <h2 className="hc-h3">{g.title}</h2>
+        <div key={g.title} id={`faq-${slug(g.title)}`} className="hc-faqgroup">
+          <h2 className="hc-faqgrouph">{g.title}</h2>
           <ul className="hc-faqlist">
             {g.articles.map((a) => {
               const on = open === a.id;
@@ -59,6 +67,14 @@ export default function Faq({ onOpen, onJump }: {
                       <div className="hc-prose" dangerouslySetInnerHTML={{ __html: a.a }} />
                       {a.path && <p className="hc-faqpath">{a.path}</p>}
                       <div className="hc-faqjump">
+                        {(() => {
+                          const m = FAQ_MEDIA[a.id];
+                          const clip = m?.clip ? ALL_CLIPS.find((c) => c.id === m.clip) : undefined;
+                          if (!clip) return null;
+                          return clip.pending
+                            ? <span className="hc-faqpending">Walkthrough pending: {clip.title}</span>
+                            : <a className="hc-btn ghost" href={`/watch/${clip.id}`} target="_blank" rel="noreferrer">Watch the walkthrough</a>;
+                        })()}
                         {onJump && FAQ_JUMPS[a.id] && (
                           <button type="button" className="hc-btn"
                             onClick={() => onJump(FAQ_JUMPS[a.id].step)}>{FAQ_JUMPS[a.id].label}</button>

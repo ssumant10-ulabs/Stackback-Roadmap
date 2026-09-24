@@ -154,3 +154,35 @@ export const FAQ_JUMPS: Record<string, { step: 2 | 3; label: string }> = {
   "what-do-swap-add-and-reschedule-actually-do-and-who-pays": { step: 3, label: "See Purchase Contracts" },
   "can-you-pause-a-customer-s-subscription-for-a-month": { step: 3, label: "See Purchase Contracts" },
 };
+
+/** What answers each FAQ question better than prose: a recording, a module in this app, or
+ *  both. A question with neither is a question we answer by typing, every time somebody asks.
+ *  `clip` ids that are `p-*` are not recorded yet and show as pending rather than as a link. */
+export const FAQ_MEDIA: Record<string, { clip?: string; step?: 1 | 2 | 3 }> = {
+  // before you go live
+  "which-products-or-collections-should-carry-a-subscription": { step: 1 },
+  "what-payment-options-can-we-offer-and-which-should-we-pick": { step: 2 },
+  "what-delivery-frequency-and-plan-length-should-we-use": { step: 1 },
+  "what-discount-should-we-set": { step: 1 },
+  "will-our-existing-store-discounts-stack-on-top-of-subscription-d": { clip: "p-discount-stack" },
+  "what-is-the-difference-between-a-fixed-bundle-and-build-your-own": { clip: "b3c5dbf7" },
+  "where-can-the-widget-sit-on-the-product-page": { clip: "p-widget-place", step: 2 },
+  "can-the-widget-match-our-fonts-and-colours": { step: 2 },
+  "can-one-time-purchase-be-the-default-selection": { step: 2 },
+  "how-does-upi-autopay-work-and-what-do-you-need-from-us": { clip: "p-autopay" },
+  "does-cod-need-to-be-disabled-for-subscriptions": { clip: "p-cod" },
+  "how-is-shipping-handled-on-subscriptions": { clip: "eeea4461" },
+  // once you are live
+  "what-does-one-subscription-create-in-shopify": { clip: "0816f724", step: 3 },
+  "what-happens-the-moment-a-customer-subscribes": { clip: "0816f724", step: 3 },
+  "how-do-we-identify-subscription-orders-inside-shopify": { step: 3 },
+  "will-the-checkout-order-inflate-our-revenue-and-inventory-number": { clip: "p-revenue-filter", step: 3 },
+  "how-pay-as-you-go-billing-decides-to-charge-or-pause": { clip: "p-payg-billing", step: 3 },
+  "can-a-customer-effectively-cancel-by-just-not-paying": { clip: "p-payg-billing" },
+  "what-is-the-customer-portal-and-where-does-it-live": { clip: "f52c05a7" },
+  "what-do-swap-add-and-reschedule-actually-do-and-who-pays": { clip: "9aa15dc3" },
+  "can-you-pause-a-customer-s-subscription-for-a-month": { clip: "ccdbe148" },
+  "which-notifications-does-stackback-send": { clip: "p-notifications" },
+  "how-do-we-know-who-cancelled-an-autopay-mandate": { clip: "p-mandates" },
+  "a-subscription-order-shows-as-cancelled-and-we-did-not-cancel-it": { clip: "p-cancellations" },
+};

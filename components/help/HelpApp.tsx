@@ -21,6 +21,7 @@ import { helpFont } from "./font";
 import "./help.css";
 
 type View =
+  | { kind: "faq" }
   | { kind: "home" }
   | { kind: "cat"; id: string }
   | { kind: "search"; q: string }
@@ -63,10 +64,12 @@ function parseHash(): View {
     return { kind: "queries", step: n >= 1 && n <= 3 ? n : 1 };
   }
   if (route === "sim") return { kind: "sim" };
-  if (route === "faq") return { kind: "home" };
+  if (route === "faq") return { kind: "faq" };
   if (route === "internal") return { kind: "internal" };
   if (route === "howto") return { kind: "howto" };
-  return { kind: "home" };
+  /* The FAQs are the landing. The overview is the 236-answer index you go to when the FAQ
+     did not have it, which is the second thing you want, not the first. */
+  return { kind: "faq" };
 }
 
 export default function HelpApp({
@@ -97,7 +100,7 @@ export default function HelpApp({
      is signed in on a ULABS account and asking them to sign in again inside their own admin
      is how the internal checklist ended up invisible to the team it was written for. */
   const internal = auth.internal || Boolean(embedded);
-  const [view, setView] = useState<View>({ kind: "home" });
+  const [view, setView] = useState<View>({ kind: "faq" });
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<string | null>(null);
   const [navOpen, setNavOpen] = useState(false);
@@ -173,7 +176,7 @@ export default function HelpApp({
     return () => clearTimeout(t);
   }, [view, hits, auth.user]);
 
-  const submit = (e: React.FormEvent) => { e.preventDefault(); go(q.trim() ? { kind: "search", q: q.trim() } : { kind: "home" }); };
+  const submit = (e: React.FormEvent) => { e.preventDefault(); go(q.trim() ? { kind: "search", q: q.trim() } : { kind: "faq" }); };
 
   const part: Part = view.kind === "queries" ? "queries"
     : view.kind === "howto" ? "howto"
@@ -208,7 +211,7 @@ export default function HelpApp({
           <button role="tab" aria-selected={part === "howto"} className={"hc-part" + (part === "howto" ? " on" : "")}
             onClick={() => go({ kind: "howto" })}>How to</button>
           <button role="tab" aria-selected={part === "help"} className={"hc-part" + (part === "help" ? " on" : "")}
-            onClick={() => go({ kind: "home" })}>Help Centre</button>
+            onClick={() => go({ kind: "faq" })}>Help Centre</button>
           {internal && (
             <button role="tab" aria-selected={part === "internal"} className={"hc-part hc-partint" + (part === "internal" ? " on" : "")}
               onClick={() => go({ kind: "internal" })}>Internal</button>
@@ -226,7 +229,7 @@ export default function HelpApp({
             onChange={(e) => {
               const v = e.target.value;
               setQ(v);
-              if (!v.trim()) go({ kind: "home" });
+              if (!v.trim()) go({ kind: "faq" });
               else if (v.trim().length > 2) go({ kind: "search", q: v.trim() });
             }}
           />
@@ -258,6 +261,9 @@ export default function HelpApp({
 
       <div className={"hc-body" + (part !== "help" ? " solo" : "")}>
         <nav className={"hc-nav" + (navOpen ? " open" : "") + (part !== "help" ? " hidden" : "")} aria-label="Topics">
+          <button className={"hc-navitem hc-navfaq" + (view.kind === "faq" ? " on" : "")} onClick={() => go({ kind: "faq" })}>
+            <span>FAQs</span>
+          </button>
           <button className={"hc-navitem" + (view.kind === "home" ? " on" : "")} onClick={() => go({ kind: "home" })}>
             <span>Overview</span>
           </button>
@@ -298,13 +304,11 @@ export default function HelpApp({
             : <div className="hc-empty"><p>The internal tab needs a ULABS account.</p></div>)}
           {view.kind === "sim" && <Simulator />}
           {view.kind === "howto" && <HowTo internal={internal} />}
-          {view.kind === "home" && (
-            <>
-              <Faq onOpen={(a) => go({ kind: "cat", id: a.cat })}
-                onJump={(step) => go({ kind: "queries", step })} />
-              <Home go={go} internal={internal} onAsk={setChatSeed} answered={answered.length} />
-            </>
+          {view.kind === "faq" && (
+            <Faq onOpen={(a) => go({ kind: "cat", id: a.cat })}
+              onJump={(step) => go({ kind: "queries", step })} />
           )}
+          {view.kind === "home" && <Home go={go} internal={internal} onAsk={setChatSeed} answered={answered.length} />}
           {view.kind === "cat" && cat && (
             <section>
               <p className="hc-eyebrow">{cat.n} answers</p>

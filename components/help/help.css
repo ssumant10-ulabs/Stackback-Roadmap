@@ -1423,3 +1423,62 @@
   background: var(--sunken); border-radius: 999px; padding: 2px 9px;
 }
 .hc-tlpurpose { margin: 0 0 10px; font-size: 12.5px; line-height: 1.55; color: var(--hc-muted); max-width: 70ch; }
+
+/* One recording, on its own page. */
+.hc-watch { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
+.hc-watchbox { width: 100%; max-width: 1000px; }
+.hc-watchbox h1 { margin: 0 0 12px; font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
+.hc-watchbox video { width: 100%; border-radius: 12px; background: #000; display: block; }
+.hc-watchnote { margin: 12px 0 0; font-size: 12.5px; color: var(--hc-muted); line-height: 1.55; }
+.hc-watchfoot { margin: 16px 0 0; font-size: 12.5px; }
+.hc-watchfoot a { color: var(--brand-deep); }
+
+/* A walkthrough that has been asked for and not recorded. Visible, and not clickable. */
+.hc-htitem.pending { cursor: default; opacity: .72; }
+.hc-htitem.pending:hover { background: transparent; }
+.hc-htpending {
+  margin-left: auto; font-style: normal; font-size: 10.5px; font-weight: 700;
+  letter-spacing: .05em; text-transform: uppercase; color: var(--hc-limit);
+  background: var(--hc-limit-soft); border-radius: 999px; padding: 2px 8px;
+}
+
+.hc-faqpending {
+  display: inline-flex; align-items: center; font-size: 11.5px; font-weight: 650;
+  color: var(--hc-limit); background: var(--hc-limit-soft); border-radius: 8px; padding: 5px 10px;
+}
+
+/* Phase anchors, at the top, so a five-phase timeline does not have to be scrolled to be
+   navigated. `scroll-margin-top` keeps a jumped-to phase clear of the sticky header. */
+.hc-tlnav { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 20px; }
+.hc-tlnav a {
+  display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+  background: var(--card); border: 1px solid var(--border); border-radius: 999px;
+  padding: 6px 13px 6px 7px; color: var(--ink-2); font-size: 12.5px; font-weight: 620;
+}
+.hc-tlnav a:hover { border-color: var(--brand-deep); color: var(--ink); }
+.hc-tlnav b {
+  width: 20px; height: 20px; border-radius: 50%; background: var(--sunken); color: var(--hc-muted);
+  display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 750;
+}
+.hc-tlnav em { font-style: normal; font-size: 11px; color: var(--hc-muted); }
+.hc-tlphase { scroll-margin-top: 90px; }
+
+/* FAQ typography and section anchors. A group heading was the same weight as the questions
+   under it, which is why "The plans" read as another question rather than as the thing the
+   next six are about. */
+.hc-faqgrouph {
+  margin: 0 0 6px; font-size: 16.5px; font-weight: 720; letter-spacing: -.012em; color: var(--ink);
+}
+.hc-faqgroup { margin-bottom: 26px; scroll-margin-top: 90px; }
+.hc-faqnav { display: flex; flex-wrap: wrap; gap: 7px; margin: 0 0 22px; }
+.hc-faqnav a {
+  display: inline-flex; align-items: center; gap: 7px; text-decoration: none;
+  background: var(--card); border: 1px solid var(--border); border-radius: 999px;
+  padding: 5px 12px; color: var(--ink-2); font-size: 12.5px; font-weight: 620;
+}
+.hc-faqnav a:hover { border-color: var(--brand-deep); color: var(--ink); }
+.hc-faqnav em { font-style: normal; font-size: 11px; color: var(--hc-muted); }
+.hc-faq .hc-h1 { font-size: 27px; letter-spacing: -.022em; }
+.hc-faqq { font-size: 14px; font-weight: 600; padding-top: 13px; padding-bottom: 13px; }
+.hc-faqlist li.on .hc-faqq { font-weight: 680; }
+.hc-navfaq { font-weight: 700; }

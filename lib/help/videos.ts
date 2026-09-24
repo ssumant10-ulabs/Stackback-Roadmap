@@ -13,6 +13,9 @@ export interface Clip {
   /** Held back from the merchant view. Used for a recording that still shows real
    *  customer or merchant detail: a clip nobody has redacted is not a help article. */
   internalOnly?: boolean;
+  /** Asked for and not recorded yet. Listed so the gap is visible rather than a question
+   *  nobody can answer with a link, and not playable. */
+  pending?: boolean;
   title: string;
   src: string;
   /** Set when the file is served from this app rather than ClickUp. */
@@ -81,4 +84,33 @@ export const CLIP_GROUPS: ClipGroup[] = [
   },
 ];
 
-export const ALL_CLIPS = CLIP_GROUPS.flatMap((g) => g.clips);
+/** Asked for by the FAQ and not recorded yet. Listed rather than left as a silence, because
+ *  a gap somebody can see gets filled and a gap nobody can see does not. Each one names the
+ *  question it exists to answer, so the recording has a brief before anybody opens QuickTime. */
+export const PENDING_CLIPS: ClipGroup = {
+  id: "pending",
+  title: "Not recorded yet",
+  blurb: "Questions from the FAQ that have no walkthrough. Each one is a brief, not a wish.",
+  clips: [
+    { id: "p-widget-place", pending: true, src: "", title: "Placing the widget on your product page",
+      note: "For: where can the widget sit on the product page. The theme editor, the app block, and what to do on a theme that has no block." },
+    { id: "p-cod", pending: true, src: "", title: "Turning COD off for subscription products",
+      note: "For: does COD need to be disabled. The payment-method rule, and what a customer sees if it is left on." },
+    { id: "p-autopay", pending: true, src: "", title: "Setting up AutoPay with Razorpay",
+      note: "For: how does UPI AutoPay work. The runbook already exists on the Internal tab; this is it on screen, including charge-at-will and the webhook." },
+    { id: "p-discount-stack", pending: true, src: "", title: "Subscription discounts alongside a store-wide sale",
+      note: "For: will our existing discounts stack. What the customer is charged when both apply, and the compare-at setting." },
+    { id: "p-revenue-filter", pending: true, src: "", title: "Filtering subscription orders in a revenue report",
+      note: "For: will the checkout order inflate our revenue. Building the filter on parent and child in Shopify reports." },
+    { id: "p-payg-billing", pending: true, src: "", title: "Pay as you go: reminders, links and non-payment",
+      note: "For: how pay as you go decides to charge or pause, and can a customer cancel by not paying." },
+    { id: "p-notifications", pending: true, src: "", title: "Notification templates and when each one fires",
+      note: "For: which notifications does StackBack send. Editing a template, and the WhatsApp path." },
+    { id: "p-mandates", pending: true, src: "", title: "AutoPay mandates: cancellations and what happens next",
+      note: "For: how do we know who cancelled a mandate. Including the downgrade to pay as you go." },
+    { id: "p-cancellations", pending: true, src: "", title: "Cancellation requests, approvals and refunds",
+      note: "For: a subscription order shows as cancelled and we did not cancel it." },
+  ],
+};
+
+export const ALL_CLIPS = [...CLIP_GROUPS, PENDING_CLIPS].flatMap((g) => g.clips);

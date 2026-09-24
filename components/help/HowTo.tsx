@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ALL_CLIPS, CLIP_GROUPS, type Clip, type ClipGroup } from "@/lib/help/videos";
+import { ALL_CLIPS, CLIP_GROUPS, PENDING_CLIPS, type Clip, type ClipGroup } from "@/lib/help/videos";
 import { APP_NAME } from "@/lib/help/types";
 
 const WATCHED = "sb-help-watched";
@@ -60,12 +60,12 @@ export default function HowTo({ internal = false }: {
   }, [current]);
 
   const groups: ClipGroup[] = useMemo(
-    () => CLIP_GROUPS
+    () => [...CLIP_GROUPS, PENDING_CLIPS]
       .map((g) => ({ ...g, clips: g.clips.filter((c) => internal || !c.internalOnly) }))
       .filter((g) => g.clips.length > 0),
     [internal],
   );
-  const flat = useMemo(() => groups.flatMap((g) => g.clips.map((c) => ({ ...c, group: g.title }))), [groups]);
+  const flat = useMemo(() => groups.flatMap((g) => g.clips.filter((c) => !c.pending).map((c) => ({ ...c, group: g.title }))), [groups]);
   const [copied, setCopied] = useState<string | null>(null);
   const index = flat.findIndex((c) => c.id === current.id);
   const next = flat[index + 1];
@@ -121,12 +121,11 @@ export default function HowTo({ internal = false }: {
               <div className="hc-htshare">
                 <button type="button" className="hc-btn ghost hc-htcopy"
                   onClick={() => {
-                    /* The file itself, which is what anyone pasting this actually wants, and
-                       what "Open the file" opens. A hash link only works for somebody who
-                       already has the Help Centre open. `navigator.clipboard` is undefined on
-                       an insecure origin and rejects without a gesture in some browsers, so
-                       the textarea fallback is the one that runs on localhost. */
-                    const link = new URL(current.src, location.href).href;
+                    /* A page with this one recording on it. A link to the file makes the
+                       browser download it, and a link into the Help Centre needs the recipient
+                       to find the right row. `navigator.clipboard` is undefined on an insecure
+                       origin, so the textarea fallback is the one that runs on localhost. */
+                    const link = `${location.origin}/watch/${current.id}`;
                     const ok = () => { setCopied(current.id); setTimeout(() => setCopied(null), 2200); };
                     const fallback = () => {
                       const t = document.createElement("textarea");
@@ -141,7 +140,6 @@ export default function HowTo({ internal = false }: {
                   }}>
                   {copied === current.id ? "Link copied" : copied === "fail" ? "Copy failed" : "Copy the link"}
                 </button>
-                <a className="hc-btn ghost" href={current.src} target="_blank" rel="noreferrer">Open the file</a>
               </div>
             </div>
             {next && (
@@ -163,12 +161,14 @@ export default function HowTo({ internal = false }: {
                   const done = watched.includes(c.id);
                   return (
                     <li key={c.id}>
-                      <button className={"hc-htitem" + (on ? " on" : "")} onClick={() => setCurrent(c)}
+                      <button className={"hc-htitem" + (on ? " on" : "") + (c.pending ? " pending" : "")}
+                        onClick={() => { if (!c.pending) setCurrent(c); }} disabled={c.pending}
                         aria-current={on ? "true" : undefined}>
                         <span className={"hc-htmark" + (done ? " done" : "")} aria-hidden="true">
-                          {done ? "✓" : on ? "▶" : ""}
+                          {c.pending ? "" : done ? "\u2713" : on ? "\u25B6" : ""}
                         </span>
                         <span className="hc-htname">{c.title}</span>
+                        {c.pending && <em className="hc-htpending">Pending</em>}
                       </button>
                     </li>
                   );
