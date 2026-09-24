@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import {
-  DEFAULT_CONFIG, fmtDate, money, parentOrder, price, schedule, startOf,
+  DEFAULT_CONFIG, MODE_LABEL, ORDER_TAGS, fmtDate, money, parentOrder, price, schedule, startOf,
   type Mode, type OrderLine, type SimConfig,
 } from "@/lib/help/sim";
 import { APP_NAME } from "@/lib/help/types";
@@ -32,6 +32,11 @@ export default function Simulator({ config, onConfig }: {
 
   const prepaid = useMemo(() => ({ p: price({ ...c, mode: "prepaid" }), rows: schedule(c, "prepaid") }), [c]);
   const payg = useMemo(() => ({ p: price({ ...c, mode: "payg" }), rows: schedule(c, "payg") }), [c]);
+  const autopay = useMemo(() => ({ p: price({ ...c, mode: "autopay" }), rows: schedule(c, "autopay") }), [c]);
+  /* Which payment type the drawn order is showing. The three are genuinely different orders,
+     not the same order with a different badge: AutoPay's carries the real goods from the
+     start and never gets converted. */
+  const [drawn, setDrawn] = useState<Mode>("prepaid");
 
   return (
     <section>
@@ -108,7 +113,14 @@ export default function Simulator({ config, onConfig }: {
 
       {surface === "shopify" ? (
         <>
-          <ShopifyOrder c={c} mode="prepaid" />
+          <div className="hc-modepick" role="tablist" aria-label="Payment type">
+            {(["prepaid", "payg", "autopay"] as Mode[]).map((m) => (
+              <button key={m} role="tab" aria-selected={drawn === m}
+                className={"hc-modepillb" + (drawn === m ? " on" : "")}
+                onClick={() => setDrawn(m)}>{MODE_LABEL[m]}</button>
+            ))}
+          </div>
+          <ShopifyOrder c={c} mode={drawn} />
 
           <p className="hc-note hc-orderafter">
             That is one order in your admin. Below is the same run as a list, with the deliveries that
@@ -118,6 +130,7 @@ export default function Simulator({ config, onConfig }: {
           <div className="hc-modecols">
             <OrdersColumn mode="prepaid" c={c} p={prepaid.p} rows={prepaid.rows} />
             <OrdersColumn mode="payg" c={c} p={payg.p} rows={payg.rows} />
+            <OrdersColumn mode="autopay" c={c} p={autopay.p} rows={autopay.rows} />
           </div>
 
           <ul className="hc-oflags hc-childnote">
@@ -152,11 +165,13 @@ function OrdersColumn({ mode, c, p, rows }: {
   return (
     <div className="hc-modecol">
       <div className="hc-modehead">
-        <b>{prepaid ? "Prepaid" : "Pay as you go"}</b>
+        <b>{MODE_LABEL[mode]}</b>
         <span>
           <b>{live} of {c.deliveries}</b> orders exist today.
           {" "}{money(p.chargedNow)} taken at checkout,{" "}
-          {prepaid ? "the rest arrive on schedule." : "the rest wait on payment."}
+          {mode === "prepaid" ? "the rest arrive on schedule."
+            : mode === "autopay" ? "the rest are debited on the mandate."
+            : "the rest wait on payment."}
         </span>
       </div>
 
@@ -172,7 +187,7 @@ function OrdersColumn({ mode, c, p, rows }: {
               <td className="hc-num"><b>{money(p.chargedNow)}</b></td>
               <td><Dot tone="ok" />Paid</td>
               <td><Dot tone="ok" />Fulfilled<em>delivery 1 ships from here</em></td>
-              <td><Tag>parent</Tag><Tag>delivery-1-converted</Tag></td>
+              <td className="hc-tagcell">{ORDER_TAGS[mode].parent.map((t) => <Tag key={t}>{t}</Tag>)}</td>
             </tr>
             {rows.slice(1).map((o) => (
               <tr key={o.n} className={o.existsToday ? "" : "hc-pendingrow"}>
@@ -187,13 +202,13 @@ function OrdersColumn({ mode, c, p, rows }: {
                 </td>
                 <td className="hc-num">{money(o.amount)}</td>
                 <td>{o.paidAtCheckout
-                  ? <><Dot tone="ok" />Paid</>
+                  ? <><Dot tone="ok" />{mode === "autopay" ? "Debited" : "Paid"}</>
                   : <><Dot tone="warn" />Invoice {fmtDate(o.invoicedOn ?? o.createdOn)}</>}</td>
                 <td>{o.existsToday
                   ? <><Dot tone="warn" />Unfulfilled<em>your 3PL ships this</em></>
                   : <span className="hc-noorder">not created yet</span>}</td>
-                <td>{o.existsToday
-                  ? <><Tag>delivery</Tag><Tag>subscription</Tag></>
+                <td className="hc-tagcell">{o.existsToday
+                  ? ORDER_TAGS[mode].delivery.map((t) => <Tag key={t}>{t}</Tag>)
                   : <span className="hc-noorder">&mdash;</span>}</td>
               </tr>
             ))}
@@ -201,10 +216,12 @@ function OrdersColumn({ mode, c, p, rows }: {
         </table>
       </div>
 
-      <p className={"hc-modekey " + (prepaid ? "ok" : "warn")}>
-        {prepaid
+      <p className={"hc-modekey " + (mode === "payg" ? "warn" : "ok")}>
+        {mode === "prepaid"
           ? <>Delivery one is on the order above. Every later delivery is <b>already paid</b>, so its order is created automatically {c.leadDays} days before its delivery, drawing down the store credit. Nothing waits on the customer.</>
-          : <>Delivery one is on the order above and is the only one paid. Each later delivery is invoiced {3 + c.leadDays} days ahead, and its order reaches Shopify <b>only once that invoice is paid</b>. An unpaid delivery has no order at all.</>}
+          : mode === "payg"
+          ? <>Delivery one is on the order above and is the only one paid. Each later delivery is invoiced {3 + c.leadDays} days ahead, and its order reaches Shopify <b>only once that invoice is paid</b>. An unpaid delivery has no order at all.</>
+          : <>The order above was placed by us through Razorpay and carries the real goods already, because the money moved inside the mandate authorisation. Every later delivery is <b>debited on the mandate</b> the day before its order is cut, so nothing waits on the customer and no invoice is sent.</>}
       </p>
     </div>
   );
@@ -250,21 +267,31 @@ function ShopifyOrder({ c, mode }: { c: SimConfig; mode: Mode }) {
             <Item l={o.shipping} />
           </section>
 
-          <section className="pl-card">
-            <header className="pl-cardh">
-              <b><span className="pl-fico">&#10003;</span>Fulfilled</b>
-              <span className="pl-muted">#{num}-F1</span>
-            </header>
-            <p className="pl-line2">{date}<span className="pl-flag">&#8856; Shipping not required</span></p>
-            {o.held
-              ? <Item l={o.held} open={open} onToggle={() => setOpen(!open)} />
-              : <p className="pl-empty">Nothing held: on pay as you go the order carries one delivery.</p>}
-          </section>
+          {mode === "autopay" ? (
+            <p className="pl-note">
+              One fulfilment, not two. AutoPay&rsquo;s order carries the real goods from the start,
+              because the money moved inside the mandate authorisation, so there is no placeholder
+              line to hold the run and nothing to convert.
+            </p>
+          ) : (
+            <section className="pl-card">
+              <header className="pl-cardh">
+                <b><span className="pl-fico">&#10003;</span>Fulfilled</b>
+                <span className="pl-muted">#{num}-F1</span>
+              </header>
+              <p className="pl-line2">{date}<span className="pl-flag">&#8856; Shipping not required</span></p>
+              {o.held
+                ? <Item l={o.held} open={open} onToggle={() => setOpen(!open)} />
+                : <p className="pl-empty">Nothing held: on pay as you go the order pays for one delivery.</p>}
+            </section>
+          )}
 
-          <section className="pl-card pl-removed">
-            <header className="pl-cardh"><b>Removed</b></header>
-            <Item l={o.removed} dim />
-          </section>
+          {o.converted && (
+            <section className="pl-card pl-removed">
+              <header className="pl-cardh"><b>Removed</b></header>
+              <Item l={o.removed} dim />
+            </section>
+          )}
 
           <section className="pl-card">
             <header className="pl-cardh"><b><span className="pl-fico">&#10003;</span>Paid</b></header>
@@ -290,8 +317,12 @@ function ShopifyOrder({ c, mode }: { c: SimConfig; mode: Mode }) {
             <header className="pl-cardh"><b>Tags</b></header>
             <div className="pl-tags">{o.tags.map((t) => <span key={t}>{t}</span>)}</div>
             <p className="pl-muted pl-tagnote">
-              <code>sb-delivery-1-converted</code> is what stops the job running twice, and the value
-              tag records what delivery one was worth.
+              {o.converted
+                ? <><code>sb-delivery-1-converted</code> is what stops the job running twice, and the
+                    value tag records what delivery one was worth.</>
+                : <>No conversion tags: nothing was converted. <code>autopay</code> and{" "}
+                    <code>razorpay</code> are written when we place the order, <code>parent</code> once
+                    the contract exists.</>}
             </p>
           </section>
         </aside>

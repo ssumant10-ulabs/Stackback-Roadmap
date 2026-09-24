@@ -1223,3 +1223,23 @@
 }
 .hc-sugpilots b { font-size: 12.5px; font-weight: 700; }
 .hc-sugpilots span { font-size: 11.5px; color: var(--hc-muted); line-height: 1.45; }
+
+/* Which payment type the drawn order is showing. */
+.hc-modepick { display: flex; gap: 2px; padding: 2px; background: var(--sunken); border-radius: 10px; width: max-content; margin: 0 0 10px; flex-wrap: wrap; }
+.hc-modepillb {
+  appearance: none; border: 0; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 640;
+  color: var(--hc-muted); background: transparent; padding: 6px 13px; border-radius: 8px;
+}
+.hc-modepillb:hover { color: var(--ink); }
+.hc-modepillb.on { background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
+.hc-tagcell { max-width: 210px; }
+.hc-modecols { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 1279px) { .hc-modecols { grid-template-columns: minmax(0, 1fr); } }
+
+/* Tags wrap. A clipped tag is worse than a wrapped one: "sb-delivery-1-" is not a tag. */
+.hc-tagcell { display: flex; flex-wrap: wrap; gap: 4px; max-width: none; }
+.hc-tagcell > * { white-space: nowrap; }
+.pl-note {
+  margin: 0; padding: 11px 13px; background: var(--pl-card); border: 1px solid var(--pl-line);
+  border-radius: 12px; color: var(--pl-sub); font-size: 12.5px; line-height: 1.55;
+}

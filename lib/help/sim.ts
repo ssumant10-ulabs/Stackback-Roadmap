@@ -19,7 +19,32 @@
  *
  *  If a rule here ever disagrees with the corpus, the corpus is right and this is stale. */
 
-export type Mode = "prepaid" | "payg";
+export type Mode = "prepaid" | "payg" | "autopay";
+
+/** The tags we actually write, per payment type, quoted from the code that writes them.
+ *  Parent: applyParentTags in webhooks.app.orders-create.tsx, plus the two conversion tags
+ *  from delivery-conversion.server.ts, plus autopay-order.server.ts for the Razorpay order.
+ *  Delivery: the createorders payload in utils/scheduler.ts, identical for all three. */
+export const ORDER_TAGS: Record<Mode, { parent: string[]; delivery: string[] }> = {
+  prepaid: {
+    parent: ["parent", "id-<n>", "sb-delivery-1-converted", "sb-delivery-1-value-<amount>"],
+    delivery: ["subscription", "automated", "scheduler", "child", "id-<n>"],
+  },
+  payg: {
+    parent: ["parent", "pay-as-you-go", "id-<n>", "sb-delivery-1-converted", "sb-delivery-1-value-<amount>"],
+    delivery: ["subscription", "automated", "scheduler", "child", "id-<n>"],
+  },
+  autopay: {
+    parent: ["subscription", "autopay", "razorpay", "parent", "id-<n>"],
+    delivery: ["subscription", "automated", "scheduler", "child", "id-<n>"],
+  },
+};
+
+export const MODE_LABEL: Record<Mode, string> = {
+  prepaid: "Prepaid",
+  payg: "Pay as you go",
+  autopay: "Pay per delivery (AutoPay)",
+};
 
 export interface SimConfig {
   productName: string;
@@ -162,7 +187,10 @@ export function schedule(c: SimConfig, mode: Mode = c.mode): ChildOrder[] {
     const atCheckout = i === 0;
     const due = addDays(deliveryDate, -c.leadDays);
     const createdOn = atCheckout ? today : (due <= today ? today : due);
-    const paid = mode === "prepaid" || i === 0;
+    /* Prepaid pays the run at checkout. AutoPay debits each delivery through the mandate
+       ahead of its date, so a delivery is paid by the time its order is placed, the same as
+       prepaid from the order's point of view. PAYG waits on a person. */
+    const paid = mode === "prepaid" || mode === "autopay" || i === 0;
     return {
       n: i + 1,
       deliveryDate,
@@ -172,7 +200,7 @@ export function schedule(c: SimConfig, mode: Mode = c.mode): ChildOrder[] {
       // Paid and inside the lead window. Prepaid pays for everything up front, which is why
       // "paid" on its own was the wrong test and made the whole run look like it exists.
       existsToday: atCheckout || (paid && due <= today),
-      invoicedOn: mode === "payg" && i > 0 ? addDays(due, -3) : null,
+      invoicedOn: mode === "payg" && i > 0 ? addDays(due, -3) : mode === "autopay" && i > 0 ? addDays(due, -1) : null,
       amount: p.perDelivery,
       paidAtCheckout: paid,
     };
@@ -192,6 +220,8 @@ export interface OrderLine {
 }
 
 export interface ParentOrder {
+  /** False for AutoPay: nothing was converted, so there is no Removed line to show. */
+  converted: boolean;
   /** Dummy line after the edit: one unit per delivery still to come. */
   held: OrderLine | null;
   /** Delivery 1's real goods, added by the edit. */
@@ -216,16 +246,32 @@ export interface ParentOrder {
  */
 export function parentOrder(c: SimConfig, mode: Mode = c.mode, productName = "Your product"): ParentOrder {
   const p = price({ ...c, mode });
+  /* AutoPay's first order is placed by us through Razorpay and already carries the REAL
+     variant, price, shipping and tax: the money moved inside the mandate authorisation, so
+     there is no placeholder to hold and nothing to convert. Prepaid holds the rest of the
+     run on the placeholder; PAYG paid for one delivery, so it holds nothing. */
   const held = mode === "prepaid" ? c.deliveries - 1 : 0;
+  const converted = mode !== "autopay";
   const planTitle = runLabel(c.everyDays, c.deliveries);
   const attrs: [string, string][] = [
     ["_sb_subscription", "true"],
     ["_payment_method", mode === "prepaid" ? "prepaid" : "pay_as_you_go"],
+    ...(mode === "autopay" ? [["_sb_autopay_mandate_ready", "true"] as [string, string]] : []),
     ["_sb_plan_title", planTitle],
     ["Info", `${freqWord(c.everyDays)} for ${c.deliveries} deliveries`],
     ["_sb_shipping_service", "Free Shipping"],
   ];
+  if (!converted) {
+    return {
+      held: null,
+      shipping: { title: productName, sub: "Delivery 1, charged on the mandate", qty: 1, unit: p.perDelivery, attrs },
+      removed: { title: planTitle, sub: productName, qty: 1, unit: p.perDelivery },
+      converted, subtotal: c.unitPrice, discount: c.unitPrice - p.perDelivery,
+      total: p.perDelivery, deliveryValue: p.perDelivery, tags: ORDER_TAGS.autopay.parent,
+    };
+  }
   return {
+    converted,
     held: held > 0
       ? { title: planTitle, sub: `${productName} · held for ${held} more deliver${held === 1 ? "y" : "ies"}`, qty: held, unit: p.perDelivery, attrs }
       : null,
@@ -235,7 +281,7 @@ export function parentOrder(c: SimConfig, mode: Mode = c.mode, productName = "Yo
     discount: (c.unitPrice - p.perDelivery) * (mode === "prepaid" ? c.deliveries : 1),
     total: p.chargedNow,
     deliveryValue: p.perDelivery,
-    tags: ["parent", "sb-delivery-1-converted", `sb-delivery-1-value-${p.perDelivery.toFixed(2)}`],
+    tags: ORDER_TAGS[mode].parent,
   };
 }
 
