@@ -237,7 +237,6 @@ function OrdersColumn({ mode, c, p, rows }: {
  */
 function ShopifyOrder({ c, mode }: { c: SimConfig; mode: Mode }) {
   const o = useMemo(() => parentOrder(c, mode, c.productName || "Your product"), [c, mode]);
-  const [open, setOpen] = useState(false);
   const num = ORDER_NO;
   const date = fmtDate(startOf(c));
 
@@ -267,11 +266,11 @@ function ShopifyOrder({ c, mode }: { c: SimConfig; mode: Mode }) {
             <Item l={o.shipping} />
           </section>
 
-          {mode === "autopay" ? (
+          {!o.held ? (
             <p className="pl-note">
-              One fulfilment, not two. AutoPay&rsquo;s order carries the real goods from the start,
-              because the money moved inside the mandate authorisation, so there is no placeholder
-              line to hold the run and nothing to convert.
+              {mode === "autopay"
+                ? "One fulfilment, not two. AutoPay\u2019s order carries the real goods from the start, because the money moved inside the mandate authorisation, so there is no placeholder line to hold the run and nothing to convert."
+                : "One fulfilment, not two. Pay as you go paid for one delivery, so the placeholder held one unit, and converting it consumed the whole line. It moves to Removed rather than staying on the order."}
             </p>
           ) : (
             <section className="pl-card">
@@ -281,7 +280,7 @@ function ShopifyOrder({ c, mode }: { c: SimConfig; mode: Mode }) {
               </header>
               <p className="pl-line2">{date}<span className="pl-flag">&#8856; Shipping not required</span></p>
               {o.held
-                ? <Item l={o.held} open={open} onToggle={() => setOpen(!open)} />
+                ? <Item l={o.held} />
                 : <p className="pl-empty">Nothing held: on pay as you go the order pays for one delivery.</p>}
             </section>
           )}
@@ -332,23 +331,14 @@ function ShopifyOrder({ c, mode }: { c: SimConfig; mode: Mode }) {
 }
 
 /** One line item, Polaris' own two-column row. */
-function Item({ l, dim, open, onToggle }: { l: OrderLine; dim?: boolean; open?: boolean; onToggle?: () => void }) {
+function Item({ l, dim }: { l: OrderLine; dim?: boolean }) {
   return (
     <div className={"pl-item" + (dim ? " dim" : "")}>
       <span className="pl-thumb" />
       <div className="pl-itemmain">
         <b>{l.title}</b>
         {l.sub && <em>{l.sub}</em>}
-        {l.attrs && onToggle && (
-          <button type="button" className="pl-attrb" onClick={onToggle}>
-            <code>_sb</code> {open ? "hide" : "show"} subscription properties
-          </button>
-        )}
-        {l.attrs && open && (
-          <dl className="pl-attrs">
-            {l.attrs.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
-          </dl>
-        )}
+
       </div>
       <span className="pl-price">
         {money(l.unit)}

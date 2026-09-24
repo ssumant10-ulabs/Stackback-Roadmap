@@ -176,6 +176,7 @@ export default function Brief({ store, open, answered, connected, step, onStep, 
             shippingRate={answers.shipping_charged === "yes" ? Number(answers.shipping_rate) || 0 : 0}
             freebieRuns={freebieRuns(answers.freebies)}
             scale={String(answers.scale || "")}
+            storeName={String(answers.brand_name || store?.name || "")}
           />
 
           <div className="hc-stepnav">

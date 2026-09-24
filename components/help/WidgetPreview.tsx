@@ -17,7 +17,7 @@ import BrandFetch from "./BrandFetch";
  *  the only thing that makes twenty switches legible on a call. */
 export default function WidgetPreview({
   s, onChange, unitPrice, compareAt, plans, productName, variantLine, currency = "₹", onSubscribe,
-  rates, shippingRate = 0, freebieRuns = [], scale = "",
+  rates, shippingRate = 0, freebieRuns = [], scale = "", storeName,
 }: {
   s: WidgetSettings;
   onChange: (next: WidgetSettings) => void;
@@ -36,6 +36,7 @@ export default function WidgetPreview({
    *  preference, so below the band that carries it the row is locked rather than absent:
    *  a control that vanishes reads as a bug, one that is locked reads as a price. */
   scale?: string;
+  storeName?: string | null;
 }) {
   const t = s.theme;
   const [hot, setHot] = useState<string | null>(null);
@@ -332,7 +333,8 @@ export default function WidgetPreview({
       </div>
 
       <div className="hc-wtoggles">
-        <BrandFetch theme={t} onTheme={(next) => onChange({ ...s, theme: next })} />
+        <BrandFetch theme={t} onTheme={(next) => onChange({ ...s, theme: next })}
+          settings={s} storeName={storeName} />
         <p className="hc-wtogglesh">What the customer sees</p>
         <p className="hc-note hc-wtoggleshelp">
           Every setting on the Purchase Options block. Hover a row to see what it changes in the

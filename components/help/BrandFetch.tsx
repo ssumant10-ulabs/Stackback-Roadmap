@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import type { WidgetTheme } from "@/lib/help/widget";
+import type { WidgetSettings, WidgetTheme } from "@/lib/help/widget";
+import { downloadTokens, tokensText } from "@/lib/help/tokens";
 
 /** Read a store's own theme settings and drop them into the widget preview.
  *
@@ -69,15 +70,19 @@ function mix(a: string, b: string, t: number): string {
     .join("");
 }
 
-export default function BrandFetch({ theme, onTheme }: {
+export default function BrandFetch({ theme, onTheme, settings, storeName }: {
   theme: WidgetTheme;
   onTheme: (next: WidgetTheme) => void;
+  /** The whole settings object, because the token file hands over the purchase options too. */
+  settings: WidgetSettings;
+  storeName?: string | null;
 }) {
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [tokens, setTokens] = useState<Token[] | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  const [font, setFont] = useState<string | null>(null);
 
   async function run() {
     const q = url.trim();
@@ -89,6 +94,7 @@ export default function BrandFetch({ theme, onTheme }: {
       if (!d.ok) { setMsg(d.error || "That site could not be read."); return; }
       onTheme(toTheme(d.tokens, d.corners, d.cornersCustomPx, theme, d.cardRadiusPx ?? null, d.buttonRadiusPx ?? null));
       setTokens(d.tokens);
+      setFont(d.fontBody ? String(d.fontBody).split(",")[0].trim() : null);
       setNote(
         (d.method === "dawn"
           ? "Read from your theme settings."
@@ -117,7 +123,15 @@ export default function BrandFetch({ theme, onTheme }: {
           onKeyDown={(e) => { if (e.key === "Enter") run(); }}
         />
         <button type="button" className="hc-btn" onClick={run} disabled={busy || !url.trim()}>
-          {busy ? "Reading…" : "Use my colours"}
+          {busy ? "Reading\u2026" : "Use my colours"}
+        </button>
+        {/* The six tokens on screen are a reading of the storefront. The widget takes the
+            nested theme, which is what this writes out, in the format dev already builds from. */}
+        <button type="button" className="hc-btn ghost" onClick={() => downloadTokens(
+          tokensText(settings, { store: storeName || url.trim() || null, source: url.trim() || null, font, notes: note ? [note] : [] }),
+          storeName || url.trim(),
+        )}>
+          Download tokens
         </button>
       </div>
 

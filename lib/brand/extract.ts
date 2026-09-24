@@ -122,6 +122,10 @@ export function hueGap(a: string, b: string): number {
 
 const isNeutral = (hex: string) => saturation(hex) < 0.12;
 const isLight = (hex: string) => luminance(hex) > 0.65;
+/* A SURFACE has to be light AND near-neutral. Luminance alone calls #FFD812 light, because a
+   saturated yellow is, and bluetea.co.in came back with its brand yellow offered as "a light
+   surface used across the page". The preview then filled every panel with it. */
+const isSurface = (hex: string) => isLight(hex) && saturation(hex) < 0.22;
 
 /* ------------------------------------------------------------------ css reading */
 
@@ -242,7 +246,9 @@ export function mapTokens(css: string, url: string): BrandResult {
     // Not a Dawn-lineage theme. Rank hex literals and take the best guesses available.
     const top = countHexes(css);
     const brand = top.filter((t) => !isNeutral(t.hex)).slice(0, 4);
-    const lights = top.filter((t) => isLight(t.hex)).slice(0, 4);
+    const lights = top.filter((t) => isSurface(t.hex)).slice(0, 4);
+    // A brand that ships no neutral surface still needs somewhere to put its panels.
+    const surface = (i: number) => lights[i]?.hex || (i === 0 ? "#FFFFFF" : "#F5F5F5");
     notes.push(
       "This theme does not expose Shopify colour-scheme variables, so these are read from how often each colour appears in the stylesheet rather than from the theme settings. Check them before saving.",
     );
@@ -252,10 +258,10 @@ export function mapTokens(css: string, url: string): BrandResult {
       ok: true, url, method: "fallback",
       tokens: [
         t("Brand_Primary", brand[0]?.hex || "#111111", "most used brand colour in the stylesheet"),
-        t("Brand_Secondary", lights[1]?.hex || "#F3F3F3", "a light surface used across the page"),
+        t("Brand_Secondary", surface(1), lights[1] ? "a light surface used across the page" : "no neutral surface in the stylesheet, so a default tint"),
         t("Brand_Accent", brand[1]?.hex || brand[0]?.hex || "#111111", "second brand colour in the stylesheet"),
         t("Product_Tile", top.find((x) => luminance(x.hex) < 0.2)?.hex || "#121212", "darkest text colour"),
-        t("Widget_Background", lights[0]?.hex || "#FFFFFF", "most used light surface"),
+        t("Widget_Background", surface(0), lights[0] ? "most used light surface" : "no neutral surface in the stylesheet, so white"),
         t("Product_Tile_Background", "#FFFFFF", "assumed white card"),
       ],
       corners, cornersCustomPx: custom, cardRadiusPx, buttonRadiusPx, fontBody, fontHeading, schemes, notes,

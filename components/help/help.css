@@ -1266,3 +1266,7 @@
 .hc-importtop li span { font-size: 11px; color: var(--hc-muted); }
 .hc-importwarn { margin: 11px 0 0; padding: 0 0 0 16px; display: flex; flex-direction: column; gap: 6px; }
 .hc-importwarn li { font-size: 11.5px; color: var(--hc-muted); line-height: 1.5; }
+
+/* Every recording has an address. */
+.hc-htshare { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 9px; }
+.hc-htshare .hc-btn { font-size: 12px; padding: 5px 11px; }

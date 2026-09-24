@@ -19,6 +19,20 @@ export default function HowTo() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [failed, setFailed] = useState(false);
 
+  /* A copied link has to open the clip it names, or the button is a lie. The hash is read on
+     mount and whenever it changes, so a link pasted into a live tab works too. */
+  useEffect(() => {
+    const open = () => {
+      const m = /#\/howto\/([a-z0-9-]+)/i.exec(location.hash);
+      if (!m) return;
+      const hit = ALL_CLIPS.find((c) => c.id === m[1]);
+      if (hit) setCurrent(hit);
+    };
+    open();
+    window.addEventListener("hashchange", open);
+    return () => window.removeEventListener("hashchange", open);
+  }, []);
+
   useEffect(() => {
     try { setWatched(JSON.parse(localStorage.getItem(WATCHED) || "[]")); }
     catch { /* private window: the library works, it just will not remember */ }
@@ -43,6 +57,7 @@ export default function HowTo() {
   }, [current]);
 
   const flat = useMemo(() => CLIP_GROUPS.flatMap((g) => g.clips.map((c) => ({ ...c, group: g.title }))), []);
+  const [copied, setCopied] = useState<string | null>(null);
   const index = flat.findIndex((c) => c.id === current.id);
   const next = flat[index + 1];
 
@@ -92,6 +107,22 @@ export default function HowTo() {
             <div>
               <p className="hc-htnowt">{current.title}</p>
               {current.note && <p className="hc-htnote">{current.note}</p>}
+              {/* Every clip has an address. Without this the only way to send somebody one
+                  recording was to tell them which row to click. */}
+              <div className="hc-htshare">
+                <button type="button" className="hc-btn ghost hc-htcopy"
+                  onClick={() => {
+                    const link = `${location.origin}${location.pathname}#/howto/${current.id}`;
+                    navigator.clipboard?.writeText(link).then(
+                      () => setCopied(current.id),
+                      () => setCopied("fail"),
+                    );
+                    setTimeout(() => setCopied(null), 2200);
+                  }}>
+                  {copied === current.id ? "Link copied" : copied === "fail" ? "Copy failed" : "Copy link to this video"}
+                </button>
+                <a className="hc-btn ghost" href={current.src} target="_blank" rel="noreferrer">Open the file</a>
+              </div>
             </div>
             {next && (
               <button className="hc-btn" onClick={() => setCurrent(next)}>

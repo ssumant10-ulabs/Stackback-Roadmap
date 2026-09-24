@@ -26,6 +26,12 @@ export type Mode = "prepaid" | "payg" | "autopay";
  *  from delivery-conversion.server.ts, plus autopay-order.server.ts for the Razorpay order.
  *  Delivery: the createorders payload in utils/scheduler.ts, identical for all three. */
 export const ORDER_TAGS: Record<Mode, { parent: string[]; delivery: string[] }> = {
+  /* Checked against four live orders on 2026-09-24. Two things this list used to get wrong.
+     A checkout order carries NO `subscription` tag: applyParentTags writes `parent`, the
+     payment tag and the id, and nothing else. And AutoPay DOES carry `pay-as-you-go`,
+     because autopay-order.server.ts writes `_payment_method: pay_as_you_go` and the same
+     applyParentTags then reads it: AutoPay is pay as you go with a mandate behind it. Its
+     `subscription` tag comes from the Razorpay order creation, not from the webhook. */
   prepaid: {
     parent: ["parent", "id-<n>", "sb-delivery-1-converted", "sb-delivery-1-value-<amount>"],
     delivery: ["subscription", "automated", "scheduler", "child", "id-<n>"],
@@ -35,7 +41,7 @@ export const ORDER_TAGS: Record<Mode, { parent: string[]; delivery: string[] }> 
     delivery: ["subscription", "automated", "scheduler", "child", "id-<n>"],
   },
   autopay: {
-    parent: ["subscription", "autopay", "razorpay", "parent", "id-<n>"],
+    parent: ["subscription", "autopay", "razorpay", "parent", "pay-as-you-go", "id-<n>"],
     delivery: ["subscription", "automated", "scheduler", "child", "id-<n>"],
   },
 };
@@ -265,7 +271,7 @@ export function parentOrder(c: SimConfig, mode: Mode = c.mode, productName = "Yo
     return {
       held: null,
       shipping: { title: productName, sub: "Delivery 1, charged on the mandate", qty: 1, unit: p.perDelivery, attrs },
-      removed: { title: planTitle, sub: productName, qty: 1, unit: p.perDelivery },
+      removed: { title: "Payment For", sub: productName, qty: 1, unit: p.perDelivery },
       converted, subtotal: c.unitPrice, discount: c.unitPrice - p.perDelivery,
       total: p.perDelivery, deliveryValue: p.perDelivery, tags: ORDER_TAGS.autopay.parent,
     };
@@ -276,7 +282,9 @@ export function parentOrder(c: SimConfig, mode: Mode = c.mode, productName = "Yo
       ? { title: planTitle, sub: `${productName} · held for ${held} more deliver${held === 1 ? "y" : "ies"}`, qty: held, unit: p.perDelivery, attrs }
       : null,
     shipping: { title: productName, sub: "Delivery 1", qty: 1, unit: p.perDelivery, was: c.unitPrice },
-    removed: { title: planTitle, sub: productName, qty: mode === "prepaid" ? c.deliveries : 1, unit: p.perDelivery, attrs },
+    // Shopify shows the released placeholder under Removed as "Payment For", not as the
+    // plan title. Checked on a live pay-as-you-go order.
+    removed: { title: "Payment For", sub: productName, qty: mode === "prepaid" ? c.deliveries : 1, unit: p.perDelivery },
     subtotal: c.unitPrice * (mode === "prepaid" ? c.deliveries : 1),
     discount: (c.unitPrice - p.perDelivery) * (mode === "prepaid" ? c.deliveries : 1),
     total: p.chargedNow,
