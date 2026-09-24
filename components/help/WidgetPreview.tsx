@@ -100,7 +100,11 @@ export default function WidgetPreview({
    * setting says to use it, otherwise the one-time price. */
   const listPrice = s.use_compare_at_price_for_discount_label && compareAt ? compareAt : unitPrice;
 
-  const radius = t.shape.radius;
+  /* Capped, and every derived corner floored at 0. A container cannot take a pill radius
+     without becoming a blob, and `radius - 6` on a small radius used to go negative. */
+  const radius = Math.min(24, Math.max(0, t.shape.radius));
+  const rad = (less: number) => Math.max(0, radius - less);
+  const btnRadius = Math.min(999, Math.max(0, t.shape.buttonRadius ?? 10));
   const lit = (tag: string) => (hot === tag ? " sb-lit" : "");
   const shadow = t.chrome.shadow === "none" ? "none"
     : t.chrome.shadow === "strong" ? "0 12px 32px rgba(15,23,42,.18)" : "0 1px 3px rgba(15,23,42,.08)";
@@ -136,7 +140,7 @@ export default function WidgetPreview({
 
           {!s.hide_product_row && (
             <div className={"hc-wprow" + lit("product-row")}>
-              <span className="hc-wthumb" style={{ background: t.surfaces.mutedSurface, borderRadius: radius - 6 }} />
+              <span className="hc-wthumb" style={{ background: t.surfaces.mutedSurface, borderRadius: rad(6) }} />
               <span className="hc-wprowl">
                 <b style={{ color: t.text.primary }}>{productName}</b>
                 <em className={lit("price")} style={{ color: t.text.secondary }}>
@@ -144,14 +148,14 @@ export default function WidgetPreview({
                   {compareAt && compareAt > unitPrice && <s style={{ color: t.text.muted }}>{money(compareAt)}</s>}
                 </em>
               </span>
-              <span className="hc-wqty" style={{ borderColor: t.borders.default, borderRadius: radius - 6, color: t.text.secondary }}>
+              <span className="hc-wqty" style={{ borderColor: t.borders.default, borderRadius: rad(6), color: t.text.secondary }}>
                 <i>&minus;</i><b style={{ color: t.text.primary }}>1</b><i>+</i>
               </span>
             </div>
           )}
 
           {modes.length > 1 && (
-            <div className="hc-wmodewrap" style={{ borderColor: t.borders.default, borderRadius: radius - 2 }}>
+            <div className="hc-wmodewrap" style={{ borderColor: t.borders.default, borderRadius: rad(2) }}>
               <div className="hc-wsegs" style={{ background: t.surfaces.mutedSurface }}>
                 {modes.map((m) => (
                   <button key={m.id} type="button" onClick={() => setMode(m.id)}
@@ -173,7 +177,7 @@ export default function WidgetPreview({
           )}
 
           {intent === "onetime" ? (
-            <div className="hc-wonetime" style={{ background: t.surfaces.mutedSurface, borderRadius: radius - 4 }}>
+            <div className="hc-wonetime" style={{ background: t.surfaces.mutedSurface, borderRadius: rad(4) }}>
               <p style={{ color: t.text.secondary }}>
                 No schedule on a one-time purchase. The quantity above is the whole order.
               </p>
@@ -193,7 +197,7 @@ export default function WidgetPreview({
               return (
                 <button key={plan.title + i} type="button" onClick={() => setPicked(i)} className="hc-wplan"
                   style={{
-                    borderRadius: radius - 2,
+                    borderRadius: rad(2),
                     border: `${on ? 1.5 : 1}px solid ${on ? t.colors.subscriptionAccent : t.borders.default}`,
                     background: on && t.components.selectedCardState === "border-and-fill" ? t.surfaces.mutedSurface : t.surfaces.inputBackground,
                   }}>
@@ -214,7 +218,7 @@ export default function WidgetPreview({
                   </span>
                   <span className="hc-wplanr">
                     {s.tag_shows_per_delivery_price && (
-                      <i className="hc-wper" style={{ background: t.colors.primary, color: "#fff", borderRadius: radius - 6 }}>
+                      <i className="hc-wper" style={{ background: t.colors.primary, color: "#fff", borderRadius: rad(6) }}>
                         {money(plan.perDelivery)}/delivery
                       </i>
                     )}
@@ -261,7 +265,7 @@ export default function WidgetPreview({
           </div>
 
           {s.promo_line && (
-            <p className={"hc-wpromo" + lit("promo")} style={{ background: withAlpha(t.colors.savings, .1), color: t.colors.savings, borderRadius: radius - 4 }}>
+            <p className={"hc-wpromo" + lit("promo")} style={{ background: withAlpha(t.colors.savings, .1), color: t.colors.savings, borderRadius: rad(4) }}>
               {s.promo_line}
             </p>
           )}
@@ -315,7 +319,7 @@ export default function WidgetPreview({
           </span>
           <button className={"hc-wcta" + lit("cta")} type="button" onClick={onSubscribe}
             style={{
-              borderRadius: radius - 4,
+              borderRadius: btnRadius,
               background: t.components.ctaButton === "solid" ? t.colors.primary : "transparent",
               color: t.components.ctaButton === "solid" ? "#fff" : t.colors.primary,
               border: `1px solid ${t.colors.primary}`,
@@ -440,7 +444,7 @@ function Tab({ t, on, label, sub, onClick, accentWord, className = "" }: {
     <button type="button" onClick={onClick} className={"hc-wtab" + (on ? " on" : "") + " " + className}
       style={{
         background: on && pill ? t.surfaces.widgetBackground : "transparent",
-        borderRadius: pill ? t.shape.radius - 4 : 0,
+        borderRadius: pill ? Math.max(0, Math.min(24, t.shape.radius) - 4) : 0,
         borderBottom: pill ? "none" : `2px solid ${on ? t.colors.subscriptionAccent : "transparent"}`,
         boxShadow: on && pill ? "0 1px 3px rgba(15,23,42,.14)" : "none",
         color: on ? t.text.primary : t.text.secondary,

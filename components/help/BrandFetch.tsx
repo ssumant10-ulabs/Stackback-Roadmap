@@ -18,7 +18,7 @@ type Token = { key: string; hex: string; source: string; confidence: "theme" | "
 /** Flat brand tokens to the nested theme this preview draws from.
  *  Brand_Secondary is a light tint in the flat model and the nested model has no field for
  *  it, so it lands on mutedSurface, which is what fills an unselected tab and a section. */
-function toTheme(tokens: Token[], corners: string, customPx: number | null, base: WidgetTheme): WidgetTheme {
+function toTheme(tokens: Token[], corners: string, customPx: number | null, base: WidgetTheme, cardPx: number | null, buttonPx: number | null): WidgetTheme {
   const get = (k: string) => tokens.find((t) => t.key === k)?.hex;
   const primary = get("Brand_Primary") || base.colors.primary;
   const accent = get("Brand_Accent") || base.colors.subscriptionAccent;
@@ -27,14 +27,22 @@ function toTheme(tokens: Token[], corners: string, customPx: number | null, base
   const tint = get("Brand_Secondary") || base.surfaces.mutedSurface;
   const tile = get("Product_Tile_Background") || base.surfaces.inputBackground;
 
-  const RADIUS: Record<string, number> = { Sharp: 0, Semi: 12, Rounded: 20 };
-  const raw = corners === "Custom" && customPx != null
-    ? Math.max(0, Math.round(customPx))
+  /* The CARD radius drives the container, never the button radius. thestack.club runs 40px
+     pill buttons over 16px cards, and reading the button recommended a widget shaped like
+     nothing on that page. Both are snapped to the steps their controls offer, or the theme
+     lands a value the dropdown has no option for and the field renders empty. */
+  const CARD_STEPS = [0, 6, 12, 16, 24];
+  const BTN_STEPS = [0, 6, 10, 999];
+  const snap = (v: number, steps: number[]) =>
+    steps.reduce((a, b) => (Math.abs(b - v) < Math.abs(a - v) ? b : a), steps[0]);
+
+  const RADIUS: Record<string, number> = { Sharp: 0, Semi: 12, Rounded: 16 };
+  const rawCard = cardPx != null ? Math.max(0, Math.round(cardPx))
+    : corners === "Custom" && customPx != null ? Math.max(0, Math.round(customPx))
     : (RADIUS[corners] ?? base.shape.radius);
-  /* Snap to the steps the Corner radius control offers, or the theme lands a value the
-     dropdown has no option for and the field renders empty. A 38px button radius is a pill. */
-  const STEPS = [0, 6, 12, 20, 999];
-  const radius = raw >= 28 ? 999 : STEPS.reduce((a, b) => (Math.abs(b - raw) < Math.abs(a - raw) ? b : a), 0);
+  const radius = snap(Math.min(24, rawCard), CARD_STEPS);
+  const radiusBtn = buttonPx == null ? base.shape.buttonRadius
+    : buttonPx >= 24 ? 999 : snap(buttonPx, BTN_STEPS);
 
   return {
     ...base,
@@ -43,7 +51,7 @@ function toTheme(tokens: Token[], corners: string, customPx: number | null, base
     // A border the theme does not publish is derived from the tint rather than left slate.
     borders: { default: mix(tint, text, 0.12), strong: primary },
     text: { primary: text, secondary: mix(text, bg, 0.45), muted: mix(text, bg, 0.62) },
-    shape: { radius },
+    shape: { radius, buttonRadius: radiusBtn },
   };
 }
 
@@ -79,7 +87,7 @@ export default function BrandFetch({ theme, onTheme }: {
       const r = await fetch("/api/brand-colours?url=" + encodeURIComponent(q));
       const d = await r.json();
       if (!d.ok) { setMsg(d.error || "That site could not be read."); return; }
-      onTheme(toTheme(d.tokens, d.corners, d.cornersCustomPx, theme));
+      onTheme(toTheme(d.tokens, d.corners, d.cornersCustomPx, theme, d.cardRadiusPx ?? null, d.buttonRadiusPx ?? null));
       setTokens(d.tokens);
       setNote(
         (d.method === "dawn"

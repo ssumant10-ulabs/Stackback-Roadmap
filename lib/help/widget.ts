@@ -11,7 +11,11 @@ export interface WidgetTheme {
   surfaces: { widgetBackground: string; mutedSurface: string; inputBackground: string };
   borders: { default: string; strong: string };
   text: { primary: string; secondary: string; muted: string };
-  shape: { radius: number };
+  /** `radius` is the container and the cards. `buttonRadius` is the subscribe button, which
+   *  is a different number on most themes: thestack.club runs 40px pill buttons over 16px
+   *  cards. A container cannot take the button's radius without becoming a blob, which is why
+   *  the two are separate and why `radius` is capped. */
+  shape: { radius: number; buttonRadius: number };
   chrome: { borderVisible: boolean; borderColor: string; shadow: "none" | "subtle" | "strong" };
   components: {
     ctaButton: "solid" | "outline";
@@ -64,7 +68,7 @@ export const DEFAULT_WIDGET: WidgetSettings = {
     surfaces: { widgetBackground: "#ffffff", mutedSurface: "#f8fafc", inputBackground: "#ffffff" },
     borders: { default: "#e2e8f0", strong: "#0f172a" },
     text: { primary: "#0f172a", secondary: "#64748b", muted: "#94a3b8" },
-    shape: { radius: 12 },
+    shape: { radius: 12, buttonRadius: 10 },
     chrome: { borderVisible: true, borderColor: "#e2e8f0", shadow: "subtle" },
     components: { ctaButton: "solid", discountBadge: "filled", selectedCardState: "border-and-fill", tabStyle: "pill" },
     typography: { fontScale: 100 },
@@ -317,10 +321,18 @@ export const TOGGLE_GROUPS: ToggleGroup[] = [
         touches: "plan-card", kind: "select",
         options: [
           { value: "0", label: "Sharp \u00b7 0px" }, { value: "6", label: "Slight \u00b7 6px" },
-          { value: "12", label: "Semi \u00b7 12px" }, { value: "20", label: "Rounded \u00b7 20px" },
-          { value: "999", label: "Pill \u00b7 fully round" },
+          { value: "12", label: "Semi \u00b7 12px" }, { value: "16", label: "Rounded \u00b7 16px" },
+          { value: "24", label: "Very rounded \u00b7 24px" },
         ],
-        help: "Every corner in the widget, from the tab bar to the plan cards. Read from your theme's button radius when you fetch your colours." },
+        help: "The container and the plan cards. It stops at 24 because a container any rounder stops reading as a panel and starts reading as a pill with content in it.",
+        note: "Read from your theme's card radius when you fetch your colours, not its button radius: most themes run pill buttons over square-ish cards." },
+      { key: "theme", themePath: "shape.buttonRadius", label: "Button shape", path: "theme.shape.buttonRadius",
+        touches: "cta", kind: "select",
+        options: [
+          { value: "0", label: "Square" }, { value: "6", label: "Slight" },
+          { value: "10", label: "Rounded" }, { value: "999", label: "Pill" },
+        ],
+        help: "The subscribe button only, so it can match your Add to cart while the panel behind it stays a panel. Read from your theme's button radius." },
       { key: "theme", themePath: "components.tabStyle", label: "Tab style", path: "theme.components.tabStyle",
         touches: "tabs", kind: "select",
         options: [{ value: "pill", label: "Pill" }, { value: "underline", label: "Underline" }],

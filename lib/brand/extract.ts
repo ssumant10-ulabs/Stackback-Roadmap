@@ -36,6 +36,13 @@ export interface BrandResult {
   /** Shape settings, read the same way. */
   corners: "Sharp" | "Semi" | "Rounded" | "Custom";
   cornersCustomPx: number | null;
+  /** The CARD radius, which is what a widget's container and its plan cards are.
+   *  `--buttons-radius` is the button and is a different number on most themes: thestack.club
+   *  runs 40px pill buttons over 16px cards, and reading the button gave a widget shaped like
+   *  nothing on the page. */
+  cardRadiusPx: number | null;
+  /** The BUTTON radius, for the subscribe button only. */
+  buttonRadiusPx: number | null;
   fontBody: string | null;
   fontHeading: string | null;
   /** Every colour scheme found, so a caller can offer "use this one instead". */
@@ -210,8 +217,26 @@ export function mapTokens(css: string, url: string): BrandResult {
 
   const fontBody = (root["--font-body-family"] || "").replace(/['"]/g, "").trim() || null;
   const fontHeading = (root["--font-heading-family"] || "").replace(/['"]/g, "").trim() || null;
-  const radiusPx = root["--buttons-radius"] ? parseFloat(root["--buttons-radius"]) : null;
-  const { corners, custom } = cornersFrom(Number.isFinite(radiusPx as number) ? (radiusPx as number) : null);
+  /* Dawn and its lineage set the document root to 62.5%, so 1rem is 10px there. The
+     declaration lives in the theme's stylesheet, not the inline block we read, so it is
+     inferred from the theme being Dawn rather than looked for: verified on thestack.club,
+     whose computed root font-size is 10px and whose 1.6rem cards render at 16px. Reading
+     rem at 16 recommended a 25.6px radius that nothing on the page uses. */
+  const remBase = dawn ? 10 : 16;
+  const px = (name: string): number | null => {
+    const raw = root[name];
+    if (!raw) return null;
+    const n = parseFloat(raw);
+    if (!Number.isFinite(n)) return null;
+    return /rem\s*$/.test(raw.trim()) ? n * remBase : n;
+  };
+  const buttonRadiusPx = px("--buttons-radius");
+  /* Cards first, in the order a widget most resembles: a product card, then a collection
+     card, then the theme's text boxes. The button is the last resort and is usually wrong. */
+  const cardRadiusPx =
+    px("--product-card-corner-radius") ?? px("--collection-card-corner-radius")
+    ?? px("--text-boxes-radius") ?? px("--media-radius") ?? buttonRadiusPx;
+  const { corners, custom } = cornersFrom(cardRadiusPx);
 
   if (!dawn) {
     // Not a Dawn-lineage theme. Rank hex literals and take the best guesses available.
@@ -233,7 +258,7 @@ export function mapTokens(css: string, url: string): BrandResult {
         t("Widget_Background", lights[0]?.hex || "#FFFFFF", "most used light surface"),
         t("Product_Tile_Background", "#FFFFFF", "assumed white card"),
       ],
-      corners, cornersCustomPx: custom, fontBody, fontHeading, schemes, notes,
+      corners, cornersCustomPx: custom, cardRadiusPx, buttonRadiusPx, fontBody, fontHeading, schemes, notes,
     };
   }
 
@@ -300,7 +325,7 @@ export function mapTokens(css: string, url: string): BrandResult {
       tk("Widget_Background", bg, "your page background", "theme"),
       tk("Product_Tile_Background", tileBg, tileBg === "#FFFFFF" ? "white card surface" : "your card background", tileBg === "#FFFFFF" ? "derived" : "theme"),
     ],
-    corners, cornersCustomPx: custom, fontBody, fontHeading, schemes, notes,
+    corners, cornersCustomPx: custom, cardRadiusPx, buttonRadiusPx, fontBody, fontHeading, schemes, notes,
   };
 }
 
