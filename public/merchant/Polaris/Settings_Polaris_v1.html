@@ -1,0 +1,963 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Settings, Branding and Selling (Polaris web components v1)</title>
+<script src="https://cdn.shopify.com/shopifycloud/polaris.js"></script>
+<style>
+  :root{
+    --p-ink:#303030; --p-muted:#616161; --p-faint:#8a8a8a;
+    --p-line:#e3e3e3; --p-line2:#ebebeb; --p-surface:#fff;
+    --p-primary:#303030; --p-success:#29845a; --p-success-bg:#cdfee1;
+    --p-link:#005bd3; --p-attn-bg:#ffefcf; --p-attn:#8a6116;
+    --p-crit:#8e1f0b; --p-crit-bg:#fedad1;
+  }
+  body{margin:0;background:#f1f1f1;font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--p-ink)}
+  html{scrollbar-gutter:stable}
+
+  /* Shopify admin shell, carried verbatim from the locked Orders, Payment Reminders and
+     Subscriptions screens so the admin wireframes share one chrome. */
+  .admin{display:flex;min-height:100vh}
+  .navL{flex:none;width:232px;background:#ebebeb;border-right:1px solid var(--p-line);
+    padding:10px 8px;display:flex;flex-direction:column;gap:1px;position:sticky;top:0;align-self:flex-start;height:100vh;overflow:auto}
+  .navItem{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;color:var(--p-ink);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
+  .navItem:hover{background:#dedede}
+  .navItem .ico{width:18px;height:18px;flex:none;color:#4a4a4a}
+  .navItem .ct{margin-left:auto;font-size:12px;color:var(--p-muted);background:#e0e0e0;border-radius:8px;padding:0 7px;line-height:18px}
+  .navSec{color:var(--p-muted);font-size:13px;font-weight:500;display:flex;align-items:center;height:30px;padding:0 8px;margin-top:6px}
+  .navSec .chev{margin-left:auto;color:var(--p-faint)}
+  .navApp{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;font-weight:600;background:#fff;box-shadow:0 1px 0 rgba(0,0,0,.04);margin-top:2px}
+  .navApp .logo{width:20px;height:20px;border-radius:5px;background:var(--p-primary);display:grid;place-items:center;color:#fff;font-size:11px;flex:none}
+  .navApp .dot{margin-left:auto;width:6px;height:6px;border-radius:50%;background:#8a8a8a}
+  .navSub{display:flex;align-items:center;height:30px;padding:0 8px 0 34px;border-radius:8px;color:var(--p-muted);font-size:13px;cursor:pointer;text-decoration:none}
+  .navSub:hover{background:#dedede;color:var(--p-ink)}
+  .navSub.sel{color:var(--p-ink);font-weight:500}
+  .navGap{flex:1}
+  .appmain{flex:1;min-width:0;display:flex;flex-direction:column}
+  .appbar{height:52px;background:#fff;border-bottom:1px solid var(--p-line);display:flex;align-items:center;gap:10px;padding:0 18px}
+  .appbar .logo{width:24px;height:24px;border-radius:6px;background:var(--p-primary);display:grid;place-items:center;color:#fff;font-size:12px}
+  .appbar .name{font-weight:650;font-size:14px}
+  .appbar .more{margin-left:auto;color:var(--p-muted);font-size:20px;cursor:pointer;letter-spacing:1px}
+  .hide{display:none !important}
+  /* several toggled elements carry display:flex, which beats the UA rule for the hidden
+     attribute, so the attribute alone was not hiding them. */
+  [hidden]{display:none !important}
+</style>
+<script>if(/bare/.test(location.search+location.hash))document.documentElement.classList.add("bare");</script>
+<style>html.bare .navL,html.bare .appbar{display:none!important}html.bare .admin{min-height:0}html.bare,html.bare body{background:#f1f1f1}</style>
+</head>
+<body>
+<div class="admin">
+
+  <aside class="navL">
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8.5 10 3l7 5.5V16a1 1 0 0 1-1 1h-3v-5H7v5H4a1 1 0 0 1-1-1z"/></svg>Home</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="13" rx="2"/><path d="M7 8h6M7 11h6"/></svg>Orders<span class="ct">127</span></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h12v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M7 6V5a3 3 0 0 1 6 0v1"/></svg>Products</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="7" r="3"/><path d="M4 16c0-3 2.7-5 6-5s6 2 6 5"/></svg>Customers</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 15V9m4 6V5m4 10v-4m4 4V7"/></svg>Growth</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="3"/><path d="M12 12l4 4M13.5 6.5 16 4"/></svg>Discounts</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="12" rx="2"/><path d="M7 8h6M7 11h4"/></svg>Content</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="6"/><path d="M4 10h12M10 4c2 2 2 10 0 12M10 4c-2 2-2 10 0 12"/></svg>Markets</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 16h12M6 16V9m4 7V5m4 11v-4"/></svg>Analytics</div>
+    <div class="navSec">Sales channels<span class="chev">&#8250;</span></div>
+    <div class="navSec">Apps<span class="chev">&#8250;</span></div>
+    <div class="navApp"><span class="logo">&#9670;</span>StackBack Subscrip&hellip;<span class="dot"></span></div>
+    <!-- Twelve flat items, ordered by data lineage, per the locked IA. Settings is item 11. -->
+    <div class="navSub">Plans</div>
+    <a class="navSub" href="Subscriptions_Polaris_v1.html">Subscriptions</a>
+    <a class="navSub" href="Orders_Polaris_v5.html">Orders</a>
+    <a class="navSub" href="PaymentReminders_Polaris_v6.html">Payment reminders</a>
+    <a class="navSub" href="Inventory_Polaris_v4.html">Inventory</a>
+    <div class="navSub">Customers</div>
+    <div class="navSub" data-goto="widget">Widget</div>
+    <div class="navSub">Portal</div>
+    <div class="navSub">Landing pages</div>
+    <div class="navSub">Analytics</div>
+    <div class="navSub sel">Settings</div>
+    <div class="navSub">Billing</div>
+    <div class="navGap"></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m7-7h-2M5 10H3m12.5-5-1.5 1.5M6 14l-1.5 1.5m11 0L14 14M6 6 4.5 4.5"/></svg>Settings</div>
+  </aside>
+
+  <div class="appmain">
+    <div class="appbar"><span class="logo">&#9670;</span><span class="name">StackBack Subscriptions &amp; More</span><span class="more">&ctdot;</span></div>
+
+    <style>
+      .swrap{padding:0 0 10px}
+
+      /* ----- settings rail. Custom, because Polaris has no settings-rail component. Styled to the
+         same grammar as the Shopify Settings modal that merchants already know. ----- */
+      .setGrid{display:grid;grid-template-columns:208px minmax(0,1fr);gap:18px;align-items:start}
+      @media(max-width:920px){.setGrid{grid-template-columns:1fr}}
+      .rail{background:#fff;border:1px solid var(--p-line);border-radius:12px;padding:8px;position:sticky;top:14px}
+      .railSearch{display:flex;align-items:center;gap:7px;border:1px solid var(--p-line);background:#fff;border-radius:8px;
+        padding:6px 9px;font-size:12.5px;color:var(--p-faint);margin-bottom:6px}
+      .railItem{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:8px;font-size:13px;cursor:pointer;color:var(--p-ink);border:0;background:none;font-family:inherit;width:100%;text-align:left}
+      .railItem:hover{background:#f3f3f3}
+      .railItem.sel{background:#e8e8e8;font-weight:600}
+      .railItem .ct{margin-left:auto;font-size:11.5px;color:var(--p-faint);font-weight:500}
+      .railItem .new{margin-left:auto;font-size:9.5px;font-weight:700;background:#eee6ff;color:#5b21b6;padding:1px 5px;border-radius:4px;letter-spacing:.3px}
+      .railSep{height:1px;background:var(--p-line2);margin:6px 4px}
+
+      .panel[hidden]{display:none}
+      .pHead{margin:0 0 4px;font-size:17px;font-weight:650;letter-spacing:-.2px}
+      .pSub{color:var(--p-muted);font-size:13px;margin:0 0 14px;max-width:660px;line-height:1.6}
+
+      .grpHd{display:flex;align-items:center;gap:9px;padding:0 0 2px}
+      .grpHd .t{font-weight:650;font-size:14px}
+      .grpHd .r{margin-left:auto;display:flex;align-items:center;gap:8px}
+
+      /* one field row. Label and help left, control right, inheritance marker beside the control. */
+      .row{display:flex;align-items:flex-start;gap:12px;padding:11px 0;border-bottom:1px solid var(--p-line2)}
+      .row:last-child{border-bottom:0}
+      .row .lft{flex:1;min-width:0}
+      .row .t{font-size:13px;font-weight:550}
+      .row .h{font-size:12px;color:var(--p-muted);margin-top:2px;line-height:1.5}
+      .row .rgt{flex:none;display:flex;align-items:center;gap:9px;padding-top:1px}
+      .row .path{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;color:var(--p-faint);margin-top:4px}
+
+      /* colour control. Native input, chrome hidden, so it reads as a Polaris swatch. */
+      .col{display:flex;align-items:center;gap:8px}
+      .col input[type=color]{appearance:none;-webkit-appearance:none;border:1px solid var(--p-line);border-radius:7px;
+        width:30px;height:30px;padding:0;background:none;cursor:pointer}
+      .col input[type=color]::-webkit-color-swatch-wrapper{padding:2px}
+      .col input[type=color]::-webkit-color-swatch{border:0;border-radius:5px}
+      .col .hex{font-family:ui-monospace,Menlo,monospace;font-size:12px;border:1px solid var(--p-line);border-radius:7px;
+        padding:5px 8px;width:86px;text-transform:lowercase;color:var(--p-ink);background:#fff}
+      .num{font-size:12.5px;border:1px solid var(--p-line);border-radius:7px;padding:6px 8px;width:74px;text-align:right;background:#fff;color:var(--p-ink);font-family:inherit}
+      .seg{display:inline-flex;border:1px solid var(--p-line);border-radius:8px;overflow:hidden;background:#fff}
+      .seg button{appearance:none;border:0;background:#fff;font:inherit;font-size:12.5px;font-weight:550;padding:6px 11px;cursor:pointer;color:var(--p-muted)}
+      .seg button + button{border-left:1px solid var(--p-line)}
+      .seg button.on{background:var(--p-primary);color:#fff}
+      .selx{font:inherit;font-size:12.5px;border:1px solid var(--p-line);border-radius:8px;padding:6px 9px;background:#fff;color:var(--p-ink);min-width:178px;max-width:100%}
+      .sw{width:34px;height:20px;border-radius:10px;background:#d4d4d4;position:relative;flex:none;cursor:pointer;border:0;padding:0}
+      .sw.on{background:var(--p-primary)}
+      .sw:after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.15s}
+      .sw.on:after{left:16px}
+      .sw[disabled]{opacity:.45;cursor:not-allowed}
+
+      /* several switches that answer ONE question, on one row under one explanation. Carried from
+         the Help Centre widget model, where this was settled on 2026-09-16. */
+      .checks{display:flex;flex-direction:column;gap:7px;align-items:flex-end}
+      .chk{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--p-ink);white-space:nowrap}
+
+      .inh{font-size:10px;font-weight:700;letter-spacing:.3px;padding:2px 6px;border-radius:5px;background:#f0f0f0;color:#7a7a7a}
+      .inh.ov{background:var(--p-attn-bg);color:var(--p-attn)}
+      .inh.lock{background:#efe8ff;color:#5b21b6}
+
+      .ovNote{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--p-attn);background:#fffaf0;
+        border:1px solid #f0e0bd;border-radius:8px;padding:7px 11px;margin:10px 0 0}
+      .ovNote a{color:var(--p-link);text-decoration:none;font-weight:600}
+      .ovNote a:hover{text-decoration:underline}
+
+      /* ----- live storefront preview. Storefront tokens, NOT admin tokens: the palette follows what
+         is being shown, not which screen it sits on (ux-patterns, D2026-0716-12). ----- */
+      /* two-up, carried from the PlanSetup preview pattern: flex with wrap and a min on the
+         left, so the preview drops below the fields rather than crushing them. s-page caps the
+         content column at 966px regardless of window width, so this has to survive that width. */
+      .twoUp{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+      .twoUp .fieldsCol{flex:1 1 400px;min-width:0}
+      .twoUp .prevWrap{flex:0 0 264px}
+      .prevWrap{position:sticky;top:14px}
+      .prevHd{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--p-faint);margin:0 0 8px;display:flex;align-items:center;gap:8px}
+      .prevHd .sb{font-size:9.5px;background:#ededed;color:var(--p-muted);border-radius:5px;padding:1px 6px;letter-spacing:.3px}
+      .sbw{
+        --sb-primary:#0f172a; --sb-accent:#7c3aed; --sb-savings:#16a34a;
+        --sb-bg:#ffffff; --sb-muted:#f8fafc; --sb-border:#e2e8f0; --sb-border-strong:#0f172a;
+        --sb-text:#0f172a; --sb-text-secondary:#64748b; --sb-text-muted:#94a3b8;
+        --sb-radius:12px; --sb-font-scale:1; --sb-warning:#d97706; --sb-warning-subtle:#fef3c7;
+        background:var(--sb-bg);border:1px solid var(--sb-border);border-radius:var(--sb-radius);
+        padding:14px;font-size:calc(13px * var(--sb-font-scale));color:var(--sb-text)}
+      .sbTabs{display:flex;gap:6px;margin-bottom:12px}
+      .sbTab{flex:1;padding:7px 4px;border-radius:calc(var(--sb-radius) - 4px);border:1px solid var(--sb-border);
+        background:var(--sb-muted);color:var(--sb-text-secondary);font-size:calc(11.5px * var(--sb-font-scale));font-weight:600;
+        display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.25;text-align:center}
+      .sbTab.on{background:var(--sb-bg);border-color:var(--sb-border-strong);color:var(--sb-text)}
+      .sbTab.pill{border-radius:999px}
+      .sbTab.underline{border:0;border-bottom:2px solid transparent;border-radius:0;background:none}
+      .sbTab.underline.on{border-bottom-color:var(--sb-primary);background:none}
+      .sbBadge{display:inline-block;font-size:calc(9.5px * var(--sb-font-scale));font-weight:700;white-space:nowrap;
+        padding:1px 5px;border-radius:999px;background:var(--sb-savings);color:#fff}
+      .sbBadge.outline{background:transparent;color:var(--sb-savings);border:1px solid var(--sb-savings)}
+      .sbBadge.minimal{background:transparent;color:var(--sb-savings);padding:1px 0}
+      .sbCard{border:1px solid var(--sb-border);border-radius:calc(var(--sb-radius) - 3px);padding:10px 12px;margin-bottom:8px;background:var(--sb-bg);display:flex;align-items:center;gap:10px}
+      .sbCard.sel{border-color:var(--sb-primary);background:color-mix(in srgb, var(--sb-primary) 6%, var(--sb-bg))}
+      .sbCard.sel.borderonly{background:var(--sb-bg)}
+      .sbRadio{width:15px;height:15px;border-radius:50%;border:1.5px solid var(--sb-border-strong);flex:none;position:relative}
+      .sbCard.sel .sbRadio:after{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--sb-primary)}
+      .sbCard .nm{font-weight:600;font-size:calc(12.5px * var(--sb-font-scale))}
+      .sbCard .sub{color:var(--sb-text-secondary);font-size:calc(11.5px * var(--sb-font-scale));margin-top:1px}
+      .sbCard .pr{margin-left:auto;text-align:right;font-weight:650;font-size:calc(13px * var(--sb-font-scale))}
+      .sbCard .pr small{display:block;font-weight:400;color:var(--sb-text-muted);font-size:calc(10.5px * var(--sb-font-scale))}
+      .sbTag{display:inline-block;font-size:calc(10px * var(--sb-font-scale));font-weight:700;padding:1px 6px;border-radius:999px;
+        background:color-mix(in srgb, var(--sb-accent) 12%, transparent);color:var(--sb-accent);margin-left:6px}
+      .sbShip{display:flex;align-items:center;gap:7px;font-size:calc(11.5px * var(--sb-font-scale));color:var(--sb-warning);
+        background:var(--sb-warning-subtle);border-radius:calc(var(--sb-radius) - 6px);padding:7px 10px;margin:10px 0}
+      .sbCta{display:block;width:100%;text-align:center;padding:11px;border-radius:calc(var(--sb-radius) - 2px);
+        background:var(--sb-primary);color:#fff;font-weight:650;font-size:calc(13px * var(--sb-font-scale));border:1.5px solid var(--sb-primary)}
+      .sbCta.outline{background:transparent;color:var(--sb-primary)}
+      .sbPromo{text-align:center;font-size:calc(11.5px * var(--sb-font-scale));color:var(--sb-savings);margin:0 0 8px}
+      .sbFoot{text-align:center;font-size:calc(10.5px * var(--sb-font-scale));color:var(--sb-text-muted);margin-top:9px}
+
+      /* ----- the override card, the one new component in this spec ----- */
+      .ovEmpty{border:1px dashed #c9c9c9;border-radius:10px;padding:20px;text-align:center;color:var(--p-muted);font-size:12.5px;line-height:1.65}
+      .ovRow{display:flex;align-items:flex-start;gap:14px;padding:12px 0;border-bottom:1px solid var(--p-line2)}
+      .ovRow:last-child{border-bottom:0}
+      .ovRow .lft{flex:1;min-width:0}
+      .ovRow .t{font-weight:600;font-size:13px;display:flex;align-items:center;gap:8px}
+      .ovRow .h{font-size:12px;color:var(--p-muted);margin-top:3px;line-height:1.55}
+      .ovPick{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+
+      .btn{appearance:none;border:1px solid #b5b5b5;background:#fff;border-radius:8px;padding:6px 12px;font:inherit;
+        font-size:12.5px;font-weight:600;cursor:pointer;color:var(--p-ink)}
+      .btn:hover{background:#f6f6f6}
+      .btn.p{background:var(--p-primary);border-color:var(--p-primary);color:#fff}
+      .btn.sm{padding:4px 9px;font-size:12px}
+
+      code.c{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;background:#f2f2f2;padding:1px 5px;border-radius:4px}
+
+      /* ----- route strip. SPEC CHROME, not part of the product. ----- */
+      .routeWrap{background:#1a1a1a;color:#e8e8e8;margin:0;padding:20px 24px 26px}
+      .routeWrap h3{margin:0 0 3px;font-size:13px;font-weight:650;color:#fff;letter-spacing:.1px}
+      .routeWrap .rsub{font-size:12px;color:#9a9a9a;margin:0 0 16px;max-width:820px;line-height:1.6}
+      .rGrid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+      @media(max-width:900px){.rGrid{grid-template-columns:1fr}}
+      .rCol h4{margin:0 0 9px;font-size:10.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#8a8a8a}
+      .rTree{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;line-height:1.95;color:#d4d4d4;
+        background:#232323;border:1px solid #333;border-radius:10px;padding:13px 15px;overflow:auto}
+      .rTree .n{color:#8a8a8a}
+      .rTree .add{color:#7ee0a8}
+      .rTree .gone{color:#f0918a;text-decoration:line-through;opacity:.75}
+      .rTree .kept{color:#d4d4d4}
+      .rNote{font-size:11.5px;color:#9a9a9a;margin-top:10px;line-height:1.65;max-width:620px}
+      .rNote b{color:#e8e8e8;font-weight:640}
+
+      .stageHd{background:#111;color:#fff;padding:9px 24px;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;display:flex;align-items:center;gap:10px}
+      .stageHd .pill{background:#333;color:#c9c9c9;font-size:9.5px;padding:2px 7px;border-radius:5px;letter-spacing:.3px}
+      .stageHd .pill.park{background:#4a3a12;color:#ffd97a}
+    </style>
+
+    <!-- ============================== SCREEN 1: SETTINGS ============================== -->
+    <div class="stageHd">Screen 1 of 2 <span class="pill">Polaris web components</span> <span class="pill park">Parked, net-new, no approved screen in the tracker</span></div>
+
+    <s-page heading="Settings" inline-size="large">
+      <s-button slot="secondary-actions" id="btnDiscard">Discard</s-button>
+      <s-button slot="primary-action" variant="primary" id="btnSave">Save</s-button>
+
+      <div class="swrap">
+        <div class="setGrid">
+
+          <!-- ---------------- rail ---------------- -->
+          <div class="rail">
+            <div class="railSearch">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg>
+              Search settings
+            </div>
+            <button class="railItem sel" data-g="branding">Branding <span class="new">NEW</span></button>
+            <button class="railItem" data-g="selling">Selling <span class="new">NEW</span></button>
+            <div class="railSep"></div>
+            <button class="railItem" data-g="orders">Orders and scheduling</button>
+            <button class="railItem" data-g="payments">Payments</button>
+            <button class="railItem" data-g="shipping">Shipping</button>
+            <button class="railItem" data-g="policies">Policies</button>
+            <div class="railSep"></div>
+            <button class="railItem" data-g="notifs">Customer notifications</button>
+            <button class="railItem" data-g="alerts">Admin alert delivery</button>
+            <button class="railItem" data-g="integrations">Integrations</button>
+          </div>
+
+          <!-- ---------------- body ---------------- -->
+          <div>
+
+            <!-- ============ BRANDING ============ -->
+            <div class="panel" data-p="branding">
+              <h2 class="pHead">Branding</h2>
+              <p class="pSub">How StackBack looks on your product pages, in your customer portal, on your landing pages and in your emails. Set once here and every surface follows. Seventeen tokens, previously stored twice and edited on two screens.</p>
+
+              <div class="twoUp" id="brandGrid">
+                <div class="fieldsCol">
+
+                  <s-section>
+                    <div class="grpHd"><span class="t">Colours</span><span class="r"><span class="inh ov" id="ovColors" hidden>1 PLACEMENT OVERRIDES</span></span></div>
+                    <div id="gColors"></div>
+                    <div class="ovNote" id="noteColors" hidden>
+                      <span>Festive flash overrides this group.</span>
+                      <a href="#widgetScreen" data-goto="widget">Review the override</a>
+                    </div>
+                  </s-section>
+
+                  <s-section>
+                    <div class="grpHd"><span class="t">Surfaces and borders</span></div>
+                    <div id="gSurfaces"></div>
+                  </s-section>
+
+                  <s-section>
+                    <div class="grpHd"><span class="t">Text</span></div>
+                    <div id="gText"></div>
+                  </s-section>
+
+                  <s-section>
+                    <div class="grpHd"><span class="t">Shape and type</span><span class="r"><span class="inh lock">NO OVERRIDE</span></span></div>
+                    <div id="gShape"></div>
+                  </s-section>
+
+                  <s-section>
+                    <div class="grpHd"><span class="t">Component style</span></div>
+                    <div id="gComponents"></div>
+                  </s-section>
+
+                  <s-section>
+                    <div class="grpHd"><span class="t">Status colours</span><span class="r"><s-badge tone="info">New</s-badge></span></div>
+                    <p class="pSub" style="margin:2px 0 6px;font-size:12.5px">Shipping prompts, freebie notices and failure states. These were hardcoded in eleven CSS files and unreachable from any screen. Six of the eight already existed as variables that the CSS did not read.</p>
+                    <div id="gStatus"></div>
+                  </s-section>
+
+                  <s-section>
+                    <div class="grpHd"><span class="t">Portal chrome</span><span class="r"><s-badge>Moved in</s-badge></span></div>
+                    <p class="pSub" style="margin:2px 0 6px;font-size:12.5px">Fonts, logo and the announcement bar, from Portal &rsaquo; Customize. The portal stops being a settings screen.</p>
+                    <div id="gPortal"></div>
+                  </s-section>
+
+                  <s-section>
+                    <div class="grpHd"><span class="t">Removed</span><span class="r"><s-badge tone="critical">3 settings</s-badge></span></div>
+                    <p class="pSub" style="margin:2px 0 0;font-size:12.5px"><code class="c">theme.chrome.borderVisible</code>, <code class="c">theme.chrome.borderColor</code> and <code class="c">theme.chrome.shadow</code> compiled to two CSS variables with zero uses anywhere in the app. They are gone rather than redrawn, because a control that changes nothing is worse than a missing one.</p>
+                  </s-section>
+
+                </div>
+
+                <!-- live preview, storefront tokens -->
+                <div class="prevWrap">
+                  <div class="prevHd">Live preview <span class="sb">Storefront tokens</span></div>
+                  <div class="sbw" id="prev">
+                    <div class="sbTabs" id="pvTabs">
+                      <div class="sbTab" data-t="0">One-time</div>
+                      <div class="sbTab on" data-t="1">Subscribe<span class="sbBadge" id="pvBadge">20%</span></div>
+                      <div class="sbTab" data-t="2">Bundle</div>
+                    </div>
+                    <div class="sbCard sel" id="pvCard1"><span class="sbRadio"></span><span><span class="nm">Every 2 weeks<span class="sbTag">Save</span></span><span class="sub" id="pvSub1">1 delivery every 2 weeks</span></span><span class="pr">&#8377;1,399<small>per delivery</small></span></div>
+                    <div class="sbCard" id="pvCard2"><span class="sbRadio"></span><span><span class="nm">Every month</span><span class="sub" id="pvSub2">1 delivery every month</span></span><span class="pr">&#8377;1,499<small>per delivery</small></span></div>
+                    <div class="sbShip">Free shipping on this plan</div>
+                    <div class="sbPromo" id="pvPromo" hidden></div>
+                    <div class="sbCta" id="pvCta">Subscribe now</div>
+                    <div class="sbFoot" id="pvFoot">Powered by StackBack</div>
+                  </div>
+                  <p style="font-size:11.5px;color:var(--p-faint);margin:9px 2px 0;line-height:1.6">The preview uses the storefront palette, not the admin one. Palette follows what is being shown, never which screen it sits on.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- ============ SELLING ============ -->
+            <div class="panel" data-p="selling" hidden>
+              <h2 class="pHead">Selling</h2>
+              <p class="pSub">What can be bought, how it is paid for, and how prices and plan cards read. Nineteen settings, grouped by what a merchant decides first rather than by which file they live in. Thirteen of these were previously stored in two places at once: eight of those copies did nothing, four quietly disagreed, one could not be switched off.</p>
+
+              <s-section>
+                <div class="grpHd"><span class="t">What can be bought</span><span class="r"><span class="inh ov" id="ovOpens" hidden>1 PLACEMENT OVERRIDES</span></span></div>
+                <div id="gBuy"></div>
+              </s-section>
+
+              <s-section>
+                <div class="grpHd"><span class="t">How it is paid for</span><span class="r"><span class="inh ov" id="ovPay" hidden>1 PLACEMENT OVERRIDES</span></span></div>
+                <div id="gPay"></div>
+              </s-section>
+
+              <s-section>
+                <div class="grpHd"><span class="t">The plan cards</span></div>
+                <div id="gCards"></div>
+              </s-section>
+
+              <s-section>
+                <div class="grpHd"><span class="t">Prices and discounts</span><span class="r"><span class="inh lock">NO OVERRIDE</span></span></div>
+                <div id="gPrice"></div>
+              </s-section>
+
+              <s-section>
+                <div class="grpHd"><span class="t">Checkout and footer</span></div>
+                <div id="gFoot"></div>
+              </s-section>
+            </div>
+
+            <!-- ============ STUB PANELS ============ -->
+            <div class="panel" data-p="orders" hidden><h2 class="pHead">Orders and scheduling</h2><p class="pSub">Order timing, placement mode, PAYG timing, and the net-new out-of-stock policy. Shipped today, unchanged by this spec.</p></div>
+            <div class="panel" data-p="payments" hidden><h2 class="pHead">Payments</h2><p class="pSub">Payment providers, and the Retry failed payments cap that Payment Reminders reads its denominator from. Shipped today, unchanged by this spec.</p></div>
+            <div class="panel" data-p="shipping" hidden><h2 class="pHead">Shipping</h2><p class="pSub">Shipping zones, rate conditions and countries. Partially shipped. Removing the live sync mode has not started.</p></div>
+            <div class="panel" data-p="policies" hidden><h2 class="pHead">Policies</h2><p class="pSub">Cancellation policy, read by the widget policy modal. Shipped today, unchanged by this spec.</p></div>
+            <div class="panel" data-p="notifs" hidden><h2 class="pHead">Customer notifications</h2><p class="pSub">Ten canonical templates on email and WhatsApp. Moved in from its own nav item, per the locked IA.</p></div>
+            <div class="panel" data-p="alerts" hidden><h2 class="pHead">Admin alert delivery</h2><p class="pSub">Which alerts reach the merchant and by which channel. Backend exists, no designed screen yet.</p></div>
+            <div class="panel" data-p="integrations" hidden><h2 class="pHead">Integrations</h2><p class="pSub">WhatsApp Cloud API, SES, and checkout compatibility for GoKwik and Shopflo, which loses the Custom Checkout Adapt name and becomes a status row inside each connection.</p></div>
+
+          </div>
+        </div>
+      </div>
+    </s-page>
+
+    <!-- ROUTE STRIP 1 -->
+    <div class="routeWrap">
+      <h3>The route</h3>
+      <p class="rsub">What the URL tree looks like before and after. The twelve-item nav does not move: every change is inside Settings, plus one card on the three storefront items. Green is added, struck through is removed.</p>
+      <div class="rGrid">
+        <div class="rCol">
+          <h4>Today, in the shipped build</h4>
+          <div class="rTree">
+/app/settings <span class="n">flat, five tabs, no search</span>
+&nbsp;&nbsp;<span class="n">tab</span> order-placement
+&nbsp;&nbsp;<span class="n">tab</span> timing-configs
+&nbsp;&nbsp;<span class="n">tab</span> cancellation-policy
+&nbsp;&nbsp;<span class="n">tab</span> brand-settings <span class="n">logo + 2 colours only</span>
+&nbsp;&nbsp;<span class="n">tab</span> shipping-zones
+
+/app/widgets/:templateKey <span class="n">48 controls</span>
+/app/portal-settings/customize <span class="n">33 of them again</span>
+/app/landing-pages/customize/:id/... <span class="n">per page</span>
+/app/integrations
+/app/custom-checkout-adapt
+          </div>
+        </div>
+        <div class="rCol">
+          <h4>After, grouped rail plus search</h4>
+          <div class="rTree">
+/app/settings <span class="n">redirects to the first group</span>
+&nbsp;&nbsp;<span class="add">/app/settings/branding</span> <span class="n">17 tokens + status + portal chrome</span>
+&nbsp;&nbsp;<span class="add">/app/settings/selling</span> <span class="n">19 settings</span>
+&nbsp;&nbsp;<span class="add">/app/settings/orders</span> <span class="n">was tab order-placement + timing</span>
+&nbsp;&nbsp;<span class="add">/app/settings/payments</span>
+&nbsp;&nbsp;<span class="add">/app/settings/shipping</span> <span class="n">was tab shipping-zones</span>
+&nbsp;&nbsp;<span class="add">/app/settings/policies</span> <span class="n">was tab cancellation-policy</span>
+&nbsp;&nbsp;<span class="add">/app/settings/notifications</span> <span class="n">moved in</span>
+&nbsp;&nbsp;<span class="add">/app/settings/alerts</span> <span class="n">moved in</span>
+&nbsp;&nbsp;<span class="add">/app/settings/integrations</span> <span class="n">moved in, absorbs adapt</span>
+
+<span class="gone">/app/settings tab brand-settings</span>
+<span class="gone">/app/integrations</span>
+<span class="gone">/app/custom-checkout-adapt</span>
+          </div>
+        </div>
+      </div>
+      <p class="rNote"><b>Nine routes, not one route with nine tabs.</b> A group is deep-linkable, which is what makes Settings search useful and what lets an error banner on Home point at the exact group that needs attention. It also means the browser back button works inside Settings, which a tab index in component state does not give you. <b>The three absorbed routes keep working as redirects</b>, because pilot merchants have them bookmarked and support articles link them.</p>
+    </div>
+
+    <!-- ============================== SCREEN 2: WIDGET INSTANCE ============================== -->
+    <div class="stageHd" id="widgetScreen">Screen 2 of 2 <span class="pill">The override card in use</span> <span class="pill park">Parked, net-new</span></div>
+
+    <s-page heading="Subscription purchase options 1" inline-size="large">
+      <s-link slot="breadcrumb-actions" href="#">Widget</s-link>
+      <s-button slot="secondary-actions">Preview</s-button>
+      <s-button slot="primary-action" variant="primary">Save</s-button>
+
+      <div class="swrap">
+        <div class="twoUp">
+          <div class="fieldsCol">
+
+            <s-section>
+              <div class="grpHd"><span class="t">Placement</span></div>
+              <div class="row">
+                <div class="lft"><div class="t">Category</div><div class="h">Decides the render scope and which theme block draws it. Shipped in code as <code class="c">widget-categories.ts</code>, not merchant-editable beyond this choice.</div></div>
+                <div class="rgt"><select class="selx"><option>Subscriptions</option><option>Master</option><option>Bundles</option><option>Mix and match</option><option>Fixed and BxGy</option><option>One-time</option></select></div>
+              </div>
+              <div class="row">
+                <div class="lft"><div class="t">Active on</div><div class="h">14 plans. Products and bundles are covered by their own categories.</div></div>
+                <div class="rgt"><button class="btn">Manage</button></div>
+              </div>
+            </s-section>
+
+            <s-section>
+              <div class="grpHd"><span class="t">Copy and layout</span><span class="r"><span class="inh">THIS WIDGET ONLY</span></span></div>
+              <p class="pSub" style="margin:2px 0 4px;font-size:12.5px">Nine settings that belong to a placement rather than to the store. There is no global control for these and no override, because the leaf is already the right scope.</p>
+              <div id="gPlacement"></div>
+            </s-section>
+
+            <s-section>
+              <div class="grpHd"><span class="t">Overrides</span><span class="r"><span id="ovCount" style="font-size:12px;color:var(--p-muted)">0 of 8 groups</span></span></div>
+              <div id="ovBody"></div>
+            </s-section>
+
+          </div>
+
+          <div class="prevWrap">
+            <div class="prevHd">This widget <span class="sb">Resolved</span></div>
+            <div class="sbw" id="prev2">
+              <div class="sbTabs">
+                <div class="sbTab" >One-time</div>
+                <div class="sbTab on">Subscribe<span class="sbBadge" id="pv2Badge">20%</span></div>
+                <div class="sbTab">Bundle</div>
+              </div>
+              <div class="sbCard sel"><span class="sbRadio"></span><span><span class="nm">Every 2 weeks<span class="sbTag">Save</span></span><span class="sub">1 delivery every 2 weeks</span></span><span class="pr">&#8377;1,399<small>per delivery</small></span></div>
+              <div class="sbCard"><span class="sbRadio"></span><span><span class="nm">Every month</span><span class="sub">1 delivery every month</span></span><span class="pr">&#8377;1,499<small>per delivery</small></span></div>
+              <div class="sbShip">Free shipping on this plan</div>
+              <div class="sbCta">Subscribe now</div>
+              <div class="sbFoot">Powered by StackBack</div>
+            </div>
+            <p style="font-size:11.5px;color:var(--p-faint);margin:9px 2px 0;line-height:1.6" id="prov">Every value resolved from <b>Settings</b>. Take an override and the ones that change are marked here.</p>
+          </div>
+        </div>
+      </div>
+    </s-page>
+
+    <!-- ROUTE STRIP 2 -->
+    <div class="routeWrap">
+      <h3>The route, and what the resolver returns</h3>
+      <p class="rsub">The leaf routes do not change. What changes is what they store: a placement holds its own copy plus any override it has explicitly taken, and nothing else.</p>
+      <div class="rGrid">
+        <div class="rCol">
+          <h4>Leaf routes, unchanged</h4>
+          <div class="rTree">
+<span class="kept">/app/widgets/:templateKey</span>
+&nbsp;&nbsp;<span class="n">stores</span> placement + copy <span class="n">9 keys</span>
+&nbsp;&nbsp;<span class="n">stores</span> overrides <span class="n">0 to 8 groups</span>
+&nbsp;&nbsp;<span class="gone">stores 48 settings</span>
+
+<span class="kept">/app/portal-settings/customize</span>
+&nbsp;&nbsp;<span class="n">stores</span> shop content, nav, CTAs
+&nbsp;&nbsp;<span class="n">stores</span> overrides
+&nbsp;&nbsp;<span class="gone">tab widget, 33 settings</span>
+
+<span class="kept">/app/landing-pages/customize/:id/...</span>
+&nbsp;&nbsp;<span class="n">stores</span> sections, hero, windows
+&nbsp;&nbsp;<span class="n">stores</span> overrides
+&nbsp;&nbsp;<span class="gone">colors / typography / layout</span> <span class="n">0 readers</span>
+          </div>
+        </div>
+        <div class="rCol">
+          <h4>One resolver, four layers, provenance returned</h4>
+          <div class="rTree">
+resolve(shop, surface, placementId)
+&nbsp;&nbsp;<span class="n">=&gt;</span> Record&lt;key, { value, from }&gt;
+
+<span class="n">1</span> widget_templates.default_settings   <span class="n">code</span>
+<span class="n">2</span> <span class="add">shop_settings.brand / .selling</span>       <span class="n">new</span>
+<span class="n">3</span> surface defaults                    <span class="n">reserved</span>
+<span class="n">4</span> shop_widgets / shop_landing_pages   <span class="n">leaf</span>
+
+<span class="n">from:</span> "default" | "brand" | "selling"
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| "surface" | "placement"
+
+<span class="n">nearest layer wins. nothing is OR-ed.</span>
+          </div>
+        </div>
+      </div>
+      <p class="rNote"><b>Returning the layer alongside the value is what makes the admin honest.</b> Every control on both screens renders its INHERITED or OVERRIDDEN marker from <code style="color:#d4d4d4">from</code>, not from a guess, and a storefront debug header can print the same thing. Today, answering "why is this widget purple" means reading four files and knowing which store a given reader picked. <b>Three OR-ed reads disappear here:</b> the three <code style="color:#d4d4d4">data-hide-*</code> theme-block checkboxes and <code style="color:#d4d4d4">group_bundle_variants</code> across both stores. An OR across two sources means one of the two screens is a decoration.</p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* =======================================================================================
+   EDIT HERE. Two maps: the store's resolved settings, and the field definitions per group.
+   Field grammar (kind: checks / matrix / invert / showWhen / gated) is carried from
+   lib/help/widget.ts, settled 2026-09-16, so the admin and the Help Centre speak one language.
+   ======================================================================================= */
+
+var STORE = {
+  // brand, 17 live tokens
+  'colors.primary':'#0f172a', 'colors.subscriptionAccent':'#7c3aed', 'colors.savings':'#16a34a',
+  'surfaces.widgetBackground':'#ffffff', 'surfaces.mutedSurface':'#f8fafc', 'surfaces.inputBackground':'#ffffff',
+  'borders.default':'#e2e8f0', 'borders.strong':'#0f172a',
+  'text.primary':'#0f172a', 'text.secondary':'#64748b', 'text.muted':'#94a3b8',
+  'shape.radius':12, 'typography.fontScale':100,
+  'components.tabStyle':'pill', 'components.ctaButton':'solid',
+  'components.discountBadge':'filled', 'components.selectedCardState':'border-and-fill',
+  // status, new
+  'status.warning':'#d97706', 'status.reward':'#b45309', 'status.danger':'#ef4444',
+  // portal chrome
+  'fonts.body':'Inter', 'fonts.header':'Inter', 'announcement.show':false,
+  // selling, 19
+  'default_intent':'auto', 'hide_intent_selector':false, 'hide_onetime_option':false,
+  'hide_prepaid':false, 'hide_payg':false, 'hide_auto_debit':false, 'default_payment_mode':'prepaid',
+  'schedule_text_format':'cadence', 'card_shows_option_title':false,
+  'tag_shows_per_delivery_price':false, 'freebie_label_shows_value':false,
+  'tab_discount_format':'percentage', 'tab_badge_shows_plan_discount':false,
+  'use_compare_at_price_for_discount_label':false, 'hide_price_decimals':true,
+  'direct_checkout':true, 'hide_free_shipping_line':false, 'promo_line':'', 'hide_branding':false,
+  // placement, 9, shown on screen 2 only
+  'tab_label_subscribe':'', 'tab_label_onetime':'', 'tab_label_bundle':'', 'policy_link_label':'',
+  'hide_product_row':true, 'summary_expanded_by_default':false, 'compare_at_shipping_price':0,
+  'bundle_selector_tabs':false, 'group_bundle_variants':false
+};
+
+/* Which groups a placement may override, and which keys each moves. */
+var GROUPS = {
+  Colors:        {panel:'branding', keys:['colors.primary','colors.subscriptionAccent','colors.savings']},
+  Surfaces:      {panel:'branding', keys:['surfaces.widgetBackground','surfaces.mutedSurface','surfaces.inputBackground','borders.default','borders.strong']},
+  Text:          {panel:'branding', keys:['text.primary','text.secondary','text.muted']},
+  'Component style':{panel:'branding', keys:['components.tabStyle','components.ctaButton','components.discountBadge','components.selectedCardState']},
+  'Purchase modes': {panel:'selling', keys:['hide_prepaid','hide_payg','hide_auto_debit','default_payment_mode']},
+  'Opens on':       {panel:'selling', keys:['default_intent','hide_intent_selector','hide_onetime_option']},
+  'Plan card name': {panel:'selling', keys:['card_shows_option_title']},
+  'Promo line':     {panel:'selling', keys:['promo_line']}
+};
+
+/* Groups deliberately NOT override-eligible, and why. Shown as a locked marker. */
+var LOCKED = {
+  'Shape and type':'One radius and one type scale per store. A placement that differs reads as a bug, not a choice.',
+  'Prices and discounts':'The discount basis and the badge wording are a store fact. Two placements quoting different savings for one product is the defect this refactor exists to remove.'
+};
+
+var OVERRIDES = {};   // groupName -> { key: value }  on the widget instance in screen 2
+
+/* ---------------- field definitions ---------------- */
+function C(key,label,help){ return {kind:'color',key:key,label:label,help:help}; }
+function N(key,label,help,suffix){ return {kind:'num',key:key,label:label,help:help,suffix:suffix}; }
+function SEG(key,label,help,opts){ return {kind:'seg',key:key,label:label,help:help,opts:opts}; }
+function SEL(key,label,help,opts,note){ return {kind:'sel',key:key,label:label,help:help,opts:opts,note:note}; }
+function SW(key,label,help,opts){ var d={kind:'sw',key:key,label:label,help:help}; if(opts) for(var k in opts) d[k]=opts[k]; return d; }
+function TXT(key,label,help){ return {kind:'txt',key:key,label:label,help:help}; }
+function CHK(label,help,checks){ return {kind:'checks',label:label,help:help,checks:checks}; }
+function MTX(label,help,key,matrix){ return {kind:'matrix',label:label,help:help,key:key,matrix:matrix}; }
+
+var FIELDS = {
+  gColors:[
+    C('colors.primary','Primary','Buttons, selected card state, strong borders. Eleven uses in the widget CSS.'),
+    C('colors.subscriptionAccent','Subscription accent','The Save tag and subscription highlights. Five uses.'),
+    C('colors.savings','Savings','Discount badges and savings lines. Nineteen uses, the most-used colour in the product.')
+  ],
+  gSurfaces:[
+    C('surfaces.widgetBackground','Widget background','The card the widget sits on. Twenty-one uses.'),
+    C('surfaces.mutedSurface','Muted surface','Unselected tabs and secondary panels. Twenty-seven uses.'),
+    C('surfaces.inputBackground','Input background','Only two uses. Worth asking whether this earns a control at all.'),
+    C('borders.default','Border','Twenty-six uses. Five of them currently fall back to a different grey, which is a bug, not a second token.'),
+    C('borders.strong','Strong border','The selected card outline. Seven uses.')
+  ],
+  gText:[
+    C('text.primary','Primary text','Plan names, prices, headings. Twenty-five uses.'),
+    C('text.secondary','Secondary text','Schedule lines and supporting copy. Twenty-four uses.'),
+    C('text.muted','Muted text','Per-delivery captions and footer. Eighteen uses.')
+  ],
+  gShape:[
+    N('shape.radius','Corner radius','Sets four derived radii: buttons, inputs and small chips step down from this. Leave it empty and the field currently saves 0, which squares every corner in the product.','px'),
+    N('typography.fontScale','Type scale','Seventy-three uses, the single highest-leverage token in the widget. Leave it empty and the field currently saves 0, which makes every price and label invisible.','%')
+  ],
+  gComponents:[
+    SEG('components.tabStyle','Tabs','',[['pill','Pill'],['underline','Underline'],['flat','Flat']]),
+    SEG('components.ctaButton','Call to action','Outline needs a data-cta-style ancestor, which the portal drawer does not currently provide, so it has no effect there until the drawer CTA goes through the widget path.',[['solid','Solid'],['outline','Outline']]),
+    SEG('components.discountBadge','Discount badge','',[['filled','Filled'],['outline','Outline'],['minimal','Minimal']]),
+    SEG('components.selectedCardState','Selected card','',[['border-and-fill','Border and fill'],['border-only','Border only']])
+  ],
+  gStatus:[
+    C('status.warning','Warning','Shipping prompts and incomplete states. Already exists as --sb-alert-warning with an exact hex match in four CSS files that hardcode it instead.'),
+    C('status.reward','Reward','Freebie and tier-unlocked notices. Already exists as --sb-alert-reward, hardcoded in three places.'),
+    C('status.danger','Danger','Failed payment and over-limit. Genuinely new, replacing three literals.')
+  ],
+  gPortal:[
+    SEL('fonts.body','Body font','Also sets the portal drawer widget font, because the widget inherits the portal root.',[['Inter','Inter'],['Kumbh Sans','Kumbh Sans'],['Roboto','Roboto'],['Poppins','Poppins'],['Open Sans','Open Sans'],['Lato','Lato'],['Montserrat','Montserrat']]),
+    SEL('fonts.header','Heading font','',[['Inter','Inter'],['Kumbh Sans','Kumbh Sans'],['Roboto','Roboto'],['Poppins','Poppins'],['Open Sans','Open Sans'],['Lato','Lato'],['Montserrat','Montserrat']]),
+    SW('announcement.show','Announcement bar','A strip across the top of the customer portal. Text and colours appear once this is on.')
+  ],
+
+  /* ---- selling ---- */
+  gBuy:[
+    SEL('default_intent','Opens on','Which tab is pre-selected when the widget loads. Auto takes subscribe, then bundle, then one-time. A mode the product does not offer falls back to auto.',
+      [['auto','Auto: first mode offered'],['subscribe','Subscribe and Save'],['bundle','Bundle and Save'],['onetime','One-time']]),
+    CHK('Tabs the customer sees','Without the bar the customer sees only the mode above and cannot switch. Without One-time the product is subscription-only, and that is ignored when one-time is the only mode there is, so it can never become unbuyable.',
+      [['hide_intent_selector','The tab bar itself',true],['hide_onetime_option','One-time',true]])
+  ],
+  gPay:[
+    CHK('Methods on the widget','Prepaid is paid in full at checkout, pay as you go sends a link before every delivery, pay per delivery charges automatically. Each is ignored for a plan whose every schedule is that one mode, and AutoPay is already hidden on its own when Razorpay is not connected.',
+      [['hide_prepaid','Prepaid',true],['hide_payg','Pay as you go',true],['hide_auto_debit','Pay per delivery (AutoPay)',true]]),
+    SEL('default_payment_mode','Preselected when several are offered','Falls back to whichever mode is actually offered.',
+      [['prepaid','Prepaid'],['pay_as_you_go','Pay as you go'],['auto_debit','Pay per delivery (AutoPay)']],
+      'AutoPay is not in the stored enum yet. The field takes prepaid or pay_as_you_go, so this needs a product change before it can be set on a store.')
+  ],
+  gCards:[
+    SEL('schedule_text_format','Second line on a card','Build-your-own cards ignore cadence, but none hides their line too.',
+      [['frequency-deliveries','Every 2 weeks, 6 deliveries'],['cadence','1 delivery every 2 weeks'],['none','No second line']]),
+    SW('card_shows_option_title','Use the option title as the plan name','Worth it when your plan names mean something to the customer.'),
+    SW('tag_shows_per_delivery_price','Show the per-delivery price on the tag','Replaces your tag label with that option’s discounted per-delivery price, on every subscription option including untagged ones. Bundle cards are unaffected.'),
+    SW('freebie_label_shows_value','Advertise freebies by value, not count','Worth ₹1,200 rather than 3 free gifts, summed across every delivery. Falls back to the count when a gift price cannot be read.')
+  ],
+  gPrice:[
+    MTX('The badge on the Subscribe tab reads','Extra is for a store already running a sitewide sale, so the subscription saving reads as on top of it. Only this badge changes; the cards keep their own basis.','__badge',
+      [['up-pct','Up to 20% off',{'tab_discount_format':'percentage','tab_badge_shows_plan_discount':false}],
+       ['up-amt','Up to ₹200 off',{'tab_discount_format':'amount','tab_badge_shows_plan_discount':false}],
+       ['extra-pct','Extra 20% off',{'tab_discount_format':'percentage','tab_badge_shows_plan_discount':true}],
+       ['extra-amt','Extra ₹200 off',{'tab_discount_format':'amount','tab_badge_shows_plan_discount':true}]]),
+    SW('use_compare_at_price_for_discount_label','Calculate savings off the compare-at price','Widens the displayed saving. Single-product subscriptions only, and it falls back to the selling price when compare-at is missing or lower.'),
+    SW('hide_price_decimals','Show price decimals','Off truncates rather than rounds, so 1,399.99 shows as 1,399. Leave decimals on unless your prices are whole numbers.',{invert:true})
+  ],
+  gFoot:[
+    SW('direct_checkout','Skip the cart and go straight to Shopify checkout','Fewer steps, and no chance to add anything else. Portal drawers and edit flows are unaffected.'),
+    SW('hide_free_shipping_line','Say so when shipping is free','Turn off if free shipping is already said elsewhere on the page. A plan whose shipping actually costs something still shows its line either way.',{invert:true}),
+    TXT('promo_line','Promo line','One line above the button, on every purchase option, so the copy has to read true on all of them. Empty means the row does not render.'),
+    SW('hide_branding','Show "Powered by StackBack"','Removing the credit is a plan entitlement, not a preference. Available from the Scale band up.',{invert:true,gated:true})
+  ],
+
+  /* ---- placement only, screen 2 ---- */
+  gPlacement:[
+    TXT('tab_label_subscribe','Subscribe tab label','Empty keeps the built-in label and its accented Save. A custom label currently loses the accent, which is worth fixing while the field is being moved.'),
+    TXT('tab_label_onetime','One-time tab label','Empty keeps the built-in label.'),
+    TXT('tab_label_bundle','Bundle tab label','Empty keeps the built-in label.'),
+    TXT('policy_link_label','Policy link label','Footer copy. The footer is theme-block only, so this never renders in the portal drawer.'),
+    SW('hide_product_row','Show the product row','Image, title and quantity stepper. Off fixes quantity at 1. The drawer answers this differently because it draws its own header, so it is a fact of the placement.',{invert:true}),
+    SW('summary_expanded_by_default','Open the price breakdown by default','The drawer never passes this through today, so it is always collapsed there regardless.'),
+    N('compare_at_shipping_price','Compare-at shipping price','What shipping would normally cost, struck through beside what you charge. Store currency, not cents. Only renders where shipping is actually charged, and 0 hides it.','₹'),
+    CHK('Bundles','Tabs apply when a variant belongs to several bundles of the same type. Grouping combines variants of one product into a single row with a variant picker. Both are mix-and-match only, so they do not appear on other categories.',
+      [['bundle_selector_tabs','Show the bundle choice as tabs, not a dropdown',false],['group_bundle_variants','Group products by variant',false]])
+  ]
+};
+
+/* ======================= render ======================= */
+function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+function get(k){ return STORE[k]; }
+
+function fieldHTML(d){
+  var help = d.help ? '<div class="h">'+d.help+(d.note?' <b style="color:var(--p-attn)">'+d.note+'</b>':'')+'</div>' : '';
+  var ctl='', path='';
+
+  if(d.kind==='color'){
+    ctl = '<div class="col"><input type="color" value="'+get(d.key)+'" data-k="'+d.key+'"><input class="hex" value="'+get(d.key)+'" data-hex="'+d.key+'"></div>';
+    path = 'theme.'+d.key;
+  } else if(d.kind==='num'){
+    ctl = '<input class="num" type="number" value="'+get(d.key)+'" data-k="'+d.key+'"><span style="font-size:12px;color:var(--p-faint)">'+(d.suffix||'')+'</span>';
+    path = d.key.indexOf('.')>0 ? 'theme.'+d.key : d.key;
+  } else if(d.kind==='seg'){
+    ctl = '<div class="seg">'+d.opts.map(function(o){
+      return '<button data-k="'+d.key+'" data-v="'+o[0]+'" class="'+(get(d.key)===o[0]?'on':'')+'">'+o[1]+'</button>';
+    }).join('')+'</div>';
+    path = 'theme.'+d.key;
+  } else if(d.kind==='sel'){
+    ctl = '<select class="selx" data-k="'+d.key+'">'+d.opts.map(function(o){
+      return '<option value="'+o[0]+'"'+(get(d.key)===o[0]?' selected':'')+'>'+o[1]+'</option>';
+    }).join('')+'</select>';
+    path = d.key;
+  } else if(d.kind==='sw'){
+    var on = d.invert ? !get(d.key) : !!get(d.key);
+    ctl = '<button class="sw '+(on?'on':'')+'" data-k="'+d.key+'"'+(d.invert?' data-inv="1"':'')+(d.gated?' disabled':'')+'></button>'
+        + (d.gated?'<span class="inh lock">SCALE PLAN</span>':'');
+    path = d.key;
+  } else if(d.kind==='txt'){
+    ctl = '<input class="hex" style="width:210px;font-family:inherit;text-transform:none" value="'+esc(get(d.key))+'" data-k="'+d.key+'" placeholder="Empty">';
+    path = d.key;
+  } else if(d.kind==='checks'){
+    ctl = '<div class="checks">'+d.checks.map(function(c){
+      var on = c[2] ? !get(c[0]) : !!get(c[0]);
+      return '<label class="chk">'+c[1]+'<button class="sw '+(on?'on':'')+'" data-k="'+c[0]+'"'+(c[2]?' data-inv="1"':'')+'></button></label>';
+    }).join('')+'</div>';
+    path = d.checks.map(function(c){return c[0];}).join('  ');
+  } else if(d.kind==='matrix'){
+    var cur = d.matrix.filter(function(m){
+      return Object.keys(m[2]).every(function(k){ return STORE[k]===m[2][k]; });
+    })[0] || d.matrix[0];
+    ctl = '<select class="selx" data-mtx="1">'+d.matrix.map(function(m){
+      return '<option value="'+m[0]+'"'+(m===cur?' selected':'')+'>'+m[1]+'</option>';
+    }).join('')+'</select>';
+    path = Object.keys(d.matrix[0][2]).join('  ');
+    window.__MTX = window.__MTX || {}; window.__MTX[d.label] = d.matrix;
+  }
+
+  return '<div class="row"><div class="lft"><div class="t">'+(d.label)+'</div>'+help
+       + '<div class="path">'+esc(path)+'</div></div>'
+       + '<div class="rgt">'+ctl+'</div></div>';
+}
+
+function renderFields(){
+  Object.keys(FIELDS).forEach(function(id){
+    var el = document.getElementById(id);
+    if(el) el.innerHTML = FIELDS[id].map(fieldHTML).join('');
+  });
+  paintPreview();
+}
+
+/* ------- live preview ------- */
+function paintPreview(){
+  ['prev','prev2'].forEach(function(id){
+    var p = document.getElementById(id); if(!p) return;
+    var src = (id==='prev2') ? resolvedForWidget() : STORE;
+    p.style.setProperty('--sb-primary', src['colors.primary']);
+    p.style.setProperty('--sb-accent', src['colors.subscriptionAccent']);
+    p.style.setProperty('--sb-savings', src['colors.savings']);
+    p.style.setProperty('--sb-bg', src['surfaces.widgetBackground']);
+    p.style.setProperty('--sb-muted', src['surfaces.mutedSurface']);
+    p.style.setProperty('--sb-border', src['borders.default']);
+    p.style.setProperty('--sb-border-strong', src['borders.strong']);
+    p.style.setProperty('--sb-text', src['text.primary']);
+    p.style.setProperty('--sb-text-secondary', src['text.secondary']);
+    p.style.setProperty('--sb-text-muted', src['text.muted']);
+    p.style.setProperty('--sb-radius', (src['shape.radius']||0)+'px');
+    p.style.setProperty('--sb-font-scale', (src['typography.fontScale']||0)/100);
+    p.style.setProperty('--sb-warning', src['status.warning']);
+
+    var tabs = p.querySelectorAll('.sbTab');
+    for(var i=0;i<tabs.length;i++){
+      tabs[i].classList.remove('pill','underline');
+      if(src['components.tabStyle']==='pill') tabs[i].classList.add('pill');
+      if(src['components.tabStyle']==='underline') tabs[i].classList.add('underline');
+    }
+    var cta = p.querySelector('.sbCta');
+    if(cta) cta.classList.toggle('outline', src['components.ctaButton']==='outline');
+    var cards = p.querySelectorAll('.sbCard');
+    for(var j=0;j<cards.length;j++) cards[j].classList.toggle('borderonly', src['components.selectedCardState']==='border-only');
+    var bg = p.querySelector('.sbBadge');
+    if(bg){
+      bg.className = 'sbBadge' + (src['components.discountBadge']==='outline'?' outline':src['components.discountBadge']==='minimal'?' minimal':'');
+      var amt = src['tab_discount_format']==='amount' ? '₹200' : '20%';
+      bg.textContent = (src['tab_badge_shows_plan_discount'] ? 'Extra ' : 'Up to ') + amt + ' off';
+    }
+    var foot = p.querySelector('.sbFoot');
+    if(foot) foot.hidden = !!src['hide_branding'];
+    var ship = p.querySelector('.sbShip');
+    if(ship) ship.hidden = !!src['hide_free_shipping_line'];
+  });
+
+  // schedule line + promo, screen 1 only
+  var fmt = STORE['schedule_text_format'];
+  var s1 = document.getElementById('pvSub1'), s2 = document.getElementById('pvSub2');
+  if(s1){
+    s1.textContent = fmt==='none' ? '' : fmt==='cadence' ? '1 delivery every 2 weeks' : 'Every 2 weeks, 6 deliveries';
+    s2.textContent = fmt==='none' ? '' : fmt==='cadence' ? '1 delivery every month' : 'Every month, 6 deliveries';
+  }
+  var pr = document.getElementById('pvPromo');
+  if(pr){ pr.hidden = !STORE['promo_line']; pr.textContent = STORE['promo_line']; }
+
+  // tab bar visibility
+  var tb = document.getElementById('pvTabs');
+  if(tb) tb.hidden = !!STORE['hide_intent_selector'];
+  var ot = tb && tb.querySelector('[data-t="0"]');
+  if(ot) ot.hidden = !!STORE['hide_onetime_option'];
+}
+
+/* ------- overrides, screen 2 ------- */
+function resolvedForWidget(){
+  var out = {}; for(var k in STORE) out[k]=STORE[k];
+  Object.keys(OVERRIDES).forEach(function(g){
+    var o = OVERRIDES[g]; for(var k in o) out[k]=o[k];
+  });
+  return out;
+}
+
+function renderOverrides(){
+  var body = document.getElementById('ovBody'); if(!body) return;
+  var taken = Object.keys(OVERRIDES);
+  var avail = Object.keys(GROUPS).filter(function(g){ return taken.indexOf(g)<0; });
+
+  var html = '';
+  if(!taken.length){
+    html += '<div class="ovEmpty">Inheriting all <b>36 settings</b> from Settings &rsaquo; Branding and Settings &rsaquo; Selling.'
+          + '<div style="margin-top:12px">' + pickerHTML(avail) + '</div></div>';
+  } else {
+    html += taken.map(function(g){
+      var keys = GROUPS[g].keys;
+      var vals = keys.map(function(k){
+        var v = OVERRIDES[g][k];
+        return typeof v==='boolean' ? (k+' '+v) : (k.split('.').pop()+' '+v);
+      }).join(', ');
+      return '<div class="ovRow"><div class="lft"><div class="t">'+g+' <span class="inh ov">OVERRIDDEN</span></div>'
+           + '<div class="h">'+esc(vals)+'</div></div>'
+           + '<div class="rgt"><button class="btn sm" data-reset="'+g+'">Reset to store</button></div></div>';
+    }).join('');
+    html += '<div class="ovRow"><div class="lft"><div class="t" style="color:var(--p-faint);font-weight:500">'+avail.join(', ')+'</div>'
+          + '<div class="h"><span class="inh">INHERITED</span> from Settings</div></div>'
+          + '<div class="rgt">'+pickerHTML(avail)+'</div></div>';
+  }
+  body.innerHTML = html;
+
+  document.getElementById('ovCount').textContent = taken.length + ' of ' + Object.keys(GROUPS).length + ' groups';
+
+  // reflect back onto the Settings group headers
+  [['Colors','ovColors','noteColors'],['Opens on','ovOpens',null],['Purchase modes','ovPay',null]].forEach(function(t){
+    var on = taken.indexOf(t[0])>=0;
+    var b = document.getElementById(t[1]); if(b) b.hidden = !on;
+    if(t[2]){ var n = document.getElementById(t[2]); if(n) n.hidden = !on; }
+  });
+
+  var prov = document.getElementById('prov');
+  if(prov){
+    prov.innerHTML = taken.length
+      ? 'Resolved from <b>Settings</b>, with <b>'+taken.length+'</b> group'+(taken.length>1?'s':'')+' taken from this placement: '+esc(taken.join(', '))+'.'
+      : 'Every value resolved from <b>Settings</b>. Take an override and the ones that change are marked here.';
+  }
+  paintPreview();
+}
+
+function pickerHTML(avail){
+  if(!avail.length) return '<span style="font-size:12px;color:var(--p-faint)">All eight groups overridden</span>';
+  return '<span class="ovPick"><select class="selx" id="ovPick" style="min-width:170px">'
+       + avail.map(function(g){ return '<option>'+g+'</option>'; }).join('')
+       + '</select><button class="btn" id="ovAdd">Override this group</button></span>';
+}
+
+/* A demo override, so the effect is visible rather than described. Flash-sale red and amber,
+   the palette the savings-liner work already landed on. */
+var DEMO = {
+  Colors:{'colors.primary':'#b42318','colors.subscriptionAccent':'#e3a23e','colors.savings':'#3b6d11'},
+  Surfaces:{'surfaces.widgetBackground':'#fffaf3','surfaces.mutedSurface':'#f4f0e8','surfaces.inputBackground':'#ffffff','borders.default':'#e8dfd0','borders.strong':'#b42318'},
+  Text:{'text.primary':'#2b2b2b','text.secondary':'#6b6459','text.muted':'#9a9486'},
+  'Component style':{'components.tabStyle':'underline','components.ctaButton':'solid','components.discountBadge':'outline','components.selectedCardState':'border-only'},
+  'Purchase modes':{'hide_prepaid':false,'hide_payg':true,'hide_auto_debit':true,'default_payment_mode':'prepaid'},
+  'Opens on':{'default_intent':'subscribe','hide_intent_selector':false,'hide_onetime_option':true},
+  'Plan card name':{'card_shows_option_title':true},
+  'Promo line':{'promo_line':'Festive week: free shipping on every delivery'}
+};
+
+/* ======================= wiring ======================= */
+document.addEventListener('input', function(e){
+  var t = e.target, k = t.getAttribute('data-k');
+  if(k){
+    var v = t.type==='number' ? Number(t.value) : t.value;
+    STORE[k] = v;
+    if(t.type==='color'){
+      var hx = document.querySelector('[data-hex="'+k+'"]'); if(hx) hx.value = v;
+    }
+    paintPreview();
+    return;
+  }
+  var hk = t.getAttribute('data-hex');
+  if(hk && /^#[0-9a-f]{6}$/i.test(t.value)){
+    STORE[hk] = t.value.toLowerCase();
+    var cp = document.querySelector('input[type=color][data-k="'+hk+'"]'); if(cp) cp.value = STORE[hk];
+    paintPreview();
+  }
+});
+
+document.addEventListener('change', function(e){
+  var t = e.target;
+  if(t.hasAttribute && t.hasAttribute('data-mtx')){
+    var row = t.closest('.row'), label = row.querySelector('.t').textContent;
+    var m = (window.__MTX||{})[label] || [];
+    var hit = m.filter(function(x){ return x[0]===t.value; })[0];
+    if(hit){ for(var k in hit[2]) STORE[k]=hit[2][k]; paintPreview(); }
+  }
+});
+
+document.addEventListener('click', function(e){
+  var b = e.target.closest('button'); if(!b) return;
+
+  // rail
+  if(b.classList.contains('railItem')){
+    document.querySelectorAll('.railItem').forEach(function(x){ x.classList.toggle('sel', x===b); });
+    document.querySelectorAll('.panel').forEach(function(p){ p.hidden = p.dataset.p !== b.dataset.g; });
+    return;
+  }
+  // segmented
+  if(b.parentElement && b.parentElement.classList.contains('seg')){
+    STORE[b.dataset.k] = b.dataset.v;
+    b.parentElement.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x===b); });
+    paintPreview(); return;
+  }
+  // switch
+  if(b.classList.contains('sw') && !b.disabled){
+    var on = !b.classList.contains('on');
+    b.classList.toggle('on', on);
+    STORE[b.dataset.k] = b.hasAttribute('data-inv') ? !on : on;
+    paintPreview(); return;
+  }
+  // override add / reset
+  if(b.id==='ovAdd'){
+    var g = document.getElementById('ovPick').value;
+    OVERRIDES[g] = DEMO[g];
+    renderOverrides(); return;
+  }
+  var rg = b.getAttribute('data-reset');
+  if(rg){ delete OVERRIDES[rg]; renderOverrides(); return; }
+});
+
+document.addEventListener('click', function(e){
+  var g = e.target.closest('[data-goto]');
+  if(g){ e.preventDefault(); document.getElementById('widgetScreen').scrollIntoView({behavior:'smooth'}); }
+});
+
+renderFields();
+renderOverrides();
+</script>
+</body>
+</html>

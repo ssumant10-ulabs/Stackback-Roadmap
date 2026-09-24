@@ -1,0 +1,1161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Branding, Storefront widgets, Customer portal (Polaris v2)</title>
+<script src="https://cdn.shopify.com/shopifycloud/polaris.js"></script>
+<style>
+  :root{
+    --p-ink:#303030; --p-muted:#616161; --p-faint:#8a8a8a;
+    --p-line:#e3e3e3; --p-line2:#ebebeb; --p-surface:#fff; --p-sunken:#f7f7f7;
+    --p-primary:#303030; --p-success:#29845a; --p-success-bg:#cdfee1;
+    --p-link:#005bd3; --p-attn-bg:#ffefcf; --p-attn:#8a6116;
+    --p-crit:#8e1f0b; --p-crit-bg:#fedad1; --p-info-bg:#eaf4ff; --p-info:#00527c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#f1f1f1;font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--p-ink)}
+  html{scrollbar-gutter:stable;overflow-x:clip}
+  [hidden]{display:none !important}
+
+  .admin{display:flex;min-height:100vh}
+  .navL{flex:none;width:232px;background:#ebebeb;border-right:1px solid var(--p-line);padding:10px 8px;display:flex;flex-direction:column;gap:1px;position:sticky;top:0;align-self:flex-start;height:100vh;overflow:auto}
+  .navItem{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;color:var(--p-ink);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
+  .navItem:hover{background:#dedede}
+  .navItem .ico{width:18px;height:18px;flex:none;color:#4a4a4a}
+  .navItem .ct{margin-left:auto;font-size:12px;color:var(--p-muted);background:#e0e0e0;border-radius:8px;padding:0 7px;line-height:18px}
+  .navSec{color:var(--p-muted);font-size:13px;font-weight:500;display:flex;align-items:center;height:30px;padding:0 8px;margin-top:6px}
+  .navSec .chev{margin-left:auto;color:var(--p-faint)}
+  .navApp{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;font-weight:600;background:#fff;box-shadow:0 1px 0 rgba(0,0,0,.04);margin-top:2px}
+  .navApp .logo{width:20px;height:20px;border-radius:5px;background:var(--p-primary);display:grid;place-items:center;color:#fff;font-size:11px;flex:none}
+  .navApp .dot{margin-left:auto;width:6px;height:6px;border-radius:50%;background:#8a8a8a}
+  .navSub{display:flex;align-items:center;height:30px;padding:0 8px 0 34px;border-radius:8px;color:var(--p-muted);font-size:13px;cursor:pointer;text-decoration:none;border:0;background:none;font-family:inherit;width:100%;text-align:left}
+  .navSub:hover{background:#dedede;color:var(--p-ink)}
+  .navSub.sel{color:var(--p-ink);font-weight:600;background:#e0e0e0}
+  .navSub .nu{margin-left:auto;font-size:9px;font-weight:700;background:#eee6ff;color:#5b21b6;padding:1px 5px;border-radius:4px;letter-spacing:.3px}
+  .navGap{flex:1}
+  .appmain{flex:1;min-width:0;display:flex;flex-direction:column}
+  .appbar{height:52px;background:#fff;border-bottom:1px solid var(--p-line);display:flex;align-items:center;gap:10px;padding:0 18px}
+  .appbar .logo{width:24px;height:24px;border-radius:6px;background:var(--p-primary);display:grid;place-items:center;color:#fff;font-size:12px}
+  .appbar .name{font-weight:650;font-size:14px}
+  .appbar .more{margin-left:auto;color:var(--p-muted);font-size:20px;cursor:pointer;letter-spacing:1px}
+</style>
+<script>if(/bare/.test(location.search+location.hash))document.documentElement.classList.add("bare");</script>
+<style>html.bare .navL,html.bare .appbar{display:none!important}html.bare .admin{min-height:0}html.bare,html.bare body{background:#f1f1f1}</style>
+</head>
+<body>
+<div class="admin">
+
+  <aside class="navL">
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8.5 10 3l7 5.5V16a1 1 0 0 1-1 1h-3v-5H7v5H4a1 1 0 0 1-1-1z"/></svg>Home</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="13" rx="2"/><path d="M7 8h6M7 11h6"/></svg>Orders<span class="ct">127</span></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h12v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M7 6V5a3 3 0 0 1 6 0v1"/></svg>Products</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="7" r="3"/><path d="M4 16c0-3 2.7-5 6-5s6 2 6 5"/></svg>Customers</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 15V9m4 6V5m4 10v-4m4 4V7"/></svg>Growth</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="3"/><path d="M12 12l4 4M13.5 6.5 16 4"/></svg>Discounts</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="12" rx="2"/><path d="M7 8h6M7 11h4"/></svg>Content</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 16h12M6 16V9m4 7V5m4 11v-4"/></svg>Analytics</div>
+    <div class="navSec">Sales channels<span class="chev">&#8250;</span></div>
+    <div class="navSec">Apps<span class="chev">&#8250;</span></div>
+    <div class="navApp"><span class="logo">&#9670;</span>StackBack Subscrip&hellip;<span class="dot"></span></div>
+
+    <!-- Twelve items become twelve still: Branding is new and sits above the three surfaces,
+         Widget + Section merge into Storefront widgets, Landing pages + Portal merge into
+         Customer portal. Net zero, and one fewer place to look for a colour. -->
+    <button class="navSub" data-nav="plans">Plans</button>
+    <button class="navSub" data-nav="subs">Subscriptions</button>
+    <button class="navSub" data-nav="orders">Orders</button>
+    <button class="navSub" data-nav="pay">Payment reminders</button>
+    <button class="navSub" data-nav="inv">Inventory</button>
+    <button class="navSub" data-nav="cust">Customers</button>
+    <button class="navSub sel" data-nav="branding">Store defaults</button>
+    <button class="navSub" data-nav="storefront">Widgets &amp; sections</button>
+    <button class="navSub" data-nav="portal">Portal &amp; pages</button>
+    <button class="navSub" data-nav="analytics">Analytics</button>
+    <button class="navSub" data-nav="settings">Settings</button>
+    <button class="navSub" data-nav="billing">Billing</button>
+    <div class="navGap"></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m7-7h-2M5 10H3m12.5-5-1.5 1.5M6 14l-1.5 1.5m11 0L14 14M6 6 4.5 4.5"/></svg>Settings</div>
+  </aside>
+
+  <div class="appmain">
+    <div class="appbar"><span class="logo">&#9670;</span><span class="name">StackBack Subscriptions &amp; More</span><span class="more">&ctdot;</span></div>
+
+    <style>
+      .wrap{padding:0 0 16px}
+      .two{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+      .two .main{flex:1 1 420px;min-width:0}
+      .two .side{flex:0 0 290px;position:sticky;top:12px}
+      .pHead{margin:0 0 3px;font-size:17px;font-weight:650;letter-spacing:-.2px}
+      .pSub{color:var(--p-muted);font-size:13px;margin:0 0 14px;line-height:1.6}
+      .scr[hidden]{display:none}
+
+      .gHd{display:flex;gap:8px;align-items:baseline;margin:0 0 8px;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+      .gHd em{font-style:normal;font-weight:600;color:var(--p-faint)}
+      .gHd .rt{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:500}
+
+      .tgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 16px;align-items:start}
+      .tgrid > .wide{grid-column:1 / -1}
+      @media(max-width:1199px){.tgrid{grid-template-columns:minmax(0,1fr)}}
+      .tg{display:flex;gap:10px;align-items:flex-start;padding:9px 8px;margin:0;cursor:pointer;border-radius:8px;min-width:0}
+      .tg:hover{background:var(--p-sunken)}
+      .tg.wide{display:block}
+      .tg > input{margin-top:1px;accent-color:var(--p-primary);flex:none;width:16px;height:16px;cursor:pointer}
+      .tg > span,.tg .lbl{font-size:12.5px;font-weight:620;line-height:1.45;display:block;min-width:0}
+      .tg.locked{opacity:.62;cursor:not-allowed}
+      .tg select,.tg input[type=text],.tg input[type=number]{display:block;width:100%;margin-top:6px;appearance:none;font:inherit;font-size:12.5px;padding:7px 9px;border:1px solid #b5b5b5;border-radius:8px;background:#fff;color:var(--p-ink)}
+      .checkrow{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:7px}
+      .checkrow label{display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--p-muted)}
+      .checkrow input{accent-color:var(--p-primary);width:16px;height:16px;flex:none;cursor:pointer}
+
+      .tip{position:relative;display:inline-flex;vertical-align:middle;margin-left:6px}
+      .tipb{appearance:none;border:1px solid #b5b5b5;background:#fff;color:var(--p-faint);width:15px;height:15px;border-radius:50%;padding:0;cursor:help;font:inherit;font-size:10px;font-weight:700;font-style:italic;line-height:1;display:flex;align-items:center;justify-content:center}
+      .tipb:hover,.tip:focus-within .tipb{border-color:var(--p-primary);color:var(--p-primary)}
+      /* Fixed, not absolute. An s-section is a web component and a card clips its overflow,
+         so an absolutely positioned box was being cut off in half the places it appeared.
+         Position is written by JS on hover, which is the only way to escape every ancestor. */
+      .tipbox{position:fixed;left:0;top:0;width:max-content;max-width:300px;z-index:9999;background:#1a1a1a;color:#fff;border-radius:9px;padding:10px 12px;font-size:12px;font-weight:450;line-height:1.55;text-transform:none;letter-spacing:0;box-shadow:0 10px 30px rgba(0,0,0,.32);opacity:0;visibility:hidden;transition:opacity .12s;pointer-events:none}
+      .tip.open .tipbox{opacity:1;visibility:visible}
+      .tipbox b{display:block;margin-top:6px;font-weight:700;color:#ffd97a}
+      .tipbox i{display:block;margin-top:6px;font-style:normal;font-family:ui-monospace,Menlo,monospace;font-size:10.5px;opacity:.6}
+
+      .fetch{border:1px solid var(--p-line);border-radius:11px;background:linear-gradient(180deg,#fbfaff,#fff);padding:14px 15px;margin:0 0 14px}
+      .fetch .ttl{font-weight:650;font-size:13.5px;display:flex;align-items:center;gap:8px}
+      .fetch p{margin:4px 0 11px;font-size:12.5px;color:var(--p-muted);line-height:1.55;max-width:560px}
+      .fetchRow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+      .fetchRow input{flex:1 1 230px;min-width:180px;font:inherit;font-size:12.5px;padding:8px 10px;border:1px solid #b5b5b5;border-radius:8px}
+      .fetched{display:flex;gap:7px;flex-wrap:wrap;margin-top:11px;align-items:center}
+      .fchip{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--p-line);border-radius:8px;padding:4px 8px;font-size:11.5px;color:var(--p-muted)}
+      .fchip i{width:13px;height:13px;border-radius:4px;border:1px solid rgba(0,0,0,.12);display:block}
+      .fchip b{font-weight:650;color:var(--p-ink)}
+      .conf{font-size:9.5px;font-weight:700;letter-spacing:.3px;border-radius:4px;padding:1px 5px}
+      .conf.direct{background:var(--p-success-bg);color:#0f5132}
+      .conf.derived{background:var(--p-attn-bg);color:var(--p-attn)}
+
+      .cRow{display:flex;gap:10px 12px;align-items:center;padding:9px 0;border-bottom:1px solid var(--p-line2);flex-wrap:wrap}
+      .cRow:last-child{border-bottom:0}
+      .cRow .sw{width:38px;height:38px;border-radius:9px;border:1px solid var(--p-line);flex:none;position:relative;overflow:hidden;cursor:pointer}
+      .cRow .sw input{position:absolute;inset:-6px;width:150%;height:150%;border:0;padding:0;cursor:pointer;opacity:0}
+      .cRow .mid{flex:1 1 160px;min-width:0}
+      .cRow .nm{font-size:12.5px;font-weight:620;display:flex;align-items:center;gap:4px;flex-wrap:wrap;overflow-wrap:anywhere}
+      .cRow .hx{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--p-faint);margin-top:2px;overflow-wrap:anywhere}
+      .cRow input.hex{font-family:ui-monospace,Menlo,monospace;font-size:12px;border:1px solid #b5b5b5;border-radius:8px;padding:7px 9px;width:96px;text-transform:uppercase;background:#fff;color:var(--p-ink);flex:0 0 96px}
+
+      .seg{display:inline-flex;border:1px solid var(--p-line);border-radius:9px;background:#f1f1f1;padding:2px;gap:2px}
+      .seg button{appearance:none;border:0;background:transparent;font:inherit;font-size:12.5px;font-weight:600;padding:6px 13px;cursor:pointer;color:var(--p-muted);border-radius:7px}
+      .seg button.on{background:var(--p-primary);color:#fff}
+      .sRow{display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--p-line2);flex-wrap:wrap}
+      .sRow:last-child{border-bottom:0}
+      .sRow .mid{flex:1 1 220px;min-width:0}
+      .sRow .nm{display:block;font-size:12.5px;font-weight:620;line-height:1.4}
+      .sRow .hx{display:block;font-size:11.5px;color:var(--p-muted);margin-top:3px;line-height:1.5}
+      .num{font-size:12.5px;border:1px solid #b5b5b5;border-radius:8px;padding:6px 8px;width:76px;text-align:right;background:#fff;font-family:inherit}
+
+      /* applies-to list, right rail, each with a preview action */
+      .appList{display:flex;flex-direction:column;gap:8px}
+      .aRow{border:1px solid var(--p-line);border-radius:10px;padding:10px 11px;background:#fff}
+      .aRow .t{font-size:12.5px;font-weight:650;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+      .aRow .c{margin-left:auto;font-size:11px;color:var(--p-faint);font-weight:500;white-space:nowrap}
+      .aRow .n{font-size:11.5px;color:var(--p-muted);margin-top:3px;line-height:1.5}
+      .aRow .act{margin-top:8px;display:flex;gap:6px}
+      .tick{width:14px;height:14px;border-radius:50%;background:var(--p-success);color:#fff;font-size:9px;display:grid;place-items:center;flex:none}
+      .tick.soon{background:#c9c9c9}
+
+      /* list tables */
+      table.lt{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff}
+      table.lt th{text-align:left;font-weight:650;color:var(--p-muted);font-size:11px;letter-spacing:.4px;text-transform:uppercase;padding:9px 12px;border-bottom:1px solid var(--p-line)}
+      table.lt td{padding:10px 12px;border-bottom:1px solid var(--p-line2);vertical-align:middle}
+      table.lt tr:last-child td{border-bottom:0}
+      table.lt tr:hover td{background:var(--p-sunken)}
+      table.lt .nm{font-weight:650}
+      table.lt .sub{font-size:11.5px;color:var(--p-faint);margin-top:2px;font-family:ui-monospace,Menlo,monospace}
+      .rowAct{display:flex;gap:6px;justify-content:flex-end}
+      .selx{font:inherit;font-size:12.5px;border:1px solid #b5b5b5;border-radius:8px;padding:6px 9px;background:#fff;color:var(--p-ink)}
+
+      .btn{appearance:none;border:1px solid #b5b5b5;background:#fff;border-radius:8px;padding:6px 12px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--p-ink)}
+      .btn:hover{background:#f6f6f6}
+      .btn.p{background:var(--p-primary);border-color:var(--p-primary);color:#fff}
+      .btn.p:hover{background:#1a1a1a}
+      .btn.sm{padding:4px 9px;font-size:12px}
+      .btn:disabled{opacity:.55;cursor:default}
+      code.c{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;background:#f2f2f2;padding:1px 5px;border-radius:4px}
+
+      .inhBox{border:1px solid var(--p-line);border-radius:10px;background:var(--p-sunken);padding:12px 14px;display:flex;align-items:center;gap:13px;flex-wrap:wrap}
+      .inhBox .tx{flex:1;min-width:230px;font-size:12.5px;color:var(--p-muted);line-height:1.6}
+      .inhBox .tx b{color:var(--p-ink);font-weight:640}
+      .miniSw{display:flex;gap:4px}
+      .miniSw i{width:21px;height:21px;border-radius:6px;border:1px solid rgba(0,0,0,.1);display:block}
+      .ovMark{font-size:10px;font-weight:700;letter-spacing:.3px;padding:2px 6px;border-radius:5px;background:var(--p-attn-bg);color:var(--p-attn)}
+      .inh{font-size:10px;font-weight:700;letter-spacing:.3px;padding:2px 6px;border-radius:5px;background:#f0f0f0;color:#7a7a7a}
+
+      .warnRow{display:flex;gap:9px;align-items:flex-start;background:#fffaf0;border:1px solid #f0e0bd;border-radius:9px;padding:9px 11px;font-size:12px;color:#5c4a23;line-height:1.55;margin-top:10px}
+      .warnRow code{font-family:ui-monospace,Menlo,monospace;font-size:11px;background:#fff;padding:1px 4px;border-radius:4px}
+      .absent{font-size:12px;color:var(--p-muted);line-height:1.75;margin:0}
+      .absent code{font-family:ui-monospace,Menlo,monospace;font-size:11px;background:#f2f2f2;padding:1px 5px;border-radius:4px}
+
+      /* preview */
+      .pvHd{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--p-faint);margin:0 0 8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+      .pvPick{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 9px}
+      .pvPick select{font:inherit;font-size:11.5px;border:1px solid #b5b5b5;border-radius:7px;padding:5px 7px;background:#fff;color:var(--p-ink);max-width:100%}
+      .pvHd .sb{font-size:9.5px;background:#ededed;color:var(--p-muted);border-radius:5px;padding:1px 6px;letter-spacing:.3px}
+      .sbw{background:var(--sb-bg);border-radius:var(--sb-radius-outer);padding:12px;color:var(--sb-text);font-size:calc(13px * var(--sb-font-scale));border:var(--sb-surface-border-width) solid var(--sb-border);box-shadow:var(--sb-surface-shadow)}
+      .sbAnn{background:var(--sb-primary);color:var(--sb-on-primary);border-radius:var(--sb-radius-in);padding:7px 10px;font-size:calc(11px * var(--sb-font-scale));font-weight:600;text-align:center;margin-bottom:10px}
+      .sbTabs{display:flex;gap:5px;margin-bottom:10px}
+      .sbTab{flex:1;text-align:center;padding:6px 4px;border-radius:var(--sb-radius-sm);border:1px solid var(--sb-border);background:transparent;color:var(--sb-text-50);font-size:calc(11px * var(--sb-font-scale));font-weight:650}
+      .sbTab.on{background:var(--sb-selected-bg);border-color:var(--sb-border-strong);color:var(--sb-text)}
+      .sbTile{background:var(--sb-tile-bg);border:1px solid var(--sb-border);border-radius:var(--sb-radius-in);padding:8px 10px;margin-bottom:8px;display:flex;align-items:center;gap:9px;font-size:calc(11.5px * var(--sb-font-scale))}
+      .sbTile .ph{width:28px;height:28px;border-radius:var(--sb-radius-sm);background:var(--sb-muted);flex:none}
+      .sbOpt{border:1px solid var(--sb-border);border-radius:var(--sb-radius-in);padding:10px 11px;margin-bottom:7px;display:flex;align-items:center;gap:10px;background:var(--sb-bg)}
+      .sbOpt > span:nth-child(2){flex:1;min-width:0}
+      .sbOpt.sel{background:var(--sb-selected-bg);border-color:var(--sb-border-strong)}
+      .sbRadio{width:15px;height:15px;border-radius:50%;border:1.5px solid var(--sb-border-strong);flex:none;position:relative}
+      .sbOpt.sel .sbRadio:after{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--sb-primary)}
+      .sbOpt .nm{display:block;font-weight:650;font-size:calc(12.5px * var(--sb-font-scale));line-height:1.35}
+      .sbOpt .sub{display:block;color:var(--sb-text-50);font-size:calc(11px * var(--sb-font-scale));margin-top:2px;line-height:1.35}
+      .sbOpt .pr{margin-left:auto;text-align:right;font-weight:700;font-size:calc(12.5px * var(--sb-font-scale));white-space:nowrap}
+      .sbPill{display:inline-block;vertical-align:middle;background:var(--sb-accent);color:var(--sb-on-accent);font-size:calc(9.5px * var(--sb-font-scale));font-weight:700;border-radius:999px;padding:1px 6px;margin-left:6px;white-space:nowrap}
+      .sbShip{font-size:calc(11px * var(--sb-font-scale));color:var(--sb-text-50);margin:9px 0 0}
+      .sbCta{margin-top:10px;background:var(--sb-primary);color:var(--sb-on-primary);border-radius:var(--sb-radius);padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+      .sbCta .lbl{display:block;font-weight:700;font-size:calc(13px * var(--sb-font-scale));line-height:1.3}
+      .sbCta .sv{display:block;font-size:calc(10.5px * var(--sb-font-scale));color:var(--sb-on-primary-subtle);margin-top:2px;line-height:1.3}
+      .sbCta .amt{font-weight:700;font-size:calc(13px * var(--sb-font-scale));color:var(--sb-on-primary-accent);white-space:nowrap}
+      .sbFoot{text-align:center;font-size:calc(10px * var(--sb-font-scale));color:var(--sb-text-50);margin-top:9px}
+      .dChip{display:inline-flex;align-items:center;gap:5px;font-family:ui-monospace,Menlo,monospace;font-size:10.5px;background:#f4f4f4;border-radius:5px;padding:2px 6px;margin:3px 4px 0 0;color:#4a4a4a}
+      .dChip i{width:10px;height:10px;border-radius:3px;border:1px solid rgba(0,0,0,.12);display:block}
+      .note{font-size:11.5px;color:var(--p-faint);margin:9px 2px 0;line-height:1.6}
+      .note b{color:var(--p-muted);font-weight:640}
+      .rtabs{display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin:0 0 14px;border-bottom:1px solid var(--p-line);padding-bottom:0}
+      .rtabs button{appearance:none;border:0;border-bottom:2px solid transparent;background:transparent;font:inherit;font-size:13px;font-weight:650;color:var(--p-muted);padding:8px 13px 9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+      .rtabs button.on{color:var(--p-ink);border-bottom-color:var(--p-primary)}
+      .rtabs button:hover:not(.on){color:var(--p-ink)}
+      .rtabs button .n{font-size:11px;font-weight:700;opacity:.6}
+      .rtabs .sp{flex:1}
+      .rpane[hidden]{display:none}
+      .band{display:flex;align-items:baseline;gap:10px;margin:22px 0 10px;padding-top:16px;border-top:2px solid var(--p-line)}
+      .band:first-child{margin-top:0;padding-top:0;border-top:0}
+      .band h3{margin:0;font-size:15px;font-weight:650;letter-spacing:-.1px}
+      .band p{margin:0;font-size:12.5px;color:var(--p-muted);flex:1}
+      .crumb{font-size:12px;color:var(--p-link);cursor:pointer;margin:0 0 8px;display:inline-flex;align-items:center;gap:5px}
+    </style>
+
+    <!-- ==================================================== BRANDING ==================================================== -->
+    <div class="scr" data-scr="branding">
+    <s-page heading="Store defaults" inline-size="large">
+      <s-button slot="secondary-actions" id="btnRevert">Revert</s-button>
+      <s-button slot="primary-action" variant="primary">Save</s-button>
+      <div class="wrap">
+        <p class="pSub" style="max-width:780px">The answers every widget, section and landing page starts from: how your store looks, and how it sells. Set once here. Anything you add later is born configured, and a placement only ever carries what genuinely differs about it.</p>
+
+        <div class="fetch">
+          <div class="ttl">Start from your website <s-badge tone="info">Recommended</s-badge></div>
+          <p>We read the colour settings out of your live theme, the same ones you set in the Shopify theme editor. Your Add to cart button, your page background, your body text. Change any of them afterwards.</p>
+          <div class="fetchRow">
+            <input type="text" id="siteUrl" value="thebasicswoman.com" spellcheck="false">
+            <button class="btn p" id="btnFetch">Fetch my colours</button>
+          </div>
+          <div class="fetched" id="fetched" hidden></div>
+        </div>
+
+        <div class="two">
+          <div class="main">
+            <div class="band"><h3>How it looks</h3><p>Nine values. Borders, tints and the colour of text on a coloured surface are worked out from them, never set by hand.</p></div>
+            <s-section>
+              <div class="gHd">Colours <em>6</em></div>
+              <div id="gColours"></div>
+              <div class="warnRow">
+                <span><b>Naming to settle before build.</b> The field behind <b>Text colour</b> is <code>Product_Tile</code>, whose schema title is "Body Text" and which drives <code>--sb-text</code>. The real card surface is <code>Product_Tile_Background</code>. One of the two names has to change or somebody wires the wrong one.</span>
+              </div>
+            </s-section>
+
+            <s-section>
+              <div class="gHd">Shape and size <em>3</em></div>
+              <div id="gShape"></div>
+            </s-section>
+
+            <s-section>
+              <div class="gHd">Worked out for you <em>8</em><span class="rt"><s-badge tone="info">Not settable</s-badge></span></div>
+              <div id="gDerived"></div>
+            </s-section>
+
+            <div class="band"><h3>How it sells</h3><p>Twenty settings. The first three groups read the same everywhere you sell. The last three are the answer a new placement starts from, and any placement may differ.</p></div>
+            <div id="globalBody"></div>
+          </div>
+
+          <div class="side">
+            <div class="pvHd">Live preview <span class="sb">Storefront tokens</span></div>
+            <div id="pickA"></div>
+                    <div class="sbw" id="prevA"></div>
+            <p class="note" id="noteA"></p>
+
+            <div class="pvHd" style="margin-top:18px">Where this applies</div>
+            <div class="appList" id="applies"></div>
+          </div>
+        </div>
+      </div>
+    </s-page>
+    </div>
+
+    <!-- ==================================================== STOREFRONT WIDGETS ==================================================== -->
+    <div class="scr" data-scr="storefront" hidden>
+    <s-page heading="Widgets and sections" inline-size="large">
+      <s-button slot="primary-action" variant="primary" id="sfAdd">Add a widget</s-button>
+      <div class="wrap">
+        <div class="rtabs" data-tabs="sf">
+          <button data-tab="widgets" class="on">Widgets <span class="n" id="nWidgets">0</span></button>
+          <button data-tab="sections">Sections <span class="n" id="nSections">0</span></button>
+          <button data-tab="sfset">Settings</button>
+        </div>
+
+        <div class="rpane" data-pane="widgets">
+          <p class="pSub">What StackBack draws on a product page. Each row is an instance of a template, activated on the products you choose.</p>
+          <s-section padding="none">
+            <table class="lt">
+              <thead><tr><th style="width:30%">Widget</th><th>Shows on</th><th style="width:18%">Template</th><th style="width:13%">Status</th><th style="width:14%"></th></tr></thead>
+              <tbody id="wList"></tbody>
+            </table>
+          </s-section>
+        </div>
+
+        <div class="rpane" data-pane="sections" hidden>
+          <p class="pSub">The same widgets placed outside a product page: on your home page, a collection, or anywhere the theme editor lets you drop a block. A section carries its own product because there is no product page above it to read one from.</p>
+          <s-section padding="none">
+            <table class="lt">
+              <thead><tr><th style="width:30%">Section</th><th>Placed on</th><th style="width:18%">Built from</th><th style="width:13%">Status</th><th style="width:14%"></th></tr></thead>
+              <tbody id="secList"></tbody>
+            </table>
+          </s-section>
+          <p class="absent" style="margin-top:12px"><b>Nothing here is in the shipped build yet.</b> Sections are drawn from the same seven widget templates, so they need no new schema: what changes is the placement, which is why they sit beside widgets rather than in their own route.</p>
+        </div>
+
+        <div class="rpane" data-pane="sfset" hidden>
+          <p class="pSub">Set once for <b>every widget and section</b>. These start from Store defaults, and anything you change here becomes the answer for this surface. An individual widget or section can still differ.</p>
+          <div class="two">
+            <div class="main" id="sfSettings"></div>
+            <div class="side">
+              <div class="pvHd">All widgets and sections <span class="sb" id="sfWho">Store palette</span></div>
+              <div id="pickSF"></div>
+              <div class="sbw" id="prevSF"></div>
+              <p class="note" id="sfNote"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </s-page>
+    </div>
+
+    <!-- ==================================================== ONE WIDGET ==================================================== -->
+    <div class="scr" data-scr="widget" hidden>
+    <s-page inline-size="large" id="wPage" heading="Purchase Options">
+      <s-button slot="secondary-actions" id="wDeact">Deactivate</s-button>
+      <s-button slot="primary-action" variant="primary">Save</s-button>
+      <div class="wrap">
+        <span class="crumb" data-nav="storefront">&#8592; Widgets and sections</span>
+        <div class="two">
+          <div class="main">
+
+            <s-section>
+              <div class="gHd">Widget</div>
+              <div class="sRow"><span class="mid"><span class="nm">Name</span><span class="hx" id="wTmplNote"></span></span>
+                <input class="selx" id="wName" style="flex:0 0 240px" value="Purchase Options"></div>
+              <div class="sRow"><span class="mid"><span class="nm">Template</span><span class="hx">Decides which controls exist. Each template drops what it cannot render.</span></span>
+                <select class="selx" id="tmplPick" style="flex:0 0 240px"></select></div>
+            </s-section>
+
+            <s-section padding="none">
+              <div style="padding:14px 16px 0"><div class="gHd">Eligible products <em id="epCount">6</em><span class="rt"><button class="btn sm">Add products</button></span></div>
+                <p class="absent" style="margin:0 0 10px">Activate the products that should show this widget on their product pages.</p></div>
+              <table class="lt">
+                <thead><tr><th style="width:34%">Name</th><th style="width:28%">Handle</th><th style="width:20%">Plan</th><th style="width:18%">Status</th></tr></thead>
+                <tbody id="epList"></tbody>
+              </table>
+            </s-section>
+
+            <s-section>
+              <div class="gHd">Appearance<span class="rt"><span id="ovMark" class="inh">FROM BRANDING</span></span></div>
+              <div class="inhBox">
+                <span class="miniSw" id="miniSw"></span>
+                <span class="tx" id="ovText">Using your store palette. Six colours and three shape controls come from Branding.</span>
+                <button class="btn sm" id="btnOv">Override for this widget</button>
+              </div>
+              <div id="ovBody" hidden style="margin-top:12px"></div>
+            </s-section>
+
+            <s-section>
+              <div class="gHd">Settings for this widget <em id="leafCount">0</em><span class="rt"><s-badge tone="info">Differs by placement</s-badge></span></div>
+              <div class="tgrid" id="gLeaf"></div>
+            </s-section>
+
+            <s-section>
+              <div class="gHd">Set once in Store defaults <em id="globCount">0</em><span class="rt"><button class="btn sm" data-nav="branding">Open Store defaults</button></span></div>
+              <p class="absent" id="globList"></p>
+            </s-section>
+
+            <s-section>
+              <div class="gHd">Not on this template<span class="rt"><s-badge>Absent, not disabled</s-badge></span></div>
+              <p class="absent" id="absentList"></p>
+            </s-section>
+
+            <s-section>
+              <div class="gHd">Where this shows</div>
+              <p class="absent" id="whereShows"></p>
+            </s-section>
+          </div>
+
+          <div class="side">
+            <div class="pvHd">This widget <span class="sb" id="prevCWho">Store palette</span></div>
+            <div class="sbw" id="prevC"></div>
+            <p class="note" id="noteC"></p>
+          </div>
+        </div>
+      </div>
+    </s-page>
+    </div>
+
+    <!-- ==================================================== CUSTOMER PORTAL ==================================================== -->
+    <div class="scr" data-scr="portal" hidden>
+    <s-page heading="Portal and pages" inline-size="large">
+      <s-button slot="secondary-actions">Preview portal</s-button>
+      <s-button slot="primary-action" variant="primary">Add a page</s-button>
+      <div class="wrap">
+        <div class="rtabs" data-tabs="pt">
+          <button data-tab="ptportal" class="on">Portal</button>
+          <button data-tab="ptpages">Landing pages <span class="n" id="nPages">0</span></button>
+          <button data-tab="ptset">Settings</button>
+        </div>
+
+        <div class="rpane" data-pane="ptportal">
+          <p class="pSub">Where your customers sign in to manage their subscriptions. One per store, at your own domain.</p>
+          <s-section><div class="gHd">Sign in <em>3</em></div><div id="gPortalAuth"></div></s-section>
+          <s-section><div class="gHd">What customers can do <em>4</em></div><div id="gPortalNav"></div></s-section>
+        </div>
+
+        <div class="rpane" data-pane="ptpages" hidden>
+          <p class="pSub">Standalone pages StackBack hosts: a product subscription page, a bundle builder, a flash sale. A campaign page is the one surface that may carry its own palette.</p>
+          <s-section padding="none">
+            <table class="lt">
+              <thead><tr><th style="width:30%">Page</th><th>Address</th><th style="width:18%">Built from</th><th style="width:16%">Palette</th><th style="width:14%"></th></tr></thead>
+              <tbody id="pgList"></tbody>
+            </table>
+          </s-section>
+        </div>
+
+        <div class="rpane" data-pane="ptset" hidden>
+          <p class="pSub">Set once for <b>the portal and every landing page</b>. These start from Store defaults. The portal itself never takes a different palette: a customer who has signed in should not find a different brand behind the login.</p>
+          <div class="two">
+            <div class="main" id="ptSettings"></div>
+            <div class="side">
+              <div class="pvHd">Portal and pages <span class="sb" id="ptWho">Store palette</span></div>
+              <div id="pickPT"></div>
+              <div class="sbw" id="prevPT"></div>
+              <p class="note" id="ptNote"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </s-page>
+    </div>
+
+    <!-- ==================================================== SETTINGS ==================================================== -->
+    <div class="scr" data-scr="settings" hidden>
+    <s-page heading="Settings" inline-size="large">
+      <s-button slot="primary-action" variant="primary">Save</s-button>
+      <div class="wrap">
+        <p class="pSub" style="max-width:760px">How the app runs: when orders are placed, how payments retry, where you ship, and what your customers are told. Nothing here changes how the storefront looks or reads, which lives in <b>Store defaults</b>.</p>
+        <s-section padding="none">
+          <table class="lt">
+            <thead><tr><th style="width:30%">Group</th><th>What it holds</th><th style="width:14%"></th></tr></thead>
+            <tbody>
+              <tr><td class="nm">Orders and scheduling</td><td>Order timing, placement mode, PAYG timing, out-of-stock policy</td><td><div class="rowAct"><button class="btn sm">Open</button></div></td></tr>
+              <tr><td class="nm">Payments</td><td>Providers, and the retry cap Payment reminders counts against</td><td><div class="rowAct"><button class="btn sm">Open</button></div></td></tr>
+              <tr><td class="nm">Shipping</td><td>Zones, rate conditions, countries</td><td><div class="rowAct"><button class="btn sm">Open</button></div></td></tr>
+              <tr><td class="nm">Policies</td><td>Cancellation policy, read by the widget footer popup</td><td><div class="rowAct"><button class="btn sm">Open</button></div></td></tr>
+              <tr><td class="nm">Customer notifications</td><td>Ten templates on email and WhatsApp</td><td><div class="rowAct"><button class="btn sm">Open</button></div></td></tr>
+              <tr><td class="nm">Admin alert delivery</td><td>Which alerts reach you, and by which channel</td><td><div class="rowAct"><button class="btn sm">Open</button></div></td></tr>
+              <tr><td class="nm">Integrations</td><td>WhatsApp Cloud API, SES, GoKwik and Shopflo checkout</td><td><div class="rowAct"><button class="btn sm">Open</button></div></td></tr>
+            </tbody>
+          </table>
+        </s-section>
+      </div>
+    </s-page>
+    </div>
+
+    <!-- generic stubs for the untouched nav items -->
+    <div class="scr" data-scr="stub" hidden>
+      <s-page inline-size="large" id="stubPage" heading="">
+        <div class="wrap"><p class="pSub" id="stubTxt"></p></div>
+      </s-page>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ==========================================================================================
+   EDIT HERE.
+   PALETTE  the store's nine values, the only place colour is stored.
+   GLOBAL   settings whose answer is the same everywhere you sell.
+   PER      settings that realistically differ from one placement to another.
+   WIDGETS  the instances, with their real eligible-product rows.
+   ========================================================================================== */
+
+var PALETTE = {
+  corners:'Semi', corners_custom_pct:12, font_size:'Medium', surface_style:'Stroke',
+  Brand_Primary:'#414217', Brand_Secondary:'#F7941D', Brand_Accent:'#FF4D8D',
+  Product_Tile:'#1A1A1A', Widget_Background:'#FFF8E3', Product_Tile_Background:'#FFFFFF'
+};
+
+/* THE SPLIT.
+   Global, because a merchant giving two different answers on two placements would be a
+   mistake rather than a choice: how money reads, and what the store is entitled to.
+   Per placement, because these change with the job the placement is doing: a flash-sale page
+   is prepaid-only, a subscribe-only PDP hides the tab bar, a bundle page opens on Bundle. */
+var GLOBAL = {
+  /* Tier 1, global only. Two placements disagreeing on any of these is a defect, not a
+     choice. Several are also a compliance matter in India, where the saving a shopper is
+     shown has to reconcile with the MRP on the pack. */
+  hide_price_decimals:true, use_compare_at_price_for_discount_label:false,
+  tab_discount_format:'percentage', tab_badge_shows_plan_discount:false,
+  schedule_text_format:'cadence', tag_shows_per_delivery_price:false,
+  freebie_label_shows_value:false, card_shows_option_title:false,
+  direct_checkout:true, policy_link_label:'', hide_branding:false,
+
+  /* Tier 2, global default that a placement may override. These carry the store's normal
+     answer so a new widget is born configured, and every placement can differ where the job
+     differs: a flash-sale page prepaid only, a trial SKU pay as you go. */
+  default_intent:'subscribe', hide_intent_selector:false, hide_onetime_option:false,
+  hide_prepaid:false, hide_payg:false, hide_auto_debit:false, default_payment_mode:'prepaid',
+  hide_free_shipping_line:false, promo_line:''
+};
+var GLOBAL_ONLY = ['hide_price_decimals','use_compare_at_price_for_discount_label',
+  'tab_discount_format','tab_badge_shows_plan_discount','schedule_text_format',
+  'tag_shows_per_delivery_price','freebie_label_shows_value','card_shows_option_title',
+  'direct_checkout','policy_link_label','hide_branding'];
+var OVERRIDABLE = ['default_intent','hide_intent_selector','hide_onetime_option',
+  'hide_prepaid','hide_payg','hide_auto_debit','default_payment_mode',
+  'hide_free_shipping_line','promo_line'];
+var PLACEMENT_ONLY = ['style_variant','tab_label_subscribe','tab_label_onetime','tab_label_bundle',
+  'hide_product_row','summary_expanded_by_default','compare_at_shipping_price',
+  'bundle_selector_tabs','group_bundle_variants'];
+var GLOBAL_KEYS = GLOBAL_ONLY;
+
+var PER_DEFAULTS = {
+  default_intent:'subscribe', hide_intent_selector:false, hide_onetime_option:false,
+  hide_prepaid:false, hide_payg:false, hide_auto_debit:false, default_payment_mode:'prepaid',
+  hide_free_shipping_line:false, promo_line:'', style_variant:'Dropdown',
+  tab_label_subscribe:'', tab_label_onetime:'', tab_label_bundle:'',
+  hide_product_row:false, summary_expanded_by_default:false, compare_at_shipping_price:0,
+  bundle_selector_tabs:false, group_bundle_variants:false
+};
+
+/* Real rows, transcribed from the live Purchase Options screen on the-basics-india. */
+var WIDGETS = [
+  { id:'po', name:'Purchase Options', tmpl:'purchase-options', type:'Product page', status:'Active',
+    where:'Add the "Master" theme block to your product template. It renders only on the product pages of the products activated below.',
+    products:[
+      ['Daily Scoop Plant Protein','daily-scoop-plant-protein','All plans (default)','Activated'],
+      ['Daily Scoop Plant Protein Chocolate','daily-scoop-plant-protein-chocolate','All plans (default)','Activated'],
+      ['Daily Scoop Plant Protein Coffee','daily-scoop-plant-protein-coffee','All plans (default)','Activated'],
+      ['Daily Scoop Plant Protein Vanilla','daily-scoop-plant-protein-vanilla','All plans (default)','Activated'],
+      ['Daily Scoop Plant Protein Marshmallow','daily-scoop-plant-protein-marshmallow','All plans (default)','Activated'],
+      ['Balance Brew','balance-brew','All plans','Activated']] },
+  { id:'refill', name:'Refill plan', tmpl:'subscription-widget', type:'Product page', status:'Active',
+    where:'Add the "Subscriptions" theme block to your product template.',
+    products:[['Balance Brew','balance-brew','Refill 6x','Activated'],
+      ['Daily Scoop Plant Protein','daily-scoop-plant-protein','Refill 6x','Activated']] },
+  { id:'starter', name:'Starter, prepaid only', tmpl:'prepaid-only', type:'Product page', status:'Active',
+    where:'Add the "Subscriptions" theme block to your product template.',
+    products:[['Daily Scoop Plant Protein Vanilla','daily-scoop-plant-protein-vanilla','Starter 3x','Activated']] }
+];
+/* Per-widget stores, seeded from the defaults. */
+var PER = {}; WIDGETS.forEach(function(w){ PER[w.id] = Object.assign({}, PER_DEFAULTS); });
+var OVERRIDE = {};   /* widget id -> its own palette, when it has taken one */
+var activeWidget = 'po';
+
+/* What the previews are drawing. A merchant checking a colour wants to see it on the thing
+   they are about to change, so every preview carries the same picker: widget or section,
+   and which template. */
+var PREVIEW = { kind:'widget', tmpl:'purchase-options' };
+function previewPickerHTML(id){
+  var tmpls = Object.keys(TEMPLATES);
+  return '<div class="pvPick">'
+    + '<select data-pv="kind" data-pvid="'+id+'">'
+      + '<option value="widget"'+(PREVIEW.kind==='widget'?' selected':'')+'>On a product page</option>'
+      + '<option value="section"'+(PREVIEW.kind==='section'?' selected':'')+'>As a section</option></select>'
+    + '<select data-pv="tmpl" data-pvid="'+id+'">'
+      + tmpls.map(function(k){ return '<option value="'+k+'"'+(PREVIEW.tmpl===k?' selected':'')+'>'+TEMPLATES[k].label+'</option>'; }).join('')
+    + '</select></div>';
+}
+
+/* Sections: the same seven templates, placed outside a product page. None of this is in the
+   shipped build, so every row says so rather than implying a screen exists. */
+var SECTIONS = [
+  { id:'sec-home', name:'Subscribe on the home page', tmpl:'subscription-widget', placed:'Home page, below the hero', status:'Planned' },
+  { id:'sec-coll', name:'Refill strip', tmpl:'single-plan', placed:'Collection pages', status:'Planned' },
+  { id:'sec-byob', name:'Build your own box', tmpl:'purchase-options', placed:'Any page', status:'Planned' },
+  { id:'sec-flash', name:'Flash sale countdown', tmpl:'prepaid-only', placed:'Campaign pages', status:'Planned' }
+];
+
+/* The middle layer. Empty means the surface takes Store defaults untouched. Widgets and
+   sections share one, because a merchant setting them apart would be setting the same thing
+   twice; the portal and its landing pages share the other. */
+var SURFACE = {
+  storefront:{ tokens:null, settings:{} },
+  portal:    { tokens:null, settings:{} }
+};
+function surfaceOf(kind){ return SURFACE[kind]; }
+
+var PAGES = [
+  ['Monthly essentials','/pages/monthly-essentials','Product subscription','Surface palette','Published'],
+  ['Wellness box','/pages/wellness-box','Bundle builder','Surface palette','Published'],
+  ['Festive flash','/pages/festive-flash','Flash sale','Own palette','Scheduled'],
+  ['Build your own box','/pages/byob-box','Bundle builder','Surface palette','Draft']
+];
+
+var TEMPLATES = {
+  'purchase-options':{ label:'Purchase Options (master)',
+    per:['promo_line','default_intent','hide_intent_selector','hide_onetime_option','hide_prepaid','hide_payg','hide_auto_debit','default_payment_mode','hide_free_shipping_line','tab_label_subscribe','tab_label_onetime','tab_label_bundle','hide_product_row','summary_expanded_by_default','compare_at_shipping_price','bundle_selector_tabs','group_bundle_variants'],
+    drop:[['style_variant','master has one fixed layout']] },
+  'subscription-widget':{ label:'Subscription Widget',
+    per:['style_variant','promo_line','default_intent','hide_intent_selector','hide_onetime_option','hide_prepaid','hide_payg','hide_auto_debit','default_payment_mode','hide_free_shipping_line'],
+    drop:[['bundle_selector_tabs','this widget renders no bundles'],['group_bundle_variants','mix and match only'],['hide_product_row','it draws its own product header'],['tab_label_bundle','no bundle tab to rename']] },
+  'single-plan':{ label:'Single Plan',
+    per:['default_intent','hide_onetime_option','hide_prepaid','hide_payg','hide_auto_debit','default_payment_mode'],
+    drop:[['style_variant','one fixed two-card layout, which IS the widget'],['promo_line','no announcement bar in this design'],['hide_free_shipping_line','no shipping row rendered'],['tag_shows_per_delivery_price','no option tags'],['tab_discount_format','savings only ever render as an amount']] },
+  'prepaid-only':{ label:'Prepaid Only',
+    per:['style_variant','promo_line','default_intent','hide_onetime_option','hide_free_shipping_line'],
+    drop:[['default_payment_mode','one payment mode by definition'],['hide_prepaid','hiding it would leave nothing to buy'],['hide_payg','this widget never offers it'],['hide_auto_debit','this widget never offers it']] },
+  'payg-only':{ label:'PAYG Only',
+    per:['style_variant','promo_line','default_intent','hide_onetime_option','hide_free_shipping_line'],
+    drop:[['default_payment_mode','one payment mode by definition'],['hide_payg','hiding it would leave nothing to buy'],['hide_prepaid','this widget never offers it'],['hide_auto_debit','this widget never offers it']] },
+  'multi-frequency':{ label:'Multi-Frequency',
+    per:['style_variant','promo_line','default_intent','hide_intent_selector','hide_onetime_option','hide_prepaid','hide_payg','hide_auto_debit','default_payment_mode','hide_free_shipping_line'], drop:[] },
+  'multi-delivery':{ label:'Multi-Delivery',
+    per:['style_variant','promo_line','default_intent','hide_intent_selector','hide_onetime_option','hide_prepaid','hide_payg','hide_auto_debit','default_payment_mode','hide_free_shipping_line'], drop:[] }
+};
+
+/* ---------------- derivation, ported from subscription-widget-theme.ts ---------------- */
+var CORNER={Sharp:0,Semi:12,Rounded:20}, FSZ={Small:85,Medium:100,Large:115};
+function rgbOf(h){h=String(h).replace('#','');if(h.length===3)h=h.split('').map(function(c){return c+c}).join('');var n=parseInt(h,16);return [(n>>16)&255,(n>>8)&255,n&255];}
+function toHex(r){return '#'+r.map(function(v){return Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,'0')}).join('').toUpperCase();}
+function mixHex(a,b,t){var A=rgbOf(a),B=rgbOf(b);return toHex([0,1,2].map(function(i){return A[i]*t+B[i]*(1-t)}));}
+function lum(h){var c=rgbOf(h).map(function(v){var x=v/255;return x<=0.03928?x/12.92:Math.pow((x+0.055)/1.055,2.4)});return 0.2126*c[0]+0.7152*c[1]+0.0722*c[2];}
+function contrast(a,b){var hi=Math.max(lum(a),lum(b)),lo=Math.min(lum(a),lum(b));return (hi+0.05)/(lo+0.05);}
+function readableOn(bg){return contrast('#000000',bg)>=contrast('#ffffff',bg)?'#111111':'#ffffff';}
+function buildVars(s){
+  var radius=s.corners==='Custom'?Math.max(0,Math.round(s.corners_custom_pct||12)):(CORNER[s.corners]!=null?CORNER[s.corners]:12);
+  var fs=FSZ[s.font_size]||100, p=s.Brand_Primary||'#041101', a=s.Brand_Accent||'#95e534', onP=readableOn(p);
+  return {'--sb-primary':p,'--sb-on-primary':onP,'--sb-on-primary-subtle':mixHex(onP,p,0.62),
+    '--sb-on-primary-accent':contrast(a,p)>=2.5?a:onP,'--sb-accent':a,'--sb-on-accent':readableOn(a),
+    '--sb-bg':s.Widget_Background||'#ffffff','--sb-selected-bg':s.Brand_Secondary||'#fcfbfc',
+    '--sb-text':s.Product_Tile||'#041101','--sb-text-50':(s.Product_Tile||'#041101')+'80',
+    '--sb-tile-bg':s.Product_Tile_Background||'#ffffff','--sb-muted':'#f8fafc','--sb-border':'#c4c4c4',
+    '--sb-border-strong':p,'--sb-radius':radius+'px','--sb-radius-outer':Math.min(radius,30)+'px',
+    '--sb-radius-in':Math.max(2,radius-2)+'px','--sb-radius-sm':Math.max(2,radius-4)+'px',
+    '--sb-font-scale':String(fs/100),
+    '--sb-surface-border-width':s.surface_style==='Stroke'?'1px':'0px',
+    '--sb-surface-shadow':s.surface_style==='Shadow'?'0 4px 20px rgba(0,0,0,0.12)':'none'};
+}
+
+/* ---------------- field defs ---------------- */
+function B(k,l,h,o){var d={k:'bool',key:k,label:l,help:h};if(o)for(var i in o)d[i]=o[i];return d;}
+function S(k,l,h,opts,note){return {k:'select',key:k,label:l,help:h,options:opts,note:note};}
+function T(k,l,h){return {k:'text',key:k,label:l,help:h};}
+function N(k,l,h){return {k:'num',key:k,label:l,help:h};}
+function K(l,h,checks){return {k:'checks',label:l,help:h,checks:checks};}
+function M(l,h,matrix){return {k:'matrix',label:l,help:h,matrix:matrix};}
+
+var DEFS = {
+  /* global */
+  hide_price_decimals:B('hide_price_decimals','Show decimals in prices','Off truncates rather than rounds, so 1,399.99 shows as 1,399. Leave decimals on unless your prices are whole numbers.',{invert:1}),
+  use_compare_at_price_for_discount_label:B('use_compare_at_price_for_discount_label','Calculate savings off the compare-at price','Widens the displayed saving. Single-product subscriptions only, and it falls back to the selling price when compare-at is missing or lower.'),
+  schedule_text_format:S('schedule_text_format','Second line on a plan card','Build-your-own cards ignore cadence, but none hides their line too.',[['frequency-deliveries','Every 2 weeks, 6 deliveries'],['cadence','1 delivery every 2 weeks'],['none','No second line']]),
+  tag_shows_per_delivery_price:B('tag_shows_per_delivery_price','Show the per-delivery price on the tag','Replaces your tag label with that option’s discounted per-delivery price, on every subscription option including untagged ones.'),
+  freebie_label_shows_value:B('freebie_label_shows_value','Advertise freebies by value, not count','Worth ₹1,200 rather than 3 free gifts, summed across every delivery.'),
+  card_shows_option_title:B('card_shows_option_title','Use the option title as the plan name','Options with no title fall back to the automatic "6 weeks plan" text.'),
+  direct_checkout:B('direct_checkout','Go straight to Shopify checkout','Fewer steps, and no chance to add anything else. Portal drawers and edit flows are unaffected.'),
+  policy_link_label:T('policy_link_label','Policy link label','Renames the footer link and the popup it opens. The text inside comes from your cancellation policy, so there is one per store.'),
+  hide_branding:B('hide_branding','Show "Powered by StackBack"','Removing the credit is a plan entitlement, not a preference.',{invert:1,gated:1}),
+
+  /* per placement */
+  style_variant:S('style_variant','Schedule picker style','Four layouts. This is what the widget IS, so it can only live here.',[['Dropdown','Dropdown'],['Grid','Grid'],['List','List'],['Collapsible','Collapsible']]),
+  promo_line:T('promo_line','Promo line','Announcement bar text. Separate messages with a semicolon to rotate them every 2 seconds.'),
+  default_intent:S('default_intent','Opens on','Which mode is pre-selected when this loads. A mode the product does not offer falls back.',[['auto','Auto: first mode offered'],['subscribe','Subscribe and Save'],['bundle','Bundle and Save'],['onetime','One-time']]),
+  hide_intent_selector:K('Tabs to show','Without the bar the customer sees only the mode above. Without One-time this placement is subscription-only, and that is ignored when one-time is all there is.',[['hide_intent_selector','The tab bar itself',1],['hide_onetime_option','One-time',1]]),
+  hide_prepaid:K('Payment methods here','Each is ignored for a plan whose every schedule is that one mode. A campaign page can be prepaid-only while your product pages offer all three.',[['hide_prepaid','Prepaid',1],['hide_payg','Pay as you go',1],['hide_auto_debit','Pay per delivery',1]]),
+  default_payment_mode:S('default_payment_mode','Selected first','Falls back to whichever mode is actually offered.',[['prepaid','Prepaid'],['pay_as_you_go','Pay as you go']],'AutoPay is not in the stored enum yet, so it cannot be preselected until the field grows.'),
+  hide_free_shipping_line:B('hide_free_shipping_line','Show a free shipping line','Turn off where free shipping is already said elsewhere on that page.',{invert:1}),
+  tab_label_subscribe:T('tab_label_subscribe','Subscribe tab label','Blank keeps the built-in label, which accents "Save". A custom label renders as one plain span and loses that accent.'),
+  tab_label_onetime:T('tab_label_onetime','One-time tab label','Blank keeps the built-in label.'),
+  tab_label_bundle:T('tab_label_bundle','Bundle tab label','Blank keeps the built-in label.'),
+  hide_product_row:B('hide_product_row','Show the product row','Image, title and quantity. Off fixes quantity at 1. A product page already shows the image, a section does not.',{invert:1}),
+  summary_expanded_by_default:B('summary_expanded_by_default','Open the price breakdown by default','Shoppers can still collapse it.'),
+  compare_at_shipping_price:N('compare_at_shipping_price','Compare-at shipping price','Struck through beside what you charge. Store currency, not cents. 0 hides it.'),
+  bundle_selector_tabs:B('bundle_selector_tabs','Show the bundle choice as tabs','Applies when a variant belongs to several bundles of the same type.'),
+  group_bundle_variants:B('group_bundle_variants','Group products by variant','Combines variants of one product into one row with a variant picker. Mix and match only.')
+};
+
+var BADGE = M('The badge on the Subscribe tab reads','Extra is for a store already running a sitewide sale, so the subscription saving reads as on top of it.',
+  [['up-pct','Up to 20% off',{tab_discount_format:'percentage',tab_badge_shows_plan_discount:false}],
+   ['up-amt','Up to ₹200 off',{tab_discount_format:'amount',tab_badge_shows_plan_discount:false}],
+   ['extra-pct','Extra 20% off',{tab_discount_format:'percentage',tab_badge_shows_plan_discount:true}],
+   ['extra-amt','Extra ₹200 off',{tab_discount_format:'amount',tab_badge_shows_plan_discount:true}]]);
+
+var GLOBAL_GROUPS = [
+  ['Prices and discounts',['hide_price_decimals','use_compare_at_price_for_discount_label','__badge'],'locked'],
+  ['Plan cards',['schedule_text_format','card_shows_option_title','tag_shows_per_delivery_price','freebie_label_shows_value'],'locked'],
+  ['Checkout and footer',['direct_checkout','policy_link_label','hide_branding'],'locked'],
+  ['Purchase options',['default_intent','hide_intent_selector'],'open'],
+  ['Payment methods',['hide_prepaid','default_payment_mode'],'open'],
+  ['Shipping and promos',['hide_free_shipping_line','promo_line'],'open']
+];
+
+/* ---------------- helpers ---------------- */
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]});}
+function tip(h,n,p){return '<span class="tip"><button type="button" class="tipb" aria-label="'+esc(h)+'">i</button><span class="tipbox" role="tooltip">'+h+(n?'<b>'+n+'</b>':'')+(p?'<i>'+esc(p)+'</i>':'')+'</span></span>';}
+/* Nearest layer wins: this instance, then its surface, then the store. Nothing is OR-ed. */
+function pal(kind){ kind = kind||'storefront';
+  return OVERRIDE[activeWidget] || SURFACE[kind].tokens || PALETTE; }
+function surfacePal(kind){ return SURFACE[kind].tokens || PALETTE; }
+function per(){ return PER[activeWidget]; }
+/* The value a placement starts from: its surface's answer, else the store's. */
+function inherited(kind,key){
+  var sv = SURFACE[kind].settings;
+  return (key in sv) ? sv[key] : GLOBAL[key];
+}
+
+function fieldHTML(d,store,scope){
+  if(d.k==='checks'){
+    return '<div class="tg wide"><span class="lbl">'+d.label+tip(d.help,d.note,d.checks.map(function(c){return c[0]}).join('  '))
+      +'<span class="checkrow">'+d.checks.map(function(c){var v=c[2]?!store[c[0]]:!!store[c[0]];
+        return '<label><input type="checkbox" '+(v?'checked':'')+' data-chk="'+c[0]+'" data-scope="'+scope+'"'+(c[2]?' data-inv="1"':'')+'>'+c[1]+'</label>';}).join('')
+      +'</span></span></div>';
+  }
+  if(d.k==='matrix'){
+    var cv=d.matrix.filter(function(m){return Object.keys(m[2]).every(function(k){return store[k]===m[2][k]})})[0]||d.matrix[0];
+    return '<label class="tg wide"><span class="lbl">'+d.label+tip(d.help,null,Object.keys(d.matrix[0][2]).join('  '))
+      +'<select data-mtx="1" data-scope="'+scope+'">'+d.matrix.map(function(m){return '<option value="'+m[0]+'"'+(m===cv?' selected':'')+'>'+m[1]+'</option>'}).join('')+'</select></span></label>';
+  }
+  if(d.k==='select') return '<label class="tg wide"><span class="lbl">'+d.label+tip(d.help,d.note,d.key)+'<select data-sel="'+d.key+'" data-scope="'+scope+'">'+d.options.map(function(o){return '<option value="'+o[0]+'"'+(store[d.key]===o[0]?' selected':'')+'>'+o[1]+'</option>'}).join('')+'</select></span></label>';
+  if(d.k==='text') return '<label class="tg wide"><span class="lbl">'+d.label+tip(d.help,d.note,d.key)+'<input type="text" maxlength="120" placeholder="Leave empty to hide it" value="'+esc(store[d.key]||'')+'" data-txt="'+d.key+'" data-scope="'+scope+'"></span></label>';
+  if(d.k==='num') return '<label class="tg wide"><span class="lbl">'+d.label+tip(d.help,d.note,d.key)+'<input type="number" min="0" step="1" value="'+(store[d.key]||0)+'" data-num2="'+d.key+'" data-scope="'+scope+'"></span></label>';
+  var on = d.invert ? !store[d.key] : !!store[d.key];
+  return '<label class="tg'+(d.gated?' locked':'')+'"><input type="checkbox" '+(on?'checked':'')+(d.gated?' disabled':'')+' data-chk="'+d.key+'" data-scope="'+scope+'"'+(d.invert?' data-inv="1"':'')+'>'
+    +'<span>'+d.label+tip(d.help,d.gated?'Available from the Scale band up.':d.note,d.key)+'</span></label>';
+}
+
+/* ---------------- branding ---------------- */
+var COLOURS = [
+  ['Brand_Primary','Primary brand colour','CTA button, announcement bar, selected outlines. The text on it is picked for contrast, not chosen by you.'],
+  ['Brand_Secondary','Secondary brand colour','The fill of a selected option card. A light colour works best.'],
+  ['Brand_Accent','Accent colour (deals)','Discount badges, offer pills, the savings amount in the CTA. Text on it switches to black or white on its own.'],
+  ['Product_Tile','Text colour','Labels, prices and descriptions. This one does not auto-adjust, so pick something that reads on your background.'],
+  ['Widget_Background','Background colour','Card surfaces, containers and popups.'],
+  ['Product_Tile_Background','Product tile colour','The product card surface. Only drawn where a product card is rendered.']
+];
+
+function segHTML(key,opts,val,scope){return '<div class="seg">'+opts.map(function(o){return '<button data-seg="'+key+'" data-scope="'+(scope||'pal')+'" data-v="'+o+'" class="'+(val===o?'on':'')+'">'+o+'</button>'}).join('')+'</div>';}
+
+function colourRows(v,scope){
+  return COLOURS.map(function(c){
+    var extra = c[0]==='Product_Tile' ? '<s-badge tone="warning">Schema says Body Text</s-badge>' : '';
+    return '<div class="cRow"><span class="sw" style="background:'+v[c[0]]+'"><input type="color" value="'+v[c[0]]+'" data-col="'+c[0]+'" data-scope="'+scope+'"></span>'
+      +'<span class="mid"><span class="nm">'+c[1]+tip(c[2],null,c[0])+' '+extra+'</span><span class="hx">'+c[0]+'</span></span>'
+      +'<input class="hex" value="'+v[c[0]]+'" data-hex="'+c[0]+'" data-scope="'+scope+'"></div>';
+  }).join('');
+}
+function shapeRows(v,scope){
+  var h='<div class="sRow"><span class="mid"><span class="nm">Corners'+tip('Sharp is 0, Semi is 12, Rounded is 20. Inner radii step down, and large surfaces cap at 30 so a tall card does not become a lozenge.',null,'corners')+'</span></span>'+segHTML('corners',['Sharp','Semi','Rounded','Custom'],v.corners,scope)+'</div>';
+  if(v.corners==='Custom') h+='<div class="sRow"><span class="mid"><span class="nm">Custom radius'+tip('The admin renders a percent suffix and the code reads it as pixels. 100 fully rounds the inner cards.','The label is wrong, not the behaviour.','corners_custom_pct')+'</span></span><input class="num" type="number" data-num="corners_custom_pct" data-scope="'+scope+'" value="'+v.corners_custom_pct+'"><span style="font-size:12px;font-weight:700;color:var(--p-attn)">px</span></div>';
+  h+='<div class="sRow"><span class="mid"><span class="nm">Surface style'+tip('Stroke gives a hairline border, Shadow a soft lift, None neither.',null,'surface_style')+'</span></span>'+segHTML('surface_style',['Stroke','Shadow','None'],v.surface_style,scope)+'</div>';
+  h+='<div class="sRow"><span class="mid"><span class="nm">Font size'+tip('Small 85, Medium 100, Large 115. One scale multiplies every size.',null,'font_size')+'</span></span>'+segHTML('font_size',['Small','Medium','Large'],v.font_size,scope)+'</div>';
+  return h;
+}
+
+function renderBranding(){
+  document.getElementById('gColours').innerHTML=colourRows(PALETTE,'pal');
+  document.getElementById('gShape').innerHTML=shapeRows(PALETTE,'pal');
+  var v=buildVars(PALETTE);
+  var show=[['--sb-on-primary','text on the CTA'],['--sb-on-accent','text on a deal pill'],['--sb-on-primary-subtle','the CTA sub-line'],['--sb-on-primary-accent','the CTA price'],['--sb-text-50','cadence subtitles'],['--sb-radius-in','inner radius'],['--sb-radius-outer','large surfaces, capped 30'],['--sb-font-scale','type multiplier']];
+  document.getElementById('gDerived').innerHTML='<div>'+show.map(function(d){var val=v[d[0]];var sw=/^#/.test(val)?'<i style="background:'+val+'"></i>':'';return '<span class="dChip" title="'+d[1]+'">'+sw+d[0]+' '+val+'</span>'}).join('')+'</div>'
+    +'<div class="warnRow" style="margin-top:11px"><span><b>Two that are not derived.</b> <code>--sb-border</code> is a hardcoded <code>#c4c4c4</code> and <code>--sb-text-secondary</code> a hardcoded <code>#6b6b6b</code> in the shipped mapping. The screen tells a merchant borders adapt. They do not.</span></div>';
+  renderApplies();
+  paint();
+}
+
+/* Where this applies, as a list with a preview action per surface. */
+function renderApplies(){
+  var ovCount = Object.keys(OVERRIDE).length;
+  var rows = [
+    ['Storefront widgets', WIDGETS.length+' widgets and sections', ovCount? ovCount+' carry their own colours':'All using the store palette', 'storefront', true],
+    ['Customer portal', 'Signed-in account area', 'Always the store palette', 'portal', true],
+    ['Landing pages', '4 published', '1 carries its own palette', 'portal', true],
+    ['Emails', '10 templates', 'Primary colour and your logo', null, true],
+    ['Sections', 'Not live yet', 'Will take the theme of the page they sit in', null, false]
+  ];
+  document.getElementById('applies').innerHTML = rows.map(function(r){
+    return '<div class="aRow"><div class="t"><span class="tick'+(r[4]?'':' soon')+'">'+(r[4]?'&#10003;':'&#8226;')+'</span>'+r[0]+'<span class="c">'+r[1]+'</span></div>'
+      +'<div class="n">'+r[2]+'</div>'
+      +(r[3]?'<div class="act"><button class="btn sm" data-nav="'+r[3]+'">Preview</button></div>':'')+'</div>';
+  }).join('');
+}
+
+/* ---------------- storefront list ---------------- */
+function renderWidgetList(){
+  var wOnly = WIDGETS.filter(function(w){ return w.type!=='Section'; });
+  document.getElementById('wList').innerHTML = wOnly.map(function(w){
+    var own = OVERRIDE[w.id];
+    return '<tr><td><div class="nm">'+w.name+'</div><div class="sub">'+w.id+'</div></td>'
+      +'<td>'+w.products.length+' product'+(w.products.length===1?'':'s')
+      +(own?' <span class="ovMark" style="margin-left:6px">OWN COLOURS</span>':'')+'</td>'
+      +'<td>'+TEMPLATES[w.tmpl].label+'</td>'
+      +'<td><s-badge tone="'+(w.status==='Active'?'success':'')+'">'+w.status+'</s-badge></td>'
+      +'<td><div class="rowAct"><button class="btn sm" data-open="'+w.id+'">Manage</button></div></td></tr>';
+  }).join('');
+  document.getElementById('nWidgets').textContent = wOnly.length;
+
+  document.getElementById('secList').innerHTML = SECTIONS.map(function(x){
+    return '<tr><td><div class="nm">'+x.name+'</div><div class="sub">'+x.id+'</div></td>'
+      +'<td>'+x.placed+'</td><td>'+TEMPLATES[x.tmpl].label+'</td>'
+      +'<td><s-badge>'+x.status+'</s-badge></td>'
+      +'<td><div class="rowAct"><button class="btn sm" disabled>Manage</button></div></td></tr>';
+  }).join('');
+  document.getElementById('nSections').textContent = SECTIONS.length;
+  document.getElementById('nPages').textContent = PAGES.length;
+}
+
+/* One renderer for both surface Settings tabs. The nine overridable settings, each showing
+   the store's answer until this surface changes it, plus a palette override for the whole
+   surface. The portal is excluded from the palette override on purpose. */
+function renderSurface(kind){
+  var host = document.getElementById(kind==='storefront'?'sfSettings':'ptSettings');
+  if(!host) return;
+  var sur = SURFACE[kind], own = !!sur.tokens;
+  var canTheme = kind==='storefront';
+  var label = kind==='storefront' ? 'every widget and section' : 'every landing page';
+
+  var appearance = '<s-section><div class="gHd">Appearance<span class="rt">'
+    + (own?'<span class="ovMark">OWN COLOURS</span>':'<span class="inh">FROM STORE DEFAULTS</span>')+'</span></div>'
+    + '<div class="inhBox"><span class="miniSw">'
+    + ['Brand_Primary','Brand_Secondary','Brand_Accent','Widget_Background','Product_Tile']
+        .map(function(k){return '<i style="background:'+surfacePal(kind)[k]+'"></i>'}).join('')
+    + '</span><span class="tx">'
+    + (canTheme
+        ? (own ? 'These colours apply to <b>'+label+'</b> and no longer follow Store defaults.'
+               : 'Using your store palette for <b>'+label+'</b>.')
+        : 'The portal always uses the store palette. A landing page may carry its own, set on the page itself.')
+    + '</span>'
+    + (canTheme ? '<button class="btn sm" data-surfov="'+kind+'">'+(own?'Reset to Store defaults':'Override for '+label)+'</button>' : '')
+    + '</div>'
+    + (own ? '<div style="margin-top:12px">'+colourRows(sur.tokens,'sur:'+kind)+shapeRows(sur.tokens,'sur:'+kind)+'</div>' : '')
+    + '</s-section>';
+
+  var groups = [['Purchase options',['default_intent','hide_intent_selector']],
+                ['Payment methods',['hide_prepaid','default_payment_mode']],
+                ['Shipping and promos',['hide_free_shipping_line','promo_line']]];
+  var body = groups.map(function(g){
+    var rows = g[1].map(function(k){
+      var d = DEFS[k]; if(!d) return '';
+      var store = {}; Object.keys(GLOBAL).forEach(function(x){ store[x]=inherited(kind,x); });
+      var changed = g[1].some(function(kk){ return kk in sur.settings; }) && (k in sur.settings);
+      return fieldHTML(d, store, 'sur:'+kind).replace('<span class="lbl">',
+        '<span class="lbl">'+(changed?'<span class="ovMark" style="margin-right:6px">DIFFERS</span>':''));
+    }).join('');
+    return '<s-section><div class="gHd">'+g[0]+' <em>'+g[1].length+'</em>'
+      + '<span class="rt"><s-badge tone="info">Starts from Store defaults</s-badge></span></div>'
+      + '<div class="tgrid">'+rows+'</div></s-section>';
+  }).join('');
+
+  host.innerHTML = appearance + body;
+
+  var pv = document.getElementById(kind==='storefront'?'prevSF':'prevPT');
+  if(pv){ var vars=buildVars(surfacePal(kind)); for(var k in vars) pv.style.setProperty(k,vars[k]);
+    var st={}; Object.keys(GLOBAL).forEach(function(x){ st[x]= (x in sur.settings)?sur.settings[x]:GLOBAL[x]; });
+    var pk=document.getElementById(kind==='storefront'?'pickSF':'pickPT'); if(pk) pk.innerHTML=previewPickerHTML(kind);
+    pv.innerHTML = previewHTML(st,{tile:kind==='storefront'}); }
+  var who=document.getElementById(kind==='storefront'?'sfWho':'ptWho');
+  if(who) who.textContent = own ? 'Own palette' : 'Store palette';
+  var note=document.getElementById(kind==='storefront'?'sfNote':'ptNote');
+  if(note) note.innerHTML = Object.keys(sur.settings).length
+    ? '<b>'+Object.keys(sur.settings).length+'</b> setting'+(Object.keys(sur.settings).length>1?'s':'')+' on this surface differ from Store defaults.'
+    : 'Everything here follows Store defaults. Change one and it applies to '+label+'.';
+}
+
+/* ---------------- one widget ---------------- */
+function renderWidget(){
+  var w = WIDGETS.filter(function(x){return x.id===activeWidget})[0];
+  var t = TEMPLATES[w.tmpl];
+  document.getElementById('wPage').setAttribute('heading', w.name);
+  document.getElementById('wName').value = w.name;
+  document.getElementById('wTmplNote').textContent = w.type + ' widget';
+  document.getElementById('tmplPick').innerHTML = Object.keys(TEMPLATES).map(function(k){
+    return '<option value="'+k+'"'+(k===w.tmpl?' selected':'')+'>'+TEMPLATES[k].label+'</option>'}).join('');
+
+  document.getElementById('epCount').textContent = w.products.length;
+  document.getElementById('epList').innerHTML = w.products.map(function(p){
+    return '<tr><td class="nm">'+p[0]+'</td><td><span class="sub">'+p[1]+'</span></td>'
+      +'<td><select class="selx" style="width:100%"><option>'+p[2]+'</option><option>All plans</option></select></td>'
+      +'<td><s-badge tone="success">'+p[3]+'</s-badge></td></tr>'}).join('');
+
+  var own = OVERRIDE[activeWidget];
+  document.getElementById('miniSw').innerHTML = ['Brand_Primary','Brand_Secondary','Brand_Accent','Widget_Background','Product_Tile']
+    .map(function(k){return '<i style="background:'+pal('storefront')[k]+'"></i>'}).join('');
+  document.getElementById('ovMark').className = own ? 'ovMark' : 'inh';
+  document.getElementById('ovMark').textContent = own ? 'OWN COLOURS' : (SURFACE.storefront.tokens ? 'FROM ALL WIDGETS' : 'FROM STORE DEFAULTS');
+  document.getElementById('ovText').innerHTML = own
+    ? 'This widget carries <b>its own six colours</b>. It will not follow a change you make in Store defaults until you reset it.'
+    : 'Using your store palette. Six colours and three shape controls come from <b>Store defaults</b>.';
+  document.getElementById('btnOv').textContent = own ? 'Reset to store palette' : 'Override for this widget';
+  document.getElementById('ovBody').hidden = !own;
+  if(own) document.getElementById('ovBody').innerHTML = colourRows(own,'ov') + shapeRows(own,'ov');
+
+  /* hide_payg, hide_auto_debit and hide_onetime_option are drawn inside a grouped checks row
+     rather than as rows of their own, so they carry no standalone definition. Filter on DEFS
+     or the grouped members render twice, once as undefined. */
+  var has = function(k){ return !!DEFS[k]; };
+  var ownKeys = t.per.filter(function(k){ return PLACEMENT_ONLY.indexOf(k)>=0 && has(k); });
+  var ovKeys  = t.per.filter(function(k){ return OVERRIDABLE.indexOf(k)>=0 && has(k); });
+  var block = function(title,keys,note){
+    if(!keys.length) return '';
+    return '<div style="grid-column:1/-1;margin:6px 0 2px"><div class="gHd" style="margin:0">'+title+' <em>'+keys.length+'</em></div>'
+      + (note?'<p class="absent" style="margin:0 0 4px">'+note+'</p>':'') + '</div>'
+      + keys.map(function(k){ return fieldHTML(DEFS[k], per(), 'per') }).join('');
+  };
+  document.getElementById('gLeaf').innerHTML = (ownKeys.length||ovKeys.length)
+    ? block('Only here', ownKeys, 'Copy and layout. There is no store-wide version of these, because they describe this placement.')
+      + block('Differs from the store', ovKeys, 'Each carries your Settings answer until you change it here. Changing one marks this placement as diverging.')
+    : '<p class="absent" style="grid-column:1/-1">Nothing differs on this template. It takes everything from Store defaults.</p>';
+  document.getElementById('leafCount').textContent = t.per.length;
+
+  document.getElementById('globCount').textContent = GLOBAL_KEYS.length;
+  document.getElementById('globList').innerHTML = GLOBAL_KEYS.map(function(k){return '<code>'+k+'</code>'}).join(' ')
+    + '<br><br>These read the same everywhere you sell, so they are set once in Store defaults and are not repeated here.'
+    + '<br><br><b>Three layers, nearest wins.</b> Store defaults, then Storefront widgets \u203a Settings for every widget and section, then this widget. Nothing is OR-ed, so a value set here is the one that renders.';
+
+  document.getElementById('absentList').innerHTML = (t.drop.length
+    ? t.drop.map(function(d){return '<code>'+d[0]+'</code>, '+d[1]}).join('<br>')
+    : 'Nothing dropped. This template can render every shared control.');
+
+  document.getElementById('whereShows').textContent = w.where;
+  paint();
+}
+
+/* ---------------- portal ---------------- */
+function renderPortal(){
+  document.getElementById('gPortalAuth').innerHTML =
+    '<div class="sRow"><span class="mid"><span class="nm">How customers sign in</span><span class="hx">A one-time code sent to the channel they choose. There is no password to forget, which is the right call for a phone-first Indian shopper.</span></span>'
+    + '<div class="checkrow"><label><input type="checkbox" checked> Email</label><label><input type="checkbox" checked> WhatsApp</label></div></div>'
+    + '<div class="sRow"><span class="mid"><span class="nm">Use classic login</span><span class="hx">Sends customers to /account/login instead of Shopify\u2019s new customer accounts. Turn on if another app hijacks the redirect.</span></span><input type="checkbox"></div>'
+    + '<div class="sRow"><span class="mid"><span class="nm">Portal address</span><span class="hx">yourstore.com/apps/stackback-portal</span></span><button class="btn sm">Change</button></div>';
+
+  document.getElementById('gPortalNav').innerHTML =
+    '<div class="sRow"><span class="mid"><span class="nm">Tabs a customer sees</span><span class="hx">Hide what does not apply. A store with no bundles should not show an empty bundle catalogue.</span></span>'
+    + '<div class="checkrow"><label><input type="checkbox" checked> Shop</label><label><input type="checkbox" checked> Subscriptions and orders</label>'
+    + '<label><input type="checkbox" checked> All bundles</label><label><input type="checkbox" checked> All subscriptions</label></div></div>'
+    + '<div class="sRow"><span class="mid"><span class="nm">Buttons in the sidebar</span><span class="hx">The two ways a customer starts something new from inside the portal.</span></span>'
+    + '<div class="checkrow"><label><input type="checkbox" checked> New bundle</label><label><input type="checkbox" checked> New subscription</label></div></div>';
+
+  document.getElementById('pgList').innerHTML = PAGES.map(function(p){
+    return '<tr><td><div class="nm">'+p[0]+'</div></td><td><span class="sub">'+p[1]+'</span></td>'
+      +'<td>'+p[2]+'</td>'
+      +'<td>'+(p[3]==='Own palette'?'<span class="ovMark">OWN PALETTE</span>':'<span class="inh">SURFACE PALETTE</span>')+'</td>'
+      +'<td><div class="rowAct"><button class="btn sm">Manage</button></div></td></tr>'}).join('');
+}
+
+/* ---------------- global settings ---------------- */
+function renderGlobal(){
+  document.getElementById('globalBody').innerHTML = GLOBAL_GROUPS.map(function(g){
+    var badge = g[2]==='locked'
+      ? '<s-badge>Same everywhere</s-badge>'
+      : '<s-badge tone="info">A placement may differ</s-badge>';
+    return '<s-section><div class="gHd">'+g[0]+' <em>'+g[1].length+'</em><span class="rt">'+badge+'</span></div><div class="tgrid">'
+      + g[1].map(function(k){ return fieldHTML(k==='__badge'?BADGE:DEFS[k], GLOBAL, 'glob') }).join('')
+      + '</div></s-section>';
+  }).join('');
+}
+
+
+
+/* ---------------- preview ---------------- */
+function previewHTML(s,opt){
+  opt = opt || {};
+  /* A template that cannot render something must not draw it here either, or the preview
+     promises a control the storefront will ignore. */
+  var t = TEMPLATES[PREVIEW.tmpl] || {drop:[]};
+  var dropped = (t.drop||[]).map(function(d){ return d[0]; });
+  var gone = function(k){ return dropped.indexOf(k)>=0; };
+  if(gone('promo_line')) opt.ann = false;
+  /* A section carries its own product, so it always shows the product row. */
+  if(PREVIEW.kind==='section') opt.tile = true;
+  var amt = GLOBAL.tab_discount_format==='amount' ? '₹200' : '20%';
+  var word = GLOBAL.tab_badge_shows_plan_discount ? 'Extra ' : 'Save ';
+  var price = GLOBAL.hide_price_decimals ? '₹1,399' : '₹1,399.00';
+  var sec = GLOBAL.schedule_text_format==='none' ? '' : GLOBAL.schedule_text_format==='cadence' ? '1 delivery every 2 weeks' : 'Every 2 weeks, 6 deliveries';
+  var name = GLOBAL.card_shows_option_title ? 'Fortnightly Refill' : 'Every 2 weeks';
+  var tag = GLOBAL.tag_shows_per_delivery_price ? price : (word+amt);
+  var tabs = s.hide_intent_selector ? '' : '<div class="sbTabs">'+(s.hide_onetime_option?'':'<span class="sbTab">One-time</span>')+'<span class="sbTab on">Subscribe</span></div>';
+  if(gone('hide_free_shipping_line')) s = Object.assign({}, s, {hide_free_shipping_line:true});
+  return (opt.ann!==false?'<div class="sbAnn">'+(s.promo_line||'Subscribe and save on every delivery')+'</div>':'')
+    + tabs
+    + (opt.tile?'<div class="sbTile"><span class="ph"></span><span>Daily Scoop Plant Protein</span></div>':'')
+    + '<div class="sbOpt sel"><span class="sbRadio"></span><span><span class="nm">'+name+'<span class="sbPill">'+tag+'</span></span><span class="sub">'+sec+'</span></span><span class="pr">'+price+'</span></div>'
+    + '<div class="sbOpt"><span class="sbRadio"></span><span><span class="nm">Every month</span><span class="sub">'+(GLOBAL.schedule_text_format==='none'?'':GLOBAL.schedule_text_format==='cadence'?'1 delivery every month':'Every month, 6 deliveries')+'</span></span><span class="pr">'+(GLOBAL.hide_price_decimals?'₹1,499':'₹1,499.00')+'</span></div>'
+    + (s.hide_free_shipping_line?'':'<p class="sbShip">Free shipping on this plan</p>')
+    + '<div class="sbCta"><span><span class="lbl">'+(GLOBAL.direct_checkout?'Buy now':'Add to cart')+'</span><span class="sv">You save on every delivery</span></span><span class="amt">'+price+'</span></div>'
+    + (GLOBAL.hide_branding?'':'<p class="sbFoot">Powered by StackBack</p>');
+}
+
+function paint(){
+  function setv(el,v){ if(!el) return; var vars=buildVars(v); for(var k in vars) el.style.setProperty(k,vars[k]); }
+  var a=document.getElementById('prevA'), c=document.getElementById('prevC');
+  /* GLOBAL now holds both tiers, so the preview moves when any of the twenty settings move.
+     It used to draw from PER_DEFAULTS, which never changed, so half the toggles did nothing. */
+  setv(a,PALETTE); if(a){ var pkA=document.getElementById('pickA'); if(pkA) pkA.innerHTML=previewPickerHTML('A'); a.innerHTML=previewHTML(GLOBAL,{tile:true}); }
+  setv(c,pal('storefront'));   if(c) c.innerHTML=previewHTML(per(),{tile:(WIDGETS.filter(function(x){return x.id===activeWidget})[0]||{}).tmpl==='purchase-options'});
+
+  var who=document.getElementById('prevCWho');
+  if(who) who.textContent = OVERRIDE[activeWidget] ? 'Own colours' : 'Store palette';
+  var v=buildVars(PALETTE), nA=document.getElementById('noteA');
+  if(nA) nA.innerHTML='<b>Contrast is worked out, not chosen.</b> Text on the CTA resolved to <code class="c">'+v['--sb-on-primary']+'</code> against <code class="c">'+PALETTE.Brand_Primary+'</code>.';
+  var nC=document.getElementById('noteC');
+  if(nC) nC.innerHTML = OVERRIDE[activeWidget]
+    ? 'This widget stopped following Store defaults. A change to the store palette will not reach it.'
+    : 'Every colour came from Store defaults. Change one there and this moves with it.';
+}
+
+/* ---------------- brand fetch, same endpoint the pilot tracker can call ---------------- */
+var API='/api/brand-colours';
+function fchip(hex,source,confidence){
+  var tag = confidence==='theme'?'THEME':confidence==='derived'?'WORKED OUT':'GUESSED';
+  return '<span class="fchip"><i style="background:'+hex+'"></i><b>'+hex+'</b> '+esc(source)+' <span class="conf '+(confidence==='theme'?'direct':'derived')+'">'+tag+'</span></span>';
+}
+function fmsg(h){var f=document.getElementById('fetched');f.hidden=false;f.innerHTML=h;}
+async function doFetch(){
+  var btn=document.getElementById('btnFetch'), url=document.getElementById('siteUrl').value.trim();
+  if(!url) return;
+  btn.disabled=true; btn.textContent='Reading your site...';
+  fmsg('<span style="font-size:12px;color:var(--p-muted)">Reading '+esc(url)+'</span>');
+  try{
+    var d = await (await fetch(API+'?url='+encodeURIComponent(url))).json();
+    if(!d.ok){ fmsg('<span style="font-size:12px;font-weight:650;color:var(--p-crit)">'+esc(d.error||'That site could not be read.')+'</span>'); return; }
+    d.tokens.forEach(function(t){ PALETTE[t.key]=t.hex; });
+    if(d.corners) PALETTE.corners=d.corners;
+    if(d.cornersCustomPx) PALETTE.corners_custom_pct=d.cornersCustomPx;
+    var extra=[]; if(d.fontBody) extra.push('Body font <b>'+esc(d.fontBody.split(',')[0])+'</b>');
+    if(d.corners) extra.push('Corners <b>'+d.corners+(d.cornersCustomPx?' '+d.cornersCustomPx+'px':'')+'</b>');
+    fmsg('<span style="font-size:12px;font-weight:650">'+(d.method==='dawn'?'Read from your theme settings on '+esc(url):'That theme does not publish its colour settings, so these come from the stylesheet. Check them.')+'</span>'
+      + d.tokens.map(function(t){return fchip(t.hex,t.source,t.confidence)}).join('')
+      + (extra.length?'<div style="flex-basis:100%;font-size:11.5px;color:var(--p-muted);margin-top:4px">'+extra.join(' &middot; ')+'</div>':'')
+      + (d.notes&&d.notes.length?'<div style="flex-basis:100%;font-size:11.5px;color:var(--p-attn);margin-top:2px">'+esc(d.notes.join(' '))+'</div>':''));
+    renderBranding();
+  }catch(e){
+    fmsg('<span style="font-size:12px;color:var(--p-crit)">Could not reach the colour reader. It is an API route in this app, so a plain static preview cannot serve it.</span>');
+  }finally{ btn.disabled=false; btn.textContent='Fetch my colours'; }
+}
+
+/* ---------------- nav ---------------- */
+var STUBS = { plans:['Plans','Subscription plans and bundles.'], subs:['Subscriptions','Every recurring agreement, PC-####.'],
+  orders:['Orders','Each individual delivery, SB-####.'], pay:['Payment reminders','The unpaid work queue.'],
+  inv:['Inventory','Forward demand built from contracts.'], cust:['Customers','Customer records.'],
+  analytics:['Analytics','Revenue, retention and churn.'], billing:['Billing','Your StackBack plan.'] };
+
+function show(name){
+  var known = ['branding','storefront','widget','portal','settings'];
+  document.querySelectorAll('.scr').forEach(function(s){ s.hidden = true; });
+  if(known.indexOf(name)>=0){ document.querySelector('.scr[data-scr="'+name+'"]').hidden=false; }
+  else {
+    var st=STUBS[name]||['','']; document.getElementById('stubPage').setAttribute('heading',st[0]);
+    document.getElementById('stubTxt').textContent=st[1]+' Unchanged by this spec.';
+    document.querySelector('.scr[data-scr="stub"]').hidden=false;
+  }
+  var navKey = name==='widget' ? 'storefront' : name;
+  document.querySelectorAll('.navSub').forEach(function(b){ b.classList.toggle('sel', b.dataset.nav===navKey); });
+  window.scrollTo({top:0});
+}
+
+/* ---------------- wiring ---------------- */
+function storeFor(scope){
+  if(scope && scope.indexOf('sur:')===0){ var kind=scope.slice(4);
+    return SURFACE[kind].tokens || SURFACE[kind].settings; }
+  return scope==='glob'?GLOBAL : scope==='per'?per() : scope==='ov'?OVERRIDE[activeWidget] : PALETTE;
+}
+/* A surface setting is written into its own bag so the screen can show what differs. */
+function writeSurface(kind,key,val){ SURFACE[kind].settings[key]=val; renderSurface(kind); }
+function isSurfaceColour(key){ return ['corners','corners_custom_pct','font_size','surface_style',
+  'Brand_Primary','Brand_Secondary','Brand_Accent','Product_Tile','Widget_Background','Product_Tile_Background'].indexOf(key)>=0; }
+
+document.addEventListener('input',function(e){
+  var t=e.target, sc=t.getAttribute('data-scope');
+  var ck=t.getAttribute('data-col'); if(ck){ if(sc&&sc.indexOf('sur:')===0){ SURFACE[sc.slice(4)].tokens[ck]=t.value.toUpperCase(); renderSurface(sc.slice(4)); return; }
+    storeFor(sc)[ck]=t.value.toUpperCase(); if(sc==='ov')renderWidget(); else renderBranding(); return; }
+  var hk=t.getAttribute('data-hex'); if(hk&&/^#[0-9a-f]{6}$/i.test(t.value)){ if(sc&&sc.indexOf('sur:')===0){ SURFACE[sc.slice(4)].tokens[hk]=t.value.toUpperCase(); renderSurface(sc.slice(4)); return; }
+    storeFor(sc)[hk]=t.value.toUpperCase(); if(sc==='ov')renderWidget(); else renderBranding(); return; }
+  var nk=t.getAttribute('data-num'); if(nk){ storeFor(sc)[nk]=Number(t.value); paint(); return; }
+  var tx=t.getAttribute('data-txt'); if(tx){ if(sc&&sc.indexOf('sur:')===0) writeSurface(sc.slice(4),tx,t.value); else { storeFor(sc)[tx]=t.value; paint(); } return; }
+  var n2=t.getAttribute('data-num2'); if(n2){ storeFor(sc)[n2]=Math.max(0,Number(t.value)||0); paint(); return; }
+});
+
+document.addEventListener('change',function(e){
+  var t=e.target, sc=t.getAttribute('data-scope');
+  if(t.hasAttribute&&t.hasAttribute('data-mtx')){
+    var hit=BADGE.matrix.filter(function(m){return m[0]===t.value})[0];
+    if(hit){ for(var k in hit[2]) GLOBAL[k]=hit[2][k]; paint(); } return;
+  }
+  var sk=t.getAttribute('data-sel'); if(sk){ if(sc&&sc.indexOf('sur:')===0) writeSurface(sc.slice(4),sk,t.value); else { storeFor(sc)[sk]=t.value; paint(); } return; }
+  var chk=t.getAttribute('data-chk'); if(chk){ var v=t.hasAttribute('data-inv')?!t.checked:t.checked;
+    if(sc&&sc.indexOf('sur:')===0) writeSurface(sc.slice(4),chk,v); else { storeFor(sc)[chk]=v; paint(); } return; }
+  var pvk=t.getAttribute('data-pv');
+  if(pvk){ PREVIEW[pvk]=t.value;
+    if(pvk==='kind' && t.value==='section' && PREVIEW.tmpl==='purchase-options') PREVIEW.tmpl='subscription-widget';
+    paint(); renderSurface('storefront'); renderSurface('portal'); return; }
+  if(t.id==='tmplPick'){ WIDGETS.filter(function(x){return x.id===activeWidget})[0].tmpl=t.value; renderWidget(); return; }
+  if(t.id==='wName'){ WIDGETS.filter(function(x){return x.id===activeWidget})[0].name=t.value; renderWidgetList(); }
+});
+
+document.addEventListener('click',function(e){
+  var b=e.target.closest('button,[data-nav]'); if(!b) return;
+  if(b.hasAttribute('data-seg')){ var bsc=b.getAttribute('data-scope');
+    if(bsc&&bsc.indexOf('sur:')===0){ SURFACE[bsc.slice(4)].tokens[b.getAttribute('data-seg')]=b.getAttribute('data-v'); renderSurface(bsc.slice(4)); return; }
+    storeFor(bsc)[b.getAttribute('data-seg')]=b.getAttribute('data-v');
+    if(bsc==='ov') renderWidget(); else renderBranding(); return; }
+  if(b.id==='btnFetch'){ doFetch(); return; }
+  if(b.id==='btnOv'){
+    if(OVERRIDE[activeWidget]) delete OVERRIDE[activeWidget];
+    else OVERRIDE[activeWidget]=Object.assign({},PALETTE);
+    renderWidget(); renderWidgetList(); renderApplies(); return;
+  }
+  var open=b.getAttribute('data-open'); if(open){ activeWidget=open; renderWidget(); show('widget'); return; }
+  var tab=b.getAttribute('data-tab');
+  if(tab){ var bar=b.closest('.rtabs');
+    bar.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on',x===b); });
+    bar.parentElement.querySelectorAll('.rpane').forEach(function(pn){ pn.hidden = pn.dataset.pane!==tab; });
+    if(tab==='sfset') renderSurface('storefront');
+    if(tab==='ptset') renderSurface('portal');
+    return; }
+  var sov=b.getAttribute('data-surfov');
+  if(sov){ if(SURFACE[sov].tokens) SURFACE[sov].tokens=null; else SURFACE[sov].tokens=Object.assign({},PALETTE);
+    renderSurface(sov); renderWidget(); renderWidgetList(); return; }
+  var nav=b.getAttribute('data-nav'); if(nav){ if(nav==='storefront')renderWidgetList(); if(nav==='portal')renderPortal(); show(nav); return; }
+});
+
+/* Tooltips are position:fixed, so their coordinates have to be written at hover time.
+   Flip left when the box would run past the right edge, and above when it would run past
+   the bottom, which is what was cutting them off inside cards. */
+function placeTip(tip){
+  var box=tip.querySelector('.tipbox'); if(!box) return;
+  tip.classList.add('open');
+  var r=tip.getBoundingClientRect(), b=box.getBoundingClientRect();
+  var left=r.left, top=r.bottom+7;
+  if(left+b.width > window.innerWidth-12) left = Math.max(12, window.innerWidth-12-b.width);
+  if(top+b.height > window.innerHeight-12) top = Math.max(12, r.top-7-b.height);
+  box.style.left=left+'px'; box.style.top=top+'px';
+}
+document.addEventListener('mouseover',function(e){ var t=e.target.closest('.tip'); if(t) placeTip(t); });
+document.addEventListener('mouseout',function(e){ var t=e.target.closest('.tip');
+  if(t && !t.contains(e.relatedTarget)) t.classList.remove('open'); });
+document.addEventListener('focusin',function(e){ var t=e.target.closest('.tip'); if(t) placeTip(t); });
+document.addEventListener('focusout',function(e){ var t=e.target.closest('.tip'); if(t) t.classList.remove('open'); });
+
+renderGlobal(); renderBranding(); renderWidgetList(); renderWidget(); renderPortal(); renderSurface('storefront'); renderSurface('portal'); show('branding');
+</script>
+</body>
+</html>
