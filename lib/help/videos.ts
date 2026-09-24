@@ -75,10 +75,9 @@ export const CLIP_GROUPS: ClipGroup[] = [
       {
         id: "managing-subs",
         title: "Reschedule, pause and resume a subscription",
-        src: "/help/videos/managing-subscriptions.mov",
+        src: "/help/videos/managing-subscriptions.mp4",
         local: true,
-        internalOnly: true,
-        note: "NOT REDACTED. This recording shows a real merchant's brand name, real subscription numbers and real product names and images, so it is held back from the merchant view until those are blurred. Internal sign-in only.",
+        note: "Redacted: the store name, the subscription numbers, the product name and image, the customer's details and the payment link are blurred. Every control is left readable, because they are the point.",
       },
     ],
   },

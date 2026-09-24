@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
-import { CHECKLIST, TOTAL_STEPS, type Step } from "@/lib/help/checklist";
+import { CHECKLIST, RUNBOOKS, TOTAL_STEPS, type Step } from "@/lib/help/checklist";
 import type { StepState, StoreRecord, StoreSummary } from "@/lib/sanity/queries";
 
 const OWNER_LABEL: Record<Step["owner"], string> = { ulabs: "Us", client: "Client", both: "Together" };
@@ -107,6 +107,7 @@ export default function Internal({ store, stores, connected, getToken }: {
                     </span>
                   </label>
                   <p className="hc-stepdetail">{step.detail}</p>
+                  {step.message && <Message step={step} />}
                   {blocked && !st?.done && <p className="hc-stepblock">Waiting on the step above it.</p>}
                   {st?.done && st.at && (
                     <p className="hc-stepwho">{new Date(st.at).toLocaleDateString()}{st.by ? ` · ${st.by}` : ""}</p>
@@ -155,11 +156,52 @@ function Spine() {
               <li key={step.id}>
                 <span className="hc-steptitle">{step.title}<em className={"hc-owner o-" + step.owner}>{OWNER_LABEL[step.owner]}</em></span>
                 <p className="hc-stepdetail">{step.detail}</p>
+                {step.message && <Message step={step} />}
               </li>
             ))}
           </ul>
         </div>
       ))}
+
+      <h2 className="hc-h2">Copy we hand over</h2>
+      <p className="hc-blurb">
+        Not messages we send: text the merchant puts on their own pages, and one runbook that only
+        applies to stores taking AutoPay.
+      </p>
+      {RUNBOOKS.map((r) => (
+        <details key={r.id} className="hc-runbook">
+          <summary><b>{r.title}</b><span>{r.blurb}</span></summary>
+          <pre>{r.body}</pre>
+          <CopyBtn text={r.body} label="Copy" />
+        </details>
+      ))}
     </>
+  );
+}
+
+/** The message we send at a step, with the thread's own wording. */
+function Message({ step }: { step: Step }) {
+  const m = step.message;
+  if (!m) return null;
+  return (
+    <details className="hc-msg">
+      <summary>What we send: <b>{m.subject}</b></summary>
+      <pre>{m.body}</pre>
+      {m.note && <p className="hc-msgnote">{m.note}</p>}
+      <CopyBtn text={m.body} label="Copy the message" />
+    </details>
+  );
+}
+
+function CopyBtn({ text, label }: { text: string; label: string }) {
+  const [done, setDone] = useState(false);
+  return (
+    <button type="button" className="hc-btn ghost hc-msgcopy"
+      onClick={() => {
+        navigator.clipboard?.writeText(text).then(() => setDone(true), () => setDone(false));
+        setTimeout(() => setDone(false), 2000);
+      }}>
+      {done ? "Copied" : label}
+    </button>
   );
 }

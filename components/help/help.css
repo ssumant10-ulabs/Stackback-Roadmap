@@ -1270,3 +1270,22 @@
 /* Every recording has an address. */
 .hc-htshare { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 9px; }
 .hc-htshare .hc-btn { font-size: 12px; padding: 5px 11px; }
+
+/* The message we send at a step, and the copy we hand over. Kept folded: the checklist is
+   read as a list of states, and five open emails inside it is not a list. */
+.hc-msg, .hc-runbook { margin-top: 8px; }
+.hc-msg > summary, .hc-runbook > summary {
+  cursor: pointer; font-size: 12px; color: var(--ink-2); list-style: none;
+  padding: 5px 9px; background: var(--sunken); border-radius: 8px; display: inline-block;
+}
+.hc-runbook > summary { display: block; }
+.hc-runbook > summary span { display: block; font-size: 11.5px; color: var(--hc-muted); margin-top: 2px; font-weight: 400; }
+.hc-msg > summary::-webkit-details-marker, .hc-runbook > summary::-webkit-details-marker { display: none; }
+.hc-msg > summary:hover, .hc-runbook > summary:hover { color: var(--ink); }
+.hc-msg pre, .hc-runbook pre {
+  margin: 8px 0 0; padding: 11px 13px; background: var(--page); border: 1px solid var(--border-2);
+  border-radius: 9px; font: inherit; font-size: 12.5px; line-height: 1.6; white-space: pre-wrap;
+  color: var(--ink-2); max-height: 420px; overflow: auto;
+}
+.hc-msgnote { margin: 7px 0 0; font-size: 11.5px; color: var(--hc-muted); line-height: 1.5; }
+.hc-msgcopy { margin-top: 8px; font-size: 12px; padding: 5px 11px; }
