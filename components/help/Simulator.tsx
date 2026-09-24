@@ -1,10 +1,14 @@
 "use client";
 import { useMemo, useState } from "react";
 import {
-  DEFAULT_CONFIG, fmtDate, money, price, schedule, startOf,
-  type Mode, type SimConfig,
+  DEFAULT_CONFIG, fmtDate, money, parentOrder, price, schedule, startOf,
+  type Mode, type OrderLine, type SimConfig,
 } from "@/lib/help/sim";
 import { APP_NAME } from "@/lib/help/types";
+
+/** One invented order number, shared by the drawn order and the list, so the two are
+ *  visibly the same order rather than two examples that happen to sit together. */
+const ORDER_NO = 44521;
 
 /** Step three: what a checkout becomes in your admin.
  *
@@ -32,38 +36,45 @@ export default function Simulator({ config, onConfig }: {
   return (
     <section>
       <p className="hc-blurb hc-flowlede">
-        Checkout creates <b>two orders</b>, whatever the run length, and one subscription. Everything
-        after that appears later, and only when it is paid for.
+        Checkout creates <b>one order</b>, whatever the run length. Delivery one&rsquo;s goods go onto
+        that same order. Everything after it appears later, and only when it is paid for.
       </p>
 
       <ol className="hc-atcheckout">
         <li>
-          <span className="hc-otag warn">PARENT</span>
-          <b>Holds the subscription</b>
+          <span className="hc-otag ok">THE ORDER</span>
+          <b>One order takes the money</b>
           <p>
-            Carries the contract details, not the real product. <b>Auto fulfilled by default</b> and
-            marked <b>shipping not required</b>, so your warehouse and inventory system do not pick it
-            up. Filter it out of revenue reports or the money is counted twice.
+            Checkout writes a single order carrying a placeholder line: one unit per delivery, priced
+            per delivery, so the whole run is paid on one line.
           </p>
         </li>
         <li>
-          <span className="hc-otag ok">CHILD 1</span>
-          <b>The real order</b>
+          <span className="hc-otag ok">MINUTES LATER</span>
+          <b>Delivery one is added to it</b>
           <p>
-            The one that ships. Written in the same minute as the parent, which is the pair most often
-            reported to us as a duplicate. It is not: one takes the money, one carries the goods.
+            A job edits that same order. The placeholder drops by one delivery, the real product is
+            added at the plan price, and the order is tagged <code>sb-delivery-1-converted</code>. The
+            pre-edit line stays visible under <b>Removed</b>, which is Shopify keeping history, not a
+            cancellation.
           </p>
         </li>
         <li className="hc-later">
           <span className="hc-otag muted">LATER</span>
           <b>Nothing else exists yet</b>
           <p>
-            Each remaining delivery&rsquo;s order is created <b>{c.leadDays} days before its delivery
-            date</b>, and only if that delivery is <b>paid for</b>. That is the whole difference between
-            the two columns below.
+            Every remaining delivery becomes <b>its own order</b>, created {c.leadDays} days before its
+            delivery date, and only if that delivery is <b>paid for</b>.
           </p>
         </li>
       </ol>
+
+      <p className="hc-note hc-flowwas">
+        This changed in September 2026. It used to be two orders at checkout, a parent holding the
+        contract and a child holding delivery one, and merchants read the pair as a duplicate. If an
+        edit cannot be made on an order, or the subscription was created without a checkout, delivery
+        one still falls back to an order of its own.
+      </p>
 
       <div className="hc-simbar hc-simbar-order">
         <label className="hc-field hc-simnum">
@@ -97,15 +108,22 @@ export default function Simulator({ config, onConfig }: {
 
       {surface === "shopify" ? (
         <>
+          <ShopifyOrder c={c} mode="prepaid" />
+
+          <p className="hc-note hc-orderafter">
+            That is one order in your admin. Below is the same run as a list, with the deliveries that
+            become orders of their own later.
+          </p>
+
           <div className="hc-modecols">
             <OrdersColumn mode="prepaid" c={c} p={prepaid.p} rows={prepaid.rows} />
             <OrdersColumn mode="payg" c={c} p={payg.p} rows={payg.rows} />
           </div>
 
           <ul className="hc-oflags hc-childnote">
-            <li>The <b>parent</b> carries a helper line, not the real product. It is auto fulfilled, moves no stock, and must be filtered out of revenue and inventory reports or the money is counted twice</li>
-            <li>Each <b>child</b> carries the real product, is left unfulfilled, and carries the shipping. Your 3PL ships these</li>
-            <li>Orders after the first two appear <b>{c.leadDays} {c.leadDays === 1 ? "day" : "days"} before</b> their
+            <li>The checkout order carries <b>two kinds of line</b>: the real product for delivery one, which your 3PL ships, and the placeholder holding the deliveries still to come, which is fulfilled as <b>shipping not required</b> so nothing picks it up</li>
+            <li>The order total does not move when the edit commits. The placeholder is reduced and the goods are added at the same value, so <b>revenue is counted once</b>, on this one order</li>
+            <li>Every delivery after the first appears <b>{c.leadDays} {c.leadDays === 1 ? "day" : "days"} before</b> its
               delivery date, not at checkout. That is <code>time_to_delivery</code>, a per-store setting</li>
             <li>On pay as you go, <b>no Shopify order exists</b> for an unpaid delivery. It is not an unpaid order sitting in your admin, it is not there at all, which is what stops anything shipping unpaid</li>
           </ul>
@@ -127,16 +145,16 @@ function OrdersColumn({ mode, c, p, rows }: {
   p: ReturnType<typeof price>; rows: ReturnType<typeof schedule>;
 }) {
   const prepaid = mode === "prepaid";
-  const base = 44521;
-  // Exists today, not paid for. Prepaid pays for the whole run at checkout and still has two
-  // orders, which is the thing this column is here to show.
-  const live = rows.filter((r) => r.existsToday).length;
+  const base = ORDER_NO;
+  // Orders in the admin today: the checkout order, plus any later delivery whose lead window
+  // has already opened. Delivery one is not counted separately, it is ON the checkout order.
+  const live = 1 + rows.slice(1).filter((r) => r.existsToday).length;
   return (
     <div className="hc-modecol">
       <div className="hc-modehead">
         <b>{prepaid ? "Prepaid" : "Pay as you go"}</b>
         <span>
-          <b>{live + 1} of {c.deliveries + 1}</b> orders exist today.
+          <b>{live} of {c.deliveries}</b> orders exist today.
           {" "}{money(p.chargedNow)} taken at checkout,{" "}
           {prepaid ? "the rest arrive on schedule." : "the rest wait on payment."}
         </span>
@@ -153,11 +171,11 @@ function OrdersColumn({ mode, c, p, rows }: {
               <td>{fmtDate(rows[0].createdOn)}<em>at checkout</em></td>
               <td className="hc-num"><b>{money(p.chargedNow)}</b></td>
               <td><Dot tone="ok" />Paid</td>
-              <td><Dot tone="ok" />Fulfilled<em>shipping not required</em></td>
-              <td><Tag>parent</Tag></td>
+              <td><Dot tone="ok" />Fulfilled<em>delivery 1 ships from here</em></td>
+              <td><Tag>parent</Tag><Tag>delivery-1-converted</Tag></td>
             </tr>
-            {rows.map((o) => (
-              <tr key={o.n} className={o.withParent ? "hc-togetherrow" : o.existsToday ? "" : "hc-pendingrow"}>
+            {rows.slice(1).map((o) => (
+              <tr key={o.n} className={o.existsToday ? "" : "hc-pendingrow"}>
                 <td>{o.existsToday ? <b>#{base + o.n}</b> : <span className="hc-noorder">none yet</span>}</td>
                 <td>
                   {o.existsToday
@@ -165,9 +183,7 @@ function OrdersColumn({ mode, c, p, rows }: {
                     : <b className={o.paidAtCheckout ? "hc-sched" : "hc-await"}>
                         {o.paidAtCheckout ? `Due ${fmtDate(o.createdOn)}` : "Waits for payment"}
                       </b>}
-                  {o.withParent
-                    ? <em className="hc-same">same minute as the parent</em>
-                    : <em>delivers {fmtDate(o.deliveryDate)}</em>}
+                  <em>delivers {fmtDate(o.deliveryDate)}</em>
                 </td>
                 <td className="hc-num">{money(o.amount)}</td>
                 <td>{o.paidAtCheckout
@@ -177,7 +193,7 @@ function OrdersColumn({ mode, c, p, rows }: {
                   ? <><Dot tone="warn" />Unfulfilled<em>your 3PL ships this</em></>
                   : <span className="hc-noorder">not created yet</span>}</td>
                 <td>{o.existsToday
-                  ? <><Tag>child</Tag><Tag>subscription</Tag></>
+                  ? <><Tag>delivery</Tag><Tag>subscription</Tag></>
                   : <span className="hc-noorder">&mdash;</span>}</td>
               </tr>
             ))}
@@ -187,9 +203,128 @@ function OrdersColumn({ mode, c, p, rows }: {
 
       <p className={"hc-modekey " + (prepaid ? "ok" : "warn")}>
         {prepaid
-          ? <>Every delivery is <b>already paid</b>, so each order is created automatically {c.leadDays} days before its delivery, drawing down the store credit. Nothing is waiting on the customer.</>
-          : <>Only the first is paid. Each later delivery is invoiced {3 + c.leadDays} days ahead, and its order reaches Shopify <b>only once that invoice is paid</b>. An unpaid delivery has no order at all.</>}
+          ? <>Delivery one is on the order above. Every later delivery is <b>already paid</b>, so its order is created automatically {c.leadDays} days before its delivery, drawing down the store credit. Nothing waits on the customer.</>
+          : <>Delivery one is on the order above and is the only one paid. Each later delivery is invoiced {3 + c.leadDays} days ahead, and its order reaches Shopify <b>only once that invoice is paid</b>. An unpaid delivery has no order at all.</>}
       </p>
+    </div>
+  );
+}
+
+
+/** The checkout order, as Shopify draws it.
+ *
+ *  Rendered on Polaris' own light surface whatever theme this module is on, the same way the
+ *  widget preview renders in the store's colours: a merchant recognises this screen by its
+ *  look, and a dark-mode version of it is a screen they have never seen. Metrics and wording
+ *  follow a real order, down to Removed keeping the pre-edit line.
+ */
+function ShopifyOrder({ c, mode }: { c: SimConfig; mode: Mode }) {
+  const o = useMemo(() => parentOrder(c, mode, c.productName || "Your product"), [c, mode]);
+  const [open, setOpen] = useState(false);
+  const num = ORDER_NO;
+  const date = fmtDate(startOf(c));
+
+  return (
+    <div className="pl">
+      <div className="pl-top">
+        <div className="pl-titlerow">
+          <span className="pl-back">&lsaquo;</span>
+          <h3>#{num}</h3>
+          <span className="pl-badge ok"><i />Paid</span>
+          <span className="pl-badge ok"><i />Fulfilled</span>
+          <span className="pl-badge">Archived</span>
+        </div>
+        <p className="pl-sub">{date} from Online Store</p>
+      </div>
+
+      <div className="pl-grid">
+        <div className="pl-main">
+          <section className="pl-card">
+            <header className="pl-cardh">
+              <b><span className="pl-fico">&#10003;</span>Fulfilled</b>
+              <span className="pl-muted">#{num}-F2</span>
+              <span className="pl-chip">Confirmed</span>
+            </header>
+            <p className="pl-line2">{date}<span className="pl-loc">&#9679; Your 3PL</span></p>
+            <p className="pl-line2">Tracking number: <a>Track package</a></p>
+            <Item l={o.shipping} />
+          </section>
+
+          <section className="pl-card">
+            <header className="pl-cardh">
+              <b><span className="pl-fico">&#10003;</span>Fulfilled</b>
+              <span className="pl-muted">#{num}-F1</span>
+            </header>
+            <p className="pl-line2">{date}<span className="pl-flag">&#8856; Shipping not required</span></p>
+            {o.held
+              ? <Item l={o.held} open={open} onToggle={() => setOpen(!open)} />
+              : <p className="pl-empty">Nothing held: on pay as you go the order carries one delivery.</p>}
+          </section>
+
+          <section className="pl-card pl-removed">
+            <header className="pl-cardh"><b>Removed</b></header>
+            <Item l={o.removed} dim />
+          </section>
+
+          <section className="pl-card">
+            <header className="pl-cardh"><b><span className="pl-fico">&#10003;</span>Paid</b></header>
+            <table className="pl-tot">
+              <tbody>
+                <tr><td>Original order</td><td>{date}</td><td className="pl-r">{money(o.total)}</td></tr>
+                <tr><td>Subtotal</td><td>{o.held ? 2 : 1} items</td><td className="pl-r">{money(o.subtotal)}</td></tr>
+                <tr><td>Discounts</td><td>Subscription</td><td className="pl-r">-{money(o.discount)}</td></tr>
+                <tr><td>Taxes</td><td>Tax details</td><td className="pl-r">Included</td></tr>
+                <tr className="pl-totrow"><td><b>Paid</b></td><td /><td className="pl-r"><b>{money(o.total)}</b></td></tr>
+              </tbody>
+            </table>
+          </section>
+        </div>
+
+        <aside className="pl-side">
+          <section className="pl-card">
+            <header className="pl-cardh"><b>Customer</b></header>
+            <p className="pl-link">Your customer</p>
+            <p className="pl-muted">1 order</p>
+          </section>
+          <section className="pl-card">
+            <header className="pl-cardh"><b>Tags</b></header>
+            <div className="pl-tags">{o.tags.map((t) => <span key={t}>{t}</span>)}</div>
+            <p className="pl-muted pl-tagnote">
+              <code>sb-delivery-1-converted</code> is what stops the job running twice, and the value
+              tag records what delivery one was worth.
+            </p>
+          </section>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+/** One line item, Polaris' own two-column row. */
+function Item({ l, dim, open, onToggle }: { l: OrderLine; dim?: boolean; open?: boolean; onToggle?: () => void }) {
+  return (
+    <div className={"pl-item" + (dim ? " dim" : "")}>
+      <span className="pl-thumb" />
+      <div className="pl-itemmain">
+        <b>{l.title}</b>
+        {l.sub && <em>{l.sub}</em>}
+        {l.attrs && onToggle && (
+          <button type="button" className="pl-attrb" onClick={onToggle}>
+            <code>_sb</code> {open ? "hide" : "show"} subscription properties
+          </button>
+        )}
+        {l.attrs && open && (
+          <dl className="pl-attrs">
+            {l.attrs.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
+          </dl>
+        )}
+      </div>
+      <span className="pl-price">
+        {money(l.unit)}
+        {l.was && l.was > l.unit && <s>{money(l.was)}</s>}
+      </span>
+      <span className="pl-qty">&times; {l.qty}</span>
+      <span className="pl-tot1">{money(l.unit * l.qty)}</span>
     </div>
   );
 }

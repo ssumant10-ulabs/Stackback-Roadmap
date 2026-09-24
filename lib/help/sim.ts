@@ -116,13 +116,16 @@ export interface ChildOrder {
   deliveryDate: Date;
   /** When StackBack creates the Shopify order. */
   createdOn: Date;
-  /** Cut at checkout, in the same moment as the parent order. True for delivery 1, always.
-   *  This is the pair a merchant reads as a duplicate. */
-  withParent: boolean;
+  /** Delivery 1 has no order of its own. Its goods are added to the storefront order that
+   *  already carried the money, by an order edit on that same order. Changed 2026-09-24:
+   *  before this, delivery 1 was a second order cut at checkout beside a parent, and a
+   *  merchant reading these two rows as a duplicate is why it is one order now. */
+  onParent: boolean;
   /** A later delivery whose lead window has already passed, so its order is cut now too. */
   early: boolean;
-  /** Does a Shopify order exist for this delivery today? Being paid for is necessary and
-   *  not sufficient: a prepaid delivery three months out is paid and has no order. */
+  /** Is this delivery in Shopify today, as its own order or as lines on the storefront
+   *  order? Being paid for is necessary and not sufficient: a prepaid delivery three months
+   *  out is paid and has nothing in the admin. */
   existsToday: boolean;
   /** PAYG only: when the invoice for this delivery goes out. */
   invoicedOn: Date | null;
@@ -154,9 +157,8 @@ export function schedule(c: SimConfig, mode: Mode = c.mode): ChildOrder[] {
 
   return Array.from({ length: c.deliveries }, (_, i) => {
     const deliveryDate = addDays(first, i * c.everyDays);
-    // Delivery 1's order is cut at checkout, alongside the parent. Later ones wait for
-    // their lead window. Treating delivery 1 like the rest is what makes a simulator
-    // disagree with the store a merchant is looking at.
+    // Delivery 1 goes onto the checkout order itself. Later ones wait for their lead
+    // window and become orders of their own.
     const atCheckout = i === 0;
     const due = addDays(deliveryDate, -c.leadDays);
     const createdOn = atCheckout ? today : (due <= today ? today : due);
@@ -165,7 +167,7 @@ export function schedule(c: SimConfig, mode: Mode = c.mode): ChildOrder[] {
       n: i + 1,
       deliveryDate,
       createdOn,
-      withParent: atCheckout,
+      onParent: atCheckout,
       early: !atCheckout && due <= today,
       // Paid and inside the lead window. Prepaid pays for everything up front, which is why
       // "paid" on its own was the wrong test and made the whole run look like it exists.
@@ -175,6 +177,66 @@ export function schedule(c: SimConfig, mode: Mode = c.mode): ChildOrder[] {
       paidAtCheckout: paid,
     };
   });
+}
+
+/** One line on the storefront order, as Shopify shows it. */
+export interface OrderLine {
+  title: string;
+  sub?: string;
+  qty: number;
+  unit: number;
+  /** Struck-through original, when an edit discounted the line. */
+  was?: number;
+  /** The `_sb_*` note attributes Shopify prints under a subscription line. */
+  attrs?: [string, string][];
+}
+
+export interface ParentOrder {
+  /** Dummy line after the edit: one unit per delivery still to come. */
+  held: OrderLine | null;
+  /** Delivery 1's real goods, added by the edit. */
+  shipping: OrderLine;
+  /** The dummy line as it stood before the edit, which Shopify keeps under Removed. */
+  removed: OrderLine;
+  subtotal: number;
+  discount: number;
+  total: number;
+  /** What the value tag records for delivery 1. */
+  deliveryValue: number;
+  tags: string[];
+}
+
+/** What one checkout puts in the admin.
+ *
+ *  Shape taken from `app/services/delivery-conversion.server.ts` and a real order: the cart
+ *  transform expands the line into a placeholder variant at one unit per delivery, priced per
+ *  delivery, so the whole run is paid on one line. A job then edits that same order, drops the
+ *  placeholder by one delivery and adds the real goods at the timeline price. The pre-edit
+ *  line stays visible under Removed, which is Shopify keeping the history, not a cancellation.
+ */
+export function parentOrder(c: SimConfig, mode: Mode = c.mode, productName = "Your product"): ParentOrder {
+  const p = price({ ...c, mode });
+  const held = mode === "prepaid" ? c.deliveries - 1 : 0;
+  const planTitle = runLabel(c.everyDays, c.deliveries);
+  const attrs: [string, string][] = [
+    ["_sb_subscription", "true"],
+    ["_payment_method", mode === "prepaid" ? "prepaid" : "pay_as_you_go"],
+    ["_sb_plan_title", planTitle],
+    ["Info", `${freqWord(c.everyDays)} for ${c.deliveries} deliveries`],
+    ["_sb_shipping_service", "Free Shipping"],
+  ];
+  return {
+    held: held > 0
+      ? { title: planTitle, sub: `${productName} · held for ${held} more deliver${held === 1 ? "y" : "ies"}`, qty: held, unit: p.perDelivery, attrs }
+      : null,
+    shipping: { title: productName, sub: "Delivery 1", qty: 1, unit: p.perDelivery, was: c.unitPrice },
+    removed: { title: planTitle, sub: productName, qty: mode === "prepaid" ? c.deliveries : 1, unit: p.perDelivery, attrs },
+    subtotal: c.unitPrice * (mode === "prepaid" ? c.deliveries : 1),
+    discount: (c.unitPrice - p.perDelivery) * (mode === "prepaid" ? c.deliveries : 1),
+    total: p.chargedNow,
+    deliveryValue: p.perDelivery,
+    tags: ["parent", "sb-delivery-1-converted", `sb-delivery-1-value-${p.perDelivery.toFixed(2)}`],
+  };
 }
 
 export const fmtDate = (d: Date) =>

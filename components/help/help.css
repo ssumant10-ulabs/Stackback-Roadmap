@@ -1077,10 +1077,13 @@
   background: var(--ink); color: var(--page); border-radius: 9px; padding: 9px 11px;
   font-size: 12px; font-weight: 450; line-height: 1.5; text-transform: none; letter-spacing: 0;
   box-shadow: 0 8px 24px rgba(15, 23, 42, .28);
-  opacity: 0; visibility: hidden; transition: opacity .12s;
+  /* `visibility: hidden` still takes part in layout, and an absolutely positioned box does
+     count towards the document's scrollWidth. Twenty of these hanging past the right edge is
+     what put a horizontal scrollbar and a dead strip of page beside this screen. */
+  display: none;
 }
 .hc-tipbox b { display: block; margin-top: 6px; font-weight: 700; opacity: .85; }
-.hc-tip:hover .hc-tipbox, .hc-tip:focus-within .hc-tipbox { opacity: 1; visibility: visible; }
+.hc-tip:hover .hc-tipbox, .hc-tip:focus-within .hc-tipbox { display: block; }
 /* A row in the right-hand column would push its box off the card. */
 .hc-tgrid > *:nth-child(even) .hc-tipbox { left: auto; right: -8px; }
 
@@ -1120,3 +1123,92 @@
 .hc-bfchip i { width: 13px; height: 13px; border-radius: 4px; border: 1px solid rgba(0,0,0,.12); display: block; }
 .hc-bfchip b { font-weight: 650; color: var(--ink); }
 .hc-bfnote { margin: 8px 0 0; font-size: 11.5px; line-height: 1.55; color: var(--hc-muted); }
+
+/* ---------------------------------------------------------------- the Shopify order, 1:1
+   Polaris' own surface, light in both themes. A merchant recognises this screen by its look,
+   and a dark-mode Shopify admin is a screen they have never seen. Metrics are Polaris': 12px
+   card radius, #E3E3E3 hairline, 13px body on #F1F1F1. */
+.pl {
+  --pl-bg: #f1f1f1; --pl-card: #fff; --pl-line: #e3e3e3; --pl-ink: #303030;
+  --pl-sub: #616161; --pl-ok-bg: #cdfee1; --pl-ok-ink: #0c5132;
+  background: var(--pl-bg); color: var(--pl-ink); border-radius: 12px; padding: 16px;
+  margin: 4px 0 14px; border: 1px solid var(--border);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 13px;
+  line-height: 1.45; color-scheme: light;
+}
+.pl-top { margin-bottom: 14px; }
+.pl-titlerow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pl-back { color: var(--pl-sub); font-size: 18px; line-height: 1; }
+.pl-titlerow h3 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -.01em; }
+.pl-badge {
+  display: inline-flex; align-items: center; gap: 5px; background: #ebebeb; color: var(--pl-ink);
+  border-radius: 8px; padding: 2px 8px; font-size: 12px; font-weight: 550;
+}
+.pl-badge.ok { background: var(--pl-ok-bg); color: var(--pl-ok-ink); }
+.pl-badge i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.pl-sub { margin: 5px 0 0; color: var(--pl-sub); font-size: 12.5px; }
+
+.pl-grid { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 14px; align-items: start; }
+.pl-main, .pl-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.pl-card {
+  background: var(--pl-card); border: 1px solid var(--pl-line); border-radius: 12px;
+  padding: 12px 14px; box-shadow: 0 1px 0 rgba(0, 0, 0, .05);
+}
+.pl-cardh { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pl-cardh b { font-size: 13.5px; font-weight: 650; display: inline-flex; align-items: center; gap: 6px; }
+.pl-fico {
+  width: 16px; height: 16px; border-radius: 4px; background: var(--pl-ok-bg); color: var(--pl-ok-ink);
+  display: inline-flex; align-items: center; justify-content: center; font-size: 10px;
+}
+.pl-chip { background: #ebebeb; border-radius: 8px; padding: 1px 8px; font-size: 12px; }
+.pl-muted { color: var(--pl-sub); font-size: 12.5px; margin: 0; }
+.pl-line2 { margin: 7px 0 0; color: var(--pl-sub); font-size: 12.5px; display: flex; gap: 14px; flex-wrap: wrap; }
+.pl-loc, .pl-flag { color: var(--pl-sub); }
+.pl-line2 a { color: #005bd3; text-decoration: none; }
+.pl-empty { margin: 9px 0 0; color: var(--pl-sub); font-size: 12.5px; }
+
+.pl-item {
+  display: grid; grid-template-columns: 40px minmax(0, 1fr) auto auto auto; gap: 12px;
+  align-items: start; margin-top: 11px; padding-top: 11px; border-top: 1px solid var(--pl-line);
+}
+.pl-item.dim { opacity: .62; }
+.pl-thumb { width: 40px; height: 40px; border-radius: 8px; border: 1px solid var(--pl-line); background: #fafafa; }
+.pl-itemmain b { display: block; font-size: 13px; font-weight: 600; }
+.pl-itemmain em { display: block; font-style: normal; color: var(--pl-sub); font-size: 12.5px; margin-top: 1px; }
+.pl-price { font-size: 13px; white-space: nowrap; }
+.pl-price s { margin-left: 6px; color: var(--pl-sub); }
+.pl-qty, .pl-tot1 { font-size: 13px; white-space: nowrap; }
+.pl-tot1 { font-weight: 600; }
+.pl-attrb {
+  appearance: none; border: 0; background: none; padding: 4px 0 0; cursor: pointer;
+  font: inherit; font-size: 12px; color: #005bd3;
+}
+.pl-attrb code { font-family: ui-monospace, Menlo, monospace; }
+.pl-attrs {
+  margin: 7px 0 0; padding: 8px 10px; background: #f7f7f7; border-radius: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px;
+}
+.pl-attrs > div { display: flex; gap: 8px; padding: 1px 0; }
+.pl-attrs dt { color: var(--pl-sub); min-width: 168px; }
+.pl-attrs dd { margin: 0; word-break: break-word; }
+
+.pl-tot { width: 100%; border-collapse: collapse; margin-top: 9px; font-size: 13px; }
+.pl-tot td { padding: 5px 0; vertical-align: top; }
+.pl-tot td:nth-child(2) { color: var(--pl-sub); }
+.pl-r { text-align: right; white-space: nowrap; }
+.pl-totrow td { border-top: 1px solid var(--pl-line); padding-top: 9px; }
+
+.pl-link { margin: 8px 0 2px; color: #005bd3; font-size: 13px; }
+.pl-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.pl-tags span { background: #ebebeb; border-radius: 8px; padding: 2px 8px; font-size: 12px; }
+.pl-tagnote { margin-top: 9px; line-height: 1.5; }
+.pl-tagnote code { font-family: ui-monospace, Menlo, monospace; font-size: 11px; }
+
+@media (max-width: 899px) {
+  .pl-grid { grid-template-columns: minmax(0, 1fr); }
+  .pl-item { grid-template-columns: 40px minmax(0, 1fr); }
+  .pl-price, .pl-qty, .pl-tot1 { grid-column: 2; }
+}
+
+.hc-flowwas { margin: -4px 0 16px; }
+.hc-orderafter { margin: 0 0 12px; }
