@@ -121,7 +121,18 @@ Do let me know in case of any queries; I'll be happy to help.`,
     purpose: "Reading their order history and asking the four questions we cannot curate plans without.",
     steps: [
       { id: "orders-read", title: "Order history read", owner: "ulabs",
-        detail: "What repeats, how often, and the gap between repeat purchases.", blockedBy: "app-installed" },
+        detail: "What repeats, how often, and the gap between repeat purchases.", blockedBy: "app-installed",
+        message: {
+          subject: "Step 2: Timeline & next steps",
+          body: `For the next steps:
+
+1. We'll be analysing your store data, and in parallel we will ask you a few brand-related questions so we can get a better understanding of the plans that need to be configured.
+
+2. We'd like to schedule a meet to walk you through the final preview we prepare, and if everything looks good to go, we can initiate the go-live process on the call itself.
+
+Please let us know if you're available for a meeting tomorrow at any convenient time. We can coordinate accordingly.`,
+          note: "Ishita's revision of 2026-09-10, for the current flow. It goes out when we start reading the data, not at the preview: it is the message that sets up both the questions and the walkthrough call.",
+        } },
       { id: "queries-sent", title: "Plan queries sent to the client", owner: "ulabs",
         detail: "Scope, frequency, discount and payment type. Sent as their Help Centre link.", blockedBy: "orders-read",
         message: {
@@ -178,18 +189,8 @@ We had a couple of questions that would help us curate the plans as per your tas
     purpose: "Showing them what we built and getting a decision. A preview goes out only once the plans exist.",
     steps: [
       { id: "preview-sent", title: "Preview email sent with both links", owner: "ulabs",
-        detail: "Widget on the PDP, bundle landing page, and the line that says their live store is untouched. Only now: a preview before the plans exist invites a reaction to pricing that is not theirs.", blockedBy: "widget-configured",
-        message: {
-          subject: "Step 2: Timeline & next steps",
-          body: `For the next steps:
+        detail: "Widget on the PDP, bundle landing page, and the line that says their live store is untouched. Only now: a preview before the plans exist invites a reaction to pricing that is not theirs.", blockedBy: "widget-configured" },
 
-1. We'll be analysing your store data, and in parallel we will ask you a few brand-related questions so we can get a better understanding of the plans that need to be configured.
-
-2. We'd like to schedule a meet to walk you through the final preview we prepare, and if everything looks good to go, we can initiate the go-live process on the call itself.
-
-Please let us know if you're available for a meeting tomorrow at any convenient time. We can coordinate accordingly.`,
-          note: "Ishita's revision of 2026-09-10, for the current flow. The older version promised a placeholder-plan preview up front, which we stopped doing: a preview before the plans exist invites a reaction to pricing that is not theirs.",
-        } },
       { id: "call-booked", title: "Walkthrough call booked", owner: "both",
         detail: "Asked for in the same email. Chase it if no slot comes back inside two days.", blockedBy: "preview-sent" },
       { id: "call-done", title: "Call done, flow and plans finalised", owner: "both",

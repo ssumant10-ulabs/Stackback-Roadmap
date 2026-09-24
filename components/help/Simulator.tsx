@@ -126,10 +126,12 @@ export default function Simulator({ config, onConfig }: {
             become orders of their own later.
           </p>
 
-          <div className="hc-modecols">
-            <OrdersColumn mode="prepaid" c={c} p={prepaid.p} rows={prepaid.rows} />
-            <OrdersColumn mode="payg" c={c} p={payg.p} rows={payg.rows} />
-            <OrdersColumn mode="autopay" c={c} p={autopay.p} rows={autopay.rows} />
+          {/* One payment type at a time. Three columns side by side is a comparison nobody
+              asked for while they are reading about the one they chose. */}
+          <div className="hc-modecols one">
+            {drawn === "prepaid" && <OrdersColumn mode="prepaid" c={c} p={prepaid.p} rows={prepaid.rows} />}
+            {drawn === "payg" && <OrdersColumn mode="payg" c={c} p={payg.p} rows={payg.rows} />}
+            {drawn === "autopay" && <OrdersColumn mode="autopay" c={c} p={autopay.p} rows={autopay.rows} />}
           </div>
 
           <div className="hc-tagtable">

@@ -321,7 +321,7 @@ export default function HelpApp({
                   <span>Set a frequency, a discount and a run length, and watch the widget, the checkout and every order move together.</span>
                 </button>
               )}
-              <ArticleList list={ARTICLES.filter((a) => a.cat === cat.id)} open={open} setOpen={setOpen} internal={internal} />
+              <ArticleList list={ARTICLES.filter((a) => a.cat === cat.id)} open={open} setOpen={setOpen} internal={false} />
             </section>
           )}
           {view.kind === "search" && (
@@ -334,7 +334,7 @@ export default function HelpApp({
                   <button className="hc-btn primary" onClick={() => setChatSeed(view.q)}>Ask support instead</button>
                 </div>
               )}
-              <ArticleList list={hits.map((h) => h.art)} open={open} setOpen={setOpen} internal={internal} showCat />
+              <ArticleList list={hits.map((h) => h.art)} open={open} setOpen={setOpen} internal={false} showCat />
             </section>
           )}
           {view.kind === "insights" && (internal
@@ -349,7 +349,10 @@ export default function HelpApp({
         </main>
       </div>
 
-      <ChatDock seed={chatSeed} onSeedUsed={() => setChatSeed(null)} email={auth.user?.email} internal={internal} />
+      {/* The chat answers as the Help Centre, not as the internal one. A merchant reading an
+          answer that tells them to talk to their account owner about commercials is reading a
+          note we wrote for ourselves. */}
+      <ChatDock seed={chatSeed} onSeedUsed={() => setChatSeed(null)} email={auth.user?.email} internal={false} />
     </div>
   );
 }

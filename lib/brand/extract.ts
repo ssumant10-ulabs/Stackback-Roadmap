@@ -185,6 +185,104 @@ function countHexes(css: string): { hex: string; n: number }[] {
   return [...tally.entries()].map(([hex, n]) => ({ hex, n })).sort((a, b) => b.n - a.n);
 }
 
+/* ------------------------------------------------------- element-grounded fallback
+
+   A theme that does not publish Shopify's colour-scheme variables used to be read by counting
+   hex literals, which is how satturmittaikadai.com came back with #6B7280 and #111827: Tailwind's
+   grey-500 and grey-900, the most common colours in any utility stylesheet and the brand colour
+   of nothing.
+
+   The `stackback-color-tokens` skill says the same thing in one line: sample from a visible
+   ELEMENT, never from the palette. So this reads declarations off the rules whose selectors name
+   the elements the skill names, in the skill's own order: the canvas, the card interior, the CTA
+   fill, the sale or announcement highlight, then the text colours. */
+
+interface Rule { sel: string; decl: string }
+
+/** Flatten the stylesheet into selector/declaration pairs, at-rules included. */
+function rules(css: string): Rule[] {
+  const out: Rule[] = [];
+  const re = /([^{}@]+)\{([^{}]*)\}/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(css))) {
+    const sel = m[1].replace(/\s+/g, " ").trim().toLowerCase();
+    if (!sel || sel.startsWith("@")) continue;
+    out.push({ sel, decl: m[2] });
+  }
+  return out;
+}
+
+const prop = (decl: string, name: string): string | null => {
+  const m = new RegExp(`(?:^|;)\\s*${name}\\s*:\\s*([^;!]+)`, "i").exec(decl);
+  return m ? m[1].trim() : null;
+};
+
+/** A colour we can use: a hex or an rgb(), not transparent, inherit or a variable. */
+function colourOf(v: string | null): string | null {
+  if (!v) return null;
+  const t = v.trim().toLowerCase();
+  if (!t || t.startsWith("var(") || t.startsWith("url(") || /transparent|inherit|currentcolor|none|initial/.test(t)) return null;
+  const hex = /#[0-9a-f]{3,8}\b/i.exec(t);
+  if (hex) return normaliseHex(hex[0]);
+  const rgb = /rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)(?:[\s,/]+([\d.]+))?/i.exec(t);
+  if (rgb) {
+    if (rgb[4] !== undefined && Number(rgb[4]) < 0.6) return null;   // a wash, not a surface
+    const h = [rgb[1], rgb[2], rgb[3]].map((n) => Math.max(0, Math.min(255, Math.round(Number(n)))).toString(16).padStart(2, "0")).join("");
+    return "#" + h.toUpperCase();
+  }
+  return null;
+}
+
+/** Selector patterns for the elements the skill samples, most specific first. */
+const ELEMENT: Record<string, RegExp[]> = {
+  /* Only rules that NAME the call to action. A generic `button` or `.btn` rule is a reset or
+     a disabled state and tells you nothing about the brand: satturmittaikadai.com gave #FFFFFF
+     from one and #D5D5D5 from the next. No named CTA means no sample, not a worse one. */
+  cta: [
+    /add[-_]?to[-_]?cart|addtocart|product-form__submit|shopify-payment-button|buy[-_]?now/,
+    /btn--primary|button--primary|btn-primary|\.primary-button|\.cta\b/,
+  ],
+  canvas: [/^body\b|^html\b|\.page-?(wrapper|container)\b|^main\b/],
+  card: [/product-card|\.card__inner|\.card\b|\.tile\b|\.product-item\b/],
+  accent: [/sale|discount|badge|announcement|promo|offer/],
+  heading: [/^h1\b|\.product__title|\.product-title|\.h1\b/],
+  body: [/^body\b|\.rte\b|^p\b/],
+  muted: [/\.caption|\.meta\b|\.subtitle|\.text-muted|\.muted\b/],
+};
+
+/** First colour found for an element, walking its patterns in order of specificity.
+ *
+ *  `reject` is what stops a generic `button { background: #fff }` reset being read as the
+ *  merchant's Add to cart fill. satturmittaikadai.com returned #FFFFFF as its brand colour
+ *  from exactly that rule, and white is the one thing a CTA fill is never. */
+function sample(
+  rs: Rule[], kind: keyof typeof ELEMENT, which: "background-color" | "color",
+  reject?: (hex: string) => boolean,
+): string | null {
+  for (const pat of ELEMENT[kind]) {
+    for (const r of rs) {
+      if (!pat.test(r.sel)) continue;
+      const c = colourOf(prop(r.decl, which)) || (which === "background-color" ? colourOf(prop(r.decl, "background")) : null);
+      if (c && !(reject && reject(c))) return c;
+    }
+  }
+  return null;
+}
+
+/** A CTA fill is either a colour or near-black. A mid or light grey is a reset, a disabled
+ *  state or a border, and never the thing a merchant chose. */
+const notACta = (hex: string) => luminance(hex) > 0.88 || (isNeutral(hex) && luminance(hex) > 0.22);
+
+/** Colours that ship with a CSS framework and belong to nobody. A stylesheet that still
+ *  carries them has not been themed, so reporting one as "your brand colour" is the same
+ *  mistake as reading Shopify's lock-screen green off a password-protected store. */
+const FRAMEWORK_DEFAULTS = new Set([
+  "#007BFF", "#0D6EFD", "#6C757D", "#28A745", "#DC3545",         // Bootstrap
+  "#6B7280", "#111827", "#374151", "#3B82F6", "#9CA3AF",         // Tailwind
+  "#2196F3", "#4CAF50", "#F44336", "#9E9E9E",                     // Material
+]);
+const isFrameworkDefault = (hex: string | null) => Boolean(hex && FRAMEWORK_DEFAULTS.has(hex.toUpperCase()));
+
 /** `--buttons-radius: 38px` maps onto the four corner presets the widget offers. */
 function cornersFrom(px: number | null): { corners: BrandResult["corners"]; custom: number | null } {
   if (px == null) return { corners: "Semi", custom: null };
@@ -243,26 +341,58 @@ export function mapTokens(css: string, url: string): BrandResult {
   const { corners, custom } = cornersFrom(cardRadiusPx);
 
   if (!dawn) {
-    // Not a Dawn-lineage theme. Rank hex literals and take the best guesses available.
+    /* Not a Dawn-lineage theme. Read the elements the colour-tokens skill samples, in its
+       order, and fall back to the palette only where an element is genuinely absent. */
+    const rs = rules(css);
+    const canvas = sample(rs, "canvas", "background-color");
+    const card = sample(rs, "card", "background-color");
+    const ctaBg = sample(rs, "cta", "background-color", notACta);
+    const accent = sample(rs, "accent", "background-color", notACta);
+    const heading = sample(rs, "heading", "color");
+    const bodyText = sample(rs, "body", "color");
+    const muted = sample(rs, "muted", "color");
+
     const top = countHexes(css);
-    const brand = top.filter((t) => !isNeutral(t.hex)).slice(0, 4);
-    const lights = top.filter((t) => isSurface(t.hex)).slice(0, 4);
-    // A brand that ships no neutral surface still needs somewhere to put its panels.
-    const surface = (i: number) => lights[i]?.hex || (i === 0 ? "#FFFFFF" : "#F5F5F5");
+    const anyBrand = top.filter((t) => !isNeutral(t.hex));
+    const anySurface = top.filter((t) => isSurface(t.hex));
+
+    const primary = ctaBg || anyBrand[0]?.hex || "#111111";
+    const bg = card || anySurface[0]?.hex || "#FFFFFF";
+    const tint = canvas && canvas.toUpperCase() !== bg.toUpperCase()
+      ? canvas
+      : (anySurface.find((t) => t.hex.toUpperCase() !== bg.toUpperCase())?.hex || "#F5F5F5");
+    const text = heading || bodyText || top.find((x) => luminance(x.hex) < 0.2)?.hex || "#121212";
+    const acc = accent && accent.toUpperCase() !== primary.toUpperCase()
+      ? accent
+      : (anyBrand.find((t) => t.hex.toUpperCase() !== primary.toUpperCase())?.hex || primary);
+
+    const framework = [primary, acc, text].filter(isFrameworkDefault);
+    if (framework.length) {
+      notes.push(
+        `${framework.join(" and ")} ${framework.length === 1 ? "is a stock CSS framework colour" : "are stock CSS framework colours"}, ` +
+        "not something anybody chose for this brand. The theme is probably carrying an " +
+        "unstyled Bootstrap or Tailwind default, so set that one by hand.",
+      );
+    }
+    const sampled = [ctaBg, canvas, card, accent, heading].filter(Boolean).length;
     notes.push(
-      "This theme does not expose Shopify colour-scheme variables, so these are read from how often each colour appears in the stylesheet rather than from the theme settings. Check them before saving.",
+      sampled >= 3
+        ? "This theme does not publish Shopify colour settings, so these are read off the elements themselves: your Add to cart button, your page canvas, a product card and your headings. Check them before saving."
+        : "This theme does not publish Shopify colour settings, and few of the usual elements could be identified in its stylesheet, so some of these are the most common colours in it rather than a sample. Check every one before saving.",
     );
-    const t = (key: BrandToken["key"], hex: string, source: string): BrandToken =>
-      ({ key, hex, source, confidence: "guessed" });
+    const conf = (hit: string | null, val?: string): Confidence =>
+      isFrameworkDefault(val ?? hit) ? "guessed" : hit ? "theme" : "guessed";
+    const t = (key: BrandToken["key"], hex: string, source: string, c: Confidence): BrandToken =>
+      ({ key, hex: hex.toUpperCase(), source, confidence: c });
     return {
       ok: true, url, method: "fallback",
       tokens: [
-        t("Brand_Primary", brand[0]?.hex || "#111111", "most used brand colour in the stylesheet"),
-        t("Brand_Secondary", surface(1), lights[1] ? "a light surface used across the page" : "no neutral surface in the stylesheet, so a default tint"),
-        t("Brand_Accent", brand[1]?.hex || brand[0]?.hex || "#111111", "second brand colour in the stylesheet"),
-        t("Product_Tile", top.find((x) => luminance(x.hex) < 0.2)?.hex || "#121212", "darkest text colour"),
-        t("Widget_Background", surface(0), lights[0] ? "most used light surface" : "no neutral surface in the stylesheet, so white"),
-        t("Product_Tile_Background", "#FFFFFF", "assumed white card"),
+        t("Brand_Primary", primary, isFrameworkDefault(primary) ? "a framework default, not a brand colour" : ctaBg ? "your Add to cart button" : "most used brand colour in the stylesheet", conf(ctaBg, primary)),
+        t("Brand_Secondary", tint, canvas ? "your page canvas" : "a light surface in the stylesheet", conf(canvas)),
+        t("Brand_Accent", acc, isFrameworkDefault(acc) ? "a framework default, not a brand colour" : accent ? "your sale or announcement highlight" : "second brand colour in the stylesheet", conf(accent, acc)),
+        t("Product_Tile", text, heading ? "your heading colour" : bodyText ? "your body text colour" : "darkest text colour", conf(heading || bodyText)),
+        t("Widget_Background", bg, card ? "your product card interior" : "most used light surface", conf(card)),
+        t("Product_Tile_Background", card || "#FFFFFF", card ? "your product card interior" : "assumed white card", conf(card)),
       ],
       corners, cornersCustomPx: custom, cardRadiusPx, buttonRadiusPx, fontBody, fontHeading, schemes, notes,
     };
