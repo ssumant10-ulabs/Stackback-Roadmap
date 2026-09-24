@@ -13,6 +13,7 @@ import Article from "./Article";
 import Brief from "./Brief";
 import Internal from "./Internal";
 import Faq from "./Faq";
+import { NAV_GROUPS } from "@/lib/help/faq";
 import HowTo from "./HowTo";
 import Simulator from "./Simulator";
 import type { LoggedQuery, StoreRecord, StoreSummary } from "@/lib/sanity/queries";
@@ -263,13 +264,22 @@ export default function HelpApp({
           <button className={"hc-navitem hc-navsim" + (view.kind === "sim" ? " on" : "")} onClick={() => go({ kind: "sim" })}>
             <span>Simulate a subscription</span>
           </button>
-          {COUNTS.map((c) => (
-            <button key={c.id} className={"hc-navitem" + (view.kind === "cat" && view.id === c.id ? " on" : "")}
-              aria-label={`${c.name}, ${c.n} answers`} aria-current={view.kind === "cat" && view.id === c.id ? "page" : undefined}
-              onClick={() => go({ kind: "cat", id: c.id })}>
-              <span>{c.name}</span><em aria-hidden="true">{c.n}</em>
-            </button>
-          ))}
+          {NAV_GROUPS.map((grp) => {
+            const items = grp.ids.map((id) => COUNTS.find((c) => c.id === id)).filter(Boolean) as typeof COUNTS;
+            if (!items.length) return null;
+            return (
+              <div key={grp.title} className="hc-navgroup">
+                <p className="hc-navgrouph">{grp.title}</p>
+                {items.map((c) => (
+                  <button key={c.id} className={"hc-navitem" + (view.kind === "cat" && view.id === c.id ? " on" : "")}
+                    aria-label={`${c.name}, ${c.n} answers`} aria-current={view.kind === "cat" && view.id === c.id ? "page" : undefined}
+                    onClick={() => go({ kind: "cat", id: c.id })}>
+                    <span>{c.name}</span><em>{c.n}</em>
+                  </button>
+                ))}
+              </div>
+            );
+          })}
           {internal && (
             <button className={"hc-navitem hc-navint" + (view.kind === "insights" ? " on" : "")}
               aria-label={`Insights, ${risky} answers carrying support risk`} onClick={() => go({ kind: "insights" })}>
@@ -290,7 +300,8 @@ export default function HelpApp({
           {view.kind === "howto" && <HowTo internal={internal} />}
           {view.kind === "home" && (
             <>
-              <Faq onOpen={(a) => go({ kind: "cat", id: a.cat })} />
+              <Faq onOpen={(a) => go({ kind: "cat", id: a.cat })}
+                onJump={(step) => go({ kind: "queries", step })} />
               <Home go={go} internal={internal} onAsk={setChatSeed} answered={answered.length} />
             </>
           )}

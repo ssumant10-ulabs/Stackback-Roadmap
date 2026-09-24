@@ -76,7 +76,6 @@ export const CLIP_GROUPS: ClipGroup[] = [
         title: "Reschedule, pause and resume a subscription",
         src: "/help/videos/managing-subscriptions.mp4",
         local: true,
-        note: "Redacted: the store name, the subscription numbers, the product name and image, the customer's details and the payment link are blurred. Every control is left readable, because they are the point.",
       },
     ],
   },

@@ -24,6 +24,9 @@ export interface Step {
 export interface Phase {
   id: string;
   title: string;
+  /** What this phase is for, in one line. A timeline of five headings tells you the order
+   *  and nothing about what is actually happening in each one. */
+  purpose: string;
   steps: Step[];
 }
 
@@ -87,6 +90,7 @@ export const CHECKLIST: Phase[] = [
   {
     id: "access",
     title: "Access",
+    purpose: "Getting into the store. Nothing else can start until all three are done, and this is where most launches stall.",
     steps: [
       { id: "collab-code", title: "Collaborator code received", owner: "client",
         detail: "Shared from Settings > Users > Collaborators. Nothing can start without it.",
@@ -114,6 +118,7 @@ Do let me know in case of any queries; I'll be happy to help.`,
   {
     id: "data",
     title: "Data and plan queries",
+    purpose: "Reading their order history and asking the four questions we cannot curate plans without.",
     steps: [
       { id: "orders-read", title: "Order history read", owner: "ulabs",
         detail: "What repeats, how often, and the gap between repeat purchases.", blockedBy: "app-installed" },
@@ -147,6 +152,7 @@ We had a couple of questions that would help us curate the plans as per your tas
   {
     id: "build",
     title: "Build",
+    purpose: "Curating the plans and building the widget on a copy of their theme. Their live store is untouched throughout.",
     steps: [
       { id: "plans-curated", title: "Plans curated against the answers", owner: "ulabs",
         detail: "Real plans, real pricing. Not placeholders.", blockedBy: "discount-answered" },
@@ -169,6 +175,7 @@ We had a couple of questions that would help us curate the plans as per your tas
   {
     id: "review",
     title: "Review",
+    purpose: "Showing them what we built and getting a decision. A preview goes out only once the plans exist.",
     steps: [
       { id: "preview-sent", title: "Preview email sent with both links", owner: "ulabs",
         detail: "Widget on the PDP, bundle landing page, and the line that says their live store is untouched. Only now: a preview before the plans exist invites a reaction to pricing that is not theirs.", blockedBy: "widget-configured",
@@ -194,6 +201,7 @@ Please let us know if you're available for a meeting tomorrow at any convenient 
   {
     id: "live",
     title: "Go live",
+    purpose: "Publishing, then watching a real subscription through to its first delivery.",
     steps: [
       { id: "client-signoff", title: "Client has given the word", owner: "client",
         detail: "Explicit. Nothing publishes on an assumed yes.", blockedBy: "call-done" },

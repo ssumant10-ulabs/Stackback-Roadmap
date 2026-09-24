@@ -129,7 +129,9 @@
 
 /* ---------------------------------------------------------------- layout */
 .hc-body { display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 30px; max-width: 1240px; margin: 0 auto; padding: 26px 22px 90px; }
-.hc-nav { position: sticky; top: 68px; align-self: start; display: flex; flex-direction: column; gap: 1px; max-height: calc(100vh - 96px); overflow-y: auto; }
+/* No inner scrollbar. A rail with its own scroller inside a page that already scrolls is two
+   scrollbars and a guess about which one you are in; grouped, it is short enough to sit. */
+.hc-nav { position: sticky; top: 68px; align-self: start; display: flex; flex-direction: column; gap: 1px; }
 .hc-navitem {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
   appearance: none; border: 0; background: transparent; color: var(--ink-2);
@@ -1334,3 +1336,90 @@
   padding: 12px 0 5px; font-size: 10.5px; font-weight: 700; letter-spacing: .07em;
   text-transform: uppercase; color: var(--hc-muted); border: 0;
 }
+
+/* The rail, grouped. Seventeen flat categories is a list you read rather than scan. */
+.hc-navgroup { margin-top: 12px; }
+.hc-navgroup:first-of-type { margin-top: 4px; }
+.hc-navgrouph {
+  margin: 0 0 3px; padding: 0 10px; font-size: 10.5px; font-weight: 700;
+  letter-spacing: .07em; text-transform: uppercase; color: var(--hc-muted);
+}
+
+/* A question you can open should look like one. */
+.hc-faqq { position: relative; padding-right: 26px; }
+.hc-faqq::after {
+  content: ""; position: absolute; right: 6px; top: 50%; width: 7px; height: 7px;
+  border-right: 1.8px solid currentColor; border-bottom: 1.8px solid currentColor;
+  transform: translateY(-70%) rotate(45deg); opacity: .55; transition: transform .15s;
+}
+.hc-faqlist li.on .hc-faqq::after { transform: translateY(-30%) rotate(225deg); opacity: 1; }
+.hc-faqq:hover { background: var(--card-2); }
+.hc-faqq > span { flex: 1 1 auto; }
+.hc-faqlist li { border-radius: 8px; }
+.hc-faqlist li.on { background: var(--card-2); }
+.hc-faqa { padding: 0 12px 14px; }
+.hc-faqq { padding-left: 10px; padding-right: 30px; }
+
+/* Where an answer is really a screen in this app. */
+.hc-faqjump { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.hc-faqjump .hc-btn { font-size: 12px; padding: 5px 11px; }
+.hc-sugask { width: 100%; margin-top: 4px; }
+
+/* Purchase Contracts on Polaris' own surface, so the two admin screens in this step look
+   like the two admin screens they are rather than like this page. */
+.hc-contracts.pl .pl-card { padding: 0; overflow: hidden; }
+.hc-contracts .hc-ctabs {
+  display: flex; gap: 0; border-bottom: 1px solid var(--pl-line); padding: 0 14px;
+}
+.hc-contracts .hc-ctab {
+  appearance: none; border: 0; background: none; cursor: pointer; font: inherit;
+  font-size: 13px; font-weight: 600; color: var(--pl-sub); padding: 12px 10px;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.hc-contracts .hc-ctab.on { color: var(--pl-ink); border-bottom-color: #303030; }
+.hc-contracts .hc-cfilters { display: flex; gap: 6px; padding: 12px 14px; flex-wrap: wrap; }
+.hc-contracts .hc-cfilter {
+  appearance: none; border: 0; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 550;
+  background: #ebebeb; color: var(--pl-ink); border-radius: 8px; padding: 4px 11px;
+}
+.hc-contracts .hc-cfilter.on { background: #303030; color: #fff; }
+.hc-contracts .hc-shopscroll { padding: 0 14px 12px; }
+.hc-contracts .hc-ctable { color: var(--pl-ink); font-size: 13px; }
+.hc-contracts .hc-ctable th {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--pl-sub);
+  border-bottom: 1px solid var(--pl-line); padding: 8px 12px 8px 0; font-weight: 650;
+}
+.hc-contracts .hc-ctable td { border-top: 1px solid var(--pl-line); padding: 12px 12px 12px 0; }
+.hc-contracts .hc-ctable td em { color: var(--pl-sub); }
+.hc-contracts .hc-cbar { background: #e3e3e3; }
+.hc-contracts .hc-cbar i { background: #0c5132; }
+.hc-contracts .hc-pill { background: #ebebeb; color: var(--pl-ink); }
+.hc-contracts .hc-pill.p-w { background: #cdfee1; color: #0c5132; }
+.hc-contracts .hc-pill.p-l { background: #ffd8a8; color: #5e4200; }
+.hc-contracts .hc-cempty, .hc-contracts .hc-cfoot { color: var(--pl-sub); padding: 14px; }
+.hc-contracts .hc-noorder { color: #005bd3; }
+
+/* ---------------------------------------------------------------- onboarding timeline
+   Five phases on one rail, each saying what it is for, with its own steps inside it. A flat
+   list of twenty-five told you the order and nothing about where a store actually is. */
+.hc-timeline { list-style: none; margin: 18px 0 0; padding: 0; }
+.hc-tlphase { position: relative; padding: 0 0 26px 40px; }
+.hc-tlphase::before {
+  content: ""; position: absolute; left: 13px; top: 26px; bottom: 0; width: 2px; background: var(--border);
+}
+.hc-tlphase:last-child::before { display: none; }
+.hc-tlphase.done::before { background: var(--brand-deep); }
+.hc-tlnode {
+  position: absolute; left: 0; top: 0; width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12.5px; font-weight: 750; background: var(--sunken); color: var(--hc-muted);
+  border: 2px solid var(--border);
+}
+.hc-tlphase.doing .hc-tlnode { border-color: var(--brand-deep); color: var(--brand-deep); background: var(--card); }
+.hc-tlphase.done .hc-tlnode { background: var(--brand-deep); border-color: var(--brand-deep); color: #fff; }
+.hc-tlbody .hc-h2 { display: flex; align-items: baseline; gap: 10px; margin: 2px 0 2px; }
+.hc-tlbody .hc-h2 em {
+  font-style: normal; font-size: 11.5px; font-weight: 650; color: var(--hc-muted);
+  background: var(--sunken); border-radius: 999px; padding: 2px 9px;
+}
+.hc-tlpurpose { margin: 0 0 10px; font-size: 12.5px; line-height: 1.55; color: var(--hc-muted); max-width: 70ch; }

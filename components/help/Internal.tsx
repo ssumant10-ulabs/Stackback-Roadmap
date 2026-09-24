@@ -89,9 +89,17 @@ export default function Internal({ store, stores, connected, getToken }: {
 
       {err && <p className="hc-result bad" role="status">{err}</p>}
 
-      {CHECKLIST.map((phase) => (
-        <div key={phase.id} className="hc-phase">
-          <h2 className="hc-h2">{phase.title}</h2>
+      <ol className="hc-timeline">
+      {CHECKLIST.map((phase, pi) => {
+        const steps = phase.steps;
+        const doneHere = steps.filter((x) => state.get(x.id)?.done).length;
+        const state_ = doneHere === steps.length ? "done" : doneHere > 0 ? "doing" : "todo";
+        return (
+        <li key={phase.id} className={"hc-tlphase " + state_}>
+          <span className="hc-tlnode" aria-hidden="true">{state_ === "done" ? "\u2713" : pi + 1}</span>
+          <div className="hc-tlbody">
+            <h2 className="hc-h2">{phase.title}<em>{doneHere} of {steps.length}</em></h2>
+            <p className="hc-tlpurpose">{phase.purpose}</p>
           <ul className="hc-steps">
             {phase.steps.map((step) => {
               const st = state.get(step.id);
@@ -116,8 +124,11 @@ export default function Internal({ store, stores, connected, getToken }: {
               );
             })}
           </ul>
-        </div>
-      ))}
+          </div>
+        </li>
+        );
+      })}
+      </ol>
     </section>
   );
 }
@@ -148,20 +159,26 @@ function Spine() {
   return (
     <>
       <h2 className="hc-h2">The spine</h2>
-      {CHECKLIST.map((phase) => (
-        <div key={phase.id} className="hc-phase">
-          <h3 className="hc-h3">{phase.title}</h3>
-          <ul className="hc-steps flat">
-            {phase.steps.map((step) => (
-              <li key={step.id}>
-                <span className="hc-steptitle">{step.title}<em className={"hc-owner o-" + step.owner}>{OWNER_LABEL[step.owner]}</em></span>
-                <p className="hc-stepdetail">{step.detail}</p>
-                {step.message && <Message step={step} />}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
+      <ol className="hc-timeline">
+        {CHECKLIST.map((phase, pi) => (
+          <li key={phase.id} className="hc-tlphase">
+            <span className="hc-tlnode" aria-hidden="true">{pi + 1}</span>
+            <div className="hc-tlbody">
+              <h3 className="hc-h2">{phase.title}<em>{phase.steps.length} steps</em></h3>
+              <p className="hc-tlpurpose">{phase.purpose}</p>
+              <ul className="hc-steps flat">
+                {phase.steps.map((step) => (
+                  <li key={step.id}>
+                    <span className="hc-steptitle">{step.title}<em className={"hc-owner o-" + step.owner}>{OWNER_LABEL[step.owner]}</em></span>
+                    <p className="hc-stepdetail">{step.detail}</p>
+                    {step.message && <Message step={step} />}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </li>
+        ))}
+      </ol>
 
       <h2 className="hc-h2">Copy we hand over</h2>
       <p className="hc-blurb">

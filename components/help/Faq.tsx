@@ -1,15 +1,18 @@
 "use client";
 import { useState } from "react";
-import { FAQ_SECTIONS, FAQ_COUNT, resolveFaq } from "@/lib/help/faq";
+import { FAQ_SECTIONS, FAQ_COUNT, FAQ_JUMPS, resolveFaq } from "@/lib/help/faq";
 import { STATUS_LABEL, type HelpArticle } from "@/lib/help/types";
 
 /** The front door. The questions that actually come up, split by whether the store is live.
  *
  *  Every answer here is an article from the same corpus the Help Centre searches, resolved by
  *  id. Nothing is authored twice, so correcting an answer corrects it in both places. */
-export default function Faq({ onOpen }: {
+export default function Faq({ onOpen, onJump }: {
   /** Open the full article, so the FAQ is a way in rather than a dead end. */
   onOpen?: (a: HelpArticle) => void;
+  /** Some answers are really a screen in this app. A widget question is answered better by
+   *  the widget than by another paragraph about it. */
+  onJump?: (step: 2 | 3) => void;
 }) {
   const [phase, setPhase] = useState<"pre" | "post">("pre");
   const [open, setOpen] = useState<string | null>(null);
@@ -55,10 +58,16 @@ export default function Faq({ onOpen }: {
                     <div className="hc-faqa">
                       <div className="hc-prose" dangerouslySetInnerHTML={{ __html: a.a }} />
                       {a.path && <p className="hc-faqpath">{a.path}</p>}
-                      {onOpen && (
-                        <button type="button" className="hc-btn ghost hc-faqfull"
-                          onClick={() => onOpen(a)}>Open the full answer</button>
-                      )}
+                      <div className="hc-faqjump">
+                        {onJump && FAQ_JUMPS[a.id] && (
+                          <button type="button" className="hc-btn"
+                            onClick={() => onJump(FAQ_JUMPS[a.id].step)}>{FAQ_JUMPS[a.id].label}</button>
+                        )}
+                        {onOpen && (
+                          <button type="button" className="hc-btn ghost"
+                            onClick={() => onOpen(a)}>Open the full answer</button>
+                        )}
+                      </div>
                     </div>
                   )}
                 </li>

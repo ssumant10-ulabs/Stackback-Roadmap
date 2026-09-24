@@ -121,14 +121,25 @@ export default function HowTo({ internal = false }: {
               <div className="hc-htshare">
                 <button type="button" className="hc-btn ghost hc-htcopy"
                   onClick={() => {
-                    const link = `${location.origin}${location.pathname}#/howto/${current.id}`;
-                    navigator.clipboard?.writeText(link).then(
-                      () => setCopied(current.id),
-                      () => setCopied("fail"),
-                    );
-                    setTimeout(() => setCopied(null), 2200);
+                    /* The file itself, which is what anyone pasting this actually wants, and
+                       what "Open the file" opens. A hash link only works for somebody who
+                       already has the Help Centre open. `navigator.clipboard` is undefined on
+                       an insecure origin and rejects without a gesture in some browsers, so
+                       the textarea fallback is the one that runs on localhost. */
+                    const link = new URL(current.src, location.href).href;
+                    const ok = () => { setCopied(current.id); setTimeout(() => setCopied(null), 2200); };
+                    const fallback = () => {
+                      const t = document.createElement("textarea");
+                      t.value = link; t.style.position = "fixed"; t.style.opacity = "0";
+                      document.body.appendChild(t); t.select();
+                      try { document.execCommand("copy"); ok(); }
+                      catch { setCopied("fail"); setTimeout(() => setCopied(null), 2200); }
+                      finally { t.remove(); }
+                    };
+                    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(link).then(ok, fallback);
+                    else fallback();
                   }}>
-                  {copied === current.id ? "Link copied" : copied === "fail" ? "Copy failed" : "Copy link to this video"}
+                  {copied === current.id ? "Link copied" : copied === "fail" ? "Copy failed" : "Copy the link"}
                 </button>
                 <a className="hc-btn ghost" href={current.src} target="_blank" rel="noreferrer">Open the file</a>
               </div>

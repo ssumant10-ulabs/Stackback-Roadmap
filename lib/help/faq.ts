@@ -126,3 +126,31 @@ export function resolveFaq(section: FaqSection): {
 export const FAQ_COUNT = FAQ_SECTIONS.reduce(
   (n, s) => n + s.groups.reduce((m, g) => m + g.ids.length, 0), 0,
 );
+
+/** The topic rail, grouped. Seventeen flat rows is a list you read rather than scan, and the
+ *  grouping is the same one the FAQ uses: what you set up, what runs, what breaks. */
+export const NAV_GROUPS: { title: string; ids: string[] }[] = [
+  { title: "Start", ids: ["start", "flows", "admin"] },
+  { title: "What you sell", ids: ["plans", "bundles", "widget"] },
+  { title: "Money and delivery", ids: ["pay", "ship", "orders", "stock"] },
+  { title: "Your customers", ids: ["portal", "cancel", "notify"] },
+  { title: "Around the app", ids: ["access", "integ", "report", "bill"] },
+];
+
+/** Which wizard step answers a question better than prose does. A widget question is really
+ *  a question about a screen the merchant can open and change, and sending them to it beats
+ *  another paragraph. */
+export const FAQ_JUMPS: Record<string, { step: 2 | 3; label: string }> = {
+  "where-can-the-widget-sit-on-the-product-page": { step: 2, label: "See it on the widget" },
+  "can-the-widget-match-our-fonts-and-colours": { step: 2, label: "See it in your colours" },
+  "can-one-time-purchase-be-the-default-selection": { step: 2, label: "Change it on the widget" },
+  "what-payment-options-can-we-offer-and-which-should-we-pick": { step: 2, label: "See the payment tabs" },
+  "does-cod-need-to-be-disabled-for-subscriptions": { step: 2, label: "See the payment tabs" },
+  "what-does-one-subscription-create-in-shopify": { step: 3, label: "See the orders it creates" },
+  "what-happens-the-moment-a-customer-subscribes": { step: 3, label: "See the orders it creates" },
+  "how-do-we-identify-subscription-orders-inside-shopify": { step: 3, label: "See the tags we write" },
+  "will-the-checkout-order-inflate-our-revenue-and-inventory-number": { step: 3, label: "See the orders it creates" },
+  "how-pay-as-you-go-billing-decides-to-charge-or-pause": { step: 3, label: "Compare the payment types" },
+  "what-do-swap-add-and-reschedule-actually-do-and-who-pays": { step: 3, label: "See Purchase Contracts" },
+  "can-you-pause-a-customer-s-subscription-for-a-month": { step: 3, label: "See Purchase Contracts" },
+};

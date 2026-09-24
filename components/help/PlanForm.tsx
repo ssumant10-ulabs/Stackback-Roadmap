@@ -53,6 +53,7 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
       .slice(0, 6);
   })();
 
+  const [showLike, setShowLike] = useState(false);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
@@ -239,9 +240,14 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
           </section>
         )}
 
-        {like.length > 0 && (
+        {like.length > 0 && !showLike && (
+          <button type="button" className="hc-btn ghost hc-sugask" data-noexport="true"
+            onClick={() => setShowLike(true)}>What other stores are doing</button>
+        )}
+
+        {like.length > 0 && showLike && (
           <section className="hc-sugblock hc-sugstores">
-            <h3>{like.length} pilot {like.length === 1 ? "store runs" : "stores run"} this</h3>
+            <h3>What other stores are doing</h3>
             <ul className="hc-sugpilots">
               {like.map((st) => (
                 <li key={st.id || st.name}>

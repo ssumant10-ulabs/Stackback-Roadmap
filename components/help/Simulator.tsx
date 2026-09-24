@@ -397,7 +397,12 @@ function Contracts({ c, prepaidRows, paygRows }: {
   const shown = status === "All" ? contracts : contracts.filter((x) => x.status === status);
 
   return (
-    <div className="hc-contracts">
+    <div className="pl hc-contracts">
+      <div className="pl-top">
+        <div className="pl-titlerow"><h3>Purchase Contracts</h3></div>
+        <p className="pl-sub">StackBack &rsaquo; Purchase Contracts</p>
+      </div>
+      <div className="pl-card">
       <div className="hc-ctabs">
         {(["product", "bundle"] as const).map((t) => (
           <button key={t} className={"hc-ctab" + (tab === t ? " on" : "")} onClick={() => setTab(t)}>
@@ -438,6 +443,7 @@ function Contracts({ c, prepaidRows, paygRows }: {
           </table>
         </div>
       )}
+      </div>
 
       <p className="hc-modefoot">
         Showing {tab === "bundle" ? 0 : shown.length} of {tab === "bundle" ? 0 : contracts.length} subscriptions.
