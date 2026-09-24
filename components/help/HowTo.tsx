@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ALL_CLIPS, CLIP_GROUPS, type Clip } from "@/lib/help/videos";
+import { ALL_CLIPS, CLIP_GROUPS, type Clip, type ClipGroup } from "@/lib/help/videos";
 import { APP_NAME } from "@/lib/help/types";
 
 const WATCHED = "sb-help-watched";
@@ -13,7 +13,10 @@ const WATCHED = "sb-help-watched";
  *
  *  What has been watched is remembered on the device, because sixteen videos is more than
  *  anybody finishes in a sitting and "where was I" is the question that stops them returning. */
-export default function HowTo() {
+export default function HowTo({ internal = false }: {
+  /** Signed in on a ULABS account. An unredacted recording is held back below this. */
+  internal?: boolean;
+}) {
   const [current, setCurrent] = useState<Clip>(ALL_CLIPS[0]);
   const [watched, setWatched] = useState<string[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -56,7 +59,13 @@ export default function HowTo() {
     v.load();
   }, [current]);
 
-  const flat = useMemo(() => CLIP_GROUPS.flatMap((g) => g.clips.map((c) => ({ ...c, group: g.title }))), []);
+  const groups: ClipGroup[] = useMemo(
+    () => CLIP_GROUPS
+      .map((g) => ({ ...g, clips: g.clips.filter((c) => internal || !c.internalOnly) }))
+      .filter((g) => g.clips.length > 0),
+    [internal],
+  );
+  const flat = useMemo(() => groups.flatMap((g) => g.clips.map((c) => ({ ...c, group: g.title }))), [groups]);
   const [copied, setCopied] = useState<string | null>(null);
   const index = flat.findIndex((c) => c.id === current.id);
   const next = flat[index + 1];
@@ -133,7 +142,7 @@ export default function HowTo() {
         </div>
 
         <nav className="hc-htlist" aria-label="Recordings">
-          {CLIP_GROUPS.map((g) => (
+          {groups.map((g) => (
             <div key={g.id} className="hc-htgroup">
               <p className="hc-htgrouph">{g.title}</p>
               <p className="hc-htgroupb">{g.blurb}</p>

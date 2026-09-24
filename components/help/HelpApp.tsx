@@ -281,7 +281,7 @@ export default function HelpApp({
             ? <Internal store={store} stores={stores} connected={sanityConnected} getToken={auth.getToken} />
             : <div className="hc-empty"><p>The internal tab needs a ULABS account.</p></div>)}
           {view.kind === "sim" && <Simulator />}
-          {view.kind === "howto" && <HowTo />}
+          {view.kind === "howto" && <HowTo internal={auth.internal} />}
           {view.kind === "home" && <Home go={go} internal={auth.internal} onAsk={setChatSeed} answered={answered.length} />}
           {view.kind === "cat" && cat && (
             <section>

@@ -10,6 +10,9 @@
 
 export interface Clip {
   id: string;
+  /** Held back from the merchant view. Used for a recording that still shows real
+   *  customer or merchant detail: a clip nobody has redacted is not a help article. */
+  internalOnly?: boolean;
   title: string;
   src: string;
   /** Set when the file is served from this app rather than ClickUp. */
@@ -71,10 +74,11 @@ export const CLIP_GROUPS: ClipGroup[] = [
     clips: [
       {
         id: "managing-subs",
-        title: "Managing subscriptions end to end",
+        title: "Reschedule, pause and resume a subscription",
         src: "/help/videos/managing-subscriptions.mov",
         local: true,
-        note: "Served from this app. QuickTime does not play in Firefox, so this should move to ClickUp with the others.",
+        internalOnly: true,
+        note: "NOT REDACTED. This recording shows a real merchant's brand name, real subscription numbers and real product names and images, so it is held back from the merchant view until those are blurred. Internal sign-in only.",
       },
     ],
   },
