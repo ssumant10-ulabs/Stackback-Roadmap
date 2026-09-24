@@ -163,6 +163,23 @@ export interface ToggleDef {
   gatedFromScale?: string;
   /** Only rendered while another setting holds a given value. */
   showWhen?: { key: keyof WidgetSettings; is: string };
+  /** Dot path into `theme` for the shape and type settings, which are nested rather than
+   *  top-level. When set, `key` is unused for reading and writing. */
+  themePath?: string;
+}
+
+/** Read or write a dot path inside the theme object. */
+export function readTheme(s: WidgetSettings, path: string): string | number {
+  return path.split(".").reduce<unknown>((o, k) => (o as Record<string, unknown>)?.[k], s.theme) as string | number;
+}
+
+export function writeTheme(s: WidgetSettings, path: string, value: string | number): WidgetSettings {
+  const keys = path.split(".");
+  const theme = structuredClone(s.theme) as unknown as Record<string, unknown>;
+  let node = theme;
+  for (const k of keys.slice(0, -1)) node = node[k] as Record<string, unknown>;
+  node[keys[keys.length - 1]] = value;
+  return { ...s, theme: theme as unknown as WidgetTheme };
 }
 
 /** Whether the row's checkbox is ticked, which is not the stored value for an inverted one. */
@@ -290,6 +307,43 @@ export const TOGGLE_GROUPS: ToggleGroup[] = [
         ],
         help: "Tabs apply when a variant belongs to several bundles of the same type. Grouping combines variants of one product into a single row with a variant picker.",
         note: "Mix & match bundles only, which this preview does not draw." },
+    ],
+  },
+  {
+    title: "Shape and type",
+    source: "theme",
+    items: [
+      { key: "theme", themePath: "shape.radius", label: "Corner radius", path: "theme.shape.radius",
+        touches: "plan-card", kind: "select",
+        options: [
+          { value: "0", label: "Sharp \u00b7 0px" }, { value: "6", label: "Slight \u00b7 6px" },
+          { value: "12", label: "Semi \u00b7 12px" }, { value: "20", label: "Rounded \u00b7 20px" },
+          { value: "999", label: "Pill \u00b7 fully round" },
+        ],
+        help: "Every corner in the widget, from the tab bar to the plan cards. Read from your theme's button radius when you fetch your colours." },
+      { key: "theme", themePath: "components.tabStyle", label: "Tab style", path: "theme.components.tabStyle",
+        touches: "tabs", kind: "select",
+        options: [{ value: "pill", label: "Pill" }, { value: "underline", label: "Underline" }],
+        help: "Pill fills the selected tab, underline rules it. Pill is the default and reads as a control; underline reads as navigation." },
+      { key: "theme", themePath: "components.ctaButton", label: "Button style", path: "theme.components.ctaButton",
+        touches: "cta", kind: "select",
+        options: [{ value: "solid", label: "Solid" }, { value: "outline", label: "Outline" }],
+        help: "Match whatever your Add to cart already does, so the two buttons on the page do not argue." },
+      { key: "theme", themePath: "components.discountBadge", label: "Discount badge", path: "theme.components.discountBadge",
+        touches: "plan-card", kind: "select",
+        options: [{ value: "filled", label: "Filled" }, { value: "outline", label: "Outline" }],
+        help: "Filled shouts the saving, outline states it." },
+      { key: "theme", themePath: "components.selectedCardState", label: "Selected plan card", path: "theme.components.selectedCardState",
+        touches: "plan-card", kind: "select",
+        options: [{ value: "border-and-fill", label: "Border and fill" }, { value: "border-only", label: "Border only" }],
+        help: "How obviously the chosen plan is chosen. Fill wins on a busy product page." },
+      { key: "theme", themePath: "typography.fontScale", label: "Text size", path: "theme.typography.fontScale",
+        touches: "plan-card", kind: "select",
+        options: [
+          { value: "90", label: "90% \u00b7 compact" }, { value: "100", label: "100% \u00b7 default" },
+          { value: "110", label: "110% \u00b7 large" },
+        ],
+        help: "Scales the whole widget. Your theme's own font family comes across when you fetch your colours; this is the size." },
     ],
   },
   {

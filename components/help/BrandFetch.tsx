@@ -28,9 +28,13 @@ function toTheme(tokens: Token[], corners: string, customPx: number | null, base
   const tile = get("Product_Tile_Background") || base.surfaces.inputBackground;
 
   const RADIUS: Record<string, number> = { Sharp: 0, Semi: 12, Rounded: 20 };
-  const radius = corners === "Custom" && customPx != null
+  const raw = corners === "Custom" && customPx != null
     ? Math.max(0, Math.round(customPx))
     : (RADIUS[corners] ?? base.shape.radius);
+  /* Snap to the steps the Corner radius control offers, or the theme lands a value the
+     dropdown has no option for and the field renders empty. A 38px button radius is a pill. */
+  const STEPS = [0, 6, 12, 20, 999];
+  const radius = raw >= 28 ? 999 : STEPS.reduce((a, b) => (Math.abs(b - raw) < Math.abs(a - raw) ? b : a), 0);
 
   return {
     ...base,

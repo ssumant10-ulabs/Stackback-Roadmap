@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import {
-  TOGGLE_GROUPS, applyMatrix, matrixValue, setToggle, settingCount, toggleOn,
+  TOGGLE_GROUPS, applyMatrix, matrixValue, readTheme, setToggle, settingCount, toggleOn, writeTheme,
   type ToggleDef, type WidgetSettings,
 } from "@/lib/help/widget";
 import type { PlanOption } from "@/lib/help/sim";
@@ -376,8 +376,10 @@ export default function WidgetPreview({
                       </select>
                     )}
                     {d.kind === "select" && (
-                      <select value={String(s[d.key] ?? "")}
-                        onChange={(e) => onChange({ ...s, [d.key]: e.target.value })}>
+                      <select value={String(d.themePath ? readTheme(s, d.themePath) : (s[d.key] ?? ""))}
+                        onChange={(e) => onChange(d.themePath
+                          ? writeTheme(s, d.themePath, /^\d+$/.test(e.target.value) ? Number(e.target.value) : e.target.value)
+                          : { ...s, [d.key]: e.target.value })}>
                         {d.options?.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                       </select>
                     )}
