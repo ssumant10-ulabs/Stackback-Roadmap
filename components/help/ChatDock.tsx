@@ -3,15 +3,32 @@ import { useEffect, useRef, useState } from "react";
 import { OPENER, reply, transcript, you, type Turn } from "@/lib/help/chat";
 import { STATUS_LABEL } from "@/lib/help/types";
 import { record } from "@/lib/help/log";
-import { CATEGORIES } from "@/lib/help/corpus";
+import { ARTICLES, CATEGORIES } from "@/lib/help/corpus";
+import { FAQ_IDS } from "@/lib/help/faq";
 
 const CAT_NAME = new Map(CATEGORIES.map((c) => [c.id, c.name]));
-const SUGGEST = [
-  "Why did one checkout create two orders?",
-  "Can customers pay COD for a subscription?",
-  "What happens to subscriptions if we uninstall?",
-  "Can we refund the deliveries a customer has not had yet?",
-];
+
+/** The openers are the most-asked of the CURATED questions, taken from the data rather than
+ *  written here. The hand-written four had drifted off the list entirely, and a starter
+ *  question nobody asks is a worse first impression than no starter at all.
+ *
+ *  Drawn from the FAQ, not from the raw `asked` ranking: raw puts "Where do I find the
+ *  collaborator code?" fourth, and that is onboarding, answered once by us on the way in and
+ *  deliberately off the FAQ (D2026-0925-04). One per topic, so four rows cover four parts of
+ *  the product instead of four ways of asking about orders. Regenerating the corpus re-picks
+ *  them. */
+const SUGGEST = (() => {
+  const byAsked = ARTICLES.filter((a) => FAQ_IDS.has(a.id)).sort((a, b) => b.asked - a.asked);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const a of byAsked) {
+    if (seen.has(a.cat)) continue;
+    seen.add(a.cat);
+    out.push(a.q);
+    if (out.length === 4) break;
+  }
+  return out;
+})();
 
 export default function ChatDock({ seed, onSeedUsed, email, internal }: {
   seed: string | null; onSeedUsed: () => void; email?: string | null; internal: boolean;

@@ -18,9 +18,10 @@
      from these two, so the bar, the rail and the answers cannot drift apart again. */
   --hc-shell: 1560px;
   --hc-pad: 24px;
-  /* Level with the right edge of the content column once the page stops filling the
-     window, rather than pinned to the glass with the answers ending 300px away. */
-  --hc-dockright: max(20px, calc((100vw - var(--hc-shell)) / 2 + var(--hc-pad)));
+  /* Out at the window edge, not tucked in level with the content column: the dock is a
+     persistent affordance and belongs out of the reading path, which is what the inset
+     version cost it. A quarter of the gutter keeps it off the very glass on a wide screen. */
+  --hc-dockright: max(20px, calc((100vw - var(--hc-shell)) / 8));
 
   /* Muted text. The app's --ink-3 is 3.4:1 on this ground and the obvious darkening to
      #6A7163 still only reaches 4.11 on --sunken, which is where the inactive part tab and
@@ -595,8 +596,17 @@
 .hc-flowlede { max-width: var(--hc-measure); }
 .hc-flowlede b { color: var(--ink); font-weight: 680; }
 
-.hc-modecols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
-.hc-modecol { background: var(--card); border: 1px solid var(--border); border-radius: 13px; padding: 15px 16px; box-shadow: var(--shadow); }
+/* One mode per row, each the full width of the column. Three-up put a Shopify Orders table
+   into 430px and a horizontal scroller, so the tags were always the half you could not see. */
+.hc-modecols { display: flex; flex-direction: column; gap: 16px; }
+.hc-modecol { border-radius: 13px; padding: 15px 16px; }
+/* `.pl` on the same element supplies Polaris' surface and its light colour-scheme, so the
+   heading above the table reads in the same ink as the table. */
+.hc-modecol.pl { margin: 0; border: 1px solid var(--border); }
+.hc-modecol .hc-modehead { border-bottom-color: var(--pl-line); }
+.hc-modecol .hc-modehead b { font-size: 15px; font-weight: 650; }
+.hc-modecol .hc-modehead span { color: var(--pl-sub); }
+.hc-modecol .hc-modekey { margin-top: 12px; }
 .hc-modehead { padding-bottom: 11px; margin-bottom: 11px; border-bottom: 1px solid var(--border); }
 .hc-modehead b { display: block; font-size: 14.5px; font-weight: 750; }
 .hc-modehead span { display: block; font-size: 12px; color: var(--hc-muted); margin-top: 2px; }
@@ -929,7 +939,7 @@
 .hc-cempty { margin: 0; padding: 26px 14px; text-align: center; font-size: 13px; color: var(--hc-muted); background: var(--sunken); border-radius: 10px; }
 
 /* The order tables carry more per row now, so give them the page rather than a column. */
-.hc-modecols { grid-template-columns: repeat(auto-fit, minmax(430px, 1fr)); }
+
 
 @media (max-width: 767px) { .hc-surfaces { grid-template-columns: minmax(0, 1fr); } }
 
@@ -1266,8 +1276,8 @@
 .hc-modepillb:hover { color: var(--ink); }
 .hc-modepillb.on { background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
 .hc-tagcell { max-width: 210px; }
-.hc-modecols { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-@media (max-width: 1279px) { .hc-modecols { grid-template-columns: minmax(0, 1fr); } }
+
+
 
 /* Tags wrap. A clipped tag is worse than a wrapped one: "sb-delivery-1-" is not a tag. */
 .hc-tagcell { display: flex; flex-wrap: wrap; gap: 4px; max-width: none; }
@@ -1530,3 +1540,50 @@
 .hc-faqq { font-size: 14px; font-weight: 600; padding-top: 13px; padding-bottom: 13px; }
 .hc-faqlist li.on .hc-faqq { font-weight: 680; }
 .hc-navfaq { font-weight: 700; }
+
+
+/* ---------------------------------------------------- Shopify's Orders index, 1:1
+   Column order, badges, hairlines and metrics are Polaris': 13px body, #E3E3E3 rules, the
+   status badge as a tinted pill with a plain filled dot and no glyph. Lives inside `.pl`,
+   so it is on Shopify's light ground in either theme. */
+.pl-orders {
+  width: 100%; border-collapse: collapse; font-size: 13px;
+  background: var(--pl-card); border: 1px solid var(--pl-line); border-radius: 12px;
+  overflow: hidden; table-layout: auto;
+}
+.pl-orders thead th {
+  text-align: left; font-size: 12px; font-weight: 600; color: var(--pl-sub);
+  background: #fafafa; border-bottom: 1px solid var(--pl-line);
+  padding: 9px 12px; white-space: nowrap;
+}
+.pl-orders td { padding: 11px 12px; border-top: 1px solid var(--pl-line); vertical-align: top; }
+.pl-orders tbody tr:first-child td { border-top: 0; }
+.pl-orders .pl-r { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pl-orders td b { font-weight: 600; }
+.pl-orders td em {
+  display: block; font-style: normal; font-size: 12px; color: var(--pl-sub); margin-top: 3px;
+}
+.pl-orow:hover td { background: #fafafa; }
+.pl-oparent td { background: #fff8e8; }
+.pl-oparent:hover td { background: #fff4db; }
+.pl-orowsplit td {
+  padding: 9px 12px 7px; border-top: 1px solid var(--pl-line); background: #f6f6f6;
+  font-size: 11px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--pl-sub);
+}
+/* A delivery with no order yet is not a faint row, it is an absent one. Hatched, because a
+   merchant reading this needs "nothing is in your admin" to be the loudest thing on the row. */
+.pl-opending td {
+  background: repeating-linear-gradient(135deg, transparent 0 7px, rgba(0, 0, 0, .035) 7px 14px);
+}
+.pl-onone { color: #8a8a8a; }
+.pl-sched { color: #005bd3; }
+.pl-await { color: #8a6116; }
+.pl-otags { max-width: 260px; }
+.pl-badge.warn { background: #ffd79d; color: #5e4200; }
+.pl-orders .pl-badge { white-space: nowrap; }
+.pl .hc-shoptag { background: #ebebeb; color: var(--pl-ink); }
+
+@media (max-width: 899px) {
+  .pl-orders { font-size: 12px; min-width: 760px; }
+  .pl-orders thead th, .pl-orders td { padding: 8px 9px; }
+}

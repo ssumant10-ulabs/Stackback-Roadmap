@@ -181,6 +181,10 @@ export default function Simulator({ config, onConfig }: {
   );
 }
 
+/** One subscription is one customer, so the column is not a variable. Named rather than left
+ *  blank because an empty Customer column is the one thing Shopify's Orders index never has. */
+const CUSTOMER = "Aarti Menon";
+
 function OrdersColumn({ mode, c, p, rows }: {
   mode: Mode; c: SimConfig;
   p: ReturnType<typeof price>; rows: ReturnType<typeof schedule>;
@@ -191,7 +195,7 @@ function OrdersColumn({ mode, c, p, rows }: {
   // has already opened. Delivery one is not counted separately, it is ON the checkout order.
   const live = 1 + rows.slice(1).filter((r) => r.existsToday).length;
   return (
-    <div className="hc-modecol">
+    <div className="hc-modecol pl">
       <div className="hc-modehead">
         <b>{MODE_LABEL[mode]}</b>
         <span>
@@ -204,42 +208,55 @@ function OrdersColumn({ mode, c, p, rows }: {
       </div>
 
       <div className="hc-shopscroll">
-        <table className="hc-shoptable">
+        {/* Shopify's Orders index, not a table of ours. Same column order, same badges, same
+            hairlines, on Polaris' own light ground in either theme: a merchant is being told
+            what will be in their admin, and they recognise that screen by its look. */}
+        <table className="pl-orders">
           <thead>
-            <tr><th>Order</th><th>Created</th><th className="hc-num">Total</th><th>Payment</th><th>Fulfilment</th><th>Tags</th></tr>
+            <tr>
+              <th>Order</th><th>Date</th><th>Customer</th><th className="pl-r">Total</th>
+              <th>Payment status</th><th>Fulfillment status</th><th className="pl-r">Items</th><th>Tags</th>
+            </tr>
           </thead>
           <tbody>
-            <tr className="hc-splitrow"><td colSpan={6}>Parent &middot; the checkout order</td></tr>
-            <tr className="hc-parentrow">
+            <tr className="pl-orowsplit"><td colSpan={8}>Parent &middot; the checkout order</td></tr>
+            <tr className="pl-orow pl-oparent">
               <td><b>#{base}</b></td>
               <td>{fmtDate(rows[0].createdOn)}<em>at checkout</em></td>
-              <td className="hc-num"><b>{money(p.chargedNow)}</b></td>
-              <td><Dot tone="ok" />Paid</td>
-              <td><Dot tone="ok" />Fulfilled<em>delivery 1 ships from here</em></td>
-              <td className="hc-tagcell">{ORDER_TAGS[mode].parent.map((t) => <Tag key={t}>{t}</Tag>)}</td>
+              <td>{CUSTOMER}</td>
+              <td className="pl-r"><b>{money(p.chargedNow)}</b></td>
+              <td><span className="pl-badge ok"><i />Paid</span></td>
+              <td>
+                <span className="pl-badge ok"><i />Fulfilled</span>
+                <em>delivery 1 ships from here</em>
+              </td>
+              <td className="pl-r">{c.deliveries === 1 ? "1 item" : `${c.deliveries} items`}</td>
+              <td className="pl-otags">{ORDER_TAGS[mode].parent.map((t) => <Tag key={t}>{t}</Tag>)}</td>
             </tr>
-            <tr className="hc-splitrow"><td colSpan={6}>Child &middot; one order per delivery after the first</td></tr>
+            <tr className="pl-orowsplit"><td colSpan={8}>Child &middot; one order per delivery after the first</td></tr>
             {rows.slice(1).map((o) => (
-              <tr key={o.n} className={o.existsToday ? "" : "hc-pendingrow"}>
-                <td>{o.existsToday ? <b>#{base + o.n}</b> : <span className="hc-noorder">none yet</span>}</td>
+              <tr key={o.n} className={"pl-orow" + (o.existsToday ? "" : " pl-opending")}>
+                <td>{o.existsToday ? <b>#{base + o.n}</b> : <span className="pl-onone">none yet</span>}</td>
                 <td>
                   {o.existsToday
                     ? fmtDate(o.createdOn)
-                    : <b className={o.paidAtCheckout ? "hc-sched" : "hc-await"}>
+                    : <b className={o.paidAtCheckout ? "pl-sched" : "pl-await"}>
                         {o.paidAtCheckout ? `Due ${fmtDate(o.createdOn)}` : "Waits for payment"}
                       </b>}
                   <em>delivers {fmtDate(o.deliveryDate)}</em>
                 </td>
-                <td className="hc-num">{money(o.amount)}</td>
+                <td>{CUSTOMER}</td>
+                <td className="pl-r">{money(o.amount)}</td>
                 <td>{o.paidAtCheckout
-                  ? <><Dot tone="ok" />{mode === "autopay" ? "Debited" : "Paid"}</>
-                  : <><Dot tone="warn" />Invoice {fmtDate(o.invoicedOn ?? o.createdOn)}</>}</td>
+                  ? <span className="pl-badge ok"><i />{mode === "autopay" ? "Debited" : "Paid"}</span>
+                  : <span className="pl-badge warn"><i />Invoice {fmtDate(o.invoicedOn ?? o.createdOn)}</span>}</td>
                 <td>{o.existsToday
-                  ? <><Dot tone="warn" />Unfulfilled<em>your 3PL ships this</em></>
-                  : <span className="hc-noorder">not created yet</span>}</td>
-                <td className="hc-tagcell">{o.existsToday
+                  ? <><span className="pl-badge warn"><i />Unfulfilled</span><em>your 3PL ships this</em></>
+                  : <span className="pl-onone">not created yet</span>}</td>
+                <td className="pl-r">{o.existsToday ? "1 item" : <span className="pl-onone">&mdash;</span>}</td>
+                <td className="pl-otags">{o.existsToday
                   ? ORDER_TAGS[mode].delivery.map((t) => <Tag key={t}>{t}</Tag>)
-                  : <span className="hc-noorder">&mdash;</span>}</td>
+                  : <span className="pl-onone">&mdash;</span>}</td>
               </tr>
             ))}
           </tbody>

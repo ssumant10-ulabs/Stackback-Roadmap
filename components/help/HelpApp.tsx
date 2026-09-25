@@ -100,6 +100,12 @@ export default function HelpApp({
      is signed in on a ULABS account and asking them to sign in again inside their own admin
      is how the internal checklist ended up invisible to the team it was written for. */
   const internal = auth.internal || Boolean(embedded);
+  /* Whose page this is. `/help` with no store in the path is ours, the link we hand somebody
+     who is not a store record yet; `/help/<slug>` is a merchant's. The Internal tab shows on
+     ours whether or not anybody has signed in, because a tab that only appears once you are
+     signed in is indistinguishable from a tab that is gone, which is how it went missing.
+     Its CONTENTS stay gated on `internal`, which is the line D2026-0925-05 drew. */
+  const ourSurface = Boolean(embedded) || !store;
   const [view, setView] = useState<View>({ kind: "faq" });
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<string | null>(null);
@@ -116,7 +122,11 @@ export default function HelpApp({
    * link to one answer rather than "search for shipping and scroll". */
   useEffect(() => {
     const sync = () => {
-      const v = parseHash();
+      let v = parseHash();
+      /* A leftover #/insights or #/internal from a previous visit opened the Help Centre on a
+         locked empty state. The front door is the questions, so a route nobody on this page
+         can open falls back to them rather than to a sign-in notice. */
+      if ((v.kind === "insights" || v.kind === "internal") && !internal && !ourSurface) v = { kind: "faq" };
       setView(v);
       if (v.kind === "search") setQ(v.q);
       const { article } = splitHash();
@@ -129,7 +139,8 @@ export default function HelpApp({
     sync();
     window.addEventListener("hashchange", sync);
     return () => window.removeEventListener("hashchange", sync);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [internal, ourSurface]);
 
   const go = useCallback((v: View) => {
     const h = v.kind === "home" ? "#/" : v.kind === "cat" ? `#/cat/${v.id}`
@@ -229,7 +240,7 @@ export default function HelpApp({
             onClick={() => go({ kind: "howto" })}>How to</button>
           <button role="tab" aria-selected={part === "help"} className={"hc-part" + (part === "help" ? " on" : "")}
             onClick={() => go({ kind: "faq" })}>Help Centre</button>
-          {internal && (
+          {ourSurface && (
             <button role="tab" aria-selected={part === "internal"} className={"hc-part hc-partint" + (part === "internal" ? " on" : "")}
               onClick={() => go({ kind: "internal" })}>Internal</button>
           )}
@@ -334,7 +345,12 @@ export default function HelpApp({
           )}
           {view.kind === "internal" && (internal
             ? <Internal store={store} stores={stores} connected={sanityConnected} getToken={auth.getToken} />
-            : <div className="hc-empty"><p>The internal tab needs a ULABS account.</p></div>)}
+            : <div className="hc-empty">
+                <p>The internal tab needs a ULABS account.</p>
+                {auth.available
+                  ? <button className="hc-btn primary" onClick={auth.signIn}>Sign in</button>
+                  : <p className="hc-note">Sign-in is not configured on this build, so it cannot be opened here.</p>}
+              </div>)}
           {view.kind === "sim" && <Simulator />}
           {view.kind === "howto" && <HowTo internal={internal} />}
           {view.kind === "faq" && (
