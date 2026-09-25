@@ -1642,3 +1642,80 @@
   .popover.assign-pop.open{display:flex;}
   .ap-body{overflow-y:auto;min-height:0;margin:0 -4px;padding:0 4px 2px;}
   .assignee-done{flex:none;}
+
+/* ================================================================= the work board
+   Three lenses over one `stage` field (lib/board.ts). Columns that are "in sync" across
+   views are the same stage read twice, so nothing here has to keep two lists level. */
+.wb { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.wb-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.wb-tabs { display: inline-flex; gap: 2px; padding: 2px; background: var(--sunken, rgba(0,0,0,.05)); border-radius: 10px; }
+.wb-tab {
+  appearance: none; border: 0; background: transparent; color: var(--ink-2, #555);
+  font: inherit; font-size: 13px; font-weight: 620; padding: 6px 12px; border-radius: 8px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 7px;
+}
+.wb-tab:hover { color: var(--ink, #111); }
+.wb-tab.on { background: var(--card, #fff); color: var(--ink, #111); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.wb-tab em { font-style: normal; font-size: 11px; opacity: .6; font-variant-numeric: tabular-nums; }
+.wb-blurb { margin: 0; font-size: 12.5px; color: var(--ink-3, #777); }
+.wb-else { color: var(--ink-2, #555); }
+
+.wb-cols { display: grid; gap: 10px; align-items: start; overflow-x: auto; padding-bottom: 8px; }
+.wb-col {
+  display: flex; flex-direction: column; gap: 8px; min-width: 0;
+  background: var(--sunken, rgba(0,0,0,.035)); border: 1px solid transparent;
+  border-radius: 12px; padding: 10px;
+}
+.wb-col.over { border-color: var(--brand, #4F7A00); background: var(--card-2, rgba(0,0,0,.06)); }
+.wb-colh { display: flex; align-items: baseline; gap: 8px; }
+.wb-colh b { font-size: 12.5px; font-weight: 700; letter-spacing: -.005em; line-height: 1.3; }
+.wb-colh em { margin-left: auto; font-style: normal; font-size: 11px; color: var(--ink-3, #777); font-variant-numeric: tabular-nums; }
+/* The junction columns say what resolves them, because "Approved" means two different
+   things depending on which team holds the card and guessing is the whole problem. */
+.wb-hint { margin: -4px 0 0; font-size: 11px; line-height: 1.45; color: var(--ink-3, #777); }
+.wb-stack { display: flex; flex-direction: column; gap: 7px; min-height: 40px; }
+.wb-empty { margin: 0; font-size: 11.5px; color: var(--ink-3, #999); opacity: .7; }
+
+.wb-card {
+  background: var(--card, #fff); border: 1px solid var(--line, rgba(0,0,0,.12));
+  border-radius: 10px; padding: 9px 10px; cursor: grab;
+  box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+.wb-card:active { cursor: grabbing; }
+.wb-card.dragging { opacity: .45; }
+.wb-cardtop { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.wb-ref { font-size: 10.5px; font-family: ui-monospace, Menlo, monospace; color: var(--ink-3, #777); }
+.wb-kind { font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; border-radius: 5px; padding: 1px 5px; }
+.wb-kind.bug { background: #ffd79d; color: #5e4200; }
+.wb-urg { margin-left: auto; font-size: 10px; font-weight: 650; border-radius: 5px; padding: 1px 6px; }
+.wb-urg.u-high { background: #ffd6d6; color: #7a1a1a; }
+.wb-urg.u-medium { background: #ffe9c2; color: #6b4a00; }
+.wb-urg.u-low { background: rgba(0,0,0,.06); color: var(--ink-3, #777); }
+.wb-title { margin: 0; font-size: 13px; font-weight: 600; line-height: 1.35; }
+.wb-store { margin: 3px 0 0; font-size: 11.5px; color: var(--ink-3, #777); }
+.wb-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.wb-chips:empty { display: none; }
+.wb-team, .wb-stage, .wb-task {
+  font-size: 10.5px; border-radius: 5px; padding: 1px 6px; max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.wb-team { font-weight: 650; }
+.wb-team.t-dsg { background: #efe0ff; color: #4a2170; }
+.wb-team.t-eng { background: #dbe9ff; color: #16407a; }
+.wb-team.t-rev { background: #e3f3d8; color: #2c4b14; }
+.wb-stage { background: rgba(0,0,0,.05); color: var(--ink-3, #777); }
+.wb-task { background: transparent; border: 1px dashed var(--line, rgba(0,0,0,.18)); color: var(--ink-3, #777); }
+
+.wb-scrim {
+  position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.35);
+  display: grid; place-items: center; padding: 20px;
+}
+.wb-nudge {
+  background: var(--card, #fff); border: 1px solid var(--line, rgba(0,0,0,.12));
+  border-radius: 14px; padding: 18px 20px; width: min(420px, 100%);
+  box-shadow: 0 12px 40px rgba(0,0,0,.25);
+}
+.wb-nudge > b { display: block; font-size: 15px; }
+.wb-nudgeq { margin: 6px 0 0; font-size: 13px; font-weight: 600; color: var(--ink, #111); }
+.wb-nudgeb { margin: 8px 0 14px; font-size: 12.5px; line-height: 1.55; color: var(--ink-3, #777); }
+.wb-nudgerow { display: flex; gap: 8px; flex-wrap: wrap; }

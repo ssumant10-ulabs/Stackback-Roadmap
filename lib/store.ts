@@ -5,6 +5,7 @@ import { SEED_VERSION, seed, stampIds } from "./seed";
 import { uid, newRoadmapId } from "./id";
 import { makeHelpers, pruneTasks, type Helpers } from "./teams";
 import { effStatus, normPriority, subtreeCounts, waveWord } from "./derive";
+import { STAGE_LABEL, stageOf, type BoardTeam, type BoardView, type ReviewWith, type Stage } from "./board";
 import { reconcile } from "./dates";
 import { featureSeed } from "./featureSeed";
 import { pilotSeed } from "./pilotSeed";
@@ -93,6 +94,8 @@ export interface UiState {
   /** Board checklist disclosure. Opt-in: a card is closed unless its id is true here,
    *  so a fresh board opens quiet no matter how many subtasks a milestone carries. */
   boardOpen: Record<string, boolean>;
+  /** Which lens the work board is showing: PM/CS, Design or Dev. */
+  boardView: BoardView;
   simpleOpen: Record<string, boolean>;
   /** Which cards have their comment thread showing. */
   commentsOpen: Record<string, boolean>;
@@ -139,7 +142,7 @@ class Store {
   data: Data = defaultData();
   ui: UiState = {
     view: "timeline", tlMode: "swim", simpleMode: "stage", teamGran: "team",
-    filter: null, boardOpen: {}, simpleOpen: {}, commentsOpen: {}, sort: null,
+    filter: null, boardOpen: {}, boardView: "pm", simpleOpen: {}, commentsOpen: {}, sort: null,
     theme: "auto", palette: "lime", activityOpen: false,
   };
   /** Display name used for authorship on comments and activity. Local to this browser. */
@@ -585,6 +588,32 @@ class Store {
     this.pilots.forEach((p) => { if (p.custom) delete p.custom[key]; });
     this.commit();
   }
+  setBoardView(v: BoardView) { this.ui.boardView = v; this.commit(); }
+
+  /** Move a card to a stage on the work board.
+   *
+   *  `team` and `review` are written in the same commit as the stage, never after it: a card
+   *  in `pm_handover` for one render with no team on it is a card in nobody's column.
+   *  Clearing them on the way back is deliberate too, so re-handing a card asks again rather
+   *  than quietly reusing an answer from a fortnight ago. */
+  setStage(id: string, stage: Stage, opts?: { team?: BoardTeam | null; review?: ReviewWith | null }) {
+    const f = this.features.find((x) => x.id === id);
+    if (!f) return;
+    const was = stageOf(f);
+    if (was === stage && !opts) return;
+    f.stage = stage;
+    if (opts && "team" in opts) f.boardTeam = opts.team ?? null;
+    if (opts && "review" in opts) f.reviewWith = opts.review ?? null;
+    // Back in PM's hands: the old answers no longer apply, and the next handover asks again.
+    if (stage === "bug" || stage === "feature") { f.boardTeam = null; f.reviewWith = null; }
+    // A review answer only means anything from the review onward.
+    if (!["dev_review", "dev_approved", "prod"].includes(stage)) f.reviewWith = null;
+    f.updatedAt = new Date().toISOString();
+    const who = f.boardTeam === "Engineering" ? "dev" : f.boardTeam === "Design" ? "design" : null;
+    this.log("stage", f.title, `${STAGE_LABEL[was]} to ${STAGE_LABEL[stage]}${who ? `, with ${who}` : ""}`);
+    this.commit();
+  }
+
   /** Bugs carry which layer the fault is in; features do not. */
   setRequestIssueType(id: string, value: string) {
     const f = this.features.find((x) => x.id === id);

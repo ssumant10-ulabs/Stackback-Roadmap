@@ -5,10 +5,7 @@ import { AppUiContext, type AppUi } from "./appui";
 import { Header } from "./Header";
 import { HeroMetrics } from "./HeroMetrics";
 import { ViewRow } from "./ViewRow";
-import { Timeline } from "./views/Timeline";
-import { Overview } from "./views/Overview";
-import { TeamsPeople } from "./views/TeamsPeople";
-import { Board } from "./views/Board";
+import { WorkBoard } from "./views/WorkBoard";
 import { Features } from "./views/Features";
 import { FilterPopover } from "./FilterPopover";
 import { AssigneePopover } from "./AssigneePopover";
@@ -120,7 +117,10 @@ export default function RoadmapApp() {
           <ViewRow />
         </div>
         <main data-view={view}>
-          {view === "board" ? <Board /> : view === "simple" ? <Overview /> : view === "teams" ? <TeamsPeople /> : view === "features" ? <Features /> : <Timeline />}
+          {/* Timeline, Teams & People and the priority board came off on 2026-09-25: five
+              lenses on the same tree was the thing that made this screen hard to use. The
+              roadmap horizons are still on the cards and in the header metrics. */}
+          {view === "features" ? <Features /> : <WorkBoard />}
         </main>
         <div className="footnote">
           <button onClick={() => { if (confirm(`Reset “${s.activeRoadmap().name}”? Added tasks and edits in this roadmap will be lost.`)) s.resetActive(); }}>Reset this roadmap</button>

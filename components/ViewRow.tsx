@@ -1,8 +1,7 @@
 "use client";
 import { useRef } from "react";
 import { useStore } from "@/lib/store";
-import { VIEWS } from "@/lib/constants";
-import { IcBoard, IcCollapseAll, IcExpandAll, IcFilter, IcPlus, ViewIcon } from "./icons";
+import { IcBoard, IcFilter, IcPlus } from "./icons";
 import { useAppUi } from "./appui";
 import type { ViewId } from "@/lib/types";
 
@@ -16,20 +15,15 @@ export function ViewRow() {
   const filterBtn = useRef<HTMLButtonElement>(null);
   const view = s.ui.view;
   const onBoard = view === "board";
-  const anyOpen = s.anyBoardOpen();
   const canFilter = FILTERABLE.includes(view);
 
   return (
     <div className="view-row">
+      {/* One view. Timeline, Teams & People and By wave / Swimlanes / Dates all read the
+          same tree, and five ways of reading it is what made the screen hard to use. The
+          board's own PM / Design / Dev tabs are inside it, next to the columns they change. */}
       <nav className="view-switch" aria-label="Roadmap views">
-        {VIEWS.map((v) => (
-          <button key={v.id} type="button" className={`vpill${view === v.id ? " active" : ""}`}
-            aria-current={view === v.id ? "page" : undefined} onClick={() => s.setView(v.id as ViewId)}>
-            <ViewIcon id={v.id} /><span>{v.label}</span>
-          </button>
-        ))}
-        <button type="button" className={`vpill${onBoard ? " active" : ""}`}
-          aria-current={onBoard ? "page" : undefined} onClick={() => s.setView("board")}>
+        <button type="button" className="vpill active" aria-current="page">
           <IcBoard /><span>Board</span>
         </button>
       </nav>
@@ -40,15 +34,7 @@ export function ViewRow() {
             <IcFilter /><span>{s.ui.filter ? s.ui.filter.name : "Filter"}</span>
           </button>
         )}
-        {onBoard && (
-          <>
-            <button className="btn ghost" title={anyOpen ? "Hide every checklist" : "Show every checklist"}
-              onClick={() => s.setAllBoardOpen(!anyOpen)}>
-              {anyOpen ? <IcCollapseAll /> : <IcExpandAll />}<span>{anyOpen ? "Collapse all" : "Expand all"}</span>
-            </button>
-            <button className="btn primary" onClick={ui.openAddTask}><IcPlus /> Add task</button>
-          </>
-        )}
+        {onBoard && <button className="btn primary" onClick={ui.openAddTask}><IcPlus /> Add task</button>}
       </div>
     </div>
   );

@@ -54,7 +54,7 @@ export interface Roadmap {
 
 export type ActivityKind =
   | "status" | "done" | "undone" | "move" | "nest" | "add" | "delete"
-  | "dates" | "assign" | "comment" | "roadmap" | "rename";
+  | "dates" | "assign" | "comment" | "roadmap" | "rename" | "stage";
 
 export interface Activity {
   id: string;
@@ -111,6 +111,15 @@ export interface Feature {
   /** A merchant raises both. Bugs are the gap the pilot sheet never covered: it counts
    *  open bugs per store but never says what they are. */
   kind?: "feature" | "bug";
+  /** Where this sits on the work board. One field, read by all three lenses, so two columns
+   *  that are "in sync" are the same stage rather than two that have to be kept level.
+   *  Absent on anything that predates the board; see DEFAULT_STAGE. */
+  stage?: import("./board").Stage | null;
+  /** Who PM handed it to. One team at a time, asked at handover rather than inferred from
+   *  who is assigned, which is how a card reaches two teams' columns at once. */
+  boardTeam?: import("./board").BoardTeam | null;
+  /** Who reviews the dev work: design QA or PM. Asked when it leaves dev. */
+  reviewWith?: import("./board").ReviewWith | null;
   /** Screenshots. Downscaled to a data URL because there is no file storage yet; they move
    *  to Firebase Storage the moment it is on. See SHOT_* limits in lib/shots.ts. */
   shots?: Shot[];
