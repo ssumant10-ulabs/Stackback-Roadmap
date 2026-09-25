@@ -3,7 +3,8 @@ import { useStore } from "@/lib/store";
 import { UserButton } from "./UserButton";
 import { SaveState } from "./SaveState";
 import { firebaseEnabled } from "@/lib/firebase";
-import { IcActivity, IcAdmin, IcPalette, IcPilots, IcSettings, Logo, ThemeIcon, ViewIcon } from "./icons";
+import { IcActivity, IcSettings, Logo, ThemeIcon } from "./icons";
+import { AppNav } from "./AppNav";
 import { useAppUi } from "./appui";
 
 const THEME_LABEL = { auto: "Auto", light: "Light", dark: "Dark" } as const;
@@ -28,21 +29,10 @@ export function Header() {
         <h1>{name} Roadmap</h1>
       </a>
       <div className="top-actions">
-        <button className={`btn ghost${s.ui.view === "features" ? " on" : ""}`} title="The pilot sheet's feature list"
-          onClick={() => s.setView(s.ui.view === "features" ? "timeline" : "features")}>
-          <ViewIcon id="features" /><span>Features backlog</span>
-        </button>
-        <a className="btn ghost" href={s.uiuxUrl} target="_blank" rel="noreferrer"
-          title={`Open the UI/UX work surface (${s.uiuxUrl})`}>
-          <IcPalette /><span>UI/UX work</span>
-        </a>
-        <a className="btn ghost" href={s.adminUrl} target="_blank" rel="noreferrer"
-          title={`Open the merchant admin (${s.adminUrl})`}>
-          <IcAdmin /><span>Merchant UI</span>
-        </a>
-        <a className="btn ghost" href="/pilots" title="Pilot stores: activation log and stats">
-          <IcPilots /><span>Pilots</span>
-        </a>
+        {/* The same six destinations, in the same order, on every screen. See AppNav. */}
+        <AppNav here={s.ui.view === "features" ? "features" : "board"}
+          onBoard={() => s.setView("board")}
+          onFeatures={() => s.setView("features")} />
         <SaveState />
         <span className="icon-group">
           <IconAction label="Activity" onClick={() => s.setActivityOpen(true)}><IcActivity /></IconAction>

@@ -698,6 +698,16 @@ export class Store {
     this.commit();
   }
 
+  /** The horizon a card sits on. It used to be which column the board drew it in; the board
+   *  is a workflow now, so it is a tag on the card and a new card was born without one. */
+  setPriority(id: string, p: 1 | 2 | 3) {
+    const n = this.findEntry(id)?.node;
+    if (!n || normPriority(n.priority) === p) return;
+    n.priority = p;
+    this.log("move", n.title, `to ${waveWord(p)}`, n.id);
+    this.commit();
+  }
+
   /** The card type tag: bug, feature or landing page. Set on either record. */
   setCardKind(id: string, kind: CardKind) {
     const node = this.findEntry(id)?.node;

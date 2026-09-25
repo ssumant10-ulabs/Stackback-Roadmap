@@ -206,6 +206,12 @@ export default function HelpApp({
 
   const submit = (e: React.FormEvent) => { e.preventDefault(); go(q.trim() ? { kind: "search", q: q.trim() } : { kind: "faq" }); };
 
+  /** Which of the two jobs the reader is on. Internal is its own, and only ours. */
+  const group: "setup" | "help" | "internal" =
+    view.kind === "queries" || view.kind === "refs" ? "setup"
+      : view.kind === "internal" || view.kind === "insights" ? "internal"
+      : "help";
+
   const part: Part = view.kind === "queries" ? "queries"
     : view.kind === "refs" ? "refs"
     : view.kind === "howto" ? "howto"
@@ -248,19 +254,17 @@ export default function HelpApp({
           </div>
         )}
 
-        <div className="hc-parts" role="tablist" aria-label="Help Centre parts">
-          <button role="tab" aria-selected={part === "queries"} className={"hc-part" + (part === "queries" ? " on" : "")}
-            onClick={() => go({ kind: "queries", step: 1 })}>Your plans</button>
-          {/* Its own item, not a panel inside the plan wizard: what the cohort runs is the
-              thing worth sending somebody on its own. */}
-          <button role="tab" aria-selected={part === "refs"} className={"hc-part" + (part === "refs" ? " on" : "")}
-            onClick={() => go({ kind: "refs" })}>References</button>
-          <button role="tab" aria-selected={part === "howto"} className={"hc-part" + (part === "howto" ? " on" : "")}
-            onClick={() => go({ kind: "howto" })}>How to</button>
-          <button role="tab" aria-selected={part === "help"} className={"hc-part" + (part === "help" ? " on" : "")}
+        {/* Two jobs, two groups. Setting a store up is work you do once with us on a call;
+            the Help Centre is what a merchant opens six weeks later on their own. They were
+            five flat tabs, so the two were the same distance apart as the two halves of each
+            one. The group is the choice; the row under it is the choice within it. */}
+        <div className="hc-parts" role="tablist" aria-label="Sections">
+          <button role="tab" aria-selected={group === "setup"} className={"hc-part" + (group === "setup" ? " on" : "")}
+            onClick={() => go({ kind: "queries", step: 1 })}>Setup StackBack</button>
+          <button role="tab" aria-selected={group === "help"} className={"hc-part" + (group === "help" ? " on" : "")}
             onClick={() => go({ kind: "faq" })}>Help Centre</button>
           {ourSurface && (
-            <button role="tab" aria-selected={part === "internal"} className={"hc-part hc-partint" + (part === "internal" ? " on" : "")}
+            <button role="tab" aria-selected={group === "internal"} className={"hc-part hc-partint" + (group === "internal" ? " on" : "")}
               onClick={() => go({ kind: "internal" })}>Internal</button>
           )}
         </div>
@@ -306,6 +310,33 @@ export default function HelpApp({
         )}
       </div></header>
 
+      {/* The row under the group: which half of it. Only where a group has two. */}
+      {group !== "internal" && (
+        <div className="hc-subrow">
+          <div className="hc-subin">
+            {group === "setup" ? (
+              <>
+                <button className={"hc-sub" + (part === "queries" ? " on" : "")}
+                  onClick={() => go({ kind: "queries", step: 1 })}>Your plans</button>
+                <button className={"hc-sub" + (part === "refs" ? " on" : "")}
+                  onClick={() => go({ kind: "refs" })}>References</button>
+              </>
+            ) : (
+              <>
+                <button className={"hc-sub" + (view.kind === "faq" ? " on" : "")}
+                  onClick={() => go({ kind: "faq" })}>FAQs</button>
+                <button className={"hc-sub" + (part === "howto" ? " on" : "")}
+                  onClick={() => go({ kind: "howto" })}>How to guides</button>
+                <button className={"hc-sub" + (view.kind === "home" || view.kind === "cat" || view.kind === "search" ? " on" : "")}
+                  onClick={() => go({ kind: "home" })}>Every answer</button>
+                <button className={"hc-sub" + (view.kind === "sim" ? " on" : "")}
+                  onClick={() => go({ kind: "sim" })}>Simulate</button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className={"hc-body" + (part !== "help" ? " solo" : "")}>
         {/* One list, two zones, and only one group open at a time.
             It was three ways in (FAQs, Overview, Simulate) stacked on seventeen topics under
@@ -314,17 +345,10 @@ export default function HelpApp({
             the group holding whatever is open expands itself. Eight rows, and the counts say
             where the mass is before you click into it. */}
         <nav className={"hc-nav" + (navOpen ? " open" : "") + (part !== "help" ? " hidden" : "")} aria-label="Topics">
-          <button className={"hc-navitem hc-navfaq" + (view.kind === "faq" ? " on" : "")} onClick={() => go({ kind: "faq" })}>
-            <span>Common questions</span><em>{FAQ_COUNT}</em>
-          </button>
-          <button className={"hc-navitem" + (view.kind === "home" ? " on" : "")} onClick={() => go({ kind: "home" })}>
-            <span>Every answer</span><em>{ARTICLES.length}</em>
-          </button>
-          <button className={"hc-navitem hc-navsim" + (view.kind === "sim" ? " on" : "")} onClick={() => go({ kind: "sim" })}>
-            <span>Simulate a subscription</span>
-          </button>
-
-          <p className="hc-navrule">Browse by topic</p>
+          {/* FAQs, Every answer and Simulate moved to the row under the tabs, where they are
+              siblings of How to rather than three entries above seventeen topics. The rail is
+              the topics now, which is the one thing it was always for. */}
+          <p className="hc-navrule hc-navfirst">Browse by topic</p>
 
           {NAV_GROUPS.map((grp) => {
             const items = grp.ids.map((id) => COUNTS.find((c) => c.id === id)).filter(Boolean) as typeof COUNTS;

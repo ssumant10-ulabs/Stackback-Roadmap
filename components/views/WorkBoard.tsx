@@ -6,7 +6,8 @@ import {
   fits, stageForDrop,
   type BoardColumn, type BoardTeam, type BoardView, type CardKind, type ReviewWith, type Stage,
 } from "@/lib/board";
-import { subtreeCounts } from "@/lib/derive";
+import { normPriority, subtreeCounts, waveWord } from "@/lib/derive";
+import { TEAM_ORDER, TEAM_VAR } from "@/lib/constants";
 import { Assignees } from "../Assignees";
 import { CommentChip, DateChip, StatusButton } from "../bits";
 import { CommentsThread } from "../CommentsThread";
@@ -33,6 +34,15 @@ export function WorkBoard() {
 
   const all = s.boardCards();
   const filter = s.ui.filter;
+
+  /* The chosen team's roster, or the team of whoever is filtered for, so the people row is
+     the people you are actually choosing between rather than everyone in the company. */
+  const people = useMemo(() => {
+    const team = filter?.type === "team" ? filter.name
+      : filter?.type === "person" ? s.helpers.teamOf(filter.name)
+      : null;
+    return team ? (s.data.roster[team] || []) : [];
+  }, [filter, s]);
 
   /** The team and person filter, which applied to two views and silently did nothing here.
    *  A card matches on who is assigned to it, or on the team it was handed to. */
@@ -98,6 +108,33 @@ export function WorkBoard() {
             </button>
           ))}
         </nav>
+        {/* The filter, out where the tabs are, because "show me Design's cards" is a thing
+            you do constantly and a popover is two clicks and a hunt. Picking a team reveals
+            that team's people as a second row: the two are the same question at two scopes. */}
+        <div className="wb-filters">
+          {TEAM_ORDER.map((t) => {
+            const on = filter?.type === "team" && filter.name === t;
+            return (
+              <button key={t} type="button" className={"wb-fchip t-" + TEAM_VAR[t] + (on ? " on" : "")}
+                onClick={() => s.setFilter(on ? null : { type: "team", name: t })}>
+                {t === "Engineering" ? "Dev" : t}
+              </button>
+            );
+          })}
+          {people.length > 0 && (
+            <span className="wb-fpeople">
+              {people.map((p) => {
+                const on = filter?.type === "person" && filter.name === p;
+                return (
+                  <button key={p} type="button" className={"wb-fchip person" + (on ? " on" : "")}
+                    onClick={() => s.setFilter(on ? null : { type: "person", name: p })}>{p}</button>
+                );
+              })}
+            </span>
+          )}
+          {filter && <button type="button" className="wb-fclear" onClick={() => s.setFilter(null)}>Clear</button>}
+        </div>
+
         <p className="wb-blurb">
           {def.blurb}
           {elsewhere > 0 && <> <span className="wb-else">{elsewhere} card{elsewhere === 1 ? " sits" : "s sit"} in a stage this view does not carry.</span></>}
@@ -105,7 +142,13 @@ export function WorkBoard() {
         </p>
       </div>
 
-      <div className="wb-cols" style={{ gridTemplateColumns: `repeat(${def.columns.length}, minmax(276px, 1fr))` }}>
+      {/* An empty column takes a sliver, not a share. Seven equal columns with five of them
+          saying "Nothing here" pushed the two that hold the work off the screen. */}
+      <div className="wb-cols" style={{
+        gridTemplateColumns: def.columns
+          .map((c) => ((byColumn[c.key] || []).length ? "minmax(272px, 1fr)" : "minmax(150px, 0.5fr)"))
+          .join(" "),
+      }}>
         {def.columns.map((c) => {
           const list = byColumn[c.key] || [];
           return (
@@ -129,7 +172,8 @@ export function WorkBoard() {
               </div>
               {/* A column you cannot add to is a column you have to leave to add to. */}
               <AddCard col={c} open={adding === c.key}
-                onOpen={() => setAdding(c.key)} onClose={() => setAdding(null)} />
+                onOpen={() => setAdding(c.key)} onClose={() => setAdding(null)}
+                onAsk={(id, kind, column) => setAsk({ id, kind, col: column })} />
             </section>
           );
         })}
@@ -155,8 +199,9 @@ function countFor(cards: BoardCard[], view: BoardView): number {
 
 /** Add a card straight into the column you are looking at. A card born in Bugs is a bug;
  *  anywhere else it is a feature, and the tag is one click away on the card itself. */
-function AddCard({ col, open, onOpen, onClose }: {
+function AddCard({ col, open, onOpen, onClose, onAsk }: {
   col: BoardColumn; open: boolean; onOpen: () => void; onClose: () => void;
+  onAsk: (id: string, kind: "team" | "review", col: BoardColumn) => void;
 }) {
   const s = useStore();
   const [v, setV] = useState("");
@@ -165,12 +210,16 @@ function AddCard({ col, open, onOpen, onClose }: {
     if (!title) return;
     const kind: CardKind = col.key === "bug" ? "bug" : "feature";
     const id = s.addBoardCard(title, kind);
+    if (!id) return;
     /* Born outside the intake columns: it belongs where it was added, not back in the pile.
-       A column that only takes cards from elsewhere is a column you cannot start work in. */
+       And a card added straight into the handover column has to answer the same question a
+       dragged one does. It did not, so it landed in PM's handover with no team on it, which
+       is a card in nobody's column: PM could see it and Design never could. */
     const first = col.accepts[0];
-    if (id && first.stage !== "bug" && first.stage !== "feature") {
-      s.setStage(id, first.stage, { team: first.team ?? null, review: first.review ?? null });
-    }
+    if (first.stage === "bug" || first.stage === "feature") { setV(""); return; }
+    const drop = stageForDrop(col, null);
+    if ("ask" in drop) { setV(""); onAsk(id, drop.ask, col); return; }
+    s.setStage(id, drop.stage, { team: first.team ?? null, review: drop.review ?? first.review ?? null });
     setV("");
   };
   if (!open) {
@@ -193,6 +242,8 @@ function AddCard({ col, open, onOpen, onClose }: {
 }
 
 const KINDS: CardKind[] = ["bug", "feature", "landing"];
+const nextPriority = (p: number | null | undefined): 1 | 2 | 3 =>
+  (normPriority(p) === 3 ? 1 : normPriority(p) + 1) as 1 | 2 | 3;
 
 function Card({ card, view, dragging, onDragStart, onDragEnd }: {
   card: BoardCard; view: BoardView; dragging: boolean;
@@ -201,6 +252,10 @@ function Card({ card, view, dragging, onDragStart, onDragEnd }: {
   const s = useStore();
   const [open, setOpen] = useState(false);
   const node = card.node;
+  /* The comment chip writes `ui.commentsOpen`, which nothing on this card was reading, so
+     clicking it did nothing at all. Either way of opening the card opens the thread. */
+  const cmt = node ? s.ui.commentsOpen[node.id] === true : false;
+  const body = open || cmt;
   const f = card.feature;
   const title = node ? node.title : f!.title;
   const kind: CardKind = (node?.kind || f?.kind || "feature") as CardKind;
@@ -257,16 +312,25 @@ function Card({ card, view, dragging, onDragStart, onDragEnd }: {
         {card.review && card.stage === "dev_review" && (
           <span className="wb-team t-rev">{card.review === "Design" ? "Design QA" : "PM review"}</span>
         )}
+        {/* The horizon. It used to BE the column; on a workflow board it has to be on the
+            card or a new task is born without one and nobody can tell Now from Future. */}
+        {node && (
+          <button type="button" className={"wb-prio p-" + normPriority(node.priority)}
+            title="Now, Next or Future" onClick={() => s.setPriority(node.id, nextPriority(node.priority))}>
+            {waveWord(normPriority(node.priority))}
+          </button>
+        )}
         {view === "pm" && <span className="wb-stage">{STAGE_LABEL[card.stage]}</span>}
         {task && <span className="wb-task" title={`Roadmap: ${task.title}`}>{task.title}</span>}
         {shots.length > 0 && <span className="wb-shotn">{shots.length} file{shots.length === 1 ? "" : "s"}</span>}
       </div>
 
-      <button type="button" className={"wb-more" + (open ? " on" : "")} onClick={() => setOpen(!open)}>
-        <IcChevron />{open ? "Less" : counts && counts.total ? `Checklist and files (${counts.total})` : "Files and notes"}
+      <button type="button" className={"wb-more" + (body ? " on" : "")}
+        onClick={() => { setOpen(!body); if (node && cmt) s.toggleComments(node.id); }}>
+        <IcChevron />{body ? "Less" : counts && counts.total ? `Checklist and files (${counts.total})` : "Files and notes"}
       </button>
 
-      {open && (
+      {body && (
         <div className="wb-open">
           {node && counts && counts.total > 0 && (
             <ul className="wb-subs">

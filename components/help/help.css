@@ -1665,3 +1665,31 @@
 .hc-whichorder { margin-top: 8px; }
 .hc-whichorder .hc-modepillb { font-size: 12.5px; }
 .pl-badge.warn { background: #ffd79d; color: #5e4200; }
+
+/* ---- two jobs, two rows ---------------------------------------------------------------
+   Setting a store up is work we do once, on a call. The Help Centre is what a merchant
+   opens six weeks later on their own. As five flat tabs the two halves of each job sat as
+   far apart as the jobs themselves. */
+.hc-subrow { border-bottom: 1px solid var(--border); background: var(--page); }
+.hc-subin {
+  display: flex; gap: 2px; width: 100%; max-width: var(--hc-shell);
+  margin: 0 auto; padding: 0 var(--hc-pad);
+}
+.hc-sub {
+  appearance: none; border: 0; background: none; cursor: pointer; font: inherit;
+  font-size: 13px; font-weight: 600; color: var(--hc-muted);
+  padding: 10px 12px; position: relative;
+}
+.hc-sub:hover { color: var(--ink); }
+.hc-sub.on { color: var(--ink); font-weight: 700; }
+.hc-sub.on::after {
+  content: ""; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 2px;
+  background: var(--brand-deep); border-radius: 2px 2px 0 0;
+}
+.hc-sub:focus-visible { outline: 2px solid var(--brand-deep); outline-offset: -3px; }
+.hc-navfirst { margin-top: 0; padding-top: 0; border-top: 0; }
+/* The sub row is sticky under the bar, so the group's halves stay reachable while reading. */
+@media (min-width: 768px) {
+  .hc-subrow { position: sticky; top: 52px; z-index: 29; }
+  .hc-faqgrouph { top: 96px; }
+}

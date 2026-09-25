@@ -105,6 +105,12 @@ export default function RoadmapApp() {
     },
   }), [s]);
 
+  /* `/?view=features` is how the menu reaches the backlog from another screen. Read once. */
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("view") === "features") s.setView("features");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   if (!mounted) return null;
 
   const view = s.ui.view;
@@ -122,9 +128,6 @@ export default function RoadmapApp() {
               roadmap horizons are still on the cards and in the header metrics. */}
           {view === "features" ? <Features /> : <WorkBoard />}
         </main>
-        <div className="footnote">
-          <button onClick={() => { if (confirm(`Reset “${s.activeRoadmap().name}”? Added tasks and edits in this roadmap will be lost.`)) s.resetActive(); }}>Reset this roadmap</button>
-        </div>
       </div>
       {filterPop && <FilterPopover pos={filterPop} onClose={() => setFilterPop(null)} />}
       {assignPop && <AssigneePopover pos={{ left: assignPop.left, top: assignPop.top }} nodeId={assignPop.nodeId} onClose={() => setAssignPop(null)} />}

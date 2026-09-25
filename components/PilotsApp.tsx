@@ -2,12 +2,11 @@
 import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
 import { UserButton } from "./UserButton";
-import { Logo, IcActivity, IcHelp, IcRoadmap, IcSettings, ThemeIcon } from "./icons";
+import { Logo, IcActivity, IcSettings, ThemeIcon } from "./icons";
+import { AppNav } from "./AppNav";
 import HelpApp from "./help/HelpApp";
 import type { LoggedQuery, StoreRecord, StoreSummary } from "@/lib/sanity/queries";
 import { PilotsLog } from "./views/PilotsLog";
-import { PilotsStats } from "./views/PilotsStats";
-import { PilotsRequests } from "./views/PilotsRequests";
 import { ActivityDrawer } from "./ActivityDrawer";
 import { SettingsModal } from "./SettingsModal";
 import { SaveState } from "./SaveState";
@@ -26,10 +25,17 @@ export interface HelpData {
 export default function PilotsApp({ help }: { help: HelpData }) {
   const s = useStore();
   const [mounted, setMounted] = useState(false);
-  const [tab, setTab] = useState<"log" | "requests" | "stats">("log");
+  /* One view. Requests & bugs are cards on the work board now, and the stats they fed are
+     the five numbers in the roadmap header, so keeping tabs here was the same data in a
+     third place with its own idea of the truth. */
   /* The Help Centre is not a fourth pilots view, it is the whole module shown in this
      screen. So it sits beside Roadmap in the header and takes over the body. */
+  /* `/pilots?help=1` is how the Help Centre is reached from a screen that cannot show it in
+     place, so the menu can be the same six everywhere. Read once, on mount. */
   const [helpOpen, setHelpOpen] = useState(false);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("help") === "1") setHelpOpen(true);
+  }, []);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => { let alive = true; s.hydrate().then(() => { if (alive) setMounted(true); }); return () => { alive = false; }; }, [s]);
@@ -60,12 +66,8 @@ export default function PilotsApp({ help }: { help: HelpData }) {
               <h1>Pilot stores</h1>
             </a>
             <div className="top-actions">
-              <a className="btn ghost" href="/" title="Back to the roadmap"><IcRoadmap /><span>Roadmap</span></a>
-              <button type="button" className={`btn ghost${helpOpen ? " on" : ""}`} aria-pressed={helpOpen}
-                title="Help Center: a store's plans, the how-to videos and the answers"
-                onClick={() => setHelpOpen((v) => !v)}>
-                <IcHelp /><span>Help Center</span>
-              </button>
+              {/* The same six, same order. This header used to carry two of them. */}
+              <AppNav here={helpOpen ? "help" : "pilots"} onHelp={() => setHelpOpen((v) => !v)} />
               <SaveState />
               <span className="icon-group">
                 <button className="ibtn" data-tip="Activity" aria-label="Activity" onClick={() => s.setActivityOpen(true)}><IcActivity /></button>
@@ -75,30 +77,11 @@ export default function PilotsApp({ help }: { help: HelpData }) {
               </span>
             </div>
           </div>
-          {/* The module carries its own parts tabs, so leaving the pilot views above it
-              would be two rows of tabs with nothing selected in the top one. */}
-          {!helpOpen && (
-            <div className="view-row">
-              <nav className="view-switch" aria-label="Pilot views">
-                <button type="button" className={`vpill${tab === "log" ? " active" : ""}`} onClick={() => setTab("log")}>
-                  <span>Activation log</span>
-                </button>
-                <button type="button" className={`vpill${tab === "requests" ? " active" : ""}`} onClick={() => setTab("requests")}>
-                  <span>Requests &amp; bugs</span>
-                </button>
-                <button type="button" className={`vpill${tab === "stats" ? " active" : ""}`} onClick={() => setTab("stats")}>
-                  <span>Stats</span>
-                </button>
-              </nav>
-            </div>
-          )}
         </div>
-        <main data-view={helpOpen ? "help" : tab}>
+        <main data-view={helpOpen ? "help" : "log"}>
           {helpOpen ? <HelpApp {...help} theme={resolvedTheme} embedded pilots={s.pilots}
               onExit={() => setHelpOpen(false)} exitLabel="Pilot stores" />
-            : tab === "log" ? <PilotsLog />
-            : tab === "requests" ? <PilotsRequests />
-            : <PilotsStats />}
+            : <PilotsLog />}
         </main>
       </div>
       {s.ui.activityOpen && <ActivityDrawer onClose={() => s.setActivityOpen(false)} />}
