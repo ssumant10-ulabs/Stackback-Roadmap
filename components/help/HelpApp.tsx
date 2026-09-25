@@ -13,7 +13,7 @@ import Article from "./Article";
 import Brief from "./Brief";
 import Internal from "./Internal";
 import Faq from "./Faq";
-import { NAV_GROUPS } from "@/lib/help/faq";
+import { FAQ_COUNT, NAV_GROUPS } from "@/lib/help/faq";
 import HowTo from "./HowTo";
 import Simulator from "./Simulator";
 import type { LoggedQuery, StoreRecord, StoreSummary } from "@/lib/sanity/queries";
@@ -104,6 +104,8 @@ export default function HelpApp({
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<string | null>(null);
   const [navOpen, setNavOpen] = useState(false);
+  /* null: follow whatever is open. A string: the group the reader picked, "" for none. */
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [chatSeed, setChatSeed] = useState<string | null>(null);
   const [theme, setTheme] = useState<"light" | "dark">(initialTheme);
 
@@ -138,6 +140,9 @@ export default function HelpApp({
       : v.kind === "howto" ? "#/howto" : "#/insights";
     if (window.location.hash !== h) window.location.hash = h; else setView(v);
     setNavOpen(false);
+    // Back to following the view: arriving at a topic from a search result or a card should
+    // open the group that holds it, not leave the rail pointing at the last one picked.
+    setOpenGroup(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
     setOpen(null);
   }, []);
@@ -185,9 +190,13 @@ export default function HelpApp({
   const risky = ARTICLES.filter((a) => RISK_STATUSES.includes(a.status)).length;
 
   return (
-    <div className={`hc ${helpFont.variable}` + (embedded ? " embedded" : "")} data-hc-theme={theme}>
+    <div className={`hc ${helpFont.variable}` + (embedded ? " embedded" : "")} data-hc-theme={theme} data-hc-part={part}>
       <a className="hc-skip" href="#hc-main">Skip to the answers</a>
-      <header className="hc-top">
+      {/* The bar is full-bleed and its CONTENTS sit in the same column as the page, so the
+          logo lines up with the rail and the sign-out lines up with the right edge of the
+          answers. They used to be two different measures: a 22px-padded bar over a centred
+          1240px body, which on any wide screen read as the page having no right margin. */}
+      <header className="hc-top"><div className="hc-topin">
         {!embedded && (
           <a className="hc-brand" href="#/" aria-label="StackBack Help Centre, overview"
             onClick={(e) => { e.preventDefault(); go({ kind: "home" }); }}>
@@ -257,27 +266,43 @@ export default function HelpApp({
             {navOpen ? "Close" : "Topics"}
           </button>
         )}
-      </header>
+      </div></header>
 
       <div className={"hc-body" + (part !== "help" ? " solo" : "")}>
+        {/* One list, two zones, and only one group open at a time.
+            It was three ways in (FAQs, Overview, Simulate) stacked on seventeen topics under
+            five headings: twenty-five rows before a merchant has read one, which is a list you
+            read rather than scan. The topics collapse to their five headings with a count, and
+            the group holding whatever is open expands itself. Eight rows, and the counts say
+            where the mass is before you click into it. */}
         <nav className={"hc-nav" + (navOpen ? " open" : "") + (part !== "help" ? " hidden" : "")} aria-label="Topics">
           <button className={"hc-navitem hc-navfaq" + (view.kind === "faq" ? " on" : "")} onClick={() => go({ kind: "faq" })}>
-            <span>FAQs</span>
+            <span>Common questions</span><em>{FAQ_COUNT}</em>
           </button>
           <button className={"hc-navitem" + (view.kind === "home" ? " on" : "")} onClick={() => go({ kind: "home" })}>
-            <span>Overview</span>
+            <span>Every answer</span><em>{ARTICLES.length}</em>
           </button>
           <button className={"hc-navitem hc-navsim" + (view.kind === "sim" ? " on" : "")} onClick={() => go({ kind: "sim" })}>
             <span>Simulate a subscription</span>
           </button>
+
+          <p className="hc-navrule">Browse by topic</p>
+
           {NAV_GROUPS.map((grp) => {
             const items = grp.ids.map((id) => COUNTS.find((c) => c.id === id)).filter(Boolean) as typeof COUNTS;
             if (!items.length) return null;
+            const total = items.reduce((n, c) => n + c.n, 0);
+            const holdsView = view.kind === "cat" && grp.ids.includes(view.id);
+            const isOpen = openGroup === grp.title || (openGroup === null && holdsView);
             return (
-              <div key={grp.title} className="hc-navgroup">
-                <p className="hc-navgrouph">{grp.title}</p>
-                {items.map((c) => (
-                  <button key={c.id} className={"hc-navitem" + (view.kind === "cat" && view.id === c.id ? " on" : "")}
+              <div key={grp.title} className={"hc-navgroup" + (isOpen ? " open" : "")}>
+                <button type="button" className={"hc-navgrouph" + (holdsView ? " holds" : "")}
+                  aria-expanded={isOpen} onClick={() => setOpenGroup(isOpen ? "" : grp.title)}>
+                  <svg className="hc-navcaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+                  <span>{grp.title}</span><em>{total}</em>
+                </button>
+                {isOpen && items.map((c) => (
+                  <button key={c.id} className={"hc-navitem hc-navsub" + (view.kind === "cat" && view.id === c.id ? " on" : "")}
                     aria-label={`${c.name}, ${c.n} answers`} aria-current={view.kind === "cat" && view.id === c.id ? "page" : undefined}
                     onClick={() => go({ kind: "cat", id: c.id })}>
                     <span>{c.name}</span><em>{c.n}</em>

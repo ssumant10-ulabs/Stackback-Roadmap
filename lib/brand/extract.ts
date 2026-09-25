@@ -217,10 +217,21 @@ const prop = (decl: string, name: string): string | null => {
   return m ? m[1].trim() : null;
 };
 
-/** A colour we can use: a hex or an rgb(), not transparent, inherit or a variable. */
-function colourOf(v: string | null): string | null {
+/** Expand `var(--x, fallback)` against the properties a theme declares on :root.
+ *  A theme that paints its button `background: var(--g-cta-button)` is telling you the
+ *  answer in the clearest way it can, and refusing to follow one hop threw it away. */
+function expandVars(v: string, vars: Record<string, string>, depth = 0): string {
+  if (depth > 4 || !v.includes("var(")) return v;
+  const out = v.replace(/var\(\s*(--[\w-]+)\s*(?:,([^()]*(?:\([^()]*\)[^()]*)*))?\)/g,
+    (_, name: string, fb: string | undefined) => (vars[name] ?? (fb ?? "")).trim());
+  return out === v ? out : expandVars(out, vars, depth + 1);
+}
+
+/** A colour we can use: a hex or an rgb(), not transparent, inherit or an unresolved variable. */
+function colourOf(v: string | null, vars?: Record<string, string>): string | null {
   if (!v) return null;
-  const t = v.trim().toLowerCase();
+  let t = v.trim().toLowerCase();
+  if (vars && t.includes("var(")) t = expandVars(t, vars).trim();
   if (!t || t.startsWith("var(") || t.startsWith("url(") || /transparent|inherit|currentcolor|none|initial/.test(t)) return null;
   const hex = /#[0-9a-f]{3,8}\b/i.exec(t);
   if (hex) return normaliseHex(hex[0]);
@@ -278,7 +289,9 @@ const notACta = (hex: string) => luminance(hex) > 0.88 || (isNeutral(hex) && lum
  *  mistake as reading Shopify's lock-screen green off a password-protected store. */
 const FRAMEWORK_DEFAULTS = new Set([
   "#007BFF", "#0D6EFD", "#6C757D", "#28A745", "#DC3545",         // Bootstrap
+  "#F8F9FA", "#E9ECEF", "#DEE2E6", "#CED4DA", "#ADB5BD", "#495057", "#343A40", "#212529",  // Bootstrap greys
   "#6B7280", "#111827", "#374151", "#3B82F6", "#9CA3AF",         // Tailwind
+  "#F3F4F6", "#E5E7EB", "#D1D5DB", "#1F2937",                     // Tailwind greys
   "#2196F3", "#4CAF50", "#F44336", "#9E9E9E",                     // Material
 ]);
 const isFrameworkDefault = (hex: string | null) => Boolean(hex && FRAMEWORK_DEFAULTS.has(hex.toUpperCase()));
@@ -311,7 +324,7 @@ function cornersFrom(px: number | null): { corners: BrandResult["corners"]; cust
  *                          that is reported rather than invented.
  *   Product_Tile_Background a light neutral scheme background, else white.
  */
-export function mapTokens(css: string, url: string): BrandResult {
+export function mapTokens(css: string, url: string, html?: string): BrandResult {
   const notes: string[] = [];
   const root = varsIn(css, /:root/);
   const schemes = readSchemes(css);
@@ -346,7 +359,11 @@ export function mapTokens(css: string, url: string): BrandResult {
     const rs = rules(css);
     const canvas = sample(rs, "canvas", "background-color");
     const card = sample(rs, "card", "background-color");
-    const ctaBg = sample(rs, "cta", "background-color", notACta);
+    /* The element first, the selector guess second. Finding the real button in the HTML and
+       reading the rules that apply TO IT is the only thing that resolves a theme whose CTA
+       is styled inline or by utility classes with no word like "cart" in them. */
+    const ctaEl = html ? ctaFill(html, css) : null;
+    const ctaBg = ctaEl?.hex ?? sample(rs, "cta", "background-color", notACta);
     const accent = sample(rs, "accent", "background-color", notACta);
     const heading = sample(rs, "heading", "color");
     const bodyText = sample(rs, "body", "color");
@@ -358,11 +375,20 @@ export function mapTokens(css: string, url: string): BrandResult {
 
     const primary = ctaBg || anyBrand[0]?.hex || "#111111";
     const bg = card || anySurface[0]?.hex || "#FFFFFF";
-    const tint = canvas && canvas.toUpperCase() !== bg.toUpperCase()
-      ? canvas
-      : (anySurface.find((t) => t.hex.toUpperCase() !== bg.toUpperCase())?.hex || "#F5F5F5");
+    /* A Bootstrap grey is not a brand tint. If the canvas sample is one of the stock greys,
+       a wash of the store's own primary is both honest and more useful than #DEE2E6. */
+    const canvasOwn = canvas && !isFrameworkDefault(canvas) ? canvas : null;
+    const tint = canvasOwn && canvasOwn.toUpperCase() !== bg.toUpperCase()
+      ? canvasOwn
+      : (anySurface.find((t) => t.hex.toUpperCase() !== bg.toUpperCase() && !isFrameworkDefault(t.hex))?.hex
+        || mixToward(primary, "#FFFFFF", 0.9));
     const text = heading || bodyText || top.find((x) => luminance(x.hex) < 0.2)?.hex || "#121212";
-    const acc = accent && accent.toUpperCase() !== primary.toUpperCase()
+    /* The theme's own named sale colour first: a setting beats a sample, and a sample of the
+       most saturated hex in a Bootstrap-carrying stylesheet is Bootstrap's #007BFF. */
+    const accVar = themeAccent(css);
+    const acc = accVar && accVar.hex.toUpperCase() !== primary.toUpperCase()
+      ? accVar.hex
+      : accent && accent.toUpperCase() !== primary.toUpperCase()
       ? accent
       : (anyBrand.find((t) => t.hex.toUpperCase() !== primary.toUpperCase())?.hex || primary);
 
@@ -372,6 +398,13 @@ export function mapTokens(css: string, url: string): BrandResult {
         `${framework.join(" and ")} ${framework.length === 1 ? "is a stock CSS framework colour" : "are stock CSS framework colours"}, ` +
         "not something anybody chose for this brand. The theme is probably carrying an " +
         "unstyled Bootstrap or Tailwind default, so set that one by hand.",
+      );
+    }
+    if (html && !ctaEl) {
+      notes.push(
+        "We found no Add to cart button on the page we read, so the button colour below comes " +
+        "from a rule that looks like a call to action rather than from the button itself. " +
+        "Check it against your product page.",
       );
     }
     const sampled = [ctaBg, canvas, card, accent, heading].filter(Boolean).length;
@@ -387,9 +420,23 @@ export function mapTokens(css: string, url: string): BrandResult {
     return {
       ok: true, url, method: "fallback",
       tokens: [
-        t("Brand_Primary", primary, isFrameworkDefault(primary) ? "a framework default, not a brand colour" : ctaBg ? "your Add to cart button" : "most used brand colour in the stylesheet", conf(ctaBg, primary)),
-        t("Brand_Secondary", tint, canvas ? "your page canvas" : "a light surface in the stylesheet", conf(canvas)),
-        t("Brand_Accent", acc, isFrameworkDefault(acc) ? "a framework default, not a brand colour" : accent ? "your sale or announcement highlight" : "second brand colour in the stylesheet", conf(accent, acc)),
+        t("Brand_Primary", primary,
+          isFrameworkDefault(primary) ? "a framework default, not a brand colour"
+            : ctaEl ? ctaEl.source
+            : ctaBg ? "your Add to cart button"
+            : "most used brand colour in the stylesheet",
+          isFrameworkDefault(primary) ? "guessed" : ctaEl ? ctaEl.confidence : conf(ctaBg, primary)),
+        t("Brand_Secondary", tint,
+          canvasOwn && tint === canvasOwn ? "your page canvas"
+            : tint === mixToward(primary, "#FFFFFF", 0.9) ? "a light wash of your button colour"
+            : "a light surface in the stylesheet",
+          canvasOwn && tint === canvasOwn ? "theme" : "derived"),
+        t("Brand_Accent", acc,
+          isFrameworkDefault(acc) ? "a framework default, not a brand colour"
+            : accVar && acc === accVar.hex ? `your theme's ${accVar.name} setting`
+            : accent ? "your sale or announcement highlight"
+            : "second brand colour in the stylesheet",
+          isFrameworkDefault(acc) ? "guessed" : accVar && acc === accVar.hex ? "theme" : conf(accent, acc)),
         t("Product_Tile", text, heading ? "your heading colour" : bodyText ? "your body text colour" : "darkest text colour", conf(heading || bodyText)),
         t("Widget_Background", bg, card ? "your product card interior" : "most used light surface", conf(card)),
         t("Product_Tile_Background", card || "#FFFFFF", card ? "your product card interior" : "assumed white card", conf(card)),
@@ -502,4 +549,204 @@ export function stylesheetHrefs(html: string, base: string): string[] {
     try { out.push(new URL(href, base).toString()); } catch { /* skip a malformed href */ }
   }
   return out.slice(0, 4);
+}
+
+/* ------------------------------------------------------ the CTA, off the element itself */
+
+/** What a page's real Add to cart button is made of, read from the HTML rather than guessed
+ *  from a selector name.
+ *
+ *  The selector patterns above are a good guess and they have a floor: a theme whose button
+ *  is styled inline, or by utility classes with no word like "cart" in them, is invisible to
+ *  a stylesheet read. `stackback-color-tokens` says to fall back to a rendered screenshot for
+ *  those, and there is no headless browser on this runtime. There does not need to be. The
+ *  button is in the HTML with its own class list and its own style attribute, so finding the
+ *  element first turns "which rule looks like a CTA" into "which rules apply to THIS
+ *  element", which is the question that has a right answer. */
+export interface CtaElement {
+  tag: string;
+  id: string | null;
+  classes: string[];
+  /** The element's own style attribute, which no stylesheet read can see. */
+  style: string | null;
+  /** What identified it, for the note the merchant reads. */
+  via: string;
+}
+
+/** Shopify's product form submit, then the payment button, then anything whose text says it.
+ *  Ordered: the form submit is the merchant's themed button, the Shop Pay button is
+ *  Shopify's and is the same on every store. */
+const CTA_MARKERS: [RegExp, string][] = [
+  [/\bname=["']add["']/i, "the product form's submit button"],
+  [/\b(?:class|id)=["'][^"']*product-form__submit/i, "the product form's submit button"],
+  [/\b(?:class|id)=["'][^"']*\badd-to-cart\b/i, "the Add to cart button"],
+  [/\bdata-(?:testid|action)=["'][^"']*add-to-cart/i, "the Add to cart button"],
+];
+
+const attr = (tagText: string, name: string): string | null => {
+  const m = new RegExp(`\\b${name}=["']([^"']*)["']`, "i").exec(tagText);
+  return m ? m[1] : null;
+};
+
+/** Every <button>/<input>/<a> opening tag, with the text that follows it up to its close. */
+function* controls(html: string): Generator<{ tagText: string; tag: string; text: string }> {
+  const re = /<(button|input|a)\b([^>]*)>([\s\S]{0,200}?)(?:<\/\1>|$)/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html))) {
+    yield { tagText: "<" + m[1] + m[2] + ">", tag: m[1].toLowerCase(), text: m[3].replace(/<[^>]+>/g, " ") };
+  }
+}
+
+export function findCta(html: string): CtaElement | null {
+  const body = html.slice(0, 900_000);
+  const found: { c: CtaElement; rank: number }[] = [];
+
+  for (const { tagText, tag, text } of controls(body)) {
+    let rank = -1;
+    let via = "";
+    for (let i = 0; i < CTA_MARKERS.length; i++) {
+      if (CTA_MARKERS[i][0].test(tagText)) { rank = i; via = CTA_MARKERS[i][1]; break; }
+    }
+    /* Last resort, and only on a real button: the visible words. Ranked below the markers
+       because "Add to cart" also appears on a quick-add tile and in a drawer. */
+    if (rank < 0 && /^(button|input)$/.test(tag) && /\badd to (cart|bag)\b|\bbuy now\b|\bsubscribe\b/i.test(text + " " + (attr(tagText, "value") || ""))) {
+      rank = CTA_MARKERS.length; via = "the button that says Add to cart";
+    }
+    if (rank < 0) continue;
+    // Shopify's own accelerated-checkout button is Shopify's colour, never the merchant's.
+    if (/shopify-payment-button|shop-pay|dynamic-checkout/i.test(tagText)) continue;
+    found.push({
+      rank,
+      c: {
+        tag, via,
+        id: attr(tagText, "id"),
+        classes: (attr(tagText, "class") || "").split(/\s+/).filter(Boolean),
+        style: attr(tagText, "style"),
+      },
+    });
+  }
+  if (!found.length) return null;
+  found.sort((a, b) => a.rank - b.rank);
+  return found[0].c;
+}
+
+/** Does this selector target the element we found?
+ *
+ *  Only SINGLE compounds: `.btn-theme`, `button.add`, `#AddToCart`. A descendant selector
+ *  names ancestors, and all we hold is the button's own tag, id and classes, so we cannot
+ *  tell whether they apply. Checking only its last part is how
+ *  `.product-card--style9 .product-card-cart .btn-theme` came back as satturmittaikadai's
+ *  Add to cart colour: a rule for a product card in a style the page does not use, matched
+ *  because the button happened to carry `.btn-theme` too. The answer it produced looked
+ *  entirely plausible, which is why this is a refusal and not a lower score. */
+function selectorHits(sel: string, cta: CtaElement): { hit: boolean; spec: number } {
+  let best = -1;
+  for (const part of sel.split(",")) {
+    const one = part.trim();
+    if (!one || /[\s>+~]/.test(one.replace(/\([^)]*\)/g, ""))) continue;   // has a combinator
+    const last = one;
+    // Strip pseudo states. :hover and :disabled are not the resting colour.
+    if (/:(hover|focus|active|disabled|visited|before|after)/.test(last)) continue;
+    const bare = last.replace(/::?[a-z-]+(\([^)]*\))?/g, "");
+    const pieces = bare.match(/^[a-z][a-z0-9]*|[.#][^.#\[]+|\[[^\]]+\]/g);
+    if (!pieces || !pieces.length) continue;
+    let all = true;
+    let spec = 0;
+    for (const piece of pieces) {
+      if (piece.startsWith(".")) { if (!cta.classes.includes(piece.slice(1))) { all = false; break; } spec += 10; }
+      else if (piece.startsWith("#")) { if (cta.id !== piece.slice(1)) { all = false; break; } spec += 100; }
+      else if (piece.startsWith("[")) { all = false; break; }   // attribute selectors: not resolved
+      else if (piece !== cta.tag) { all = false; break; } else spec += 1;
+    }
+    if (all && spec > best) best = spec;
+  }
+  return { hit: best >= 0, spec: best };
+}
+
+/** The CTA fill, read off the element. Inline style first, because it beats every stylesheet
+ *  and is the case a selector read cannot see at all. Then the rules that actually apply. */
+/** Custom properties whose NAME says they are the call to action, in the order a theme
+ *  means them. A theme that writes `--g-cta-button: #000000` on :root has configured its
+ *  button colour as plainly as Dawn writes `--color-button`, and the only reason the old
+ *  read missed it is that it was looking for selectors rather than for settings. */
+const CTA_VAR = [
+  /^--[\w-]*cta[\w-]*(button|btn|bg|background)?$/,
+  /^--[\w-]*(button|btn)[\w-]*(bg|background|color)?$/,
+  /^--[\w-]*(primary|brand|main|accent)[\w-]*$/,
+];
+
+/** A theme's own named setting for the sale or highlight colour. Same evidence class as the
+ *  CTA one: `--g-label-sale: #ffa800` is a decision somebody made, and it beats the most
+ *  saturated hex in a stylesheet, which on a Bootstrap-carrying theme is Bootstrap's blue. */
+const ACCENT_VAR = [
+  /^--[\w-]*(sale|offer|promo|deal|discount)[\w-]*$/,
+  /^--[\w-]*(accent|highlight|secondary)[\w-]*$/,
+];
+
+function namedVar(
+  vars: Record<string, string>, pats: RegExp[], reject: (hex: string) => boolean,
+): { hex: string; name: string } | null {
+  for (const pat of pats) {
+    for (const [name, raw] of Object.entries(vars)) {
+      if (!pat.test(name)) continue;
+      if (/text|ink|fg|foreground|hover|border|radius|size|width|font|shadow|gap|space/.test(name)) continue;
+      const hex = colourOf(raw, vars);
+      if (hex && !reject(hex)) return { hex, name };
+    }
+  }
+  return null;
+}
+
+const namedCtaVar = (vars: Record<string, string>) => namedVar(vars, CTA_VAR, notACta);
+
+/** The theme's declared accent, for the fallback path. Exported because `mapTokens` reads it
+ *  beside the element samples rather than after them. */
+export function themeAccent(css: string): { hex: string; name: string } | null {
+  return namedVar(varsIn(css, /:root/), ACCENT_VAR, (hex) => isNeutral(hex) || isFrameworkDefault(hex));
+}
+
+export function ctaFill(html: string, css: string): { hex: string; source: string; confidence: Confidence } | null {
+  const vars = varsIn(css, /:root/);
+  const cta = findCta(html);
+
+  if (cta?.style) {
+    const inline = colourOf(prop(cta.style, "background-color"), vars) || colourOf(prop(cta.style, "background"), vars);
+    if (inline && !notACta(inline)) {
+      return { hex: inline, source: `${cta.via}, styled on the element`, confidence: "theme" };
+    }
+  }
+
+  if (cta) {
+    /* The cascade, as far as it can honestly be resolved here: !important first, then
+       specificity, then source order. Taking the last applicable rule was wrong, and wrong
+       in the direction that produces a confident answer. */
+    let win: { hex: string; rank: number } | null = null;
+    rules(css).forEach((r, i) => {
+      const { hit, spec } = selectorHits(r.sel, cta);
+      if (!hit) return;
+      const decl = r.decl;
+      const raw = prop(decl, "background-color") ?? prop(decl, "background");
+      const hex = colourOf(raw, vars);
+      if (!hex || notACta(hex)) return;
+      const important = /background(-color)?\s*:[^;]*!\s*important/i.test(decl) ? 100000 : 0;
+      const rank = important + spec * 1000 + i;
+      if (!win || rank > win.rank) win = { hex, rank };
+    });
+    if (win) {
+      const hex = (win as { hex: string }).hex;
+      return { hex, source: cta.via, confidence: isFrameworkDefault(hex) ? "guessed" : "theme" };
+    }
+  }
+
+  /* No rule we can stand behind applies to the button. The theme's own named setting is the
+     next best thing and is a setting, not a sample: same class of evidence as Dawn's. */
+  const named = namedCtaVar(vars);
+  if (named) {
+    return {
+      hex: named.hex,
+      source: `your theme's ${named.name} setting`,
+      confidence: isFrameworkDefault(named.hex) ? "guessed" : "theme",
+    };
+  }
+  return null;
 }

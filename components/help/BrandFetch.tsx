@@ -16,6 +16,14 @@ import { downloadTokens, tokensText } from "@/lib/help/tokens";
 
 type Token = { key: string; hex: string; source: string; confidence: "theme" | "derived" | "guessed" };
 
+/** One real product off the storefront, so the preview stops saying "Dummy product". */
+export interface ReadProduct {
+  title: string; handle: string;
+  /** Minor units, as Shopify serves them. */
+  priceMinor: number | null; compareAtMinor: number | null;
+  image: string | null; vendor: string | null;
+}
+
 /** Flat brand tokens to the nested theme this preview draws from.
  *  Brand_Secondary is a light tint in the flat model and the nested model has no field for
  *  it, so it lands on mutedSurface, which is what fills an unselected tab and a section. */
@@ -70,12 +78,16 @@ function mix(a: string, b: string, t: number): string {
     .join("");
 }
 
-export default function BrandFetch({ theme, onTheme, settings, storeName }: {
+export default function BrandFetch({ theme, onTheme, settings, storeName, onProduct }: {
   theme: WidgetTheme;
   onTheme: (next: WidgetTheme) => void;
   /** The whole settings object, because the token file hands over the purchase options too. */
   settings: WidgetSettings;
   storeName?: string | null;
+  /** A real product off the same store, if it publishes one. The preview showing the
+   *  merchant's own product at their own price is the difference between a demo of our
+   *  widget and a picture of their page. */
+  onProduct?: (p: ReadProduct) => void;
 }) {
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
@@ -83,23 +95,26 @@ export default function BrandFetch({ theme, onTheme, settings, storeName }: {
   const [tokens, setTokens] = useState<Token[] | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [font, setFont] = useState<string | null>(null);
+  const [product, setProduct] = useState<ReadProduct | null>(null);
 
   async function run() {
     const q = url.trim();
     if (!q || busy) return;
-    setBusy(true); setMsg(null); setTokens(null); setNote(null);
+    setBusy(true); setMsg(null); setTokens(null); setNote(null); setProduct(null);
     try {
       const r = await fetch("/api/brand-colours?url=" + encodeURIComponent(q));
       const d = await r.json();
       if (!d.ok) { setMsg(d.error || "That site could not be read."); return; }
       onTheme(toTheme(d.tokens, d.corners, d.cornersCustomPx, theme, d.cardRadiusPx ?? null, d.buttonRadiusPx ?? null));
       setTokens(d.tokens);
+      if (d.product?.title) { setProduct(d.product); onProduct?.(d.product); }
       setFont(d.fontBody ? String(d.fontBody).split(",")[0].trim() : null);
       setNote(
         (d.method === "dawn"
           ? "Read from your theme settings."
           : "That theme does not publish its colour settings, so these come from the stylesheet. Worth checking.")
         + (d.fontBody ? " Body font " + String(d.fontBody).split(",")[0].trim() + "." : "")
+        + (d.readFrom === "product" ? " Read off your product page." : "")
         + (d.notes?.length ? " " + d.notes.join(" ") : ""),
       );
     } catch {
@@ -147,6 +162,13 @@ export default function BrandFetch({ theme, onTheme, settings, storeName }: {
               </span>
             ))}
           </div>
+          {product && (
+            <p className="hc-bfnote">
+              Showing <b>{product.title}</b>
+              {product.priceMinor != null && <> at ₹{(product.priceMinor / 100).toLocaleString("en-IN")}</>}
+              , read from your storefront.
+            </p>
+          )}
           {note && <p className="hc-bfnote">{note}</p>}
         </>
       )}

@@ -14,6 +14,14 @@
   --primary:#0E1A08; --primary-ink:#EAF7CF;
   --track:#E4E3D8;
 
+  /* The page measure, and the gutter inside it. Everything that spans the screen reads
+     from these two, so the bar, the rail and the answers cannot drift apart again. */
+  --hc-shell: 1560px;
+  --hc-pad: 24px;
+  /* Level with the right edge of the content column once the page stops filling the
+     window, rather than pinned to the glass with the answers ending 300px away. */
+  --hc-dockright: max(20px, calc((100vw - var(--hc-shell)) / 2 + var(--hc-pad)));
+
   /* Muted text. The app's --ink-3 is 3.4:1 on this ground and the obvious darkening to
      #6A7163 still only reaches 4.11 on --sunken, which is where the inactive part tab and
      the eyebrows sit. Chosen against the DARKEST light surface rather than the page, so
@@ -88,11 +96,18 @@
 /* ---------------------------------------------------------------- top bar */
 .hc-top {
   position: sticky; top: 0; z-index: 30;
-  display: flex; align-items: center; gap: 14px;
-  padding: 11px 22px;
+  padding: 11px 0;
   background: color-mix(in srgb, var(--page) 88%, transparent);
   backdrop-filter: saturate(1.4) blur(10px);
   border-bottom: 1px solid var(--border);
+}
+/* One measure for the whole screen, set by whichever part is open: the answers read best
+   in a column, the tools need the width. Everything that spans the page reads this. */
+.hc[data-hc-part="help"] { --hc-shell: 1264px; }
+
+.hc-topin {
+  display: flex; align-items: center; gap: 14px;
+  width: 100%; max-width: var(--hc-shell); margin: 0 auto; padding: 0 var(--hc-pad);
 }
 .hc-brand { display: flex; align-items: center; gap: 9px; text-decoration: none; color: var(--ink); flex: none; }
 .hc-brand .logo { width: 34px; height: 22px; flex: none; margin: 0; }
@@ -128,7 +143,10 @@
 .hc-navtoggle { display: none; }
 
 /* ---------------------------------------------------------------- layout */
-.hc-body { display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 30px; max-width: 1240px; margin: 0 auto; padding: 26px 22px 90px; }
+.hc-body {
+  display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 30px;
+  width: 100%; max-width: var(--hc-shell); margin: 0 auto; padding: 26px var(--hc-pad) 90px;
+}
 /* No inner scrollbar. A rail with its own scroller inside a page that already scrolls is two
    scrollbars and a guess about which one you are in; grouped, it is short enough to sit. */
 .hc-nav { position: sticky; top: 68px; align-self: start; display: flex; flex-direction: column; gap: 1px; }
@@ -281,7 +299,7 @@
 
 /* ---------------------------------------------------------------- chat */
 .hc-fab {
-  position: fixed; right: 20px; bottom: 20px; z-index: 40;
+  position: fixed; right: var(--hc-dockright); bottom: 20px; z-index: 40;
   display: flex; align-items: center; gap: 8px;
   appearance: none; border: 0; cursor: pointer; font: inherit; font-size: 13px; font-weight: 680;
   background: var(--primary); color: var(--primary-ink);
@@ -292,7 +310,7 @@
 .hc-fab svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
 .hc-chat {
-  position: fixed; right: 20px; bottom: 20px; z-index: 40;
+  position: fixed; right: var(--hc-dockright); bottom: 20px; z-index: 40;
   display: flex; flex-direction: column;
   width: min(408px, calc(100vw - 32px)); height: min(624px, calc(100vh - 100px));
   background: var(--card); border: 1px solid var(--border-2); border-radius: 15px;
@@ -352,6 +370,7 @@
 
 /* ---------------------------------------------------------------- responsive */
 @media (max-width: 1023px) {
+  .hc { --hc-pad: 18px; }
   .hc-body { grid-template-columns: minmax(0, 1fr); gap: 0; padding-top: 20px; }
   .hc-nav {
     position: static; display: none; max-height: none; margin-bottom: 20px;
@@ -359,13 +378,20 @@
   }
   .hc-nav.open { display: flex; }
   .hc-navtoggle { display: block; flex: none; }
+  .hc-navrule { margin-top: 8px; padding-top: 8px; }
+  /* Sticky headings would pin under a bar that is two rows tall here, and the sections are
+     a swipe apart on a phone anyway. */
+  .hc-faqgrouph { position: static; background: none; }
 }
 @media (max-width: 767px) {
-  .hc-top { padding: 9px 14px; gap: 9px; flex-wrap: wrap; }
+  /* The gutter is one number now, so the bar, the rail and the answers narrow together. */
+  .hc { --hc-pad: 14px; }
+  .hc-top { padding: 9px 0; }
+  .hc-topin { gap: 9px; flex-wrap: wrap; }
   .hc-brandname { display: none; }
   .hc-searchwrap { order: 3; max-width: none; flex-basis: 100%; }
   .hc-kbd { display: none; }
-  .hc-body { padding: 18px 14px 96px; }
+  .hc-body { padding-top: 18px; padding-bottom: 96px; }
   .hc-h1 { font-size: 23px; }
   .hc-hero { font-size: 26px; max-width: none; }
   .hc-fab span { display: none; }
@@ -389,7 +415,7 @@
 .hc-part.on { background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
 .hc-part:focus-visible { outline: 2px solid var(--brand-deep); outline-offset: 1px; }
 
-.hc-body.solo { grid-template-columns: minmax(0, 1fr); max-width: 1560px; }
+.hc-body.solo { grid-template-columns: minmax(0, 1fr); }
 .hc-nav.hidden { display: none; }
 
 /* ---------------------------------------------------------------- query form */
@@ -1305,17 +1331,20 @@
    The front door. Two stages, because a merchant choosing plans and a merchant running a
    live store are not asking the same questions, and mixing them is why 236 reads as a wall. */
 .hc-faq { max-width: 860px; }
-.hc-faqphase { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 16px 0 14px; }
-.hc-faqphaseb {
-  appearance: none; cursor: pointer; text-align: left; font: inherit;
-  background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px;
+.hc-faqphase { display: inline-flex; margin: 4px 0 14px; }
+.hc-faqphase .hc-part em {
+  font-style: normal; margin-left: 7px; font-size: 11px; opacity: .62; font-variant-numeric: tabular-nums;
 }
-.hc-faqphaseb b { display: block; font-size: 14px; font-weight: 700; }
-.hc-faqphaseb em { display: block; font-style: normal; font-size: 12px; color: var(--hc-muted); margin-top: 2px; }
-.hc-faqphaseb:hover { border-color: var(--border-2); }
-.hc-faqphaseb.on { border-color: var(--brand-deep); box-shadow: inset 0 0 0 1px var(--brand-deep); }
 .hc-faqblurb { margin: 0 0 18px; }
 .hc-faqgroup { margin-bottom: 20px; }
+.hc-faqgrouph {
+  position: sticky; top: 52px; z-index: 5;
+  display: flex; align-items: baseline; gap: 8px;
+  margin: 0 0 6px; padding: 9px 0 7px;
+  font-size: 13px; font-weight: 740; letter-spacing: -0.005em;
+  background: linear-gradient(var(--page) 72%, transparent);
+}
+.hc-faqgrouph em { font-style: normal; font-size: 11px; font-weight: 600; color: var(--hc-muted); font-variant-numeric: tabular-nums; }
 .hc-faqgroup .hc-h3 { margin: 0 0 8px; }
 .hc-faqlist { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); }
 .hc-faqlist li { border-bottom: 1px solid var(--border); }
@@ -1329,7 +1358,7 @@
 .hc-faqa { padding: 0 2px 14px; }
 .hc-faqpath { margin: 10px 0 0; font-size: 11.5px; color: var(--hc-muted); font-family: ui-monospace, Menlo, monospace; }
 .hc-faqfull { margin-top: 10px; font-size: 12px; padding: 5px 11px; }
-@media (max-width: 719px) { .hc-faqphase { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 719px) { .hc-faqphase { display: flex; width: 100%; } .hc-faqphase .hc-part { flex: 1 1 0; justify-content: center; } }
 
 /* Parent and child, said out loud in every column rather than left to the tags. */
 .hc-splitrow td {
@@ -1338,12 +1367,34 @@
 }
 
 /* The rail, grouped. Seventeen flat categories is a list you read rather than scan. */
-.hc-navgroup { margin-top: 12px; }
-.hc-navgroup:first-of-type { margin-top: 4px; }
-.hc-navgrouph {
-  margin: 0 0 3px; padding: 0 10px; font-size: 10.5px; font-weight: 700;
-  letter-spacing: .07em; text-transform: uppercase; color: var(--hc-muted);
+/* The topic rail. A group is a row until it is opened, so the whole spine is eight rows
+   rather than twenty-five, and the count on each says where the mass is before you click. */
+.hc-navrule {
+  margin: 14px 0 5px; padding: 11px 10px 0; border-top: 1px solid var(--border);
+  font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--hc-muted);
 }
+.hc-navgroup { margin: 0; }
+.hc-navgrouph {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+  appearance: none; border: 0; background: transparent; color: var(--ink-2);
+  text-align: left; font: inherit; font-size: 13px; font-weight: 640;
+  padding: 7px 10px; border-radius: 8px; cursor: pointer;
+}
+.hc-navgrouph:hover { background: var(--card-2); color: var(--ink); }
+.hc-navgrouph:focus-visible { outline: 2px solid var(--brand-deep); outline-offset: -2px; }
+.hc-navgrouph.holds { color: var(--ink); }
+.hc-navgrouph span { flex: 1 1 auto; }
+.hc-navgrouph em { font-style: normal; font-size: 11px; color: var(--hc-muted); font-variant-numeric: tabular-nums; }
+.hc-navcaret {
+  flex: none; width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2.4;
+  stroke-linecap: round; stroke-linejoin: round; opacity: .55;
+  transition: transform .14s ease;
+}
+.hc-navgroup.open .hc-navcaret { transform: rotate(90deg); opacity: .8; }
+/* Indented under its heading, and hung off a rule so the group reads as one block. */
+.hc-navsub { margin-left: 19px; padding-left: 10px; border-left: 1px solid var(--border); border-radius: 0 8px 8px 0; font-size: 12.5px; }
+.hc-navsub.on { border-left-color: var(--brand-deep); }
 
 /* A question you can open should look like one. */
 .hc-faqq { position: relative; padding-right: 26px; }
@@ -1470,14 +1521,6 @@
   margin: 0 0 6px; font-size: 16.5px; font-weight: 720; letter-spacing: -.012em; color: var(--ink);
 }
 .hc-faqgroup { margin-bottom: 26px; scroll-margin-top: 90px; }
-.hc-faqnav { display: flex; flex-wrap: wrap; gap: 7px; margin: 0 0 22px; }
-.hc-faqnav a {
-  display: inline-flex; align-items: center; gap: 7px; text-decoration: none;
-  background: var(--card); border: 1px solid var(--border); border-radius: 999px;
-  padding: 5px 12px; color: var(--ink-2); font-size: 12.5px; font-weight: 620;
-}
-.hc-faqnav a:hover { border-color: var(--brand-deep); color: var(--ink); }
-.hc-faqnav em { font-style: normal; font-size: 11px; color: var(--hc-muted); }
 .hc-faq .hc-h1 { font-size: 27px; letter-spacing: -.022em; }
 .hc-faqq { font-size: 14px; font-weight: 600; padding-top: 13px; padding-bottom: 13px; }
 .hc-faqlist li.on .hc-faqq { font-weight: 680; }

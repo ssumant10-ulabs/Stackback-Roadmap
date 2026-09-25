@@ -23,35 +23,30 @@ export default function Faq({ onOpen, onJump }: {
 
   return (
     <section className="hc-faq">
-      <p className="hc-eyebrow">Frequently asked</p>
       <h1 className="hc-h1">The questions that come up</h1>
       <p className="hc-blurb">
-        Mined from the pilot conversations and the calls, and split by where you are. Every
-        answer is the same one the Help Centre holds, so there is one version of it.
+        Mined from the pilot conversations and the calls. Every answer is the same one the
+        Help Centre holds, so there is one version of it.
       </p>
 
-      <div className="hc-faqphase" role="tablist" aria-label="Which stage">
-        {FAQ_SECTIONS.map((s) => (
-          <button key={s.phase} role="tab" aria-selected={phase === s.phase}
-            className={"hc-faqphaseb" + (phase === s.phase ? " on" : "")}
-            onClick={() => { setPhase(s.phase); setOpen(null); }}>
-            <b>{s.title}</b>
-            <em>{s.groups.reduce((n, g) => n + g.ids.length, 0)} questions</em>
+      {/* A filter, at a filter's weight. It was two cards the width of the column, ~80px of
+          vertical each, carrying three words and a count; and the titles rendered white on
+          white, so all a reader saw was "12 questions" twice. */}
+      <div className="hc-parts hc-faqphase" role="tablist" aria-label="Which stage">
+        {FAQ_SECTIONS.map((sec) => (
+          <button key={sec.phase} role="tab" aria-selected={phase === sec.phase}
+            className={"hc-part" + (phase === sec.phase ? " on" : "")}
+            onClick={() => { setPhase(sec.phase); setOpen(null); }}>
+            {sec.title}<em>{sec.groups.reduce((n, g) => n + g.ids.length, 0)}</em>
           </button>
         ))}
       </div>
 
       <p className="hc-note hc-faqblurb">{section.blurb}</p>
 
-      <nav className="hc-faqnav" aria-label="Sections">
-        {groups.map((g) => (
-          <a key={g.title} href={`#faq-${slug(g.title)}`}>{g.title}<em>{g.articles.length}</em></a>
-        ))}
-      </nav>
-
       {groups.map((g) => (
         <div key={g.title} id={`faq-${slug(g.title)}`} className="hc-faqgroup">
-          <h2 className="hc-faqgrouph">{g.title}</h2>
+          <h2 className="hc-faqgrouph">{g.title}<em>{g.articles.length}</em></h2>
           <ul className="hc-faqlist">
             {g.articles.map((a) => {
               const on = open === a.id;

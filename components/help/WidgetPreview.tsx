@@ -5,7 +5,7 @@ import {
   type ToggleDef, type WidgetSettings,
 } from "@/lib/help/widget";
 import type { PlanOption } from "@/lib/help/sim";
-import BrandFetch from "./BrandFetch";
+import BrandFetch, { type ReadProduct } from "./BrandFetch";
 
 /** The storefront widget, rendered from the settings object.
  *
@@ -15,9 +15,14 @@ import BrandFetch from "./BrandFetch";
  *
  *  Hovering a setting highlights what it touches. That is the explorer's affordance, and
  *  the only thing that makes twenty switches legible on a call. */
+/** Every row in "Shape and type" is `key: "theme"` and differs only by `themePath`, so the
+ *  settings key alone is not unique and React was dropping and reusing rows across renders. */
+const rowKey = (d: { key?: unknown; themePath?: string }) =>
+  String(d.key) + (d.themePath ? ":" + d.themePath : "");
+
 export default function WidgetPreview({
   s, onChange, unitPrice, compareAt, plans, productName, variantLine, currency = "₹", onSubscribe,
-  rates, shippingRate = 0, freebieRuns = [], scale = "", storeName,
+  rates, shippingRate = 0, freebieRuns = [], scale = "", storeName, onProduct,
 }: {
   s: WidgetSettings;
   onChange: (next: WidgetSettings) => void;
@@ -37,6 +42,8 @@ export default function WidgetPreview({
    *  a control that vanishes reads as a bug, one that is locked reads as a price. */
   scale?: string;
   storeName?: string | null;
+  /** A real product read off the merchant's storefront, forwarded from BrandFetch. */
+  onProduct?: (p: ReadProduct) => void;
 }) {
   const t = s.theme;
   const [hot, setHot] = useState<string | null>(null);
@@ -334,7 +341,7 @@ export default function WidgetPreview({
 
       <div className="hc-wtoggles">
         <BrandFetch theme={t} onTheme={(next) => onChange({ ...s, theme: next })}
-          settings={s} storeName={storeName} />
+          settings={s} storeName={storeName} onProduct={onProduct} />
         <p className="hc-wtogglesh">What the customer sees</p>
         <p className="hc-note hc-wtoggleshelp">
           Every setting on the Purchase Options block. Hover a row to see what it changes in the
@@ -347,7 +354,7 @@ export default function WidgetPreview({
             <div className="hc-tgrid">
               {g.items.filter((d) => !d.showWhen || String(s[d.showWhen.key]) === d.showWhen.is)
                 .map((d) => (d.kind === "checks" ? (
-                <div key={String(d.key)} className="hc-wtoggle wide hc-wchecks"
+                <div key={rowKey(d)} className="hc-wtoggle wide hc-wchecks"
                   onMouseOver={() => setHot(d.touches)} onMouseOut={() => setHot(null)}>
                   <span>
                     {d.label}<Tip help={d.help} note={d.note} path={d.path} />
@@ -366,7 +373,7 @@ export default function WidgetPreview({
                   </span>
                 </div>
               ) : (
-                <label key={String(d.key)} className={"hc-wtoggle" + (d.kind ? " wide" : "") + (locked(d.gatedFromScale) ? " locked" : "")}
+                <label key={rowKey(d)} className={"hc-wtoggle" + (d.kind ? " wide" : "") + (locked(d.gatedFromScale) ? " locked" : "")}
                   onMouseOver={() => setHot(d.touches)} onMouseOut={() => setHot(null)}
                   onFocus={() => setHot(d.touches)} onBlur={() => setHot(null)}>
                   {!d.kind && (

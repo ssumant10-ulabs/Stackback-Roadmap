@@ -177,6 +177,12 @@ export default function Brief({ store, open, answered, connected, step, onStep, 
             freebieRuns={freebieRuns(answers.freebies)}
             scale={String(answers.scale || "")}
             storeName={String(answers.brand_name || store?.name || "")}
+            /* Their product, their price, in step two and in every order step three draws. */
+            onProduct={(pr) => setCfg((c) => ({
+              ...c,
+              productName: pr.title || c.productName,
+              unitPrice: pr.priceMinor != null ? Math.round(pr.priceMinor / 100) : c.unitPrice,
+            }))}
           />
 
           <div className="hc-stepnav">
