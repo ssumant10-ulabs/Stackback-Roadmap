@@ -123,6 +123,31 @@ export function resolveFaq(section: FaqSection): {
   return { groups, missing };
 }
 
+/** Every article the curated FAQ points at. Search reads it as an editorial prior: a question
+ *  on this list is one merchants are known to arrive with, which no word count can tell you. */
+export const FAQ_IDS = new Set(FAQ_SECTIONS.flatMap((s) => s.groups.flatMap((g) => g.ids)));
+
+/** Merchant phrasings that name an answer without sharing a word with it, each one a miss
+ *  observed while testing the ranker against how pilot stores actually type.
+ *
+ *  This is the same discipline as the alias groups in `search.ts` and it exists for the
+ *  cases those cannot reach: "two orders" is the order-flow question, and the order-flow
+ *  article says "one order" throughout, so no amount of term weighting gets there. A boost,
+ *  never an override, so a better lexical match still wins.
+ *
+ *  Grows only from a real miss. Add the case to `scripts/eval-search.ts` in the same edit,
+ *  or nothing stops the next change from undoing it. */
+export const INTENTS: { when: RegExp; id: string }[] = [
+  { when: /\b(two|second|extra|duplicate|another) orders?\b|\bparent (order|and child)|\bchild order/,
+    id: "what-does-one-subscription-create-in-shopify" },
+  { when: /\b(change|swap|replace|switch)\b[^?]{0,24}\b(product|item|sku|flavour|flavor)\b/,
+    id: "what-do-swap-add-and-reschedule-actually-do-and-who-pays" },
+  { when: /\b(wants? to cancel|cancel (a |my |the |their )?subscription|stop (a |the |their )?subscription|how (do|to) .{0,12}cancel)\b/,
+    id: "how-does-cancellation-work" },
+  { when: /\b(double|inflate|overstate|twice)\b[^?]{0,24}\b(revenue|sales|turnover|inventory)\b/,
+    id: "will-the-checkout-order-inflate-our-revenue-and-inventory-number" },
+];
+
 export const FAQ_COUNT = FAQ_SECTIONS.reduce(
   (n, s) => n + s.groups.reduce((m, g) => m + g.ids.length, 0), 0,
 );

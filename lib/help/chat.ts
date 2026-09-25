@@ -32,14 +32,25 @@ export interface Turn {
 let seq = 0;
 const nextId = () => `t${Date.now().toString(36)}${(seq++).toString(36)}`;
 
-/** Below this, a top hit is noise dressed as an answer. Tuned against the corpus: the
- *  cutoff sits between "shipping charged twice" (a real question, scores well clear) and
- *  a two-common-word query that matches forty articles weakly. */
-const FLOOR = 2.6;
+/** Below this, a top hit is noise dressed as an answer.
+ *
+ *  Read off `Hit.confidence`, not the raw score, which was the bug: BM25 scales with how
+ *  many words you typed, so a raw cutoff asked "cod" to clear the same bar as "does the
+ *  checkout order double my revenue". Confidence divides by the best that query could have
+ *  scored, so the two are comparable. Tuned against the corpus: 0.25 sits between "how do I
+ *  turn off cash on delivery" (0.40, a real question) and "something about stuff" (0.14). */
+const FLOOR = 0.25;
 /** A top hit this far ahead of the runner-up is the answer. Closer than this and the honest
  *  move is to ask, because picking one of two plausible answers wrong costs more than a
- *  question does. */
-const DECISIVE = 1.45;
+ *  question does.
+ *
+ *  Was 1.45, which almost nothing cleared: the chat asked "which one?" to nineteen of
+ *  twenty-five real merchant questions, which is a search box with an extra step. */
+const DECISIVE = 1.3;
+/** Relaxed to this when the whole shortlist sits in one category. If the corpus agrees on
+ *  the topic, the disagreement is about which paragraph, and leading with the best one and
+ *  putting the rest under "more" beats making the merchant choose blind. */
+const DECISIVE_SAME_TOPIC = 1.12;
 
 const SMALLTALK: [RegExp, string][] = [
   [/^(hi|hey|hello|yo|namaste|hii+)\b/i, `Hello. Ask me anything about your StackBack setup: plans, bundles, orders, payments, the customer portal. I answer out of the ${ARTICLES.length} questions pilot stores have actually asked.`],
@@ -112,7 +123,7 @@ export function reply(text: string, prior?: Turn): Turn {
   const hits = search(text, 6);
   const top = hits[0];
 
-  if (!top || top.score < FLOOR) {
+  if (!top || top.confidence < FLOOR) {
     return {
       ...base,
       kind: "miss",
@@ -124,10 +135,19 @@ export function reply(text: string, prior?: Turn): Turn {
   }
 
   const runnerUp = hits[1];
-  const decisive = !runnerUp || top.score / runnerUp.score >= DECISIVE;
+  const ratio = runnerUp ? top.score / runnerUp.score : Infinity;
+  const oneTopic = hits.slice(0, 3).every((h) => h.art.cat === top.art.cat);
+  const decisive = ratio >= DECISIVE || (oneTopic && ratio >= DECISIVE_SAME_TOPIC);
 
   if (decisive) {
-    return { ...base, kind: "answer", art: top.art, more: related(top.art), lead: leadFor(top.art) };
+    /* The runners-up are the further reading when they were close, rather than a generic
+       "related" list that repeats what the answer already said. */
+    const near = hits.slice(1, 4).filter((h) => h.score >= top.score * 0.6).map((h) => h.art);
+    return {
+      ...base, kind: "answer", art: top.art,
+      more: near.length ? near : related(top.art),
+      lead: leadFor(top.art),
+    };
   }
 
   return {
