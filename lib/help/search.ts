@@ -45,6 +45,11 @@ const ALIAS_GROUPS: string[][] = [
   ["parent", "child"],
   ["frequency", "cadence", "interval"],
   ["razorpay", "gateway"],
+  /* "Turn it off" is how a merchant says "disable", and the corpus only ever writes the
+     second. Without this, "how do I turn off cash on delivery" spent its coverage on "turn"
+     and "off" and surfaced an article about turning off a PORTAL action. */
+  ["disable", "off", "deactivate", "switch"],
+  ["enable", "activate"],
 ];
 
 /** term -> the other members of its group. Built once, symmetric by construction. */

@@ -162,6 +162,11 @@
 .hc-navint { margin-top: 8px; border-top: 1px solid var(--border); padding-top: 13px; border-radius: 0 0 8px 8px; }
 
 .hc-main { min-width: 0; }
+.hc-searchmore { margin-top: 14px; }
+.hc-linkish {
+  appearance: none; border: 0; background: none; padding: 0; font: inherit;
+  color: var(--brand-deep); text-decoration: underline; text-underline-offset: 2px; cursor: pointer;
+}
 .hc-eyebrow { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--hc-muted); font-weight: 700; margin: 0 0 6px; }
 .hc-h1 { font-size: 28px; line-height: 1.18; letter-spacing: -0.02em; margin: 0 0 8px; font-weight: 800; }
 .hc-hero { font-size: 34px; max-width: 20ch; }

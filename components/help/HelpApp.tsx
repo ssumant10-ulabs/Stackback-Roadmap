@@ -169,6 +169,14 @@ export default function HelpApp({
   }, []);
 
   const hits = useMemo(() => (view.kind === "search" && view.q.trim() ? search(view.q, 40) : []), [view]);
+  /* Forty results to a question with one answer is the wall the search box was meant to
+     replace. Anything under a third of the top hit's score is a word in common, not an
+     answer, so it is held back rather than listed and the count is what is worth reading. */
+  const shown = useMemo(() => {
+    if (!hits.length) return hits;
+    const near = hits.filter((h) => h.score >= hits[0].score * 0.35);
+    return near.length >= 3 ? near : hits.slice(0, Math.min(6, hits.length));
+  }, [hits]);
 
   /* Logged once the typing has settled, so one question is one row rather than one per
    * keystroke, and only when there was something to find or conspicuously nothing. */
@@ -351,7 +359,9 @@ export default function HelpApp({
           )}
           {view.kind === "search" && (
             <section>
-              <p className="hc-eyebrow">{hits.length ? `${hits.length} answer${hits.length === 1 ? "" : "s"}` : "No match"}</p>
+              <p className="hc-eyebrow">
+                {shown.length ? `${shown.length} answer${shown.length === 1 ? "" : "s"}` : "No match"}
+              </p>
               <h1 className="hc-h1">&ldquo;{view.q}&rdquo;</h1>
               {hits.length === 0 && (
                 <div className="hc-empty">
@@ -359,7 +369,14 @@ export default function HelpApp({
                   <button className="hc-btn primary" onClick={() => setChatSeed(view.q)}>Ask support instead</button>
                 </div>
               )}
-              <ArticleList list={hits.map((h) => h.art)} open={open} setOpen={setOpen} internal={false} showCat />
+              <ArticleList list={shown.map((h) => h.art)} open={open} setOpen={setOpen} internal={false} showCat />
+              {hits.length > shown.length && (
+                <p className="hc-note hc-searchmore">
+                  {hits.length - shown.length} more answers mention these words without being about
+                  them. Narrow the search, or <button type="button" className="hc-linkish"
+                    onClick={() => setChatSeed(view.q)}>ask the chat</button>.
+                </p>
+              )}
             </section>
           )}
           {view.kind === "insights" && (internal

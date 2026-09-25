@@ -152,14 +152,24 @@ export const FAQ_COUNT = FAQ_SECTIONS.reduce(
   (n, s) => n + s.groups.reduce((m, g) => m + g.ids.length, 0), 0,
 );
 
-/** The topic rail, grouped. Seventeen flat rows is a list you read rather than scan, and the
- *  grouping is the same one the FAQ uses: what you set up, what runs, what breaks. */
+/** The topic rail, grouped on the SAME axis the FAQ uses: where you are, not what the thing
+ *  is called. The two were on different axes, which is the part that read as wrong: the front
+ *  door splits on before-you-go-live and once-you-are-live, and the rail beside it split on
+ *  what-you-sell and around-the-app, so a merchant switching between them had to re-learn
+ *  where their issue lived.
+ *
+ *  Two moves, no renames. "Using the app" was filed under Start and is not something you do
+ *  on the way in; it sits with the rest of the app now. "Access and install" was filed at the
+ *  bottom under "Around the app" and is the third most-asked category in the corpus: it is
+ *  the first thing a merchant does, so it sits with the other pre-live topics.
+ *
+ *  Five categories to a group at most, because the rail expands one group at a time and a
+ *  group longer than that is the flat list again. 105 / 56 / 39 / 36 of 236. */
 export const NAV_GROUPS: { title: string; ids: string[] }[] = [
-  { title: "Start", ids: ["start", "flows", "admin"] },
-  { title: "What you sell", ids: ["plans", "bundles", "widget"] },
-  { title: "Money and delivery", ids: ["pay", "ship", "orders", "stock"] },
+  { title: "Before you go live", ids: ["start", "access", "plans", "bundles", "widget"] },
+  { title: "Orders and money", ids: ["orders", "pay", "ship", "stock"] },
   { title: "Your customers", ids: ["portal", "cancel", "notify"] },
-  { title: "Around the app", ids: ["access", "integ", "report", "bill"] },
+  { title: "The app itself", ids: ["flows", "admin", "integ", "report", "bill"] },
 ];
 
 /** Which wizard step answers a question better than prose does. A widget question is really
