@@ -332,11 +332,19 @@ export default function WidgetPreview({
               color: t.components.ctaButton === "solid" ? "#fff" : t.colors.primary,
               border: `1px solid ${t.colors.primary}`,
             }}>
-            Subscribe Now
+            {/* `direct_checkout` was a control that changed nothing: it was declared, it was
+                defaulted true, it was drawn on the panel, and no line in this repo read it.
+                Off, the widget adds to the cart and the customer carries on shopping, which
+                is a different button and a different sentence underneath. */}
+            {s.direct_checkout ? "Subscribe Now" : "Add subscription to cart"}
           </button>
         </div>
 
-        <p className="hc-wtax" style={{ color: t.text.muted }}>Prices inclusive of all taxes</p>
+        <p className="hc-wtax" style={{ color: t.text.muted }}>
+          {s.direct_checkout
+            ? "Prices inclusive of all taxes"
+            : "Prices inclusive of all taxes. Goes to the cart, not to checkout."}
+        </p>
       </div>
 
       <div className="hc-wtoggles">

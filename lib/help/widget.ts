@@ -151,7 +151,7 @@ export interface ToggleDef {
   /** kind "checks": several switches that answer ONE question, on one row under one
    *  explanation. Three rows each saying "ignored when it is the only mode offered" is
    *  three readings of the same sentence. */
-  checks?: { key: keyof WidgetSettings; path: string; label: string; invert?: boolean }[];
+  checks?: { key: keyof WidgetSettings; path: string; label: string; invert?: boolean; notPreviewable?: true }[];
   /** kind "matrix": one dropdown over the real combinations of two fields, labelled with
    *  what the customer actually reads. A format select plus a wording checkbox is a 2x2 the
    *  merchant has to hold in their head; the four strings are the thing being chosen. */
@@ -307,7 +307,11 @@ export const TOGGLE_GROUPS: ToggleGroup[] = [
       { key: "bundle_selector_tabs", label: "Bundles", path: "bundle_selector_tabs", touches: "tab-bundle", kind: "checks",
         checks: [
           { key: "bundle_selector_tabs", path: "bundle_selector_tabs", label: "Show the bundle choice as tabs, not a dropdown" },
-          { key: "group_bundle_variants", path: "group_bundle_variants", label: "Group products by variant" },
+          /* Mix and match bundles only, which this preview does not draw, so nothing here
+             reads it and nothing should. Declared rather than left to be discovered: without
+             the flag `scripts/eval-settings.ts` reports it as a control that changes
+             nothing, which is the defect it exists to catch. */
+          { key: "group_bundle_variants", path: "group_bundle_variants", label: "Group products by variant", notPreviewable: true },
         ],
         help: "Tabs apply when a variant belongs to several bundles of the same type. Grouping combines variants of one product into a single row with a variant picker.",
         note: "Mix & match bundles only, which this preview does not draw." },
