@@ -15,6 +15,7 @@ import Internal from "./Internal";
 import Faq from "./Faq";
 import { FAQ_COUNT, NAV_GROUPS } from "@/lib/help/faq";
 import HowTo from "./HowTo";
+import References from "./References";
 import Simulator from "./Simulator";
 import type { LoggedQuery, StoreRecord, StoreSummary } from "@/lib/sanity/queries";
 import { helpFont } from "./font";
@@ -29,12 +30,13 @@ type View =
   | { kind: "queries"; step: number }
   | { kind: "sim" }
   | { kind: "internal" }
-  | { kind: "howto" };
+  | { kind: "howto" }
+  | { kind: "refs" };
 
 /** The Help Centre is two parts, and they answer different questions.
  *  Queries is live and incomplete by nature: what came in, what we answered.
  *  Help Centre is the settled corpus: the FAQs, the order flow, the simulator. */
-type Part = "queries" | "howto" | "help" | "internal";
+type Part = "queries" | "refs" | "howto" | "help" | "internal";
 
 /** Topics where the question underneath is usually "what would that actually do", which
  *  a simulator answers and a paragraph does not. */
@@ -67,6 +69,7 @@ function parseHash(): View {
   if (route === "faq") return { kind: "faq" };
   if (route === "internal") return { kind: "internal" };
   if (route === "howto") return { kind: "howto" };
+  if (route === "refs") return { kind: "refs" };
   /* The FAQs are the landing. The overview is the 236-answer index you go to when the FAQ
      did not have it, which is the second thing you want, not the first. */
   return { kind: "faq" };
@@ -148,7 +151,8 @@ export default function HelpApp({
       : v.kind === "queries" ? (v.step > 1 ? `#/queries/${v.step}` : "#/queries")
       : v.kind === "sim" ? "#/sim"
       : v.kind === "internal" ? "#/internal"
-      : v.kind === "howto" ? "#/howto" : "#/insights";
+      : v.kind === "howto" ? "#/howto"
+      : v.kind === "refs" ? "#/refs" : "#/insights";
     if (window.location.hash !== h) window.location.hash = h; else setView(v);
     setNavOpen(false);
     // Back to following the view: arriving at a topic from a search result or a card should
@@ -203,6 +207,7 @@ export default function HelpApp({
   const submit = (e: React.FormEvent) => { e.preventDefault(); go(q.trim() ? { kind: "search", q: q.trim() } : { kind: "faq" }); };
 
   const part: Part = view.kind === "queries" ? "queries"
+    : view.kind === "refs" ? "refs"
     : view.kind === "howto" ? "howto"
     : view.kind === "internal" ? "internal" : "help";
   const cat = view.kind === "cat" ? COUNTS.find((c) => c.id === view.id) : undefined;
@@ -236,6 +241,10 @@ export default function HelpApp({
         <div className="hc-parts" role="tablist" aria-label="Help Centre parts">
           <button role="tab" aria-selected={part === "queries"} className={"hc-part" + (part === "queries" ? " on" : "")}
             onClick={() => go({ kind: "queries", step: 1 })}>Your plans</button>
+          {/* Its own item, not a panel inside the plan wizard: what the cohort runs is the
+              thing worth sending somebody on its own. */}
+          <button role="tab" aria-selected={part === "refs"} className={"hc-part" + (part === "refs" ? " on" : "")}
+            onClick={() => go({ kind: "refs" })}>References</button>
           <button role="tab" aria-selected={part === "howto"} className={"hc-part" + (part === "howto" ? " on" : "")}
             onClick={() => go({ kind: "howto" })}>How to</button>
           <button role="tab" aria-selected={part === "help"} className={"hc-part" + (part === "help" ? " on" : "")}
@@ -351,6 +360,7 @@ export default function HelpApp({
                   ? <button className="hc-btn primary" onClick={auth.signIn}>Sign in</button>
                   : <p className="hc-note">Sign-in is not configured on this build, so it cannot be opened here.</p>}
               </div>)}
+          {view.kind === "refs" && <References pilots={pilots} />}
           {view.kind === "sim" && <Simulator />}
           {view.kind === "howto" && <HowTo internal={internal} />}
           {view.kind === "faq" && (

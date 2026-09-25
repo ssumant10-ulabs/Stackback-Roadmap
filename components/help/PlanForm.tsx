@@ -9,6 +9,7 @@ import { CATEGORY_BY_ID, SCALE_BY_ID, freqWord } from "@/lib/help/categories";
 import { drawPlanSheet } from "@/lib/help/sheet-png";
 import OrderImport from "./OrderImport";
 import type { PilotStore } from "@/lib/types";
+import { categoryReferences, coverage, discountBand } from "@/lib/help/references";
 import { CATEGORY_DEFAULTS, categoryIdFor } from "@/lib/help/categories";
 import type { WidgetSettings } from "@/lib/help/widget";
 
@@ -20,6 +21,15 @@ const DRAFT = "sb-help-planform";
  *  is "what does everyone else do", and having an answer on the page turns a two-day email
  *  round trip into a click. It proposes, it never fills, because a store's own repeat gap
  *  beats a category average every time and quietly overwriting their number would hide that. */
+/** A discount per run length out of a single observed band: the shortest run gets the low
+ *  end, the longest the high end. A cohort logs one number per store, not a ladder, and a
+ *  ladder is what a merchant has to be shown. */
+function spread(band: { low: number; mid: number; high: number }, n: number): number[] {
+  if (n <= 1) return [band.mid];
+  const step = (band.high - band.low) / (n - 1);
+  return Array.from({ length: n }, (_, i) => Math.round(band.low + step * i));
+}
+
 export default function PlanForm({ answers, onAnswers, storeName, onDone, settings, pilots = [] }: {
   answers: Answers; onAnswers: (a: Answers) => void;
   /** Snapshotted into the export, so the picture records what was toggled as well as priced. */
@@ -51,6 +61,19 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
         return false;
       })
       .slice(0, 6);
+  })();
+
+  /* What this store's own category actually runs, off the pilot rows, so the suggestion is
+     the cohort's numbers rather than the ones somebody typed into categories.ts in July. It
+     only overrides the default where enough of the category is logged to mean anything;
+     below that the default stands and the cohort line is shown beside it as a check. */
+  const ref = (() => {
+    const id = String(answers.category || "");
+    if (!id || !pilots.length) return null;
+    const mine = categoryReferences(pilots).find((r) => categoryIdFor(r.label) === id);
+    if (!mine) return null;
+    const band = discountBand(mine);
+    return { ref: mine, band, cov: coverage(mine), solid: coverage(mine) >= 0.34 && Boolean(band) };
   })();
 
   const [showLike, setShowLike] = useState(false);
@@ -207,17 +230,34 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
           <section className="hc-sugblock">
             <h3>{scale.hint}</h3>
             <p className="hc-sugwhy">{scale.why}</p>
+            {ref?.band && (
+              <p className={"hc-sugcohort" + (ref.solid ? "" : " thin")}>
+                <b>Your cohort:</b> {ref.ref.stores.length} {ref.ref.label} store{ref.ref.stores.length === 1 ? "" : "s"} run{ref.ref.stores.length === 1 ? "s" : ""}{" "}
+                {ref.band.mid}%{ref.band.low !== ref.band.high ? ` (${ref.band.low} to ${ref.band.high})` : ""}
+                {ref.ref.everyDays[0] ? `, every ${ref.ref.everyDays[0]} days` : ""}
+                {ref.ref.deliveries[0] ? `, ${ref.ref.deliveries[0]} deliveries` : ""}.
+                {ref.solid
+                  ? " The rates below are theirs."
+                  : ` Only ${ref.ref.stores.length - ref.ref.unlogged.length} of ${ref.ref.stores.length} are logged, so the rates below are still the category default.`}
+              </p>
+            )}
             <ul className="hc-sugoffers">
               {scale.modes.map((m) => {
                 const rate = MODE_RATE[m];
-                const runs = m === "auto_debit" ? null : cat.deliveries;
+                /* The cohort's own run lengths and discounts once enough of the category is
+                   logged, because "what your category runs" beats "what we wrote down". */
+                const runs = m === "auto_debit" ? null
+                  : (ref?.solid && ref.ref.deliveries.length ? ref.ref.deliveries.slice(0, 3) : cat.deliveries);
+                const base = ref?.solid && ref.band
+                  ? spread(ref.band, (runs || cat.deliveries).length)
+                  : cat.discounts;
                 return (
                   <li key={m}>
                     <b>{MODE_NAME[m]}</b>
                     <span>
                       {runs
-                        ? runs.map((d, i) => `${Math.round(cat.discounts[i] * rate)}% at ${d}`).join(", ")
-                        : `${Math.round(cat.discounts[0] * rate)}% off, no run length`}
+                        ? runs.map((d, i) => `${Math.round((base[i] ?? base[base.length - 1]) * rate)}% at ${d}`).join(", ")
+                        : `${Math.round(base[0] * rate)}% off, no run length`}
                     </span>
                     <em>{m === "auto_debit"
                       ? "One plan that runs until they stop it."
