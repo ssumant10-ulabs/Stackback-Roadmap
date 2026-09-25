@@ -158,11 +158,17 @@ function Spine() {
         send at a step sits on that step.
       </p>
 
+      {/* Buttons, not anchors. `href="#phase-access"` writes the document hash, and the hash
+          is this app's router: `parseHash` did not recognise it, fell back to the FAQ, and
+          the click left the Internal tab entirely instead of scrolling down it. Scrolling the
+          element directly never touches the address. The landing offset is
+          `scroll-margin-top` on the phase, so the sticky bar does not sit over the heading. */}
       <nav className="hc-tlnav" aria-label="Phases">
         {CHECKLIST.map((phase, i) => (
-          <a key={phase.id} href={`#phase-${phase.id}`}>
+          <button key={phase.id} type="button"
+            onClick={() => document.getElementById(`phase-${phase.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}>
             <b>{i + 1}</b><span>{phase.title}</span><em>{phase.steps.length}</em>
-          </a>
+          </button>
         ))}
       </nav>
 

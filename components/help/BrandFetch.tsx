@@ -2,6 +2,7 @@
 import { useState } from "react";
 import type { WidgetSettings, WidgetTheme } from "@/lib/help/widget";
 import { downloadTokens, tokensText } from "@/lib/help/tokens";
+import { canonicalTokens, tokenPasteBlock, type ReadSources } from "@/lib/help/tokenmap";
 
 /** Read a store's own theme settings and drop them into the widget preview.
  *
@@ -96,17 +97,20 @@ export default function BrandFetch({ theme, onTheme, settings, storeName, onProd
   const [note, setNote] = useState<string | null>(null);
   const [font, setFont] = useState<string | null>(null);
   const [product, setProduct] = useState<ReadProduct | null>(null);
+  /** Which of the six the last read actually supplied, so the table can say so per row. */
+  const [readFrom, setReadFrom] = useState<ReadSources | undefined>(undefined);
 
   async function run() {
     const q = url.trim();
     if (!q || busy) return;
-    setBusy(true); setMsg(null); setTokens(null); setNote(null); setProduct(null);
+    setBusy(true); setMsg(null); setTokens(null); setNote(null); setProduct(null); setReadFrom(undefined);
     try {
       const r = await fetch("/api/brand-colours?url=" + encodeURIComponent(q));
       const d = await r.json();
       if (!d.ok) { setMsg(d.error || "That site could not be read."); return; }
       onTheme(toTheme(d.tokens, d.corners, d.cornersCustomPx, theme, d.cardRadiusPx ?? null, d.buttonRadiusPx ?? null));
       setTokens(d.tokens);
+      setReadFrom(Object.fromEntries((d.tokens as Token[]).map((t) => [t.key, { source: t.source, confidence: t.confidence }])));
       if (d.product?.title) { setProduct(d.product); onProduct?.(d.product); }
       setFont(d.fontBody ? String(d.fontBody).split(",")[0].trim() : null);
       setNote(
@@ -152,6 +156,12 @@ export default function BrandFetch({ theme, onTheme, settings, storeName, onProd
 
       {msg && <p className="hc-bferr">{msg}</p>}
 
+      {/* Every token this widget actually has, named the way `stackback-color-tokens` names
+          it, in its sections and its order. The reader answers six of them; the widget on
+          every pilot store today has nineteen plus the portal's five and two fonts, and
+          showing six and calling it the token set is why this panel kept reading as wrong. */}
+      <LiveTokens theme={theme} read={readFrom} font={font} storeName={storeName || url.trim() || null} />
+
       {tokens && (
         <>
           <div className="hc-bfchips">
@@ -170,6 +180,69 @@ export default function BrandFetch({ theme, onTheme, settings, storeName, onProd
             </p>
           )}
           {note && <p className="hc-bfnote">{note}</p>}
+        </>
+      )}
+    </div>
+  );
+}
+
+/** The widget's whole token set, in the skill's sections and its order.
+ *
+ *  Collapsed by default because it is a reference, not a control: a merchant on a call wants
+ *  the six chips and the preview, and dev wants all twenty-six to paste into the app. The
+ *  copy block at the bottom is the `field: value` shape the skill asks every derivation to
+ *  end with, so nobody has to read a table to enter them. */
+function LiveTokens({ theme, read, font, storeName }: {
+  theme: WidgetTheme; read?: ReadSources; font: string | null; storeName: string | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const sections = canonicalTokens(theme, read, font);
+  const count = sections.reduce((n, s) => n + s.rows.length, 0);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(
+        `# StackBack widget tokens${storeName ? ` — ${storeName}` : ""}\n\n` + tokenPasteBlock(sections),
+      );
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch { /* a blocked clipboard is not an error worth a dialog */ }
+  };
+
+  return (
+    <div className="hc-tok">
+      <button type="button" className="hc-tokh" onClick={() => setOpen(!open)} aria-expanded={open}>
+        <b>All {count} widget tokens</b>
+        <span>{open ? "Hide" : "Show"}</span>
+      </button>
+      {open && (
+        <>
+          <p className="hc-toknote">
+            The token set this widget actually has, named as the colour-token spec names it.
+            The reader answers six of them; the rest are what the theme is set to.
+          </p>
+          {sections.map((sec) => (
+            <div key={sec.title} className="hc-toksec">
+              <p className="hc-toksech">{sec.title}</p>
+              <dl className="hc-tokrows">
+                {sec.rows.map((r) => (
+                  <div key={r.label}>
+                    <dt>{r.label}</dt>
+                    <dd>
+                      {r.swatch && <i className="hc-tokdot" style={{ background: r.value }} />}
+                      <b>{r.value}</b>
+                      {r.how && <em className={"hc-tokhow h-" + r.how}>{r.how}</em>}
+                      {r.note && <span>{r.note}</span>}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          ))}
+          <button type="button" className="hc-btn ghost hc-tokcopy" onClick={copy}>
+            {copied ? "Copied" : "Copy all as field: value"}
+          </button>
         </>
       )}
     </div>

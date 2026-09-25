@@ -133,14 +133,50 @@ export const STAGE_LABEL: Record<Stage, string> = {
   prod: "Pushed to prod",
 };
 
+export type CardKind = "feature" | "bug" | "landing";
+
+export const KIND_LABEL: Record<CardKind, string> = {
+  bug: "Bug", feature: "Feature", landing: "Landing page",
+};
+
 /** Where a card sits before anybody has moved it: its own intake column, read off what it
  *  is. Everything that predates the board lands in Bugs or Feature requests, which is where
  *  an untriaged item belongs, and nothing has to be backfilled for the board to be right. */
-export function defaultStage(kind: "feature" | "bug" | undefined | null): Stage {
+export function defaultStage(kind: CardKind | undefined | null): Stage {
   return kind === "bug" ? "bug" : "feature";
 }
-export const stageOf = (f: { stage?: Stage | null; kind?: "feature" | "bug" | null }): Stage =>
+export const stageOf = (f: { stage?: Stage | null; kind?: CardKind | null }): Stage =>
   f.stage || defaultStage(f.kind);
+
+/** Where a ROADMAP task sits before anybody has moved it on the board.
+ *
+ *  Read off the status and team it already carried, so 149 tasks landed in the right columns
+ *  on the first render with nothing written. A shipped milestone is in production, work in
+ *  flight is in progress on whichever team owns it, and anything still planned is backlog.
+ *  Work in flight with no team is back with PM, because "in progress, owner unknown" is a
+ *  handover that has not happened rather than a team's column. */
+export function defaultNodeStage(
+  effStatus: "planned" | "progress" | "done",
+  team: string | null | undefined,
+  kind?: CardKind | null,
+): Stage {
+  if (effStatus === "done") return "prod";
+  if (effStatus === "progress") {
+    if (team === "Design") return "design_progress";
+    if (team === "Engineering") return "dev_progress";
+    return "pm_handover";
+  }
+  /* Planned work is intake, and which intake column depends on what it is. Ignoring the kind
+     here sent a card added to the Bugs column straight into Feature requests: it was created
+     as a bug, tagged as a bug, and filed as a request. */
+  return defaultStage(kind);
+}
+
+/** The sheet's Team column mapped onto the two teams a board card can be handed to. PM is
+ *  not one of them: PM hands out, it does not hold. */
+export function teamToBoard(team: string | null | undefined): BoardTeam | null {
+  return team === "Design" ? "Design" : team === "Engineering" ? "Engineering" : null;
+}
 
 /** Which stages a view can show at all, so a card handed to the other team does not appear
  *  in a column just because the column's stage matches. */

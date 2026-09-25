@@ -1516,12 +1516,14 @@
 /* Phase anchors, at the top, so a five-phase timeline does not have to be scrolled to be
    navigated. `scroll-margin-top` keeps a jumped-to phase clear of the sticky header. */
 .hc-tlnav { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 20px; }
-.hc-tlnav a {
-  display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+.hc-tlnav button {
+  display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+  appearance: none; font: inherit;
   background: var(--card); border: 1px solid var(--border); border-radius: 999px;
   padding: 6px 13px 6px 7px; color: var(--ink-2); font-size: 12.5px; font-weight: 620;
 }
-.hc-tlnav a:hover { border-color: var(--brand-deep); color: var(--ink); }
+.hc-tlnav button:focus-visible { outline: 2px solid var(--brand-deep); outline-offset: 2px; }
+.hc-tlnav button:hover { border-color: var(--brand-deep); color: var(--ink); }
 .hc-tlnav b {
   width: 20px; height: 20px; border-radius: 50%; background: var(--sunken); color: var(--hc-muted);
   display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 750;
@@ -1623,3 +1625,43 @@
 }
 .hc-sugcohort.thin { background: var(--sunken); }
 .hc-sugcohort b { color: var(--ink); }
+
+/* ---- the widget's whole token set ------------------------------------------------------
+   A reference, not a control, so it is collapsed: the call wants six chips and a preview,
+   dev wants all twenty-six to paste into the app. */
+.hc-tok { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 10px; }
+.hc-tokh {
+  display: flex; align-items: baseline; gap: 10px; width: 100%;
+  appearance: none; border: 0; background: none; padding: 0; cursor: pointer;
+  font: inherit; color: var(--ink); text-align: left;
+}
+.hc-tokh b { font-size: 12.5px; font-weight: 700; flex: 1 1 auto; }
+.hc-tokh span { font-size: 11.5px; color: var(--brand-deep); }
+.hc-tokh:focus-visible { outline: 2px solid var(--brand-deep); outline-offset: 3px; }
+.hc-toknote { margin: 8px 0 10px; font-size: 11.5px; line-height: 1.55; color: var(--hc-muted); }
+.hc-toksec { margin-bottom: 11px; }
+.hc-toksech {
+  margin: 0 0 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--hc-muted);
+}
+.hc-tokrows { margin: 0; display: grid; gap: 2px; }
+.hc-tokrows > div { display: grid; grid-template-columns: 150px 1fr; gap: 10px; align-items: baseline; font-size: 12px; }
+.hc-tokrows dt { color: var(--ink-2); }
+.hc-tokrows dd { margin: 0; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; min-width: 0; }
+.hc-tokrows dd b { font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; font-weight: 600; }
+.hc-tokrows dd span { color: var(--hc-muted); font-size: 11px; line-height: 1.45; }
+.hc-tokdot {
+  width: 11px; height: 11px; border-radius: 3px; align-self: center;
+  border: 1px solid var(--border-2); flex: none;
+}
+.hc-tokhow { font-style: normal; font-size: 9.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; border-radius: 4px; padding: 0 4px; }
+.hc-tokhow.h-direct { background: var(--hc-ok-soft); color: var(--hc-ok); }
+.hc-tokhow.h-derived { background: var(--sunken); color: var(--hc-muted); }
+.hc-tokhow.h-logic { background: var(--card-2); color: var(--hc-muted); }
+.hc-tokcopy { font-size: 12px; padding: 5px 11px; }
+
+/* Which order is being drawn: the edited checkout order, or one of the deliveries after it.
+   Sits under the payment-type tabs, indented, because it is a choice within that choice. */
+.hc-whichorder { margin-top: 8px; }
+.hc-whichorder .hc-modepillb { font-size: 12.5px; }
+.pl-badge.warn { background: #ffd79d; color: #5e4200; }

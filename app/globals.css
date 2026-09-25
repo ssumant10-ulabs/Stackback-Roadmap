@@ -1719,3 +1719,84 @@
 .wb-nudgeq { margin: 6px 0 0; font-size: 13px; font-weight: 600; color: var(--ink, #111); }
 .wb-nudgeb { margin: 8px 0 14px; font-size: 12.5px; line-height: 1.55; color: var(--ink-3, #777); }
 .wb-nudgerow { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ---- the board, round two -------------------------------------------------------------
+   Tabs at the weight of a real switch, cards carrying what the old roadmap cards carried,
+   and a way to add one without leaving the column you are looking at. */
+.wb-tabs {
+  gap: 3px; padding: 3px;
+  background: var(--sunken, rgba(0,0,0,.06));
+  border: 1px solid var(--line, rgba(0,0,0,.10));
+  border-radius: 12px;
+}
+.wb-tab { padding: 8px 15px; font-size: 13.5px; font-weight: 680; border-radius: 9px; }
+/* The brand, not the card colour. On the dark theme a white-card active tab is near-black
+   on near-black, which is the same as no active state at all. */
+.wb-tab.on {
+  background: var(--brand); color: var(--brand-ink);
+  box-shadow: 0 1px 2px rgba(0,0,0,.18);
+}
+.wb-tab.on em { opacity: .72; font-weight: 700; color: inherit; }
+.wb-tab.on:hover { color: var(--brand-ink); filter: brightness(1.04); }
+
+.wb-add {
+  appearance: none; width: 100%; display: flex; align-items: center; gap: 6px;
+  border: 1px dashed var(--line, rgba(0,0,0,.18)); background: transparent;
+  color: var(--ink-3, #777); border-radius: 9px; padding: 7px 10px;
+  font: inherit; font-size: 12.5px; cursor: pointer;
+}
+.wb-add:hover { border-color: var(--brand, #4F7A00); color: var(--ink, #111); }
+.wb-add svg { width: 13px; height: 13px; }
+.wb-addbox { display: flex; flex-direction: column; gap: 6px; }
+.wb-addbox input {
+  width: 100%; appearance: none; font: inherit; font-size: 13px;
+  border: 1px solid var(--line, rgba(0,0,0,.18)); border-radius: 9px; padding: 7px 9px;
+  background: var(--card, #fff); color: var(--ink, #111);
+}
+.wb-addrow { display: flex; gap: 6px; }
+.wb-addrow .btn { padding: 5px 10px; font-size: 12px; }
+
+/* The type tag cycles bug, feature, landing page: three values do not earn a dropdown, and
+   a tag that cannot be changed from the board only ever says what it was created as. */
+.wb-kind { appearance: none; border: 0; cursor: pointer; font: inherit; }
+.wb-kind.k-bug { background: #ffd79d; color: #5e4200; }
+.wb-kind.k-feature { background: rgba(0,0,0,.07); color: var(--ink-2, #555); }
+.wb-kind.k-landing { background: #dbe9ff; color: #16407a; }
+.wb-status { margin-left: auto; display: inline-flex; }
+.wb-cardtop .wb-urg { margin-left: 0; }
+
+.wb-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 7px; }
+.wb-prog { display: flex; align-items: center; gap: 8px; margin-top: 7px; font-size: 11px; color: var(--ink-3, #777); }
+.wb-progtrack { flex: 1 1 auto; height: 5px; border-radius: 999px; background: var(--sunken, rgba(0,0,0,.08)); overflow: hidden; }
+.wb-progfill { height: 100%; background: var(--brand, #4F7A00); border-radius: 999px; }
+.wb-shotn { font-size: 10.5px; border-radius: 5px; padding: 1px 6px; background: rgba(0,0,0,.05); color: var(--ink-3, #777); }
+
+.wb-more {
+  appearance: none; border: 0; background: none; padding: 6px 0 0; margin-top: 4px;
+  font: inherit; font-size: 11.5px; color: var(--ink-3, #777); cursor: pointer;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.wb-more:hover { color: var(--ink, #111); }
+.wb-more svg { width: 12px; height: 12px; transition: transform .14s ease; }
+.wb-more.on svg { transform: rotate(180deg); }
+.wb-open { margin-top: 8px; padding-top: 9px; border-top: 1px solid var(--line, rgba(0,0,0,.10)); }
+.wb-subs { list-style: none; margin: 0 0 9px; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.wb-subs li { display: flex; align-items: flex-start; gap: 7px; font-size: 12px; line-height: 1.4; }
+.wb-subs li span.done { text-decoration: line-through; opacity: .55; }
+
+.wb-files { margin-bottom: 8px; }
+.wb-filerow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.wb-shot { position: relative; display: inline-flex; }
+.wb-shot img { width: 42px; height: 42px; object-fit: cover; border-radius: 7px; border: 1px solid var(--line, rgba(0,0,0,.14)); }
+.wb-shot button {
+  position: absolute; top: -5px; right: -5px; width: 17px; height: 17px; padding: 0;
+  border-radius: 50%; border: 1px solid var(--line, rgba(0,0,0,.14));
+  background: var(--card, #fff); color: #a11; cursor: pointer; display: grid; place-items: center;
+}
+.wb-shot button svg { width: 9px; height: 9px; }
+.wb-shotadd {
+  appearance: none; border: 1px dashed var(--line, rgba(0,0,0,.20)); background: transparent;
+  color: var(--ink-3, #777); border-radius: 7px; padding: 4px 8px; font: inherit; font-size: 11px; cursor: pointer;
+}
+.wb-shotadd:hover { border-color: var(--brand, #4F7A00); color: var(--ink, #111); }
+.wb-fileerr { margin: 6px 0 0; font-size: 11px; color: #a11; line-height: 1.45; }

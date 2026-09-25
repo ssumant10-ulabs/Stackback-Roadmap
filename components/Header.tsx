@@ -30,7 +30,7 @@ export function Header() {
       <div className="top-actions">
         <button className={`btn ghost${s.ui.view === "features" ? " on" : ""}`} title="The pilot sheet's feature list"
           onClick={() => s.setView(s.ui.view === "features" ? "timeline" : "features")}>
-          <ViewIcon id="features" /><span>Features</span>
+          <ViewIcon id="features" /><span>Features backlog</span>
         </button>
         <a className="btn ghost" href={s.uiuxUrl} target="_blank" rel="noreferrer"
           title={`Open the UI/UX work surface (${s.uiuxUrl})`}>

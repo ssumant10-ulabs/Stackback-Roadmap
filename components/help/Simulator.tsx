@@ -37,6 +37,9 @@ export default function Simulator({ config, onConfig }: {
      not the same order with a different badge: AutoPay's carries the real goods from the
      start and never gets converted. */
   const [drawn, setDrawn] = useState<Mode>("prepaid");
+  /** Which of the two order shapes is being drawn. A delivery order looks nothing like the
+      checkout order, and until now the only place it appeared was as a row in a list. */
+  const [which, setWhich] = useState<"parent" | "child">("parent");
 
   return (
     <section>
@@ -119,11 +122,25 @@ export default function Simulator({ config, onConfig }: {
                 onClick={() => setDrawn(m)}>{MODE_LABEL[m]}</button>
             ))}
           </div>
-          <ShopifyOrder c={c} mode={drawn} />
+          {/* Two orders, two shapes, and the second one is the one nobody has seen. The
+              checkout order is the edited parent; every delivery after the first is its own
+              order and looks nothing like it, which is the question the list below prompts
+              and could not answer. */}
+          <div className="hc-modepick hc-whichorder" role="tablist" aria-label="Which order">
+            <button role="tab" aria-selected={which === "parent"}
+              className={"hc-modepillb" + (which === "parent" ? " on" : "")}
+              onClick={() => setWhich("parent")}>The checkout order</button>
+            <button role="tab" aria-selected={which === "child"}
+              className={"hc-modepillb" + (which === "child" ? " on" : "")}
+              onClick={() => setWhich("child")}>A delivery order</button>
+          </div>
+
+          {which === "parent" ? <ShopifyOrder c={c} mode={drawn} /> : <ShopifyChildOrder c={c} mode={drawn} />}
 
           <p className="hc-note hc-orderafter">
-            That is one order in your admin. Below is the same run as a list, with the deliveries that
-            become orders of their own later.
+            {which === "parent"
+              ? "That is one order in your admin. Below is the same run as a list, with the deliveries that become orders of their own later."
+              : "Every delivery after the first is an order like that one. Below is the whole run as a list, so you can see when each of them appears."}
           </p>
 
           {/* One payment type at a time. Three columns side by side is a comparison nobody
@@ -475,3 +492,94 @@ function Contracts({ c, prepaidRows, paygRows }: {
 
 const Tag = ({ children }: { children: React.ReactNode }) => <i className="hc-shoptag">{children}</i>;
 const Dot = ({ tone }: { tone: "ok" | "warn" }) => <i className={"hc-shopdot " + tone} />;
+
+/** A delivery order, as Shopify draws it.
+ *
+ *  Deliveries two onward are ordinary orders: one real line at the plan price, one
+ *  fulfilment, the child tags, created inside the lead window. No placeholder, no edit, no
+ *  Removed line, because there is nothing to convert. Drawn because the list above says a
+ *  delivery "becomes an order of its own" and a merchant's next question is what that order
+ *  looks like in their admin. */
+function ShopifyChildOrder({ c, mode }: { c: SimConfig; mode: Mode }) {
+  const p = price({ ...c, mode });
+  const rows = schedule(c, mode);
+  /* The second delivery, which is the first one that gets an order of its own. */
+  const row = rows[1] || rows[0];
+  const num = ORDER_NO + (row?.n ?? 1);
+  const created = fmtDate(row.createdOn);
+  const delivers = fmtDate(row.deliveryDate);
+  const paid = row.paidAtCheckout;
+
+  return (
+    <div className="pl">
+      <div className="pl-top">
+        <div className="pl-titlerow">
+          <span className="pl-back">&lsaquo;</span>
+          <h3>#{num}</h3>
+          <span className="pl-badge ok"><i />Paid</span>
+          <span className="pl-badge warn"><i />Unfulfilled</span>
+        </div>
+        <p className="pl-sub">{created} from {mode === "autopay" ? "StackBack, on the mandate" : "StackBack"}</p>
+      </div>
+
+      <div className="pl-grid">
+        <div className="pl-main">
+          <section className="pl-card">
+            <header className="pl-cardh">
+              <b>Unfulfilled</b>
+              <span className="pl-muted">#{num}-F1</span>
+            </header>
+            <p className="pl-line2">Delivers {delivers}<span className="pl-loc">&#9679; Your 3PL ships this</span></p>
+            <Item l={{ title: c.productName || "Your product", sub: `Delivery ${row.n + 1} of ${c.deliveries}`, qty: 1, unit: row.amount }} />
+          </section>
+
+          <p className="pl-note">
+            {mode === "prepaid"
+              ? `No payment step. This delivery was paid at checkout, so the order is created ${c.leadDays} days ahead on its own and draws down the store credit.`
+              : mode === "autopay"
+              ? "Debited on the mandate the day before the order is cut, so nothing waits on the customer and no invoice is sent."
+              : "This order exists only because the invoice was paid. An unpaid delivery has no order at all, which is what stops anything shipping unpaid."}
+          </p>
+
+          <section className="pl-card">
+            <header className="pl-cardh"><b><span className="pl-fico">&#10003;</span>Paid</b></header>
+            <table className="pl-tot">
+              <tbody>
+                <tr><td>Original order</td><td>{created}</td><td className="pl-r">{money(row.amount)}</td></tr>
+                <tr><td>Subtotal</td><td>1 item</td><td className="pl-r">{money(c.unitPrice)}</td></tr>
+                <tr><td>Discounts</td><td>Subscription</td><td className="pl-r">-{money(Math.max(0, c.unitPrice - row.amount))}</td></tr>
+                <tr><td>Taxes</td><td>Tax details</td><td className="pl-r">Included</td></tr>
+                <tr className="pl-totrow"><td><b>Paid</b></td><td /><td className="pl-r"><b>{money(row.amount)}</b></td></tr>
+              </tbody>
+            </table>
+          </section>
+        </div>
+
+        <aside className="pl-side">
+          <section className="pl-card">
+            <header className="pl-cardh"><b>Customer</b></header>
+            <p className="pl-link">Your customer</p>
+            <p className="pl-muted">{c.deliveries} orders</p>
+          </section>
+          <section className="pl-card">
+            <header className="pl-cardh"><b>Tags</b></header>
+            <div className="pl-tags">{ORDER_TAGS[mode].delivery.map((t) => <span key={t}>{t}</span>)}</div>
+            <p className="pl-muted pl-tagnote">
+              <code>child</code> is how you tell a delivery order from the checkout order in a
+              report. Every delivery order carries the same set, whichever way the run is paid
+              for, because <code>createorders</code> places all of them.
+            </p>
+          </section>
+          <section className="pl-card">
+            <header className="pl-cardh"><b>Not here</b></header>
+            <p className="pl-muted">
+              No placeholder line, no Removed line and no second fulfilment. There was nothing
+              to convert: this order was created with the real goods on it.
+              {!paid && " And on pay as you go it does not exist at all until the invoice is paid."}
+            </p>
+          </section>
+        </aside>
+      </div>
+    </div>
+  );
+}

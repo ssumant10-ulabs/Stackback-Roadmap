@@ -29,6 +29,18 @@ export interface Node {
   team?: string | null;
   /** Roadmap sheet: Handover Timeline column. */
   handover?: string | null;
+  /* ---- the work board. A roadmap task is a card on it too, not only a bug or a request. */
+  /** Where it sits. Absent means derived from the status and team it already had, so the
+   *  board was right on the first load without anything being backfilled. */
+  stage?: import("./board").Stage | null;
+  /** Who it was handed to, one team at a time. Falls back to the sheet's Team column. */
+  boardTeam?: import("./board").BoardTeam | null;
+  /** Design QA or PM, for dev work going out for review. */
+  reviewWith?: import("./board").ReviewWith | null;
+  /** What kind of card it is, for the tag. Roadmap work is a feature unless said otherwise. */
+  kind?: "feature" | "bug" | "landing";
+  /** Handover files and screenshots. Same shape and same uploader as a request's. */
+  shots?: Shot[];
   /** Roadmap sheet: Deadline column. */
   deadline?: string | null;
   /** Scheduled window, ISO `yyyy-mm-dd`. Settable on a milestone or any subtask.
@@ -110,7 +122,7 @@ export interface Feature {
   issueType?: string | null;
   /** A merchant raises both. Bugs are the gap the pilot sheet never covered: it counts
    *  open bugs per store but never says what they are. */
-  kind?: "feature" | "bug";
+  kind?: "feature" | "bug" | "landing";
   /** Where this sits on the work board. One field, read by all three lenses, so two columns
    *  that are "in sync" are the same stage rather than two that have to be kept level.
    *  Absent on anything that predates the board; see DEFAULT_STAGE. */

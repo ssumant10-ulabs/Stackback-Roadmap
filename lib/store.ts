@@ -5,7 +5,7 @@ import { SEED_VERSION, seed, stampIds } from "./seed";
 import { uid, newRoadmapId } from "./id";
 import { makeHelpers, pruneTasks, type Helpers } from "./teams";
 import { effStatus, normPriority, subtreeCounts, waveWord } from "./derive";
-import { STAGE_LABEL, stageOf, type BoardTeam, type BoardView, type ReviewWith, type Stage } from "./board";
+import { STAGE_LABEL, defaultNodeStage, stageOf, teamToBoard, type BoardTeam, type BoardView, type CardKind, type ReviewWith, type Stage } from "./board";
 import { reconcile } from "./dates";
 import { featureSeed } from "./featureSeed";
 import { pilotSeed } from "./pilotSeed";
@@ -138,10 +138,11 @@ function clone<T>(v: T): T {
   return JSON.parse(JSON.stringify(v));
 }
 
-class Store {
+export class Store {
   data: Data = defaultData();
   ui: UiState = {
-    view: "timeline", tlMode: "swim", simpleMode: "stage", teamGran: "team",
+    // The board is the only view left; a stored "timeline" from before still lands there.
+    view: "board", tlMode: "swim", simpleMode: "stage", teamGran: "team",
     filter: null, boardOpen: {}, boardView: "pm", simpleOpen: {}, commentsOpen: {}, sort: null,
     theme: "auto", palette: "lime", activityOpen: false,
   };
@@ -596,7 +597,71 @@ class Store {
    *  in `pm_handover` for one render with no team on it is a card in nobody's column.
    *  Clearing them on the way back is deliberate too, so re-handing a card asks again rather
    *  than quietly reusing an answer from a fortnight ago. */
+  /** Every card on the board, roadmap tasks and requests alike, with the stage each one
+   *  sits at. A task's stage is derived from the status and team it already carried unless
+   *  somebody has moved it, so nothing was backfilled to make the board right. */
+  boardCards(): { id: string; node?: Node; feature?: Feature; stage: Stage; team: BoardTeam | null; review: ReviewWith | null }[] {
+    const out: ReturnType<Store["boardCards"]> = [];
+    for (const f of this.features) {
+      out.push({
+        id: f.id, feature: f, stage: stageOf(f),
+        team: f.boardTeam ?? null, review: f.reviewWith ?? null,
+      });
+    }
+    for (const t of this.activeRoadmap().tasks || []) {
+      out.push({
+        id: t.id, node: t,
+        stage: t.stage || defaultNodeStage(effStatus(t), t.team, t.kind),
+        team: t.boardTeam ?? teamToBoard(t.team),
+        review: t.reviewWith ?? null,
+      });
+    }
+    return out;
+  }
+
+  /** Does this roadmap card match the active team or person filter? Matches on the card
+   *  itself OR anything under it, because a milestone whose only Design subtask is the one
+   *  you filtered for is a card Design needs to see. */
+  nodeInFilter(n: Node): boolean {
+    const f = this.ui.filter;
+    if (!f) return true;
+    const hit = (x: Node): boolean =>
+      (f.type === "person"
+        ? (x.assignees || []).some((a) => !a.isTeam && a.name === f.name)
+        : this.helpers.nodeInTeam(x, f.name))
+      || (x.children || []).some(hit);
+    return hit(n);
+  }
+
+  /** The same question for a request. It has no assignees, so it matches on the team it was
+   *  handed to, the team column the sheet carried, or who raised it. */
+  featureInFilter(f: Feature, boardTeam: BoardTeam | null): boolean {
+    const flt = this.ui.filter;
+    if (!flt) return true;
+    if (flt.type === "person") return (f.requestedBy || "") === flt.name;
+    return boardTeam === flt.name || f.team === flt.name;
+  }
+
+  /** A new card on the board. A roadmap task, because that is what the board's cards are
+   *  and what everything else in the app already understands: Features links to it, the
+   *  activity log names it, the metrics count it. */
+  addBoardCard(title: string, kind: CardKind): string | null {
+    title = (title || "").trim();
+    if (!title) return null;
+    const r = this.activeRoadmap();
+    const node: Node = stampIds({
+      id: "", title, status: "planned" as Status, assignees: [], children: [],
+      priority: 1, kind,
+    });
+    r.tasks.push(node);
+    this.log("add", title, `new ${kind} on the board`, node.id);
+    this.commit();
+    return node.id;
+  }
+
   setStage(id: string, stage: Stage, opts?: { team?: BoardTeam | null; review?: ReviewWith | null }) {
+    const node = this.findEntry(id)?.node;
+    if (node) return this.setNodeStage(node, stage, opts);
     const f = this.features.find((x) => x.id === id);
     if (!f) return;
     const was = stageOf(f);
@@ -611,6 +676,36 @@ class Store {
     f.updatedAt = new Date().toISOString();
     const who = f.boardTeam === "Engineering" ? "dev" : f.boardTeam === "Design" ? "design" : null;
     this.log("stage", f.title, `${STAGE_LABEL[was]} to ${STAGE_LABEL[stage]}${who ? `, with ${who}` : ""}`);
+    this.commit();
+  }
+
+  /** The same move on a roadmap task. Kept apart because the two records store different
+   *  things, not because the rule differs: it is the same stage field either way. */
+  private setNodeStage(n: Node, stage: Stage, opts?: { team?: BoardTeam | null; review?: ReviewWith | null }) {
+    const was = n.stage || defaultNodeStage(effStatus(n), n.team, n.kind);
+    if (was === stage && !opts) return;
+    n.stage = stage;
+    if (opts && "team" in opts) n.boardTeam = opts.team ?? null;
+    if (opts && "review" in opts) n.reviewWith = opts.review ?? null;
+    if (stage === "bug" || stage === "feature") { n.boardTeam = null; n.reviewWith = null; }
+    if (!["dev_review", "dev_approved", "prod"].includes(stage)) n.reviewWith = null;
+    /* Reaching production IS shipping it, and a card that reads done on the board while its
+       checklist sits at 3 of 7 is the drift this board exists to remove. */
+    if (stage === "prod" && effStatus(n) !== "done") this.setDeep(n, "done");
+    const team = n.boardTeam ?? teamToBoard(n.team);
+    const who = team === "Engineering" ? "dev" : team === "Design" ? "design" : null;
+    this.log("stage", n.title, `${STAGE_LABEL[was]} to ${STAGE_LABEL[stage]}${who ? `, with ${who}` : ""}`, n.id);
+    this.commit();
+  }
+
+  /** The card type tag: bug, feature or landing page. Set on either record. */
+  setCardKind(id: string, kind: CardKind) {
+    const node = this.findEntry(id)?.node;
+    if (node) { node.kind = kind; this.commit(); return; }
+    const f = this.features.find((x) => x.id === id);
+    if (!f) return;
+    f.kind = kind;
+    f.updatedAt = new Date().toISOString();
     this.commit();
   }
 
@@ -1262,16 +1357,31 @@ class Store {
 
   /* ---- screenshots ---- */
   shotBytesUsed(): number {
-    return this.features.reduce((a, f) => a + (f.shots || []).reduce((b, s2) => b + (s2.bytes || 0), 0), 0);
+    const sum = (list: { shots?: Shot[] }[]) =>
+      list.reduce((a, f) => a + (f.shots || []).reduce((b, s2) => b + (s2.bytes || 0), 0), 0);
+    // Roadmap cards carry attachments too, so leaving them out of the budget would let the
+    // browser's storage fill while the counter said there was room.
+    return sum(this.features) + sum(this.activeRoadmap().tasks || []);
   }
   /** Adds a screenshot, or explains exactly why it could not. Rolls the image back out of
    *  state if the write is refused, so a rejected upload never costs the surrounding edits. */
+  /** Handover files and screenshots hang off a board card, and a board card is a roadmap
+   *  task as often as it is a request. Same limits, same budget, same uploader: the only
+   *  difference is which record holds the array. */
+  private shotHolder(id: string): { shots?: Shot[]; title: string; touch: () => void } | null {
+    const f = this.features.find((x) => x.id === id);
+    if (f) return { get shots() { return f.shots; }, set shots(v) { f.shots = v; }, title: f.title, touch: () => { f.updatedAt = new Date().toISOString(); } } as never;
+    const n = this.findEntry(id)?.node;
+    if (n) return { get shots() { return n.shots; }, set shots(v) { n.shots = v; }, title: n.title, touch: () => {} } as never;
+    return null;
+  }
+
   addShot(featureId: string, name: string, src: string, bytes: number): { ok: boolean; error?: string } {
-    const f = this.features.find((x) => x.id === featureId);
-    if (!f) return { ok: false, error: "That request no longer exists." };
+    const f = this.shotHolder(featureId);
+    if (!f) return { ok: false, error: "That card no longer exists." };
     f.shots = f.shots || [];
     if (f.shots.length >= SHOT_MAX_PER_REQUEST) {
-      return { ok: false, error: `Up to ${SHOT_MAX_PER_REQUEST} screenshots per request.` };
+      return { ok: false, error: `Up to ${SHOT_MAX_PER_REQUEST} files per card.` };
     }
     const projected = this.shotBytesUsed() + bytes;
     if (projected > SHOT_TOTAL_BUDGET) {
@@ -1284,35 +1394,35 @@ class Store {
       this.persist();
       return { ok: false, error: "This browser's storage is full, so the screenshot was not saved. Nothing else was lost. Download a backup and clear some screenshots." };
     }
-    f.updatedAt = new Date().toISOString();
-    this.log("comment", f.title, `screenshot: ${shot.name}`, undefined);
+    f.touch();
+    this.log("comment", f.title, `attachment: ${shot.name}`, undefined);
     this.notify();
     return { ok: true };
   }
   /** A hosted image, pasted as a URL. Costs nothing against the storage budget, which is
    *  why it is the better default once a team has somewhere to put images. */
   addShotLink(featureId: string, url: string): { ok: boolean; error?: string } {
-    const f = this.features.find((x) => x.id === featureId);
-    if (!f) return { ok: false, error: "That request no longer exists." };
+    const f = this.shotHolder(featureId);
+    if (!f) return { ok: false, error: "That card no longer exists." };
     const clean = (url || "").trim();
     if (!/^https?:\/\//i.test(clean)) return { ok: false, error: "Paste a full link starting with http:// or https://" };
     f.shots = f.shots || [];
     if (f.shots.length >= SHOT_MAX_PER_REQUEST) {
-      return { ok: false, error: `Up to ${SHOT_MAX_PER_REQUEST} images per request.` };
+      return { ok: false, error: `Up to ${SHOT_MAX_PER_REQUEST} files per card.` };
     }
     let name = clean;
     try { name = decodeURIComponent(new URL(clean).pathname.split("/").pop() || clean); } catch {}
     f.shots.push({ id: uid("s_"), name: name.slice(0, 80), src: clean, at: new Date().toISOString(), bytes: 0 });
-    f.updatedAt = new Date().toISOString();
-    this.log("comment", f.title, `image link: ${name}`, undefined);
+    f.touch();
+    this.log("comment", f.title, `link: ${name}`, undefined);
     this.commit();
     return { ok: true };
   }
   delShot(featureId: string, shotId: string) {
-    const f = this.features.find((x) => x.id === featureId);
+    const f = this.shotHolder(featureId);
     if (!f || !f.shots) return;
     f.shots = f.shots.filter((x) => x.id !== shotId);
-    f.updatedAt = new Date().toISOString();
+    f.touch();
     this.commit();
   }
 

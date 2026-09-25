@@ -1,44 +1,55 @@
 "use client";
-import { DragEvent, useMemo, useState } from "react";
+import { DragEvent, useMemo, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import {
-  ASK_REVIEW, ASK_TEAM, BOARD_VIEWS, STAGE_LABEL, VIEW_BY_ID,
-  fits, stageForDrop, stageOf,
-  type BoardColumn, type BoardTeam, type BoardView, type ReviewWith, type Stage,
+  ASK_REVIEW, ASK_TEAM, BOARD_VIEWS, KIND_LABEL, STAGE_LABEL, VIEW_BY_ID,
+  fits, stageForDrop,
+  type BoardColumn, type BoardTeam, type BoardView, type CardKind, type ReviewWith, type Stage,
 } from "@/lib/board";
-import type { Feature } from "@/lib/types";
+import { subtreeCounts } from "@/lib/derive";
+import { Assignees } from "../Assignees";
+import { CommentChip, DateChip, StatusButton } from "../bits";
+import { CommentsThread } from "../CommentsThread";
+import { IcChevron, IcPlus, IcTrash } from "../icons";
+import { SHOT_MAX_PER_REQUEST, fmtBytes, uploadShot } from "@/lib/shots";
 
-/** The work board. Bugs and feature requests are the cards, because they are the records
- *  that move between CS, design and dev; the roadmap task delivering one is a chip on the
- *  card rather than a card of its own.
+
+/** The work board. Three lenses over one `stage` field, and every card the team has: the
+ *  roadmap tasks and the bugs and requests CS logs, on the same board, because they are all
+ *  work moving between the same three teams.
  *
- *  Three lenses over one `stage` field. A column that is "in sync" with a column in another
- *  view is the same stage read twice, so there is nothing to keep level. See lib/board.ts. */
+ *  A roadmap task nobody has moved sits where its own status and team put it, derived rather
+ *  than written, so every task landed in the right column on the first render with nothing
+ *  backfilled. See `defaultNodeStage` in lib/board.ts. */
 export function WorkBoard() {
   const s = useStore();
   const view = s.ui.boardView || "pm";
   const def = VIEW_BY_ID[view];
   const [dragId, setDragId] = useState<string | null>(null);
   const [over, setOver] = useState<string | null>(null);
-  /** A handover that is waiting on its nudge. Nothing is written until it is answered. */
+  const [adding, setAdding] = useState<string | null>(null);
+  /** A handover waiting on its nudge. Nothing is written until it is answered. */
   const [ask, setAsk] = useState<{ id: string; kind: "team" | "review"; col: BoardColumn } | null>(null);
 
-  const cards = s.features;
+  const all = s.boardCards();
+  const filter = s.ui.filter;
+
+  /** The team and person filter, which applied to two views and silently did nothing here.
+   *  A card matches on who is assigned to it, or on the team it was handed to. */
+  const cards = useMemo(() => {
+    if (!filter) return all;
+    return all.filter((c) => (c.node ? s.nodeInFilter(c.node) : s.featureInFilter(c.feature!, c.team)));
+  }, [all, filter, s]);
 
   const byColumn = useMemo(() => {
-    const out: Record<string, Feature[]> = {};
-    for (const c of def.columns) {
-      out[c.key] = cards.filter((f) =>
-        fits(c, stageOf(f), f.boardTeam ?? null, f.reviewWith ?? null));
-    }
+    const out: Record<string, BoardCard[]> = {};
+    for (const c of def.columns) out[c.key] = cards.filter((x) => fits(c, x.stage, x.team, x.review));
     return out;
   }, [cards, def]);
 
-  /** Everything the lens cannot show, counted rather than hidden. A card with a stage no
-   *  column in this view carries is not missing, it is somebody else's right now. */
   const elsewhere = useMemo(() => {
-    const shown = new Set(Object.values(byColumn).flat().map((f) => f.id));
-    return cards.filter((f) => !shown.has(f.id)).length;
+    const shown = new Set(Object.values(byColumn).flat().map((c) => c.id));
+    return cards.filter((c) => !shown.has(c.id)).length;
   }, [byColumn, cards]);
 
   function drop(e: DragEvent, c: BoardColumn) {
@@ -47,9 +58,9 @@ export function WorkBoard() {
     const id = dragId || e.dataTransfer.getData("text/plain");
     setDragId(null);
     if (!id) return;
-    const f = cards.find((x) => x.id === id);
-    if (!f) return;
-    const r = stageForDrop(c, f.boardTeam ?? null);
+    const card = all.find((x) => x.id === id);
+    if (!card) return;
+    const r = stageForDrop(c, card.team);
     if ("ask" in r) { setAsk({ id, kind: r.ask, col: c }); return; }
     s.setStage(id, r.stage, "review" in r ? { review: r.review ?? null } : undefined);
   }
@@ -72,6 +83,8 @@ export function WorkBoard() {
     setAsk(null);
   }
 
+  const asking = ask ? all.find((c) => c.id === ask.id) : null;
+
   return (
     <div className="wb">
       <div className="wb-head">
@@ -88,10 +101,11 @@ export function WorkBoard() {
         <p className="wb-blurb">
           {def.blurb}
           {elsewhere > 0 && <> <span className="wb-else">{elsewhere} card{elsewhere === 1 ? " sits" : "s sit"} in a stage this view does not carry.</span></>}
+          {filter && <> <span className="wb-else">Filtered to {filter.name}.</span></>}
         </p>
       </div>
 
-      <div className="wb-cols" style={{ gridTemplateColumns: `repeat(${def.columns.length}, minmax(232px, 1fr))` }}>
+      <div className="wb-cols" style={{ gridTemplateColumns: `repeat(${def.columns.length}, minmax(276px, 1fr))` }}>
         {def.columns.map((c) => {
           const list = byColumn[c.key] || [];
           return (
@@ -105,14 +119,17 @@ export function WorkBoard() {
               </header>
               {c.hint && <p className="wb-hint">{c.hint}</p>}
               <div className="wb-stack">
-                {list.map((f) => (
-                  <Card key={f.id} f={f} view={view}
-                    dragging={dragId === f.id}
-                    onDragStart={(e) => { setDragId(f.id); e.dataTransfer.setData("text/plain", f.id); e.dataTransfer.effectAllowed = "move"; }}
+                {list.map((card) => (
+                  <Card key={card.id} card={card} view={view}
+                    dragging={dragId === card.id}
+                    onDragStart={(e) => { setDragId(card.id); e.dataTransfer.setData("text/plain", card.id); e.dataTransfer.effectAllowed = "move"; }}
                     onDragEnd={() => { setDragId(null); setOver(null); }} />
                 ))}
                 {!list.length && <p className="wb-empty">Nothing here.</p>}
               </div>
+              {/* A column you cannot add to is a column you have to leave to add to. */}
+              <AddCard col={c} open={adding === c.key}
+                onOpen={() => setAdding(c.key)} onClose={() => setAdding(null)} />
             </section>
           );
         })}
@@ -120,49 +137,200 @@ export function WorkBoard() {
 
       {ask && (
         <Nudge spec={ask.kind === "team" ? ASK_TEAM : ASK_REVIEW}
-          title={cards.find((f) => f.id === ask.id)?.title || ""}
+          title={asking?.node?.title || asking?.feature?.title || ""}
           onPick={answer} onClose={() => setAsk(null)} />
       )}
     </div>
   );
 }
 
-function countFor(cards: Feature[], view: BoardView): number {
+/** One card on the board, either record. The store derives the stage, team and reviewer, so
+ *  a component never has to know which of the two shapes it is holding to place it. */
+type BoardCard = ReturnType<ReturnType<typeof useStore>["boardCards"]>[number];
+
+function countFor(cards: BoardCard[], view: BoardView): number {
   const def = VIEW_BY_ID[view];
-  return cards.filter((f) =>
-    def.columns.some((c) => fits(c, stageOf(f), f.boardTeam ?? null, f.reviewWith ?? null))).length;
+  return cards.filter((c) => def.columns.some((col) => fits(col, c.stage, c.team, c.review))).length;
 }
 
-function Card({ f, view, dragging, onDragStart, onDragEnd }: {
-  f: Feature; view: BoardView; dragging: boolean;
+/** Add a card straight into the column you are looking at. A card born in Bugs is a bug;
+ *  anywhere else it is a feature, and the tag is one click away on the card itself. */
+function AddCard({ col, open, onOpen, onClose }: {
+  col: BoardColumn; open: boolean; onOpen: () => void; onClose: () => void;
+}) {
+  const s = useStore();
+  const [v, setV] = useState("");
+  const add = () => {
+    const title = v.trim();
+    if (!title) return;
+    const kind: CardKind = col.key === "bug" ? "bug" : "feature";
+    const id = s.addBoardCard(title, kind);
+    /* Born outside the intake columns: it belongs where it was added, not back in the pile.
+       A column that only takes cards from elsewhere is a column you cannot start work in. */
+    const first = col.accepts[0];
+    if (id && first.stage !== "bug" && first.stage !== "feature") {
+      s.setStage(id, first.stage, { team: first.team ?? null, review: first.review ?? null });
+    }
+    setV("");
+  };
+  if (!open) {
+    return <button type="button" className="wb-add" onClick={onOpen}><IcPlus /> Add a card</button>;
+  }
+  return (
+    <div className="wb-addbox">
+      <input autoFocus type="text" value={v} placeholder="What is it?"
+        onChange={(e) => setV(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") { e.preventDefault(); add(); }
+          if (e.key === "Escape") { setV(""); onClose(); }
+        }} />
+      <div className="wb-addrow">
+        <button type="button" className="btn primary" onClick={add}>Add</button>
+        <button type="button" className="btn ghost" onClick={() => { setV(""); onClose(); }}>Done</button>
+      </div>
+    </div>
+  );
+}
+
+const KINDS: CardKind[] = ["bug", "feature", "landing"];
+
+function Card({ card, view, dragging, onDragStart, onDragEnd }: {
+  card: BoardCard; view: BoardView; dragging: boolean;
   onDragStart: (e: DragEvent) => void; onDragEnd: () => void;
 }) {
   const s = useStore();
-  const task = s.featureTask(f);
-  const stage = stageOf(f);
-  const team = f.boardTeam;
+  const [open, setOpen] = useState(false);
+  const node = card.node;
+  const f = card.feature;
+  const title = node ? node.title : f!.title;
+  const kind: CardKind = (node?.kind || f?.kind || "feature") as CardKind;
+  const counts = node ? subtreeCounts(node) : null;
+  const shots = (node?.shots || f?.shots || []) as { id: string; name: string; src: string; bytes: number }[];
+  const task = f ? s.featureTask(f) : null;
 
   return (
     <article className={"wb-card" + (dragging ? " dragging" : "")} draggable
-      onDragStart={onDragStart} onDragEnd={onDragEnd} data-feature-id={f.id}>
+      onDragStart={onDragStart} onDragEnd={onDragEnd}
+      data-node-id={node?.id} data-feature-id={f?.id}>
       <div className="wb-cardtop">
-        {f.ref && <span className="wb-ref">{f.ref}</span>}
-        {f.kind === "bug" && <span className="wb-kind bug">Bug</span>}
-        {f.urgency && <span className={"wb-urg u-" + f.urgency.toLowerCase()}>{f.urgency}</span>}
+        {/* Click to cycle. Three values do not earn a dropdown, and the tag has to be
+            changeable from the board or it will only ever say what it was created as. */}
+        <button type="button" className={"wb-kind k-" + kind} title="Bug, feature or landing page"
+          onClick={() => s.setCardKind(card.id, KINDS[(KINDS.indexOf(kind) + 1) % KINDS.length])}>
+          {KIND_LABEL[kind]}
+        </button>
+        {f?.ref && <span className="wb-ref">{f.ref}</span>}
+        {f?.urgency && <span className={"wb-urg u-" + f.urgency.toLowerCase()}>{f.urgency}</span>}
+        {node && <span className="wb-status"><StatusButton node={node} size={15} /></span>}
       </div>
-      <h4 className="wb-title">{f.title}</h4>
-      {f.storeName && <p className="wb-store">{f.storeName}</p>}
+
+      <h4 className="wb-title">{title}</h4>
+      {f?.storeName && <p className="wb-store">{f.storeName}</p>}
+
+      {/* The old card's meta row, unchanged: who has it, when it is due, what was said. */}
+      {node && (
+        <div className="wb-meta">
+          <span className="assignees"><Assignees node={node} small /></span>
+          <DateChip node={node} variant="icon" />
+          <CommentChip node={node} />
+        </div>
+      )}
+
+      {counts && counts.total > 0 && (
+        <div className="wb-prog">
+          <div className="wb-progtrack">
+            <div className="wb-progfill" style={{ width: Math.round((counts.done / counts.total) * 100) + "%" }} />
+          </div>
+          <span>{counts.done}/{counts.total}</span>
+        </div>
+      )}
+
       <div className="wb-chips">
-        {/* The team only shows in PM's lens: inside Design's board every card is design's. */}
-        {view === "pm" && team && <span className={"wb-team t-" + (team === "Design" ? "dsg" : "eng")}>{team === "Engineering" ? "Dev" : "Design"}</span>}
-        {f.reviewWith && stage === "dev_review" && <span className="wb-team t-rev">{f.reviewWith === "Design" ? "Design QA" : "PM review"}</span>}
-        {/* Where it is, for anyone reading a junction column and wondering which half. */}
-        {view === "pm" && <span className="wb-stage">{STAGE_LABEL[stage]}</span>}
-        {/* The roadmap task delivering this, named rather than linked: the board no longer
-            holds roadmap cards to jump to. */}
+        {/* Only once it has actually been handed over. At intake the team chip is the
+            sheet's owner, not a decision anybody made on this board, and a card reading
+            "Dev" while it sits in Feature requests looks like a handover that happened. */}
+        {view === "pm" && card.team && card.stage !== "bug" && card.stage !== "feature" && (
+          <span className={"wb-team t-" + (card.team === "Design" ? "dsg" : "eng")}>
+            {card.team === "Engineering" ? "Dev" : "Design"}
+          </span>
+        )}
+        {card.review && card.stage === "dev_review" && (
+          <span className="wb-team t-rev">{card.review === "Design" ? "Design QA" : "PM review"}</span>
+        )}
+        {view === "pm" && <span className="wb-stage">{STAGE_LABEL[card.stage]}</span>}
         {task && <span className="wb-task" title={`Roadmap: ${task.title}`}>{task.title}</span>}
+        {shots.length > 0 && <span className="wb-shotn">{shots.length} file{shots.length === 1 ? "" : "s"}</span>}
       </div>
+
+      <button type="button" className={"wb-more" + (open ? " on" : "")} onClick={() => setOpen(!open)}>
+        <IcChevron />{open ? "Less" : counts && counts.total ? `Checklist and files (${counts.total})` : "Files and notes"}
+      </button>
+
+      {open && (
+        <div className="wb-open">
+          {node && counts && counts.total > 0 && (
+            <ul className="wb-subs">
+              {node.children.map((k) => (
+                <li key={k.id}>
+                  <StatusButton node={k} size={13} />
+                  <span className={k.status === "done" ? "done" : ""}>{k.title}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <Files id={card.id} shots={shots} />
+          {node && <CommentsThread node={node} />}
+        </div>
+      )}
     </article>
+  );
+}
+
+/** Handover files on a card: a screenshot, a spec, a link to a frame. The same uploader and
+ *  the same budget the requests module already uses, now reaching roadmap cards too. */
+function Files({ id, shots }: { id: string; shots: { id: string; name: string; src: string; bytes: number }[] }) {
+  const s = useStore();
+  const ref = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const pick = async (files: FileList | null) => {
+    if (!files?.length) return;
+    setBusy(true); setErr(null);
+    for (const file of Array.from(files)) {
+      try {
+        const { src, bytes } = await uploadShot(file, id);
+        const r = s.addShot(id, file.name, src, bytes);
+        if (!r.ok) { setErr(r.error || "That file could not be attached."); break; }
+      } catch (e) { setErr("Could not attach that file: " + (e as Error).message); break; }
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div className="wb-files">
+      <div className="wb-filerow">
+        {shots.map((sh) => (
+          <span className="wb-shot" key={sh.id}>
+            <img src={sh.src} alt={sh.name} title={`${sh.name} · ${sh.bytes ? fmtBytes(sh.bytes) : "linked, costs no storage"}`} />
+            <button type="button" aria-label={`Remove ${sh.name}`} onClick={() => s.delShot(id, sh.id)}><IcTrash /></button>
+          </span>
+        ))}
+        {shots.length < SHOT_MAX_PER_REQUEST && (
+          <button type="button" className="wb-shotadd" disabled={busy} onClick={() => ref.current?.click()}>
+            {busy ? "…" : "+ File"}
+          </button>
+        )}
+        <button type="button" className="wb-shotadd" onClick={() => {
+          const url = prompt("Paste an image or file link");
+          if (!url) return;
+          const r = s.addShotLink(id, url);
+          if (!r.ok) setErr(r.error || null);
+        }}>+ Link</button>
+      </div>
+      <input ref={ref} type="file" accept="image/*" multiple hidden onChange={(e) => pick(e.target.files)} />
+      {err && <p className="wb-fileerr">{err}</p>}
+    </div>
   );
 }
 

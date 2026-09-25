@@ -215,7 +215,17 @@ export default function HelpApp({
 
   return (
     <div className={`hc ${helpFont.variable}` + (embedded ? " embedded" : "")} data-hc-theme={theme} data-hc-part={part}>
-      <a className="hc-skip" href="#hc-main">Skip to the answers</a>
+      {/* Stays a link for the semantics, but never lets the browser follow it: the document
+          hash is this app's router, so "#hc-main" was an unknown route and the skip link sent
+          a keyboard user to the FAQ instead of past the header. Same fault as the Internal
+          tab's phase pills. */}
+      <a className="hc-skip" href="#hc-main"
+        onClick={(e) => {
+          e.preventDefault();
+          const main = document.getElementById("hc-main");
+          main?.focus();
+          main?.scrollIntoView({ block: "start" });
+        }}>Skip to the answers</a>
       {/* The bar is full-bleed and its CONTENTS sit in the same column as the page, so the
           logo lines up with the rail and the sign-out lines up with the right edge of the
           answers. They used to be two different measures: a 22px-padded bar over a centred
