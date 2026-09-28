@@ -1,7 +1,10 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import type { PilotStore } from "@/lib/types";
-import { categoryReferences, coverage, discountBand, type CategoryReference } from "@/lib/help/references";
+import {
+  categoryReferences, coverage, discountBand, freqLabel, parseDiscounts, parsePlans,
+  type CategoryReference,
+} from "@/lib/help/references";
 
 /** Every pilot store and what it runs, by category, in a drawer.
  *
@@ -70,9 +73,9 @@ function Cat({ r, pilots, open, onToggle }: {
         <b>{r.label}</b>
         <em>{r.stores.length}</em>
         <span>
-          {band ? `${band.mid}%` : "no discount logged"}
-          {r.everyDays[0] ? ` · every ${r.everyDays[0]} days` : ""}
-          {r.deliveries[0] ? ` · ${r.deliveries[0]} deliveries` : ""}
+          {r.everyDays[0] ? freqLabel(r.everyDays[0]) : "cadence not logged"}
+          {r.deliveries.length ? ` · ${[...r.deliveries].sort((a, b) => a - b).join(", ")} deliveries` : ""}
+          {band ? ` · ${band.low === band.high ? band.mid : `${band.low} to ${band.high}`}%` : ""}
         </span>
       </button>
 
@@ -84,33 +87,75 @@ function Cat({ r, pilots, open, onToggle }: {
               summary as one or two stores, not as the category.
             </p>
           )}
-          <table className="hc-drawertable">
-            <thead>
-              <tr><th>Store</th><th>Discount</th><th>Frequency</th><th>Payment</th><th>Bundles</th></tr>
-            </thead>
-            <tbody>
-              {rows.map((p) => {
-                const blank = (v: string | null | undefined) => {
-                  const t = (v || "").trim();
-                  return !t || t === "—" ? null : t;
-                };
-                const d = blank(p.discountMargin);
-                const f = blank(p.frequency);
-                const pay = blank(p.paymentType);
-                return (
-                  <tr key={p.id} className={!d && !f && !pay ? "hc-drawergap" : ""}>
-                    <td><b>{p.name}</b></td>
-                    <td>{d || <i>not logged</i>}</td>
-                    <td>{f || <i>not logged</i>}</td>
-                    <td>{pay || <i>not logged</i>}</td>
-                    <td>{blank(p.bundles) || <i>&mdash;</i>}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <ul className="hc-drawerstores">
+            {rows.map((p) => {
+              const plan = planOf(p);
+              return (
+                <li key={p.id} className={plan.logged ? "" : "hc-drawergap"}>
+                  <div className="hc-drawerstoreh">
+                    <b>{p.name}</b>
+                    {plan.discount != null && <span className="hc-drawerpct">{plan.discount}% off</span>}
+                  </div>
+                  {plan.logged ? (
+                    <>
+                      {/* The plans, one line each, the way a merchant would be offered them:
+                          every run length at the cadence it is sold at. The raw cell is
+                          underneath, because a parser reading a free-text column has to show
+                          its working. */}
+                      <ul className="hc-drawerplans">
+                        {plan.lines.length
+                          ? plan.lines.map((l) => <li key={l}>{l}</li>)
+                          : <li className="hc-drawerunknown">Cadence logged, no run lengths</li>}
+                      </ul>
+                      <p className="hc-drawermeta">
+                        {[plan.payment, plan.bundles ? `bundles: ${plan.bundles}` : null, plan.shipping]
+                          .filter(Boolean).join(" \u00b7 ") || "no payment or shipping logged"}
+                      </p>
+                      <p className="hc-drawerraw">{plan.raw}</p>
+                    </>
+                  ) : (
+                    <p className="hc-drawermeta">Nothing logged in the plan columns yet.</p>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         </>
       )}
     </section>
   );
+}
+
+/** One store's plan, parsed out of the sheet's free-text columns and said plainly.
+ *
+ *  The columns are `Monthly - 3, 6, 9` and `25%`, which is a plan ladder written as two
+ *  cells. A reference list that shows the cells makes every reader parse them again. */
+function planOf(p: PilotStore): {
+  logged: boolean; lines: string[]; discount: number | null;
+  payment: string | null; bundles: string | null; shipping: string | null; raw: string;
+} {
+  const clean = (v: string | null | undefined) => {
+    const t = (v || "").trim();
+    return !t || t === "\u2014" ? null : t;
+  };
+  const plans = parsePlans(p.frequency);
+  const d = parseDiscounts(p.discountMargin);
+  const raws = [clean(p.frequency), clean(p.discountMargin)].filter(Boolean).join("  \u00b7  ");
+  /* One line per clause, each cadence with its OWN run lengths. */
+  const lines = plans.flatMap((pl) =>
+    (pl.everyDays.length ? pl.everyDays : [0]).map((days) => {
+      const cadence = days ? freqLabel(days) : "Cadence not logged";
+      return pl.deliveries.length
+        ? `${cadence} \u00b7 ${[...pl.deliveries].sort((a, b) => a - b).join(", ")} deliveries`
+        : cadence;
+    }));
+  return {
+    logged: Boolean(plans.length || d.length || clean(p.paymentType)),
+    lines,
+    discount: d.length ? Math.max(...d) : null,
+    payment: clean(p.paymentType),
+    bundles: clean(p.bundles),
+    shipping: clean(p.shipping) ? `shipping: ${clean(p.shipping)}` : null,
+    raw: raws || "",
+  };
 }

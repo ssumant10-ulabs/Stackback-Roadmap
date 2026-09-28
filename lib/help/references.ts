@@ -53,32 +53,81 @@ export function parseDiscounts(text: string | null | undefined): number[] {
   return out.filter((n) => n > 0 && n <= 60);
 }
 
+/* The negative lookbehind matters: "Bi-Weekly" contains "Weekly" with a word boundary in
+   front of it, so without it that cell reads as both weekly and fortnightly. */
 const WORD_DAYS: [RegExp, number][] = [
-  [/\bweekly\b/i, 7], [/\bfortnight(ly)?\b/i, 14], [/\bbi[- ]?weekly\b/i, 14],
-  [/\bmonthly\b/i, 30], [/\bbi[- ]?monthly\b/i, 60], [/\bquarterly\b/i, 90],
+  [/(?<!bi[- ]?)\bweekly\b/i, 7], [/\bfortnight(ly)?\b/i, 14], [/\bbi[- ]?weekly\b/i, 14],
+  [/(?<!bi[- ]?)\bmonthly\b/i, 30], [/\bbi[- ]?monthly\b/i, 60], [/\bquarterly\b/i, 90],
   [/\b15\s*days?\b/i, 15], [/\b45\s*days?\b/i, 45],
 ];
 
-/** Cadence and run length out of one free-text cell: "Monthly x 6", "every 15 days, 3
- *  cycles", "30 days / 6 deliveries", "fortnightly". */
+/** Cadence and run lengths out of one free-text cell.
+ *
+ *  The sheet's own shape is `Cadence - n, n, n`: "Monthly - 3, 6, 9" is a monthly plan sold
+ *  at three, six and nine deliveries. Several cadences are separated by a semicolon, as in
+ *  "Weekly - 4, 6; Monthly - 3". The first version of this needed the word "cycles" or
+ *  "deliveries" or an "x", none of which the sheet uses, so it read every cadence correctly
+ *  and every run length as absent: 23 stores had their plans logged and the references
+ *  showed run lengths for none of them.
+ *
+ *  Also handled, because they appear: "every 15 days, 3 cycles", "30 days / 6 deliveries",
+ *  "Monthly x 6", "fortnightly". */
 export function parseFrequency(text: string | null | undefined): { everyDays: number[]; deliveries: number[] } {
-  if (blank(text)) return { everyDays: [], deliveries: [] };
-  const t = text!;
-  const everyDays: number[] = [];
-  const deliveries: number[] = [];
+  const plans = parsePlans(text);
+  return {
+    everyDays: uniq(plans.flatMap((p) => p.everyDays)),
+    deliveries: uniq(plans.flatMap((p) => p.deliveries)),
+  };
+}
 
-  for (const [re, d] of WORD_DAYS) if (re.test(t)) everyDays.push(d);
-  const dre = /(\d{1,3})\s*(?:-|\s)?\s*days?\b/gi;
-  let m: RegExpExecArray | null;
-  while ((m = dre.exec(t))) { const n = Number(m[1]); if (n >= 3 && n <= 180) everyDays.push(n); }
+/** The same cell, clause by clause, so each cadence keeps its OWN run lengths.
+ *
+ *  `parseFrequency` flattens, which is right for a category summary and wrong for one store:
+ *  "Weekly - 4, 6; Monthly - 3" rendered as "Weekly 4, 6, 3" and "Monthly 4, 6, 3", which
+ *  are two plans neither of which the store sells. */
+export function parsePlans(text: string | null | undefined): { everyDays: number[]; deliveries: number[] }[] {
+  if (blank(text)) return [];
+  const out: { everyDays: number[]; deliveries: number[] }[] = [];
 
-  // A run length: "x 6", "6 cycles", "6 deliveries", "6 months".
-  const cre = /(?:x\s*|×\s*)?(\d{1,2})\s*(?:cycles?|deliveries|deliveres|months?|times)\b/gi;
-  while ((m = cre.exec(t))) { const n = Number(m[1]); if (n >= 2 && n <= 24) deliveries.push(n); }
-  const xre = /\b[x×]\s*(\d{1,2})\b/gi;
-  while ((m = xre.exec(t))) { const n = Number(m[1]); if (n >= 2 && n <= 24) deliveries.push(n); }
+  for (const clause of text!.split(/;|\band\b/i)) {
+    if (!clause.trim()) continue;
 
-  return { everyDays: uniq(everyDays), deliveries: uniq(deliveries) };
+    const days: number[] = [];
+    for (const [re, d] of WORD_DAYS) if (re.test(clause)) days.push(d);
+    const dre = /(\d{1,3})\s*(?:-|\s)?\s*days?\b/gi;
+    let m: RegExpExecArray | null;
+    while ((m = dre.exec(clause))) { const n = Number(m[1]); if (n >= 3 && n <= 180) days.push(n); }
+    const runs: number[] = [];
+
+    /* Run lengths. Named first, then the sheet's bare list after the cadence: everything
+       after the dash that is not part of a "N days" cadence we already took. */
+    const named: number[] = [];
+    const cre = /(?:x\s*|\u00d7\s*)?(\d{1,3})\s*(?:cycles?|deliveries|deliveres|months?|times)\b/gi;
+    while ((m = cre.exec(clause))) { const n = Number(m[1]); if (n >= 2 && n <= 60) named.push(n); }
+    const xre = /\b[x\u00d7]\s*(\d{1,3})\b/gi;
+    while ((m = xre.exec(clause))) { const n = Number(m[1]); if (n >= 2 && n <= 60) named.push(n); }
+
+    if (named.length) { push(days, named); continue; }
+
+    /* After the dash, or after the cadence word when somebody left the dash out: the sheet
+       has both "Monthly - 3, 6" and "Monthly 3, 6". */
+    const cadence = /\b(weekly|fortnightly|bi[- ]?weekly|monthly|bi[- ]?monthly|quarterly|\d{1,3}\s*days?)\b/i.exec(clause);
+    const dash = clause.search(/[-\u2013:]/);
+    const from = dash >= 0 ? dash + 1 : cadence ? cadence.index + cadence[0].length : -1;
+    if (from < 0) { push(days, runs); continue; }
+    const tail = clause.slice(from);
+    // "15 days" in the tail is the cadence restated, not a run length.
+    const bare = tail.replace(/\d{1,3}\s*days?/gi, "").match(/\d{1,3}/g);
+    if (bare) for (const b of bare) { const n = Number(b); if (n >= 2 && n <= 60) runs.push(n); }
+    push(days, runs);
+  }
+
+  return out;
+
+  function push(days: number[], runs: number[]) {
+    if (!days.length && !runs.length) return;
+    out.push({ everyDays: uniq(days), deliveries: uniq(runs) });
+  }
 }
 
 const uniq = (a: number[]) => [...new Set(a)];
@@ -191,4 +240,14 @@ export function referenceFor(
     bundles: parts.reduce((a, p) => a + p.bundles, 0),
     unlogged: parts.flatMap((p) => p.unlogged),
   };
+}
+
+/** Days between deliveries, said the way a merchant says it. */
+export function freqLabel(days: number): string {
+  if (days === 7) return "Weekly";
+  if (days === 14) return "Fortnightly";
+  if (days === 30) return "Monthly";
+  if (days === 60) return "Every two months";
+  if (days === 90) return "Quarterly";
+  return `Every ${days} days`;
 }

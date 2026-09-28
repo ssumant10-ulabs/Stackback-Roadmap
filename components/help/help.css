@@ -1756,3 +1756,26 @@
 .hc-drawertable i { font-style: normal; color: var(--hc-muted); }
 .hc-drawergap td { opacity: .62; }
 @media (max-width: 719px) { .hc-drawer { width: 100%; } }
+
+/* One store, one plan, said plainly. The columns are "Monthly - 3, 6, 9" and "25%", which
+   is a ladder written as two cells; showing the cells makes every reader parse them again. */
+.hc-drawerstores { list-style: none; margin: 0 0 16px; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.hc-drawerstores > li { padding: 10px 0; border-top: 1px solid var(--border); }
+.hc-drawerstoreh { display: flex; align-items: baseline; gap: 9px; }
+.hc-drawerstoreh b { font-size: 13px; font-weight: 640; }
+.hc-drawerpct {
+  margin-left: auto; font-size: 11.5px; font-weight: 700;
+  background: var(--hc-ok-soft); color: var(--hc-ok); border-radius: 5px; padding: 1px 7px;
+}
+.hc-drawerplans { list-style: none; margin: 5px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 5px; }
+.hc-drawerplans li {
+  font-size: 11.5px; background: var(--sunken); color: var(--ink-2);
+  border-radius: 6px; padding: 2px 8px;
+}
+.hc-drawerunknown { color: var(--hc-muted) !important; font-style: italic; }
+.hc-drawermeta { margin: 6px 0 0; font-size: 11.5px; color: var(--hc-muted); }
+.hc-drawerraw {
+  margin: 4px 0 0; font-size: 10.5px; color: var(--hc-muted); opacity: .75;
+  font-family: ui-monospace, Menlo, monospace;
+}
+.hc-drawergap { opacity: .62; }
