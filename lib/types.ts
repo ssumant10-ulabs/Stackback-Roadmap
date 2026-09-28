@@ -41,6 +41,9 @@ export interface Node {
   kind?: "feature" | "bug" | "landing";
   /** Handover files and screenshots. Same shape and same uploader as a request's. */
   shots?: Shot[];
+  /** Rank within its board column. The position IS the priority, so it has to be stored:
+   *  array order is shared with the roadmap tree and cannot be reordered per column. */
+  boardOrder?: number | null;
   /** Roadmap sheet: Deadline column. */
   deadline?: string | null;
   /** Scheduled window, ISO `yyyy-mm-dd`. Settable on a milestone or any subtask.
@@ -132,6 +135,8 @@ export interface Feature {
   boardTeam?: import("./board").BoardTeam | null;
   /** Who reviews the dev work: design QA or PM. Asked when it leaves dev. */
   reviewWith?: import("./board").ReviewWith | null;
+  /** Rank within its board column. See the Node field of the same name. */
+  boardOrder?: number | null;
   /** Screenshots. Downscaled to a data URL because there is no file storage yet; they move
    *  to Firebase Storage the moment it is on. See SHOT_* limits in lib/shots.ts. */
   shots?: Shot[];

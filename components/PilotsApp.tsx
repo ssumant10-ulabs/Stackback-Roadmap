@@ -34,7 +34,12 @@ export default function PilotsApp({ help }: { help: HelpData }) {
      place, so the menu can be the same six everywhere. Read once, on mount. */
   const [helpOpen, setHelpOpen] = useState(false);
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("help") === "1") setHelpOpen(true);
+    if (new URLSearchParams(window.location.search).get("help") !== "1") return;
+    /* Opened from the menu, so start at the top. The hash survives the navigation, and a
+       leftover "#/internal" from a previous visit meant clicking Help Centre landed on
+       Insights, which is the last screen anybody wants as a front door. */
+    if (window.location.hash) history.replaceState(null, "", window.location.pathname + window.location.search);
+    setHelpOpen(true);
   }, []);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -67,7 +72,7 @@ export default function PilotsApp({ help }: { help: HelpData }) {
             </a>
             <div className="top-actions">
               {/* The same six, same order. This header used to carry two of them. */}
-              <AppNav here={helpOpen ? "help" : "pilots"} onHelp={() => setHelpOpen((v) => !v)} />
+              <AppNav here={helpOpen ? "help" : "pilots"} onHelp={() => setHelpOpen(true)} />
               <SaveState />
               <span className="icon-group">
                 <button className="ibtn" data-tip="Activity" aria-label="Activity" onClick={() => s.setActivityOpen(true)}><IcActivity /></button>

@@ -22,7 +22,7 @@ export type Stage =
   | "dev_progress" | "dev_review" | "dev_approved"
   | "prod";
 
-export type BoardView = "pm" | "design" | "dev";
+export type BoardView = "pm" | "design" | "dev" | "backlog" | "roadmap";
 /** The two teams a card can be handed to. PM hands out; it never holds the card as a team. */
 export type BoardTeam = "Design" | "Engineering";
 export type ReviewWith = "Design" | "PM";
@@ -83,14 +83,29 @@ export const BOARD_VIEWS: BoardViewDef[] = [
     label: "Design",
     blurb: "Handed in by PM, out to dev, and back again for QA.",
     columns: [
-      { key: "in", title: "PM handover", accepts: [{ stage: "pm_handover", team: "Design" }] },
+      /* Queued, not just handed. Design's board read zero while the sheet had design work on
+         it, because every one of those cards was still `planned` and this column only took a
+         handover. A team board that cannot show the team's own queue is a board nobody
+         opens. Cards naming that team, at any stage before it has picked them up. */
+      { key: "in", title: "To pick up",
+        accepts: [
+          { stage: "pm_handover", team: "Design" },
+          { stage: "feature", team: "Design" },
+          { stage: "bug", team: "Design" },
+        ] },
       { key: "wip", title: "In progress", accepts: [{ stage: "design_progress" }] },
       { key: "review", title: "In review", accepts: [{ stage: "design_review" }],
         hint: "Also PM's Handed for review." },
       { key: "approved", title: "Design approved", accepts: [{ stage: "design_approved" }],
         hint: "Also PM's Approved." },
-      { key: "todev", title: "Handed over to dev", accepts: [{ stage: "design_to_dev" }],
-        hint: "Also Dev's Design handover." },
+      /* Also anything dev is actively building that names design. A card the sheet marks
+         Engineering with a Design assignee sits at `dev_progress`, and without this it left
+         Design's board the moment dev started: design could see it queued and could not see
+         it again until dev approved it. From design's side "dev has it" and "dev is building
+         it" are the same column. */
+      { key: "todev", title: "Handed over to dev",
+        accepts: [{ stage: "design_to_dev" }, { stage: "dev_progress", team: "Design" }],
+        hint: "Also Dev's Design handover, and anything dev is building that names design." },
       { key: "qa", title: "Dev QA handover", accepts: [{ stage: "dev_review", review: "Design" }],
         hint: "Dev sent this back for design QA." },
       { key: "devok", title: "Dev approved", accepts: [{ stage: "dev_approved" }],
@@ -102,9 +117,15 @@ export const BOARD_VIEWS: BoardViewDef[] = [
     label: "Dev",
     blurb: "Handed in by PM or design, out for review, and shipped.",
     columns: [
-      { key: "in", title: "PM handover", accepts: [{ stage: "pm_handover", team: "Engineering" }] },
-      { key: "fromdesign", title: "Design handover", accepts: [{ stage: "design_to_dev" }],
-        hint: "Also Design's Handed over to dev." },
+      { key: "in", title: "To pick up",
+        accepts: [
+          { stage: "pm_handover", team: "Engineering" },
+          { stage: "feature", team: "Engineering" },
+          { stage: "bug", team: "Engineering" },
+        ] },
+      { key: "fromdesign", title: "Design handover",
+        accepts: [{ stage: "design_to_dev" }, { stage: "design_progress", team: "Engineering" }],
+        hint: "Also Design's Handed over to dev, and design work in flight that names dev." },
       { key: "wip", title: "In progress", accepts: [{ stage: "dev_progress" }] },
       { key: "review", title: "Handover to design QA or PM review", accepts: [{ stage: "dev_review" }],
         hint: "Dropping here asks which." },
@@ -115,6 +136,45 @@ export const BOARD_VIEWS: BoardViewDef[] = [
     ],
   },
 ];
+
+/** Two more lenses on the same stages.
+ *
+ *  Backlog is everything nobody has picked up, which used to be a destination in the top
+ *  menu. It is a column set, not a screen: the cards are the same cards and moving one out
+ *  of the backlog is the same drag as any other.
+ *
+ *  Roadmap is the board grouped the way the old board grouped it, by where the work is
+ *  rather than by who holds it. It is a READ of the same stages: every card on it is on one
+ *  of the three team boards too, and moving it here moves it there. */
+BOARD_VIEWS.push(
+  {
+    id: "backlog",
+    label: "Backlog",
+    blurb: "Everything nobody has picked up yet. Hand one over and it leaves.",
+    columns: [
+      { key: "bug", title: "Bugs", accepts: [{ stage: "bug" }] },
+      { key: "feature", title: "Feature requests", accepts: [{ stage: "feature" }] },
+      { key: "handover", title: "Handed over", accepts: [{ stage: "pm_handover" }],
+        hint: "Dropping here asks which team takes it." },
+    ],
+  },
+  {
+    id: "roadmap",
+    label: "Roadmap",
+    blurb: "Every card by where the work is, not by who holds it. The same cards as the three team boards.",
+    columns: [
+      { key: "todo", title: "Not started",
+        accepts: [{ stage: "bug" }, { stage: "feature" }, { stage: "pm_handover" }] },
+      { key: "doing", title: "In progress",
+        accepts: [{ stage: "design_progress" }, { stage: "design_to_dev" }, { stage: "dev_progress" }] },
+      { key: "review", title: "In review",
+        accepts: [{ stage: "design_review" }, { stage: "dev_review" }] },
+      { key: "approved", title: "Approved",
+        accepts: [{ stage: "design_approved" }, { stage: "dev_approved" }] },
+      { key: "prod", title: "Pushed to prod", accepts: [{ stage: "prod" }] },
+    ],
+  },
+);
 
 export const VIEW_BY_ID = Object.fromEntries(BOARD_VIEWS.map((v) => [v.id, v])) as Record<BoardView, BoardViewDef>;
 
@@ -137,6 +197,23 @@ export type CardKind = "feature" | "bug" | "landing";
 
 export const KIND_LABEL: Record<CardKind, string> = {
   bug: "Bug", feature: "Feature", landing: "Landing page",
+};
+
+/** What the checkbox reads once a card is in a column. A card sitting in In progress while
+ *  its own status says planned is the drift the board exists to remove, so the move writes
+ *  both. Production is handled separately: it reaches the whole checklist, and starting a
+ *  milestone does not finish anything. */
+export const STAGE_STATUS: Partial<Record<Stage, "planned" | "progress" | "done">> = {
+  bug: "planned",
+  feature: "planned",
+  pm_handover: "planned",
+  design_progress: "progress",
+  design_review: "progress",
+  design_approved: "progress",
+  design_to_dev: "progress",
+  dev_progress: "progress",
+  dev_review: "progress",
+  dev_approved: "progress",
 };
 
 /** Where a card sits before anybody has moved it: its own intake column, read off what it
@@ -180,14 +257,22 @@ export function teamToBoard(team: string | null | undefined): BoardTeam | null {
 
 /** Which stages a view can show at all, so a card handed to the other team does not appear
  *  in a column just because the column's stage matches. */
-export function inView(view: BoardView, stage: Stage, team: BoardTeam | null, review: ReviewWith | null): boolean {
-  return VIEW_BY_ID[view].columns.some((c) => fits(c, stage, team, review));
+export function inView(view: BoardView, stage: Stage, teams: BoardTeam[], review: ReviewWith | null): boolean {
+  return VIEW_BY_ID[view].columns.some((c) => fits(c, stage, teams, review));
 }
 
-export function fits(c: BoardColumn, stage: Stage, team: BoardTeam | null, review: ReviewWith | null): boolean {
+/** `teams` is a LIST, not one value, and that is the difference between Design having a
+ *  board and Design having an empty one.
+ *
+ *  A handover is one team: `boardTeam` is set, the list is that one team, and the card shows
+ *  on their board and nobody else's. A card nobody has handed over is a different question,
+ *  and the honest answer is every team the sheet names on it. The roadmap sheet's Team column
+ *  says "Engineering" on cards that carry a Design team assignee, so reading that one column
+ *  put every design card on Dev's board and left Design's reading zero. */
+export function fits(c: BoardColumn, stage: Stage, teams: BoardTeam[], review: ReviewWith | null): boolean {
   return c.accepts.some((a) =>
     a.stage === stage
-    && (!a.team || a.team === team)
+    && (!a.team || teams.includes(a.team))
     && (!a.review || a.review === review));
 }
 
@@ -209,7 +294,23 @@ export function stageForDrop(c: BoardColumn, team: BoardTeam | null): Drop {
   // Always asks. Re-handing a card is the moment the previous answer stops being right.
   if (c.key === "handover") return { ask: "team" };
 
+  /* A team's queue holds three stages for reading and means one thing for writing: dropping
+     a card there is handing it to that team. */
+  if (c.key === "in" && c.accepts[0]?.team) return { stage: "pm_handover" };
+  /* These two read wider than they write: they SHOW the other team's work in flight, and a
+     card dropped on them is the handover itself. */
+  if (c.key === "todev" || c.key === "fromdesign") return { stage: "design_to_dev" };
+
   if (c.accepts.length > 1) {
+    /* The Roadmap lens groups by where the work is, so its columns hold several stages that
+       are not a junction at all: a card dropped on its "In progress" keeps whichever team
+       already had it. Only PM's two ask. */
+    if (c.key === "todo" || c.key === "doing" || (c.key === "review" && c.accepts.length > 2)) {
+      return { stage: c.accepts[0].stage };
+    }
+    if (c.key === "approved" && c.accepts.some((a) => a.stage === "dev_approved")) {
+      return { stage: team === "Engineering" ? "dev_approved" : "design_approved" };
+    }
     // PM's junctions. Without a team there is nothing to resolve them by, so ask for one.
     if (!team) return { ask: "team" };
     if (c.key === "review") {

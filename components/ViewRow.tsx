@@ -21,21 +21,7 @@ export function ViewRow() {
   const onBoard = s.ui.view !== "features";
   const canFilter = onBoard || FILTERABLE.includes(s.ui.view);
 
-  return (
-    <div className="view-row">
-      {/* No view switcher. There is one view, so a pill that only ever says Board and can
-          only ever be on is a control that does nothing. The board's own PM / Design / Dev
-          tabs live inside it, next to the columns they change. */}
-      <div />
-      <div className="view-actions">
-        {canFilter && (
-          <button ref={filterBtn} className={`btn ghost${s.ui.filter ? " active-filter" : ""}`} aria-haspopup="true"
-            onClick={() => filterBtn.current && ui.openFilter(filterBtn.current)}>
-            <IcFilter /><span>{s.ui.filter ? s.ui.filter.name : "Filter"}</span>
-          </button>
-        )}
-        {onBoard && <button className="btn primary" onClick={ui.openAddTask}><IcPlus /> Add task</button>}
-      </div>
-    </div>
-  );
+  /* Nothing left here. The board carries its own tabs, its own filter and its own Add task,
+     all on one row, and this was a third strip of chrome above them with one control in it. */
+  return null;
 }

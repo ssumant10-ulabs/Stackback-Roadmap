@@ -11,8 +11,9 @@ import { TEAM_ORDER, TEAM_VAR } from "@/lib/constants";
 import { Assignees } from "../Assignees";
 import { CommentChip, DateChip, StatusButton } from "../bits";
 import { CommentsThread } from "../CommentsThread";
-import { IcChevron, IcPlus, IcTrash } from "../icons";
-import { SHOT_MAX_PER_REQUEST, fmtBytes, uploadShot } from "@/lib/shots";
+import { IcChevron, IcFilter, IcPlus, IcTrash } from "../icons";
+import { useAppUi } from "../appui";
+import { SHOT_MAX_PER_REQUEST } from "@/lib/shots";
 
 
 /** The work board. Three lenses over one `stage` field, and every card the team has: the
@@ -29,6 +30,11 @@ export function WorkBoard() {
   const [dragId, setDragId] = useState<string | null>(null);
   const [over, setOver] = useState<string | null>(null);
   const [adding, setAdding] = useState<string | null>(null);
+  /** The last column is the end of the line, so it is folded by default: on the seven-column
+   *  design board it was taking a seventh of the width to say "Dev approved". */
+  const [tailOpen, setTailOpen] = useState(false);
+  const filterBtn = useRef<HTMLButtonElement>(null);
+  const ui = useAppUi();
   /** A handover waiting on its nudge. Nothing is written until it is answered. */
   const [ask, setAsk] = useState<{ id: string; kind: "team" | "review"; col: BoardColumn } | null>(null);
 
@@ -53,7 +59,13 @@ export function WorkBoard() {
 
   const byColumn = useMemo(() => {
     const out: Record<string, BoardCard[]> = {};
-    for (const c of def.columns) out[c.key] = cards.filter((x) => fits(c, x.stage, x.team, x.review));
+    for (const c of def.columns) {
+      /* Rank is the priority, so it is the sort. Cards with no rank yet keep the order they
+         arrived in, behind anything that has been placed by hand. */
+      out[c.key] = cards
+        .filter((x) => fits(c, x.stage, x.teams, x.review))
+        .sort((a, b) => rank(a) - rank(b));
+    }
     return out;
   }, [cards, def]);
 
@@ -94,6 +106,7 @@ export function WorkBoard() {
   }
 
   const asking = ask ? all.find((c) => c.id === ask.id) : null;
+  const isTail = (i: number) => def.columns.length > 3 && i === def.columns.length - 1;
 
   return (
     <div className="wb">
@@ -135,6 +148,17 @@ export function WorkBoard() {
           {filter && <button type="button" className="wb-fclear" onClick={() => s.setFilter(null)}>Clear</button>}
         </div>
 
+        {/* Filter and Add task live here, on the tabs row, rather than in a strip of their
+            own above it. Three stacked rows of chrome before the first column. */}
+        <span className="wb-actions">
+          <button ref={filterBtn} type="button" className={"btn ghost" + (filter ? " active-filter" : "")}
+            data-filter-anchor aria-haspopup="true"
+            onClick={() => filterBtn.current && ui.openFilter(filterBtn.current)}>
+            <IcFilter /><span>{filter ? filter.name : "Filter"}</span>
+          </button>
+          <button type="button" className="btn primary" onClick={ui.openAddTask}><IcPlus /> Add task</button>
+        </span>
+
         <p className="wb-blurb">
           {def.blurb}
           {elsewhere > 0 && <> <span className="wb-else">{elsewhere} card{elsewhere === 1 ? " sits" : "s sit"} in a stage this view does not carry.</span></>}
@@ -146,24 +170,43 @@ export function WorkBoard() {
           saying "Nothing here" pushed the two that hold the work off the screen. */}
       <div className="wb-cols" style={{
         gridTemplateColumns: def.columns
-          .map((c) => ((byColumn[c.key] || []).length ? "minmax(272px, 1fr)" : "minmax(150px, 0.5fr)"))
+          .map((c, i) => (isTail(i) && !tailOpen ? "58px"
+            : (byColumn[c.key] || []).length ? "minmax(272px, 1fr)" : "minmax(154px, 0.55fr)"))
           .join(" "),
       }}>
-        {def.columns.map((c) => {
+        {def.columns.map((c, i) => {
           const list = byColumn[c.key] || [];
+          const folded = isTail(i) && !tailOpen;
+          if (folded) {
+            return (
+              <button key={c.key} type="button" className="wb-colfold"
+                onClick={() => setTailOpen(true)}
+                onDragOver={(e) => { e.preventDefault(); setOver(c.key); }}
+                onDrop={(e) => { setTailOpen(true); drop(e, c); }}>
+                <span className="wb-foldn">{list.length}</span>
+                <span className="wb-foldt">{c.title}</span>
+              </button>
+            );
+          }
           return (
             <section key={c.key}
-              className={"wb-col" + (over === c.key ? " over" : "")}
+              className={"wb-col" + (over === c.key ? " over" : "") + (list.length ? "" : " empty")}
               onDragOver={(e) => { e.preventDefault(); setOver(c.key); }}
               onDragLeave={() => setOver((k) => (k === c.key ? null : k))}
               onDrop={(e) => drop(e, c)}>
               <header className="wb-colh">
                 <b>{c.title}</b><em>{list.length}</em>
+                {isTail(i) && tailOpen && (
+                  <button type="button" className="wb-colhide" title="Fold this column"
+                    onClick={() => setTailOpen(false)}>&times;</button>
+                )}
               </header>
               {c.hint && <p className="wb-hint">{c.hint}</p>}
               <div className="wb-stack">
-                {list.map((card) => (
+                {list.map((card, at) => (
                   <Card key={card.id} card={card} view={view}
+                    rank={at + 1} of={list.length}
+                    siblings={list.map((x) => x.id)}
                     dragging={dragId === card.id}
                     onDragStart={(e) => { setDragId(card.id); e.dataTransfer.setData("text/plain", card.id); e.dataTransfer.effectAllowed = "move"; }}
                     onDragEnd={() => { setDragId(null); setOver(null); }} />
@@ -192,9 +235,15 @@ export function WorkBoard() {
  *  a component never has to know which of the two shapes it is holding to place it. */
 type BoardCard = ReturnType<ReturnType<typeof useStore>["boardCards"]>[number];
 
+/** No rank yet means "wherever you already were", which sorts behind anything placed. */
+const rank = (c: BoardCard): number => {
+  const v = c.node?.boardOrder ?? c.feature?.boardOrder;
+  return v == null ? Number.MAX_SAFE_INTEGER : v;
+};
+
 function countFor(cards: BoardCard[], view: BoardView): number {
   const def = VIEW_BY_ID[view];
-  return cards.filter((c) => def.columns.some((col) => fits(col, c.stage, c.team, c.review))).length;
+  return cards.filter((c) => def.columns.some((col) => fits(col, c.stage, c.teams, c.review))).length;
 }
 
 /** Add a card straight into the column you are looking at. A card born in Bugs is a bug;
@@ -245,8 +294,11 @@ const KINDS: CardKind[] = ["bug", "feature", "landing"];
 const nextPriority = (p: number | null | undefined): 1 | 2 | 3 =>
   (normPriority(p) === 3 ? 1 : normPriority(p) + 1) as 1 | 2 | 3;
 
-function Card({ card, view, dragging, onDragStart, onDragEnd }: {
-  card: BoardCard; view: BoardView; dragging: boolean;
+function Card({ card, view, rank: at, of, siblings, dragging, onDragStart, onDragEnd }: {
+  card: BoardCard; view: BoardView;
+  /** 1-based position in its column, which IS its priority. */
+  rank: number; of: number; siblings: string[];
+  dragging: boolean;
   onDragStart: (e: DragEvent) => void; onDragEnd: () => void;
 }) {
   const s = useStore();
@@ -268,6 +320,12 @@ function Card({ card, view, dragging, onDragStart, onDragEnd }: {
       onDragStart={onDragStart} onDragEnd={onDragEnd}
       data-node-id={node?.id} data-feature-id={f?.id}>
       <div className="wb-cardtop">
+        <span className="wb-move">
+          <button type="button" aria-label="Move up" disabled={at === 1}
+            onClick={() => s.reorderCard(card.id, siblings, -1)}>&#9650;</button>
+          <button type="button" aria-label="Move down" disabled={at === of}
+            onClick={() => s.reorderCard(card.id, siblings, 1)}>&#9660;</button>
+        </span>
         {/* Click to cycle. Three values do not earn a dropdown, and the tag has to be
             changeable from the board or it will only ever say what it was created as. */}
         <button type="button" className={"wb-kind k-" + kind} title="Bug, feature or landing page"
@@ -312,14 +370,16 @@ function Card({ card, view, dragging, onDragStart, onDragEnd }: {
         {card.review && card.stage === "dev_review" && (
           <span className="wb-team t-rev">{card.review === "Design" ? "Design QA" : "PM review"}</span>
         )}
-        {/* The horizon. It used to BE the column; on a workflow board it has to be on the
-            card or a new task is born without one and nobody can tell Now from Future. */}
+        {/* Position is the priority, so the number is the point: "second in this column" is
+            a fact anybody can act on, where "Next" was a word three people read three ways.
+            The horizon is still there and still clickable, in front of it. */}
         {node && (
           <button type="button" className={"wb-prio p-" + normPriority(node.priority)}
             title="Now, Next or Future" onClick={() => s.setPriority(node.id, nextPriority(node.priority))}>
             {waveWord(normPriority(node.priority))}
           </button>
         )}
+        <span className="wb-rank" title={`${at} of ${of} in this column`}>{at}</span>
         {view === "pm" && <span className="wb-stage">{STAGE_LABEL[card.stage]}</span>}
         {task && <span className="wb-task" title={`Roadmap: ${task.title}`}>{task.title}</span>}
         {shots.length > 0 && <span className="wb-shotn">{shots.length} file{shots.length === 1 ? "" : "s"}</span>}
@@ -342,33 +402,41 @@ function Card({ card, view, dragging, onDragStart, onDragEnd }: {
               ))}
             </ul>
           )}
+          {node && <AddSub parentId={node.id} />}
           <Files id={card.id} shots={shots} />
           {node && <CommentsThread node={node} />}
+          <button type="button" className="wb-del"
+            onClick={() => {
+              const n = counts?.total || 0;
+              if (n && !confirm(`Delete "${title}" and its ${n} subtask${n === 1 ? "" : "s"}?`)) return;
+              if (!n && !confirm(`Delete "${title}"?`)) return;
+              s.delCard(card.id);
+            }}>
+            <IcTrash /> Delete this card
+          </button>
         </div>
       )}
     </article>
   );
 }
 
-/** Handover files on a card: a screenshot, a spec, a link to a frame. The same uploader and
- *  the same budget the requests module already uses, now reaching roadmap cards too. */
+/** Handover links on a card: a Figma frame, a spec, a shared screenshot.
+ *
+ *  Links only. The file picker downscaled a JPEG into a data URL in this browser's storage,
+ *  which is a copy nobody else on the team can open and a budget that runs out; a link is the
+ *  thing itself and costs nothing. */
 function Files({ id, shots }: { id: string; shots: { id: string; name: string; src: string; bytes: number }[] }) {
   const s = useStore();
-  const ref = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [url, setUrl] = useState("");
 
-  const pick = async (files: FileList | null) => {
-    if (!files?.length) return;
-    setBusy(true); setErr(null);
-    for (const file of Array.from(files)) {
-      try {
-        const { src, bytes } = await uploadShot(file, id);
-        const r = s.addShot(id, file.name, src, bytes);
-        if (!r.ok) { setErr(r.error || "That file could not be attached."); break; }
-      } catch (e) { setErr("Could not attach that file: " + (e as Error).message); break; }
-    }
-    setBusy(false);
+  const add = () => {
+    const v = url.trim();
+    if (!v) return;
+    const r = s.addShotLink(id, v);
+    if (!r.ok) { setErr(r.error || null); return; }
+    setErr(null); setUrl(""); setAdding(false);
   };
 
   return (
@@ -376,27 +444,33 @@ function Files({ id, shots }: { id: string; shots: { id: string; name: string; s
       <div className="wb-filerow">
         {shots.map((sh) => (
           <span className="wb-shot" key={sh.id}>
-            <img src={sh.src} alt={sh.name} title={`${sh.name} · ${sh.bytes ? fmtBytes(sh.bytes) : "linked, costs no storage"}`} />
+            <a href={sh.src} target="_blank" rel="noreferrer" title={sh.name}>
+              {isImage(sh.src) ? <img src={sh.src} alt={sh.name} /> : <span className="wb-shotdoc">{sh.name.slice(0, 18)}</span>}
+            </a>
             <button type="button" aria-label={`Remove ${sh.name}`} onClick={() => s.delShot(id, sh.id)}><IcTrash /></button>
           </span>
         ))}
-        {shots.length < SHOT_MAX_PER_REQUEST && (
-          <button type="button" className="wb-shotadd" disabled={busy} onClick={() => ref.current?.click()}>
-            {busy ? "…" : "+ File"}
-          </button>
+        {!adding && shots.length < SHOT_MAX_PER_REQUEST && (
+          <button type="button" className="wb-shotadd" onClick={() => setAdding(true)}>+ Link</button>
         )}
-        <button type="button" className="wb-shotadd" onClick={() => {
-          const url = prompt("Paste an image or file link");
-          if (!url) return;
-          const r = s.addShotLink(id, url);
-          if (!r.ok) setErr(r.error || null);
-        }}>+ Link</button>
       </div>
-      <input ref={ref} type="file" accept="image/*" multiple hidden onChange={(e) => pick(e.target.files)} />
+      {adding && (
+        <div className="wb-linkrow">
+          <input autoFocus type="url" value={url} placeholder="https://..."
+            onChange={(e) => setUrl(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") { e.preventDefault(); add(); }
+              if (e.key === "Escape") { setAdding(false); setUrl(""); setErr(null); }
+            }} />
+          <button type="button" onClick={add}>Add</button>
+        </div>
+      )}
       {err && <p className="wb-fileerr">{err}</p>}
     </div>
   );
 }
+
+const isImage = (src: string) => /\.(png|jpe?g|gif|webp|avif|svg)(\?|$)/i.test(src) || src.startsWith("data:image");
 
 /** The handover nudge. Asked rather than inferred, and nothing is written until it is
  *  answered, so cancelling leaves the card exactly where it was. */
@@ -420,6 +494,22 @@ function Nudge({ spec, title, onPick, onClose }: {
           <button type="button" className="btn ghost" onClick={onClose}>Cancel</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Add a subtask, the way the old board did. A card whose checklist can only be read is a
+ *  card you have to leave the board to change. */
+function AddSub({ parentId }: { parentId: string }) {
+  const s = useStore();
+  const [v, setV] = useState("");
+  const add = () => { const t = v.trim(); if (!t) return; s.addChild(parentId, t); setV(""); };
+  return (
+    <div className="wb-addsub">
+      <input type="text" value={v} placeholder="Add a subtask"
+        onChange={(e) => setV(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
+      <button type="button" onClick={add}>Add</button>
     </div>
   );
 }

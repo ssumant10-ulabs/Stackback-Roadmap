@@ -5,7 +5,7 @@ import { SEED_VERSION, seed, stampIds } from "./seed";
 import { uid, newRoadmapId } from "./id";
 import { makeHelpers, pruneTasks, type Helpers } from "./teams";
 import { effStatus, normPriority, subtreeCounts, waveWord } from "./derive";
-import { STAGE_LABEL, defaultNodeStage, stageOf, teamToBoard, type BoardTeam, type BoardView, type CardKind, type ReviewWith, type Stage } from "./board";
+import { STAGE_LABEL, STAGE_STATUS, defaultNodeStage, stageOf, teamToBoard, type BoardTeam, type BoardView, type CardKind, type ReviewWith, type Stage } from "./board";
 import { reconcile } from "./dates";
 import { featureSeed } from "./featureSeed";
 import { pilotSeed } from "./pilotSeed";
@@ -591,6 +591,41 @@ export class Store {
   }
   setBoardView(v: BoardView) { this.ui.boardView = v; this.commit(); }
 
+  /** Move a card up or down its column. The position is the priority, so this is what
+   *  setting a priority IS; the number on the card is the rank it produces.
+   *
+   *  `siblings` is the column as the board draws it, in the order it draws it, because only
+   *  the board knows which cards share a column. Ranks are rewritten across the whole column
+   *  on every move, so a column with no ranks yet gets them on the first nudge rather than
+   *  needing a migration. */
+  reorderCard(id: string, siblings: string[], dir: -1 | 1) {
+    const at = siblings.indexOf(id);
+    const to = at + dir;
+    if (at < 0 || to < 0 || to >= siblings.length) return;
+    const next = [...siblings];
+    next.splice(to, 0, next.splice(at, 1)[0]);
+    next.forEach((cardId, i) => {
+      const n = this.findEntry(cardId)?.node;
+      if (n) { n.boardOrder = i; return; }
+      const f = this.features.find((x) => x.id === cardId);
+      if (f) { f.boardOrder = i; f.updatedAt = new Date().toISOString(); }
+    });
+    const e = this.findEntry(id);
+    this.log("move", e?.node.title || this.features.find((x) => x.id === id)?.title || "Card",
+      `to ${to + 1} of ${next.length}`, e?.node.id);
+    this.commit();
+  }
+
+  /** Delete a card from the board, whichever record it is. */
+  delCard(id: string) {
+    if (this.findEntry(id)) { this.del(id); return; }
+    const i = this.features.findIndex((x) => x.id === id);
+    if (i < 0) return;
+    this.log("delete", this.features[i].title);
+    this.data.features.splice(i, 1);
+    this.commit();
+  }
+
   /** Move a card to a stage on the work board.
    *
    *  `team` and `review` are written in the same commit as the stage, never after it: a card
@@ -600,19 +635,37 @@ export class Store {
   /** Every card on the board, roadmap tasks and requests alike, with the stage each one
    *  sits at. A task's stage is derived from the status and team it already carried unless
    *  somebody has moved it, so nothing was backfilled to make the board right. */
-  boardCards(): { id: string; node?: Node; feature?: Feature; stage: Stage; team: BoardTeam | null; review: ReviewWith | null }[] {
+  boardCards(): { id: string; node?: Node; feature?: Feature; stage: Stage; teams: BoardTeam[]; team: BoardTeam | null; review: ReviewWith | null }[] {
     const out: ReturnType<Store["boardCards"]> = [];
     for (const f of this.features) {
+      const teams = f.boardTeam ? [f.boardTeam] : ([teamToBoard(f.team)].filter(Boolean) as BoardTeam[]);
       out.push({
         id: f.id, feature: f, stage: stageOf(f),
-        team: f.boardTeam ?? null, review: f.reviewWith ?? null,
+        teams, team: f.boardTeam ?? teams[0] ?? null, review: f.reviewWith ?? null,
       });
     }
     for (const t of this.activeRoadmap().tasks || []) {
+      /* Handed over: one team, theirs. Not handed over: every team the sheet names on it,
+         which is the Team column AND the team assignees, because the column says
+         "Engineering" on cards carrying a Design assignee and reading it alone left Design's
+         board empty. `team` stays for the chip and for resolving a drop; `teams` is what
+         decides which boards it appears on. */
+      /* `nodeTeams` returns the sheet's Team column ALONE when it is set, and ignores the
+         assignees, which is right for the roadmap's own attribution and wrong here: the
+         board asks which teams are on this card, and the sheet says "Engineering" on cards
+         carrying a Design team assignee. Reading the column alone is why Design's board read
+         zero while the sheet had design work on it. Both answers are true, so both count. */
+      const teams = t.boardTeam
+        ? [t.boardTeam]
+        : ([...new Set([
+            teamToBoard(t.team),
+            ...(t.assignees || []).map((a) => teamToBoard(this.helpers.assigneeTeam(a))),
+          ])].filter(Boolean) as BoardTeam[]);
       out.push({
         id: t.id, node: t,
         stage: t.stage || defaultNodeStage(effStatus(t), t.team, t.kind),
-        team: t.boardTeam ?? teamToBoard(t.team),
+        teams,
+        team: t.boardTeam ?? teamToBoard(t.team) ?? teams[0] ?? null,
         review: t.reviewWith ?? null,
       });
     }
@@ -689,9 +742,14 @@ export class Store {
     if (opts && "review" in opts) n.reviewWith = opts.review ?? null;
     if (stage === "bug" || stage === "feature") { n.boardTeam = null; n.reviewWith = null; }
     if (!["dev_review", "dev_approved", "prod"].includes(stage)) n.reviewWith = null;
-    /* Reaching production IS shipping it, and a card that reads done on the board while its
-       checklist sits at 3 of 7 is the drift this board exists to remove. */
-    if (stage === "prod" && effStatus(n) !== "done") this.setDeep(n, "done");
+    /* The checkbox follows the column, because a card that reads planned while it sits in
+       In progress is exactly the drift this board exists to remove. Production is the only
+       one that reaches the whole subtree: shipping a milestone ships its checklist, while
+       starting one does not finish anything. */
+    if (stage === "prod") { if (effStatus(n) !== "done") this.setDeep(n, "done"); }
+    else if (STAGE_STATUS[stage] && n.status !== STAGE_STATUS[stage]) {
+      n.status = STAGE_STATUS[stage] as Status;
+    }
     const team = n.boardTeam ?? teamToBoard(n.team);
     const who = team === "Engineering" ? "dev" : team === "Design" ? "design" : null;
     this.log("stage", n.title, `${STAGE_LABEL[was]} to ${STAGE_LABEL[stage]}${who ? `, with ${who}` : ""}`, n.id);

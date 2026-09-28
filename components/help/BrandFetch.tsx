@@ -17,7 +17,7 @@ import { canonicalTokens, tokenPasteBlock, type ReadSources } from "@/lib/help/t
 
 type Token = { key: string; hex: string; source: string; confidence: "theme" | "derived" | "guessed" };
 
-/** One real product off the storefront, so the preview stops saying "Dummy product". */
+/** One real product off the storefront, so the preview shows their product rather than a placeholder. */
 export interface ReadProduct {
   title: string; handle: string;
   /** Minor units, as Shopify serves them. */

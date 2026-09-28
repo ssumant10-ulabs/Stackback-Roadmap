@@ -6,7 +6,6 @@ import { Header } from "./Header";
 import { HeroMetrics } from "./HeroMetrics";
 import { ViewRow } from "./ViewRow";
 import { WorkBoard } from "./views/WorkBoard";
-import { Features } from "./views/Features";
 import { FilterPopover } from "./FilterPopover";
 import { AssigneePopover } from "./AssigneePopover";
 import { DatesPopover } from "./DatesPopover";
@@ -105,12 +104,6 @@ export default function RoadmapApp() {
     },
   }), [s]);
 
-  /* `/?view=features` is how the menu reaches the backlog from another screen. Read once. */
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("view") === "features") s.setView("features");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   if (!mounted) return null;
 
   const view = s.ui.view;
@@ -126,7 +119,7 @@ export default function RoadmapApp() {
           {/* Timeline, Teams & People and the priority board came off on 2026-09-25: five
               lenses on the same tree was the thing that made this screen hard to use. The
               roadmap horizons are still on the cards and in the header metrics. */}
-          {view === "features" ? <Features /> : <WorkBoard />}
+          <WorkBoard />
         </main>
       </div>
       {filterPop && <FilterPopover pos={filterPop} onClose={() => setFilterPop(null)} />}

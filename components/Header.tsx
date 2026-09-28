@@ -30,9 +30,7 @@ export function Header() {
       </a>
       <div className="top-actions">
         {/* The same six destinations, in the same order, on every screen. See AppNav. */}
-        <AppNav here={s.ui.view === "features" ? "features" : "board"}
-          onBoard={() => s.setView("board")}
-          onFeatures={() => s.setView("features")} />
+        <AppNav here="roadmap" onBoard={() => s.setView("board")} />
         <SaveState />
         <span className="icon-group">
           <IconAction label="Activity" onClick={() => s.setActivityOpen(true)}><IcActivity /></IconAction>

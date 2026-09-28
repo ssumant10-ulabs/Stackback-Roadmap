@@ -109,7 +109,7 @@ export function runLabel(everyDays: number, deliveries: number): string {
 }
 
 export const DEFAULT_CONFIG: SimConfig = {
-  productName: "Dummy product",
+  productName: "Store Product",
   unitPrice: 750,
   deliveries: 6,
   everyDays: 14,

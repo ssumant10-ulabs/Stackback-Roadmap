@@ -78,7 +78,7 @@ export default function Brief({ store, open, answered, connected, step, onStep, 
       discountPct: answers.tiered === "yes"
         ? (bands[runs[0]] ?? (Number(answers.discount_max) || 0))
         : Number(answers.discount_max) || 0,
-      productName: names[0] || "Dummy product",
+      productName: names[0] || "Store Product",
     }));
     const modes = Array.isArray(answers.modes) ? answers.modes : [];
     setSettings((s) => ({

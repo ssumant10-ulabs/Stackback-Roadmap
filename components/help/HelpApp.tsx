@@ -56,6 +56,9 @@ function splitHash(): { route: string; article: string | null } {
 
 function parseHash(): View {
   const { route } = splitHash();
+  // `#/` used to be an overview that listed the same answers the FAQ does under another
+  // name, so it lands on the FAQ now and old links still resolve.
+  if (route === "" || route === "home") return { kind: "faq" };
   if (route.startsWith("cat/")) return { kind: "cat", id: decodeURIComponent(route.slice(4)) };
   if (route.startsWith("search/")) return { kind: "search", q: decodeURIComponent(route.slice(7)) };
   if (route === "insights") return { kind: "insights" };
@@ -323,12 +326,13 @@ export default function HelpApp({
               </>
             ) : (
               <>
-                <button className={"hc-sub" + (view.kind === "faq" ? " on" : "")}
-                  onClick={() => go({ kind: "faq" })}>FAQs</button>
+                {/* How to first: somebody opening the Help Centre is trying to do something,
+                    and the guides are the answer to that. "Every answer" came off, it was the
+                    FAQ's index under a second name, and the topic rail is the way in. */}
                 <button className={"hc-sub" + (part === "howto" ? " on" : "")}
                   onClick={() => go({ kind: "howto" })}>How to guides</button>
-                <button className={"hc-sub" + (view.kind === "home" || view.kind === "cat" || view.kind === "search" ? " on" : "")}
-                  onClick={() => go({ kind: "home" })}>Every answer</button>
+                <button className={"hc-sub" + (["faq", "home", "cat", "search"].includes(view.kind) ? " on" : "")}
+                  onClick={() => go({ kind: "faq" })}>FAQs</button>
                 <button className={"hc-sub" + (view.kind === "sim" ? " on" : "")}
                   onClick={() => go({ kind: "sim" })}>Simulate</button>
               </>
