@@ -2,7 +2,7 @@
 import { useState } from "react";
 import type { WidgetSettings, WidgetTheme } from "@/lib/help/widget";
 import { downloadTokens, tokensText } from "@/lib/help/tokens";
-import { canonicalTokens, tokenPasteBlock, type ReadSources } from "@/lib/help/tokenmap";
+import { canonicalTokens, tokenPasteBlock, type ReadShape, type ReadSources } from "@/lib/help/tokenmap";
 
 /** Read a store's own theme settings and drop them into the widget preview.
  *
@@ -99,18 +99,28 @@ export default function BrandFetch({ theme, onTheme, settings, storeName, onProd
   const [product, setProduct] = useState<ReadProduct | null>(null);
   /** Which of the six the last read actually supplied, so the table can say so per row. */
   const [readFrom, setReadFrom] = useState<ReadSources | undefined>(undefined);
+  /** What else the reader managed to find: shape, shadow, button style. */
+  const [shape, setShape] = useState<ReadShape | undefined>(undefined);
 
   async function run() {
     const q = url.trim();
     if (!q || busy) return;
-    setBusy(true); setMsg(null); setTokens(null); setNote(null); setProduct(null); setReadFrom(undefined);
+    setBusy(true); setMsg(null); setTokens(null); setNote(null); setProduct(null); setReadFrom(undefined); setShape(undefined);
     try {
       const r = await fetch("/api/brand-colours?url=" + encodeURIComponent(q));
       const d = await r.json();
       if (!d.ok) { setMsg(d.error || "That site could not be read."); return; }
-      onTheme(toTheme(d.tokens, d.corners, d.cornersCustomPx, theme, d.cardRadiusPx ?? null, d.buttonRadiusPx ?? null));
+      onTheme({
+        ...toTheme(d.tokens, d.corners, d.cornersCustomPx, theme, d.cardRadiusPx ?? null, d.buttonRadiusPx ?? null),
+        ...(d.shadow ? { chrome: { ...theme.chrome, shadow: d.shadow } } : {}),
+        ...(d.ctaStyle ? { components: { ...theme.components, ctaButton: d.ctaStyle } } : {}),
+      });
       setTokens(d.tokens);
       setReadFrom(Object.fromEntries((d.tokens as Token[]).map((t) => [t.key, { source: t.source, confidence: t.confidence }])));
+      setShape({
+        cardRadiusPx: d.cardRadiusPx ?? null, buttonRadiusPx: d.buttonRadiusPx ?? null,
+        shadow: d.shadow ?? null, ctaStyle: d.ctaStyle ?? null, fontRead: Boolean(d.fontBody),
+      });
       if (d.product?.title) { setProduct(d.product); onProduct?.(d.product); }
       setFont(d.fontBody ? String(d.fontBody).split(",")[0].trim() : null);
       setNote(
@@ -160,7 +170,7 @@ export default function BrandFetch({ theme, onTheme, settings, storeName, onProd
           it, in its sections and its order. The reader answers six of them; the widget on
           every pilot store today has nineteen plus the portal's five and two fonts, and
           showing six and calling it the token set is why this panel kept reading as wrong. */}
-      <LiveTokens theme={theme} read={readFrom} font={font} storeName={storeName || url.trim() || null} />
+      <LiveTokens theme={theme} read={readFrom} font={font} shape={shape} storeName={storeName || url.trim() || null} />
 
       {tokens && (
         <>
@@ -189,13 +199,13 @@ export default function BrandFetch({ theme, onTheme, settings, storeName, onProd
  *  the six chips and the preview, and dev wants all twenty-six to paste into the app. The
  *  copy block at the bottom is the `field: value` shape the skill asks every derivation to
  *  end with, so nobody has to read a table to enter them. */
-function LiveTokens({ theme, read, font, storeName }: {
-  theme: WidgetTheme; read?: ReadSources; font: string | null; storeName: string | null;
+function LiveTokens({ theme, read, font, shape, storeName }: {
+  theme: WidgetTheme; read?: ReadSources; font: string | null; shape?: ReadShape; storeName: string | null;
 }) {
   /* Open. This is the token set, not an appendix to it. */
   const [open, setOpen] = useState(true);
   const [copied, setCopied] = useState(false);
-  const sections = canonicalTokens(theme, read, font);
+  const sections = canonicalTokens(theme, read, font, shape);
   const count = sections.reduce((n, s) => n + s.rows.length, 0);
 
   const copy = async () => {

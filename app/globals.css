@@ -2018,3 +2018,38 @@
 .wb-head .wb-tabs { grid-column: 1; }
 .wb-kfilters { grid-column: 2; justify-self: start; }
 .wb-actions { grid-column: 3; }
+
+/* The kind tag is a tag. It was a bordered select the width of the card. */
+.wb-kind {
+  font-size: 9.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  border-radius: 4px; padding: 1px 14px 1px 5px; line-height: 1.6; max-width: 92px;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+                    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 7px) 55%, calc(100% - 4px) 55%;
+  background-size: 3px 3px, 3px 3px;
+  background-repeat: no-repeat;
+}
+.wb-kind:focus-visible { outline: 2px solid var(--brand, #4F7A00); outline-offset: 1px; }
+
+/* The move menu lists this board's own columns. */
+.wb-movemenu { min-width: 190px; max-height: 320px; overflow: auto; }
+.wb-moverule { display: block; height: 1px; margin: 4px 2px; background: var(--line, rgba(0,0,0,.12)); }
+
+/* The work filter, a popover beside the who filter. */
+.wb-kfwrap { position: relative; display: inline-flex; }
+.wb-kfmenu {
+  position: absolute; top: calc(100% + 4px); right: 0; z-index: 55; min-width: 160px;
+  display: flex; flex-direction: column; padding: 5px;
+  background: var(--card, #fff); border: 1px solid var(--line, rgba(0,0,0,.14));
+  border-radius: 11px; box-shadow: 0 10px 28px rgba(0,0,0,.16);
+}
+.wb-kfmenu button {
+  appearance: none; border: 0; background: none; cursor: pointer; font: inherit;
+  text-align: left; font-size: 12.5px; padding: 6px 9px; border-radius: 7px; color: var(--ink, #111);
+}
+.wb-kfmenu button:hover { background: var(--card-2, rgba(0,0,0,.05)); }
+.wb-kfmenu button.on { font-weight: 700; }
+.wb-kfclear { color: var(--ink-3, #888) !important; border-top: 1px solid var(--line, rgba(0,0,0,.12)) !important; border-radius: 0 !important; margin-top: 3px; }
+.wb-head { grid-template-columns: 1fr auto; }
+.wb-head .wb-tabs { grid-column: 1; }
+.wb-actions { grid-column: 2; }

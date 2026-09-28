@@ -62,6 +62,12 @@ export interface BoardViewDef {
 }
 
 /** PM and CS share a lens: the two intake columns are CS's, the rest is PM's. */
+export const ALL_STAGES: Stage[] = [
+  "bug", "feature", "pm_progress", "pm_handover",
+  "design_progress", "design_review", "design_approved", "design_to_dev",
+  "dev_progress", "dev_review", "dev_approved", "prod",
+];
+
 /** The two intake pairs. A card is asked for, or it is being built. */
 export const ASKED_FOR: CardKind[] = ["bug", "feature"];
 export const BUILT: CardKind[] = ["module", "template", "landing"];
@@ -175,7 +181,7 @@ BOARD_VIEWS.push(
   {
     id: "backlog",
     label: "Backlog",
-    blurb: "Every card, by what it is. Move one to PM, Design or Dev and it appears on their board.",
+    blurb: "Every card there is, by what it is. This is the inventory; the team boards are who has what.",
     columns: [
       { key: "bugs", title: "Bugs", accepts: intake(["bug"]) },
       { key: "features", title: "Features", accepts: intake(["feature"]) },
@@ -201,12 +207,16 @@ BOARD_VIEWS.push(
   },
 );
 
-/** The backlog is everything before a team holds it, split by what a card IS. A card that
- *  has been picked up has left, which is the difference between the backlog and PM's board:
- *  PM's shows what PM took, this shows what exists. */
+/** The backlog is EVERY card, split by what it is.
+ *
+ *  It took the two intake stages, so the moment anybody picked a card up it vanished from
+ *  the one list that is supposed to hold everything, and with the live data almost nothing
+ *  was left at intake: the backlog read empty while 71 cards existed. It is the inventory,
+ *  not the queue. PM's board is what PM took; this is what there is. */
 function intake(kinds: CardKind[]): StageSpec[] {
-  return [{ stage: "bug", kinds }, { stage: "feature", kinds }];
+  return ALL_STAGES.map((stage) => ({ stage, kinds }));
 }
+
 
 export const VIEW_BY_ID = Object.fromEntries(BOARD_VIEWS.map((v) => [v.id, v])) as Record<BoardView, BoardViewDef>;
 
@@ -308,7 +318,10 @@ export function defaultNodeStage(
 /** The sheet's Team column mapped onto the two teams a board card can be handed to. PM is
  *  not one of them: PM hands out, it does not hold. */
 export function teamToBoard(team: string | null | undefined): BoardTeam | null {
-  return team === "Design" ? "Design" : team === "Engineering" ? "Engineering" : null;
+  return team === "Design" ? "Design"
+    : team === "Engineering" ? "Engineering"
+    : team === "PM" ? "PM"
+    : null;
 }
 
 /** Which stages a view can show at all, so a card handed to the other team does not appear

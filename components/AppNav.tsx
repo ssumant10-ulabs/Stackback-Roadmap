@@ -1,6 +1,6 @@
 "use client";
 import { useStore } from "@/lib/store";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { IcBoard, IcHelp, IcPalette, IcPilots } from "./icons";
 
 /** One menu, the same on every screen.
@@ -23,6 +23,17 @@ export function AppNav({ here, onHelp, onBoard }: {
   const cls = (on: boolean) => `btn ghost${on ? " on" : ""}`;
 
   const [designOpen, setDesignOpen] = useState(false);
+  const designRef = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!designOpen) return;
+    const away = (e: MouseEvent) => {
+      if (!designRef.current?.contains(e.target as HTMLElement)) setDesignOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setDesignOpen(false); };
+    document.addEventListener("mousedown", away);
+    document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("mousedown", away); document.removeEventListener("keydown", esc); };
+  }, [designOpen]);
 
   return (
     <>
@@ -34,17 +45,20 @@ export function AppNav({ here, onHelp, onBoard }: {
 
       {/* One Design entry holding the two surfaces, because they are the same job at two
           ends: the storefront work and the merchant admin. They were two peers of Roadmap. */}
-      <span className="nav-group" onMouseLeave={() => setDesignOpen(false)}>
+      {/* Opens on hover, closes on a click elsewhere or Escape, never on the cursor leaving
+          it: a menu that vanishes on the way to the thing you are reaching for cannot be
+          used with a mouse at all. */}
+      <span className="nav-group" ref={designRef}>
         <button type="button" className={cls(false)} aria-expanded={designOpen}
           onClick={() => setDesignOpen((v) => !v)} onMouseEnter={() => setDesignOpen(true)}>
           <IcPalette /><span>Design</span>
         </button>
         {designOpen && (
           <span className="nav-menu">
-            <a href={s.uiuxUrl} target="_blank" rel="noreferrer">
+            <a href={s.uiuxUrl} target="_blank" rel="noreferrer" onClick={() => setDesignOpen(false)}>
               <b>Frontend design</b><em>UI/UX work</em>
             </a>
-            <a href={s.adminUrl} target="_blank" rel="noreferrer">
+            <a href={s.adminUrl} target="_blank" rel="noreferrer" onClick={() => setDesignOpen(false)}>
               <b>Backend design</b><em>Merchant UI</em>
             </a>
           </span>

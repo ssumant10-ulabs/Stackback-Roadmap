@@ -30,6 +30,10 @@ export interface BrandToken {
 export interface BrandResult {
   ok: boolean;
   url: string;
+  /** Read off the real elements where they could be found, null where they could not.
+   *  Null is the point: the panel said DIRECT beside the app's own default. */
+  shadow?: "none" | "subtle" | "strong" | null;
+  ctaStyle?: "solid" | "outline" | null;
   /** "dawn" when the theme exposes Shopify colour-scheme variables, else "fallback". */
   method: "dawn" | "fallback";
   tokens: BrandToken[];
@@ -330,7 +334,11 @@ export function mapTokens(css: string, url: string, html?: string): BrandResult 
   const schemes = readSchemes(css);
   const dawn = schemes.length > 0 || "--color-button" in root;
 
-  const fontBody = (root["--font-body-family"] || "").replace(/['"]/g, "").trim() || null;
+  /* Read off the real elements once, up front: the shape, the shadow, the button style and
+     the font all come from the page rather than from a Dawn variable a theme may not set. */
+  const elShape = html ? elementTokens(html, css) : null;
+
+  const fontBody = elShape?.fontBody || (root["--font-body-family"] || "").replace(/['"]/g, "").trim() || null;
   const fontHeading = (root["--font-heading-family"] || "").replace(/['"]/g, "").trim() || null;
   /* Dawn and its lineage set the document root to 62.5%, so 1rem is 10px there. The
      declaration lives in the theme's stylesheet, not the inline block we read, so it is
@@ -345,11 +353,14 @@ export function mapTokens(css: string, url: string, html?: string): BrandResult 
     if (!Number.isFinite(n)) return null;
     return /rem\s*$/.test(raw.trim()) ? n * remBase : n;
   };
-  const buttonRadiusPx = px("--buttons-radius");
+  /* The real button and the real card where we found them. `--buttons-radius` is a Dawn
+     setting, and a theme that does not publish it left these at the app's own defaults with
+     DIRECT beside them, which is worse than saying nothing. */
+  const buttonRadiusPx = elShape?.buttonRadiusPx ?? px("--buttons-radius");
   /* Cards first, in the order a widget most resembles: a product card, then a collection
      card, then the theme's text boxes. The button is the last resort and is usually wrong. */
-  const cardRadiusPx =
-    px("--product-card-corner-radius") ?? px("--collection-card-corner-radius")
+  const cardRadiusPx = elShape?.cardRadiusPx
+    ?? px("--product-card-corner-radius") ?? px("--collection-card-corner-radius")
     ?? px("--text-boxes-radius") ?? px("--media-radius") ?? buttonRadiusPx;
   const { corners, custom } = cornersFrom(cardRadiusPx);
 
@@ -362,6 +373,7 @@ export function mapTokens(css: string, url: string, html?: string): BrandResult 
     const el = html ? elementTokens(html, css) : null;
     const canvas = el?.canvas?.hex ?? sample(rs, "canvas", "background-color");
     const card = el?.card?.hex ?? sample(rs, "card", "background-color");
+    const inputBg = el?.inputBackground?.hex ?? null;
     /* The element first, the selector guess second. Finding the real button in the HTML and
        reading the rules that apply TO IT is the only thing that resolves a theme whose CTA
        is styled inline or by utility classes with no word like "cart" in them. */
@@ -455,11 +467,15 @@ export function mapTokens(css: string, url: string, html?: string): BrandResult 
         t("Widget_Background", bg,
           bg === el?.card?.hex ? el.card.source : card ? "your product card interior" : "most used light surface",
           bg === el?.card?.hex ? el.card.confidence : conf(card)),
-        t("Product_Tile_Background", card || "#FFFFFF",
-          card === el?.card?.hex ? el!.card!.source : card ? "your product card interior" : "assumed white card",
-          card === el?.card?.hex ? el!.card!.confidence : conf(card)),
+        t("Product_Tile_Background", inputBg || card || "#FFFFFF",
+          inputBg ? el!.inputBackground!.source
+            : card === el?.card?.hex ? el!.card!.source
+            : card ? "your product card interior" : "assumed white card",
+          inputBg ? el!.inputBackground!.confidence
+            : card === el?.card?.hex ? el!.card!.confidence : conf(card)),
       ],
       corners, cornersCustomPx: custom, cardRadiusPx, buttonRadiusPx, fontBody, fontHeading, schemes, notes,
+      shadow: elShape?.shadow ?? null, ctaStyle: elShape?.ctaStyle ?? null,
     };
   }
 
@@ -527,6 +543,7 @@ export function mapTokens(css: string, url: string, html?: string): BrandResult 
       tk("Product_Tile_Background", tileBg, tileBg === "#FFFFFF" ? "white card surface" : "your card background", tileBg === "#FFFFFF" ? "derived" : "theme"),
     ],
     corners, cornersCustomPx: custom, cardRadiusPx, buttonRadiusPx, fontBody, fontHeading, schemes, notes,
+      shadow: elShape?.shadow ?? null, ctaStyle: elShape?.ctaStyle ?? null,
   };
 }
 
@@ -789,6 +806,41 @@ function resolveOn(
   return null;
 }
 
+/** Any declaration on an element, resolved the same way a colour is: the element's own style
+ *  attribute first, then the rules that apply to it, !important, specificity, source order.
+ *  Returns the raw value, because radius, shadow and font-family are not colours. */
+function rawOn(
+  el: CtaElement, rs: Rule[], vars: Record<string, string>, which: string,
+): string | null {
+  const read = (decl: string) => {
+    const v = prop(decl, which);
+    if (!v) return null;
+    const out = v.includes("var(") ? expandVars(v, vars).trim() : v.trim();
+    return out && !out.includes("var(") ? out : null;
+  };
+  if (el.style) { const inline = read(el.style); if (inline) return inline; }
+  let win: { v: string; rank: number } | null = null;
+  rs.forEach((r, i) => {
+    const { hit, spec } = selectorHits(r.sel, el);
+    if (!hit) return;
+    const v = read(r.decl);
+    if (!v) return;
+    const important = /!\s*important/i.test(r.decl) ? 100000 : 0;
+    const rank = important + spec * 1000 + i;
+    if (!win || rank > win.rank) win = { v, rank };
+  });
+  return win ? (win as { v: string }).v : null;
+}
+
+const firstPx = (v: string | null): number | null => {
+  if (!v) return null;
+  const m = /(-?\d+(?:\.\d+)?)\s*px/.exec(v);
+  if (m) return Number(m[1]);
+  if (/^\s*0\s*$/.test(v)) return 0;
+  if (/\d+\s*%/.test(v) || /9999/.test(v)) return 999;
+  return null;
+};
+
 /** Every token the skill grounds in a visible element, read off that element.
  *
  *  Steps 1, 2, 3, 4 and 5 of `stackback-color-tokens`, in its order: the canvas between the
@@ -822,7 +874,64 @@ export function elementTokens(html: string, css: string) {
     ?? on(findTag(html, "h1", "your page heading"), "color")
     ?? on(findByClass(html, /span|div|p/, /\bprice\b|\bproduct__price\b|\bmoney\b/, "your price text"), "color");
 
-  return { canvas, card, accent, heading };
+  /* The rest of the skill's list, which was never read and was reported at the app's own
+     defaults with a DIRECT tag beside it, which is worse than saying nothing. */
+  const cardEl = findByClass(html, /div|li|article/, /\bproduct-card\b|\bcard__inner\b|\bproduct-item\b|\bproduct-grid-item\b/, "your product card");
+  const ctaEl = findCta(html);
+  const bodyEl = findTag(html, "body", "your body text");
+  const inputEl = findByClass(html, /input|div|select/, /\bquantity\b|\bqty\b|\bfield__input\b|\bform__input\b/, "your quantity field");
+
+  const raw = (el: CtaElement | null, which: string) => (el ? rawOn(el, rs, vars, which) : null);
+
+  /** A fill means solid; a transparent background with a border means outline. */
+  const ctaBg = ctaEl ? rawOn(ctaEl, rs, vars, "background-color") ?? rawOn(ctaEl, rs, vars, "background") : null;
+  /* "outline" only when we can see there is genuinely no fill. Dawn paints its primary
+     button with a ::before, so the element's own background-color reads transparent while the
+     button renders solid coral: reporting outline there is a confident wrong answer, and no
+     answer is the right one. */
+  const dawnish = /--color-button|\.color-scheme-/.test(css);
+  const ctaStyle: "solid" | "outline" | null = !ctaEl ? null
+    : ctaBg && !/transparent|rgba\([^)]*,\s*0\s*\)/i.test(ctaBg) ? "solid"
+    : dawnish ? null
+    : ctaBg ? "outline"
+    : null;
+
+  const shadowRaw = raw(cardEl, "box-shadow");
+  const shadow: "none" | "subtle" | "strong" | null = shadowRaw == null
+    ? null
+    : /^\s*none\s*$/i.test(shadowRaw) ? "none"
+    /* Blur radius is the honest axis: a 4px blur is a lift, a 24px one is a card floating. */
+    : (firstPxAt(shadowRaw, 2) ?? 0) >= 16 ? "strong" : "subtle";
+
+  const fontRaw = raw(bodyEl, "font-family") || vars["--font-body-family"] || null;
+
+  return {
+    canvas, card, accent, heading,
+    cardRadiusPx: firstPx(raw(cardEl, "border-radius")),
+    buttonRadiusPx: firstPx(raw(ctaEl, "border-radius")),
+    shadow,
+    ctaStyle,
+    fontBody: realFont(fontRaw),
+    inputBackground: on(inputEl, "background-color"),
+  };
+}
+
+/** A font stack's first family, or null when what came back is a token rather than a font.
+ *  rosierfoods.com resolves `font-family` to `M-Body-Font`, a custom property name defined
+ *  somewhere we did not fetch, and "M-Body-Font" is not a typeface anybody can match. */
+function realFont(raw: string | null): string | null {
+  if (!raw) return null;
+  const first = raw.replace(/['"]/g, "").split(",")[0].trim();
+  if (!first || first.startsWith("--") || first.includes("var(")) return null;
+  if (/^-{0,2}[a-z]-|[-_]font$|^font[-_]/i.test(first)) return null;
+  if (/^(inherit|initial|unset|revert)$/i.test(first)) return null;
+  return first;
+}
+
+/** The nth number in a shadow, for reading its blur. */
+function firstPxAt(v: string, n: number): number | null {
+  const nums = v.match(/-?\d+(?:\.\d+)?(?=px)/g);
+  return nums && nums[n] != null ? Number(nums[n]) : null;
 }
 
 export function ctaFill(html: string, css: string): { hex: string; source: string; confidence: Confidence } | null {

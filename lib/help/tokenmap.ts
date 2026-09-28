@@ -30,7 +30,20 @@ export type ReadSources = Partial<Record<string, { source: string; confidence: "
 
 const HOW: Record<string, TokenRow["how"]> = { theme: "direct", derived: "derived", guessed: "derived" };
 
-export function canonicalTokens(t: WidgetTheme, read?: ReadSources, fontBody?: string | null): TokenSection[] {
+/** What the reader actually managed to read off the page, beyond the six colours. Absent
+ *  means it could not be found, and the row says so instead of presenting the app's own
+ *  default with DIRECT beside it. */
+export interface ReadShape {
+  cardRadiusPx?: number | null;
+  buttonRadiusPx?: number | null;
+  shadow?: "none" | "subtle" | "strong" | null;
+  ctaStyle?: "solid" | "outline" | null;
+  fontRead?: boolean;
+}
+
+export function canonicalTokens(
+  t: WidgetTheme, read?: ReadSources, fontBody?: string | null, shape?: ReadShape,
+): TokenSection[] {
   /** A row whose value the brand reader supplied carries the reader's own words for where it
    *  came from; everything else is what the theme is set to, said plainly. */
   const from = (key: string, fallback: string, how: TokenRow["how"] = "logic"): Pick<TokenRow, "note" | "how"> => {
@@ -73,26 +86,33 @@ export function canonicalTokens(t: WidgetTheme, read?: ReadSources, fontBody?: s
     {
       title: "Shape",
       rows: [
-        { label: "Corner Radius", value: `${t.shape.radius}px`, note: "The container and the plan cards", how: "direct" },
+        { label: "Corner Radius", value: `${t.shape.radius}px`,
+          note: shape?.cardRadiusPx != null ? "Read off your product card" : "Not found on the page; the app's default",
+          how: shape?.cardRadiusPx != null ? "direct" : "logic" },
         { label: "Button Radius", value: t.shape.buttonRadius >= 999 ? "pill" : `${t.shape.buttonRadius}px`,
-          note: "The subscribe button, which is a different number on most themes", how: "direct" },
+          note: shape?.buttonRadiusPx != null ? "Read off your Add to cart button" : "Not found on the page; the app's default",
+          how: shape?.buttonRadiusPx != null ? "direct" : "logic" },
       ],
     },
     {
       title: "Widget chrome",
       rows: [
-        { label: "Show Outer Border", value: t.chrome.borderVisible ? "true" : "false" },
-        { label: "Border Color", value: t.chrome.borderColor, swatch: true, note: "The outer border, when it is shown" },
-        { label: "Shadow", value: t.chrome.shadow },
+        { label: "Show Outer Border", value: t.chrome.borderVisible ? "true" : "false", how: "logic" },
+        { label: "Border Color", value: t.chrome.borderColor, swatch: true, note: "The outer border, when it is shown", how: "derived" },
+        { label: "Shadow", value: t.chrome.shadow,
+          note: shape?.shadow ? "Read off your product card" : "Not found on the page; the app's default",
+          how: shape?.shadow ? "direct" : "logic" },
       ],
     },
     {
       title: "Component styles",
       rows: [
-        { label: "Tab Style", value: t.components.tabStyle },
-        { label: "CTA Button Style", value: t.components.ctaButton },
-        { label: "Discount Badge Style", value: t.components.discountBadge },
-        { label: "Selected Card State", value: t.components.selectedCardState },
+        { label: "Tab Style", value: t.components.tabStyle, note: "Not read; the app's default", how: "logic" },
+        { label: "CTA Button Style", value: t.components.ctaButton,
+          note: shape?.ctaStyle ? "A fill means solid, a transparent background with a border means outline" : "Not read; the app's default",
+          how: shape?.ctaStyle ? "direct" : "logic" },
+        { label: "Discount Badge Style", value: t.components.discountBadge, note: "Not read; the app's default", how: "logic" },
+        { label: "Selected Card State", value: t.components.selectedCardState, note: "Not read; the app's default", how: "logic" },
       ],
     },
     {
@@ -111,7 +131,9 @@ export function canonicalTokens(t: WidgetTheme, read?: ReadSources, fontBody?: s
     {
       title: "Fonts",
       rows: [
-        { label: "Body Font", value: matchFont(fontBody), note: fontBody ? `Read as ${fontBody}` : "No font read; Inter is the default", how: fontBody ? "direct" : "logic" },
+        { label: "Body Font", value: matchFont(fontBody),
+          note: fontBody ? `Read as ${fontBody}, matched to the nearest the app offers` : "No font read; Inter is the default",
+          how: fontBody ? "direct" : "logic" },
         { label: "Header Font", value: matchFont(fontBody), note: "Matched to the body font unless the site sets a second one", how: "logic" },
       ],
     },

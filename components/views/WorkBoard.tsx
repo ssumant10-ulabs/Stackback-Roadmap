@@ -46,6 +46,7 @@ export function WorkBoard() {
   /** Two filters, because "Design's cards" and "every template" are different questions and
    *  one control cannot answer both. The team one is the popover; this one is the row. */
   const [kindFilter, setKindFilter] = useState<CardKind | null>(null);
+  const [kindOpen, setKindOpen] = useState(false);
 
   const cards = useMemo(() => {
     let out = all;
@@ -77,6 +78,18 @@ export function WorkBoard() {
     const id = dragId || e.dataTransfer.getData("text/plain");
     setDragId(null);
     if (!id) return;
+    const card = all.find((x) => x.id === id);
+    if (!card) return;
+    const r = stageForDrop(c, card.team);
+    if ("ask" in r) { setAsk({ id, kind: r.ask, col: c }); return; }
+    s.setStage(id, r.stage, {
+      ...("review" in r ? { review: r.review ?? null } : {}),
+      ...("team" in r ? { team: r.team ?? null } : {}),
+    });
+  }
+
+  /** The move menu and a drop are the same action, so they run the same rule. */
+  function moveTo(id: string, c: BoardColumn) {
     const card = all.find((x) => x.id === id);
     if (!card) return;
     const r = stageForDrop(c, card.team);
@@ -123,24 +136,38 @@ export function WorkBoard() {
         </nav>
         {/* Filter and Add task live here, on the tabs row, rather than in a strip of their
             own above it. Three stacked rows of chrome before the first column. */}
-        <span className="wb-kfilters">
-          {ALL_KINDS.map((k) => (
-            <button key={k} type="button"
-              className={"wb-kchip k-" + k + (kindFilter === k ? " on" : "")}
-              onClick={() => setKindFilter(kindFilter === k ? null : k)}>
-              {KIND_LABEL[k]}
-            </button>
-          ))}
-        </span>
-
         {/* Fixed to the right of the row, not pushed there by the tabs: the tab strip is a
             different width on every lens, so `margin-left: auto` moved Filter and Add task
             every time you switched. */}
         <span className="wb-actions">
+          {/* Two filters, two questions. "Who" is the team and person popover; "What" is the
+              kind of work. They were a popover and a loose row of capsules, which read as one
+              control and a decoration. */}
+          <span className="wb-kfwrap">
+            <button type="button" className={"btn ghost" + (kindFilter ? " active-filter" : "")}
+              aria-haspopup="true" aria-expanded={kindOpen}
+              onClick={() => setKindOpen((v) => !v)}>
+              <IcFilter /><span>{kindFilter ? KIND_LABEL[kindFilter] : "Work"}</span>
+            </button>
+            {kindOpen && (
+              <span className="wb-kfmenu" onMouseLeave={() => setKindOpen(false)}>
+                {ALL_KINDS.map((k) => (
+                  <button key={k} type="button" className={kindFilter === k ? "on" : ""}
+                    onClick={() => { setKindFilter(kindFilter === k ? null : k); setKindOpen(false); }}>
+                    {KIND_LABEL[k]}
+                  </button>
+                ))}
+                {kindFilter && (
+                  <button type="button" className="wb-kfclear"
+                    onClick={() => { setKindFilter(null); setKindOpen(false); }}>Clear</button>
+                )}
+              </span>
+            )}
+          </span>
           <button ref={filterBtn} type="button" className={"btn ghost" + (filter ? " active-filter" : "")}
             data-filter-anchor aria-haspopup="true"
             onClick={() => filterBtn.current && ui.openFilter(filterBtn.current)}>
-            <IcFilter /><span>{filter ? filter.name : "Filter"}</span>
+            <IcFilter /><span>{filter ? filter.name : "Who"}</span>
           </button>
           <button type="button" className="btn primary" onClick={ui.openAddTask}><IcPlus /> Add task</button>
         </span>
@@ -193,6 +220,7 @@ export function WorkBoard() {
                   <Card key={card.id} card={card} view={view}
                     rank={at + 1} of={list.length}
                     siblings={list.map((x) => x.id)}
+                    onMove={(id, col) => moveTo(id, col)}
                     dragging={dragId === card.id}
                     onDragStart={(e) => { setDragId(card.id); e.dataTransfer.setData("text/plain", card.id); e.dataTransfer.effectAllowed = "move"; }}
                     onDragEnd={() => { setDragId(null); setOver(null); }} />
@@ -282,8 +310,10 @@ function AddCard({ col, open, onOpen, onClose, onAsk }: {
 const nextPriority = (p: number | null | undefined): 1 | 2 | 3 =>
   (normPriority(p) === 3 ? 1 : normPriority(p) + 1) as 1 | 2 | 3;
 
-function Card({ card, view, rank: at, of, siblings, dragging, onDragStart, onDragEnd }: {
+function Card({ card, view, rank: at, of, siblings, onMove, dragging, onDragStart, onDragEnd }: {
   card: BoardCard; view: BoardView;
+  /** Moving a card to a column runs the same rule a drop on it does, nudge and all. */
+  onMove: (id: string, col: BoardColumn) => void;
   /** 1-based position in its column, which IS its priority. */
   rank: number; of: number; siblings: string[];
   dragging: boolean;
@@ -329,16 +359,26 @@ function Card({ card, view, rank: at, of, siblings, dragging, onDragStart, onDra
         {/* Moving a card without dragging it. Dragging is fine within a column you can see;
             it is not how you send something from the backlog to Dev on a board that scrolls
             five columns wide. */}
+        {/* The columns of the board you are looking at, which is what "move it" means when
+            you are looking at one. A list of teams answered a different question and left you
+            to work out which column that put it in. */}
         <span className="wb-moveto">
-          <button type="button" aria-label="Move to a team" title="Move to a team"
+          <button type="button" aria-label="Move to a column" title="Move to a column"
             onClick={() => setMoveOpen((v) => !v)}>&#8594;</button>
           {moveOpen && (
-            <span className="wb-movemenu" onMouseLeave={() => setMoveOpen(false)}>
+            <span className="wb-movemenu">
+              {VIEW_BY_ID[view].columns.map((c) => (
+                <button key={c.key} type="button"
+                  className={fits(c, card.stage, card.teams, card.review, kind) ? "on" : ""}
+                  onClick={() => { onMove(card.id, c); setMoveOpen(false); }}>
+                  {c.title}
+                </button>
+              ))}
+              <span className="wb-moverule" />
               {MOVE_TO.map((m) => (
                 <button key={m.label} type="button"
-                  className={card.team === m.value ? "on" : ""}
                   onClick={() => { s.moveToTeam(card.id, m.value, m.stage); setMoveOpen(false); }}>
-                  {m.label}
+                  {m.label === "Back to the backlog" ? m.label : `Hand to ${m.label}`}
                 </button>
               ))}
             </span>

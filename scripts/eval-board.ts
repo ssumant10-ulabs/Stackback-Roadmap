@@ -8,7 +8,7 @@
  *  Run: npx tsx scripts/eval-board.ts
  */
 import {
-  ALL_KINDS, BOARD_VIEWS, VIEW_BY_ID, fits, stageForDrop, stageOf,
+  ALL_KINDS, ALL_STAGES, BOARD_VIEWS, VIEW_BY_ID, fits, stageForDrop, stageOf,
   type BoardTeam, type BoardView, type CardKind, type ReviewWith, type Stage,
 } from "../lib/board";
 
@@ -96,7 +96,7 @@ ok(same(where("prod", "Engineering", null), ["pm.approved", "dev.prod"]),
 
 console.log("\n# a card is never in two teams' columns at once");
 let crossed = 0;
-for (const stage of ALL_STAGES()) {
+for (const stage of ALL_STAGES) {
   for (const team of ["Design", "Engineering"] as (BoardTeam | null)[]) {
     for (const review of [null, "Design", "PM"] as (ReviewWith | null)[]) {
       /* The two columns that exist to show the OTHER team's work are not a leak: they are
@@ -155,15 +155,17 @@ ok(dropStage(col("design", "todev"), "Design") === "design_to_dev",
 console.log("\n# the backlog and roadmap lenses are re-cuts, not a fourth place to be");
 const inLens = (lens: BoardView, stage: Stage) =>
   VIEW_BY_ID[lens].columns.some((c) => fits(c, stage, ["Design", "Engineering", "PM"], null, "feature"));
-for (const st of ALL_STAGES()) {
+for (const st of ALL_STAGES) {
   const onTeamBoard = TEAM_VIEWS.some((v) => v.columns.some((c) => fits(c, st, ["Design", "Engineering", "PM"], null, "feature")));
   if (inLens("roadmap", st) && !onTeamBoard) {
     fails++; console.log(`  FAIL  ${st} is on the roadmap lens and on no team board`);
   }
 }
-ok(ALL_STAGES().every((st) => inLens("roadmap", st)), "every stage has a roadmap column, so no card is invisible there");
-ok(["bug", "feature"].every((st) => inLens("backlog", st as Stage)), "the backlog holds the two intake stages");
-ok(!inLens("backlog", "dev_progress") && !inLens("backlog", "prod"), "and nothing that has been picked up");
+ok(ALL_STAGES.every((st) => inLens("roadmap", st)), "every stage has a roadmap column, so no card is invisible there");
+/* The backlog is the INVENTORY, not the queue. It took the two intake stages, so a card
+   vanished from the one list meant to hold everything the moment anybody picked it up, and
+   with the live data it read empty while 71 cards existed. */
+ok(ALL_STAGES.every((st) => inLens("backlog", st)), "the backlog holds every card at every stage");
 ok(ALL_KINDS.every((k) => VIEW_BY_ID.backlog.columns.some((c) => fits(c, "feature", [], null, k))),
   "every kind has a backlog column, so no card is invisible there");
 
@@ -175,10 +177,7 @@ ok(stageOf({ kind: "bug", stage: "prod" }) === "prod", "a stored stage wins over
 console.log(fails ? `\nFAIL: ${fails}` : "\nPASS");
 process.exit(fails ? 1 : 0);
 
-function ALL_STAGES(): Stage[] {
-  return ["bug", "feature", "pm_handover", "design_progress", "design_review", "design_approved",
-    "design_to_dev", "dev_progress", "dev_review", "dev_approved", "prod"];
-}
+
 function same(a: string[], b: string[]): boolean {
   return a.length === b.length && [...a].sort().join("|") === [...b].sort().join("|");
 }
