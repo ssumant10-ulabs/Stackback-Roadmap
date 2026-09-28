@@ -389,7 +389,11 @@ export function mapTokens(css: string, url: string, html?: string): BrandResult 
     const anySurface = top.filter((t) => isSurface(t.hex));
 
     const primary = ctaBg || anyBrand[0]?.hex || "#111111";
-    const bg = card || anySurface[0]?.hex || "#FFFFFF";
+    /* The skill's step 2: inside a product card, "usually #ffffff". When no card can be
+       found, white is the honest guess and the most-used light surface is not: on a cream
+       storefront that is the page background, which is step 1 and the thing step 2 has to
+       CONTRAST with. rosierfoods came back with its page cream as the widget interior. */
+    const bg = card || "#FFFFFF";
     /* Step 1 of the skill wants the ground BETWEEN the cards, which on a site that is white
        throughout is the same white as the card. It cannot be both, and step 2 says the two
        must contrast, so it is derived: a wash of the store's own button colour, which stays
@@ -465,8 +469,10 @@ export function mapTokens(css: string, url: string, html?: string): BrandResult 
             : "darkest text colour",
           text === el?.heading?.hex ? el.heading.confidence : conf(heading || bodyText)),
         t("Widget_Background", bg,
-          bg === el?.card?.hex ? el.card.source : card ? "your product card interior" : "most used light surface",
-          bg === el?.card?.hex ? el.card.confidence : conf(card)),
+          bg === el?.card?.hex ? el.card.source
+            : card ? "your product card interior"
+            : "no product card found on the page, so white, which is what a widget sits on",
+          bg === el?.card?.hex ? el.card.confidence : card ? conf(card) : "derived"),
         t("Product_Tile_Background", inputBg || card || "#FFFFFF",
           inputBg ? el!.inputBackground!.source
             : card === el?.card?.hex ? el!.card!.source
@@ -860,7 +866,12 @@ export function elementTokens(html: string, css: string) {
     ?? on(findByClass(html, /div|main|section/, /\bpage-?(wrapper|container)\b|\bsite-?wrapper\b/, "your page background"), "background-color");
 
   // Step 2: inside a product card.
-  const card = on(findByClass(html, /div|li|article/, /\bproduct-card\b|\bcard__inner\b|\bproduct-item\b|\bproduct-grid-item\b/, "your product card interior"), "background-color");
+  /* A card interior, whatever the theme calls it. The four Dawn-lineage names missed every
+     theme that ships its own: rosierfoods draws `.pcard`, and the read fell through to "the
+     most used light surface", which on a cream storefront is the page, not a card. */
+  const card = on(findByClass(html, /div|li|article|section/,
+    /\bproduct-card\b|\bcard__inner\b|\bproduct-item\b|\bproduct-grid-item\b|\bpcard\b|\bcard-wrapper\b|\bproduct-block\b|\bproduct-tile\b|\bgrid-product\b|\bcard-product\b|\bproduct__card\b/,
+    "your product card interior"), "background-color");
 
   // Step 4: the sale badge or announcement bar.
   const accent = on(

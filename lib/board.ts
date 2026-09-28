@@ -56,6 +56,9 @@ export interface BoardColumn {
 export interface BoardViewDef {
   id: BoardView;
   label: string;
+  /** Only cards a team has. The Roadmap lens is the overview of work in hand, so a card
+   *  nobody owns is in the backlog and nowhere else until somebody takes it. */
+  ownedOnly?: true;
   /** What this lens is for, one line, shown under the tabs. */
   blurb: string;
   columns: BoardColumn[];
@@ -192,7 +195,8 @@ BOARD_VIEWS.push(
   {
     id: "roadmap",
     label: "Roadmap",
-    blurb: "Every card by where the work is, not by who holds it. The same cards as the team boards.",
+    ownedOnly: true,
+    blurb: "The overview: everything a team has, by where the work is. Anything nobody has taken is in the backlog.",
     columns: [
       { key: "todo", title: "Not started",
         accepts: [{ stage: "bug" }, { stage: "feature" }, { stage: "pm_handover" }] },

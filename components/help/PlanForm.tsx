@@ -10,6 +10,7 @@ import { drawPlanSheet } from "@/lib/help/sheet-png";
 import OrderImport from "./OrderImport";
 import type { PilotStore } from "@/lib/types";
 import { coverage, discountBand, referenceFor, type CategoryReference } from "@/lib/help/references";
+import ReferenceDrawer from "./ReferenceDrawer";
 import { CATEGORY_DEFAULTS, categoryIdFor } from "@/lib/help/categories";
 import type { WidgetSettings } from "@/lib/help/widget";
 
@@ -88,6 +89,7 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
   })();
 
   const [showLike, setShowLike] = useState(false);
+  const [refsOpen, setRefsOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
@@ -219,7 +221,15 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
           onAnswers(next); save(next);
         }} />
 
-        <p className="hc-suggesth">What similar stores run</p>
+        <p className="hc-suggesth">
+          What similar stores run
+          {/* The panel answers "what does MY category do". The drawer answers "show me all of
+              them", which is the question the moment a merchant says their category is
+              different, and it was a tab nobody opened. */}
+          <button type="button" className="hc-refbtn" onClick={() => setRefsOpen(true)}>
+            References
+          </button>
+        </p>
 
         {!cat && !scale && (
           <p className="hc-note">Pick a category and a size, and this fills in.</p>
@@ -357,6 +367,8 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
           </div>
         )}
       </aside>
+
+      {refsOpen && <ReferenceDrawer pilots={pilots} onClose={() => setRefsOpen(false)} />}
     </div>
   );
 }

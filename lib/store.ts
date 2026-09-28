@@ -138,11 +138,6 @@ function clone<T>(v: T): T {
   return JSON.parse(JSON.stringify(v));
 }
 
-/** A card nobody is named on belongs to PM, because PM is who triages. Without this the
- *  three team boards only populated from the sheet's Team column, so anything the sheet left
- *  blank was on no board at all and only the backlog knew it existed. */
-const withOwner = (teams: BoardTeam[]): BoardTeam[] => (teams.length ? teams : ["PM"]);
-
 export class Store {
   data: Data = defaultData();
   ui: UiState = {
@@ -647,7 +642,7 @@ export class Store {
          anybody assigned since it became a card on this board. */
       const teams = f.boardTeam
         ? [f.boardTeam]
-        : withOwner([...new Set([
+        : ([...new Set([
             teamToBoard(f.team),
             ...(f.assignees || []).map((a) => teamToBoard(this.helpers.assigneeTeam(a))),
           ])].filter(Boolean) as BoardTeam[]);
@@ -669,7 +664,7 @@ export class Store {
          zero while the sheet had design work on it. Both answers are true, so both count. */
       const teams = t.boardTeam
         ? [t.boardTeam]
-        : withOwner([...new Set([
+        : ([...new Set([
             teamToBoard(t.team),
             ...(t.assignees || []).map((a) => teamToBoard(this.helpers.assigneeTeam(a))),
           ])].filter(Boolean) as BoardTeam[]);

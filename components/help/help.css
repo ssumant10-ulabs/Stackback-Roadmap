@@ -1705,3 +1705,54 @@
 /* No sub row on those parts, so the rail and the headings sit one layer higher. */
 .hc[data-hc-part="queries"] .hc-nav,
 .hc[data-hc-part="internal"] .hc-nav { top: calc(var(--hc-bar) + 14px); }
+
+/* ---- the references drawer -------------------------------------------------------------
+   Every store and what it runs, by category, glanced at mid-form and closed. The panel
+   beside the fields answers "what does my category do"; this answers "show me all of them". */
+.hc-refbtn {
+  appearance: none; border: 1px solid var(--border-2); background: var(--card); cursor: pointer;
+  font: inherit; font-size: 11px; font-weight: 620; color: var(--ink-2);
+  border-radius: 999px; padding: 2px 9px; margin-left: 8px; vertical-align: middle;
+}
+.hc-refbtn:hover { border-color: var(--brand-deep); color: var(--ink); }
+.hc-drawerwrap { position: fixed; inset: 0; z-index: 80; }
+.hc-drawerscrim { position: absolute; inset: 0; background: rgba(0, 0, 0, .34); }
+.hc-drawer {
+  position: absolute; top: 0; right: 0; bottom: 0; width: min(620px, 100%);
+  background: var(--page); border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; box-shadow: -18px 0 46px rgba(0, 0, 0, .22);
+}
+.hc-drawerh {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 16px 18px; border-bottom: 1px solid var(--border);
+}
+.hc-drawerh b { display: block; font-size: 15px; }
+.hc-drawerh span { display: block; font-size: 12px; color: var(--hc-muted); margin-top: 2px; }
+.hc-drawerh button {
+  margin-left: auto; appearance: none; border: 0; background: none; cursor: pointer;
+  font-size: 22px; line-height: 1; color: var(--hc-muted); padding: 0 2px;
+}
+.hc-drawerh button:hover { color: var(--ink); }
+.hc-drawerbody { flex: 1 1 auto; overflow: auto; padding: 12px 18px 26px; }
+.hc-drawercat { border-bottom: 1px solid var(--border); }
+.hc-drawercath {
+  display: flex; align-items: baseline; gap: 9px; width: 100%;
+  appearance: none; border: 0; background: none; cursor: pointer; font: inherit;
+  color: var(--ink); text-align: left; padding: 12px 0;
+}
+.hc-drawercath b { font-size: 13.5px; font-weight: 700; }
+.hc-drawercath em { font-style: normal; font-size: 11px; color: var(--hc-muted); }
+.hc-drawercath span { margin-left: auto; font-size: 12px; color: var(--hc-muted); text-align: right; }
+.hc-drawerthin {
+  margin: 0 0 10px; font-size: 11.5px; line-height: 1.5;
+  background: var(--hc-limit-soft); color: var(--hc-limit); border-radius: 8px; padding: 7px 9px;
+}
+.hc-drawertable { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 14px; }
+.hc-drawertable th {
+  text-align: left; font-size: 10.5px; font-weight: 700; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--hc-muted); padding: 0 8px 6px 0;
+}
+.hc-drawertable td { padding: 6px 8px 6px 0; border-top: 1px solid var(--border); vertical-align: top; }
+.hc-drawertable i { font-style: normal; color: var(--hc-muted); }
+.hc-drawergap td { opacity: .62; }
+@media (max-width: 719px) { .hc-drawer { width: 100%; } }

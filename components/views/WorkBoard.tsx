@@ -57,6 +57,9 @@ export function WorkBoard() {
 
   const byColumn = useMemo(() => {
     const out: Record<string, BoardCard[]> = {};
+    /* The Roadmap lens is the overview of work in hand: a card nobody has taken belongs in
+       the backlog and nowhere else until somebody takes it. */
+    const pool = def.ownedOnly ? cards.filter((c) => c.teams.length > 0) : cards;
     for (const c of def.columns) {
       /* Rank is the priority, so it is the sort. Cards with no rank yet keep the order they
          arrived in, behind anything that has been placed by hand. */
@@ -260,7 +263,8 @@ const rank = (c: BoardCard): number => {
 
 function countFor(cards: BoardCard[], view: BoardView): number {
   const def = VIEW_BY_ID[view];
-  return cards.filter((c) => def.columns.some((col) => fits(col, c.stage, c.teams, c.review, kindOf(c)))).length;
+  const pool = def.ownedOnly ? cards.filter((c) => c.teams.length > 0) : cards;
+  return pool.filter((c) => def.columns.some((col) => fits(col, c.stage, c.teams, c.review, kindOf(c)))).length;
 }
 
 /** Add a card straight into the column you are looking at. A card born in Bugs is a bug;
