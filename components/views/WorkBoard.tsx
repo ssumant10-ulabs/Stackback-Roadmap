@@ -2,7 +2,7 @@
 import { DragEvent, useMemo, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import {
-  ASK_REVIEW, ASK_TEAM, BOARD_VIEWS, KIND_LABEL, STAGE_LABEL, VIEW_BY_ID,
+  ALL_KINDS, ASK_REVIEW, ASK_TEAM, BOARD_VIEWS, KIND_LABEL, MOVE_TO, STAGE_LABEL, VIEW_BY_ID,
   fits, stageForDrop,
   type BoardColumn, type BoardTeam, type BoardView, type CardKind, type ReviewWith, type Stage,
 } from "@/lib/board";
@@ -43,10 +43,16 @@ export function WorkBoard() {
 
   /** The team and person filter, which applied to two views and silently did nothing here.
    *  A card matches on who is assigned to it, or on the team it was handed to. */
+  /** Two filters, because "Design's cards" and "every template" are different questions and
+   *  one control cannot answer both. The team one is the popover; this one is the row. */
+  const [kindFilter, setKindFilter] = useState<CardKind | null>(null);
+
   const cards = useMemo(() => {
-    if (!filter) return all;
-    return all.filter((c) => (c.node ? s.nodeInFilter(c.node) : s.featureInFilter(c.feature!, c.team)));
-  }, [all, filter, s]);
+    let out = all;
+    if (filter) out = out.filter((c) => (c.node ? s.nodeInFilter(c.node) : s.featureInFilter(c.feature!, c.team)));
+    if (kindFilter) out = out.filter((c) => kindOf(c) === kindFilter);
+    return out;
+  }, [all, filter, kindFilter, s]);
 
   const byColumn = useMemo(() => {
     const out: Record<string, BoardCard[]> = {};
@@ -75,7 +81,10 @@ export function WorkBoard() {
     if (!card) return;
     const r = stageForDrop(c, card.team);
     if ("ask" in r) { setAsk({ id, kind: r.ask, col: c }); return; }
-    s.setStage(id, r.stage, "review" in r ? { review: r.review ?? null } : undefined);
+    s.setStage(id, r.stage, {
+      ...("review" in r ? { review: r.review ?? null } : {}),
+      ...("team" in r ? { team: r.team ?? null } : {}),
+    });
   }
 
   function answer(value: string) {
@@ -114,6 +123,16 @@ export function WorkBoard() {
         </nav>
         {/* Filter and Add task live here, on the tabs row, rather than in a strip of their
             own above it. Three stacked rows of chrome before the first column. */}
+        <span className="wb-kfilters">
+          {ALL_KINDS.map((k) => (
+            <button key={k} type="button"
+              className={"wb-kchip k-" + k + (kindFilter === k ? " on" : "")}
+              onClick={() => setKindFilter(kindFilter === k ? null : k)}>
+              {KIND_LABEL[k]}
+            </button>
+          ))}
+        </span>
+
         {/* Fixed to the right of the row, not pushed there by the tabs: the tab strip is a
             different width on every lens, so `margin-left: auto` moved Filter and Add task
             every time you switched. */}
@@ -202,6 +221,9 @@ export function WorkBoard() {
  *  a component never has to know which of the two shapes it is holding to place it. */
 type BoardCard = ReturnType<ReturnType<typeof useStore>["boardCards"]>[number];
 
+/** What a card is, whichever record holds it. Roadmap work is a feature unless said so. */
+const kindOf = (c: BoardCard): CardKind => (c.node?.kind || c.feature?.kind || "feature") as CardKind;
+
 /** No rank yet means "wherever you already were", which sorts behind anything placed. */
 const rank = (c: BoardCard): number => {
   const v = c.node?.boardOrder ?? c.feature?.boardOrder;
@@ -210,7 +232,7 @@ const rank = (c: BoardCard): number => {
 
 function countFor(cards: BoardCard[], view: BoardView): number {
   const def = VIEW_BY_ID[view];
-  return cards.filter((c) => def.columns.some((col) => fits(col, c.stage, c.teams, c.review))).length;
+  return cards.filter((c) => def.columns.some((col) => fits(col, c.stage, c.teams, c.review, kindOf(c)))).length;
 }
 
 /** Add a card straight into the column you are looking at. A card born in Bugs is a bug;
@@ -257,7 +279,6 @@ function AddCard({ col, open, onOpen, onClose, onAsk }: {
   );
 }
 
-const KINDS: CardKind[] = ["bug", "feature", "landing"];
 const nextPriority = (p: number | null | undefined): 1 | 2 | 3 =>
   (normPriority(p) === 3 ? 1 : normPriority(p) + 1) as 1 | 2 | 3;
 
@@ -270,6 +291,7 @@ function Card({ card, view, rank: at, of, siblings, dragging, onDragStart, onDra
 }) {
   const s = useStore();
   const [open, setOpen] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
   /* The comment chip writes `ui.commentsOpen`, which nothing on this card was reading, so
      clicking it did nothing at all. Either way of opening the card opens the thread. */
   const cmt = s.ui.commentsOpen[card.id] === true;
@@ -296,14 +318,32 @@ function Card({ card, view, rank: at, of, siblings, dragging, onDragStart, onDra
           <button type="button" aria-label="Move down" disabled={at === of}
             onClick={() => s.reorderCard(card.id, siblings, 1)}>&#9660;</button>
         </span>
-        {/* Click to cycle. Three values do not earn a dropdown, and the tag has to be
-            changeable from the board or it will only ever say what it was created as. */}
-        <button type="button" className={"wb-kind k-" + kind} title="Bug, feature or landing page"
-          onClick={() => s.setCardKind(card.id, KINDS[(KINDS.indexOf(kind) + 1) % KINDS.length])}>
-          {KIND_LABEL[kind]}
-        </button>
+        {/* Five values, so a select rather than a click-through: cycling past four to reach
+            the fifth is a control that punishes you for wanting the last one. */}
+        <select className={"wb-kind k-" + kind} value={kind} aria-label="What this card is"
+          onChange={(e) => s.setCardKind(card.id, e.target.value as CardKind)}>
+          {ALL_KINDS.map((k) => <option key={k} value={k}>{KIND_LABEL[k]}</option>)}
+        </select>
         {f?.ref && <span className="wb-ref">{f.ref}</span>}
         {f?.urgency && <span className={"wb-urg u-" + f.urgency.toLowerCase()}>{f.urgency}</span>}
+        {/* Moving a card without dragging it. Dragging is fine within a column you can see;
+            it is not how you send something from the backlog to Dev on a board that scrolls
+            five columns wide. */}
+        <span className="wb-moveto">
+          <button type="button" aria-label="Move to a team" title="Move to a team"
+            onClick={() => setMoveOpen((v) => !v)}>&#8594;</button>
+          {moveOpen && (
+            <span className="wb-movemenu" onMouseLeave={() => setMoveOpen(false)}>
+              {MOVE_TO.map((m) => (
+                <button key={m.label} type="button"
+                  className={card.team === m.value ? "on" : ""}
+                  onClick={() => { s.moveToTeam(card.id, m.value, m.stage); setMoveOpen(false); }}>
+                  {m.label}
+                </button>
+              ))}
+            </span>
+          )}
+        </span>
         <span className="wb-status"><StatusButton node={node} size={15} /></span>
       </div>
 

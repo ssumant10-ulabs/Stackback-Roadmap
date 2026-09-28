@@ -1973,3 +1973,48 @@
 .wb-head .wb-tabs { grid-column: 1; justify-self: start; }
 .wb-actions { grid-column: 2; display: inline-flex; gap: 8px; justify-self: end; }
 .wb-head .wb-blurb { grid-column: 1 / -1; margin: 0; }
+
+/* Five kinds, so the tag is a select: cycling past four to reach the fifth is a control
+   that punishes you for wanting the last one. */
+.wb-kind {
+  appearance: none; -webkit-appearance: none; cursor: pointer; font: inherit; border: 0;
+  padding-right: 5px; max-width: 108px;
+}
+.wb-kind.k-module { background: #e6e0ff; color: #3a2570; }
+.wb-kind.k-template { background: #d9f0e4; color: #17452f; }
+
+/* Moving a card without dragging it across five columns. */
+.wb-moveto { position: relative; display: inline-flex; margin-left: auto; }
+.wb-moveto > button {
+  appearance: none; border: 1px solid var(--line, rgba(0,0,0,.14)); background: transparent;
+  color: var(--ink-3, #888); border-radius: 6px; width: 20px; height: 18px; line-height: 1;
+  font-size: 11px; cursor: pointer; padding: 0;
+}
+.wb-moveto > button:hover { color: var(--ink, #111); border-color: var(--ink-3, #999); }
+.wb-movemenu {
+  position: absolute; top: calc(100% + 3px); right: 0; z-index: 50; min-width: 148px;
+  display: flex; flex-direction: column; padding: 4px;
+  background: var(--card, #fff); border: 1px solid var(--line, rgba(0,0,0,.14));
+  border-radius: 9px; box-shadow: 0 8px 24px rgba(0,0,0,.16);
+}
+.wb-movemenu button {
+  appearance: none; border: 0; background: none; cursor: pointer; font: inherit;
+  text-align: left; font-size: 12px; padding: 6px 8px; border-radius: 6px; color: var(--ink, #111);
+}
+.wb-movemenu button:hover { background: var(--card-2, rgba(0,0,0,.05)); }
+.wb-movemenu button.on { font-weight: 700; }
+.wb-status { margin-left: 4px; }
+
+/* The work filter, beside the team one. Two questions, two controls. */
+.wb-kfilters { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.wb-kchip {
+  appearance: none; cursor: pointer; font: inherit; font-size: 11.5px; font-weight: 600;
+  border: 1px solid var(--line, rgba(0,0,0,.14)); background: transparent;
+  color: var(--ink-3, #777); border-radius: 999px; padding: 3px 10px;
+}
+.wb-kchip:hover { color: var(--ink, #111); border-color: var(--ink-3, #999); }
+.wb-kchip.on { background: var(--ink, #111); color: var(--page, #fff); border-color: transparent; }
+.wb-head { grid-template-columns: auto 1fr auto; }
+.wb-head .wb-tabs { grid-column: 1; }
+.wb-kfilters { grid-column: 2; justify-self: start; }
+.wb-actions { grid-column: 3; }

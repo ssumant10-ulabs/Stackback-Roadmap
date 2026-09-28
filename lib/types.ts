@@ -38,7 +38,7 @@ export interface Node {
   /** Design QA or PM, for dev work going out for review. */
   reviewWith?: import("./board").ReviewWith | null;
   /** What kind of card it is, for the tag. Roadmap work is a feature unless said otherwise. */
-  kind?: "feature" | "bug" | "landing";
+  kind?: import("./board").CardKind;
   /** Handover files and screenshots. Same shape and same uploader as a request's. */
   shots?: Shot[];
   /** Rank within its board column. The position IS the priority, so it has to be stored:
@@ -125,7 +125,7 @@ export interface Feature {
   issueType?: string | null;
   /** A merchant raises both. Bugs are the gap the pilot sheet never covered: it counts
    *  open bugs per store but never says what they are. */
-  kind?: "feature" | "bug" | "landing";
+  kind?: import("./board").CardKind;
   /** Where this sits on the work board. One field, read by all three lenses, so two columns
    *  that are "in sync" are the same stage rather than two that have to be kept level.
    *  Absent on anything that predates the board; see DEFAULT_STAGE. */

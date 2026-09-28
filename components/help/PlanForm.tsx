@@ -9,7 +9,7 @@ import { CATEGORY_BY_ID, SCALE_BY_ID, freqWord } from "@/lib/help/categories";
 import { drawPlanSheet } from "@/lib/help/sheet-png";
 import OrderImport from "./OrderImport";
 import type { PilotStore } from "@/lib/types";
-import { categoryReferences, coverage, discountBand, type CategoryReference } from "@/lib/help/references";
+import { coverage, discountBand, referenceFor, type CategoryReference } from "@/lib/help/references";
 import { CATEGORY_DEFAULTS, categoryIdFor } from "@/lib/help/categories";
 import type { WidgetSettings } from "@/lib/help/widget";
 
@@ -79,7 +79,9 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
   const ref = (() => {
     const id = String(answers.category || "");
     if (!id || !pilots.length) return null;
-    const mine = categoryReferences(pilots).find((r) => categoryIdFor(r.label) === id);
+    /* Merged, not the first match: two sheet categories land on one plan category and
+       taking the first showed a tea merchant the coffee stores and nothing else. */
+    const mine = referenceFor(pilots, id, categoryIdFor);
     if (!mine) return null;
     const band = discountBand(mine);
     return { ref: mine, band, cov: coverage(mine), solid: coverage(mine) >= 0.34 && Boolean(band) };

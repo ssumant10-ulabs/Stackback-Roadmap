@@ -719,6 +719,11 @@ export class Store {
     return node.id;
   }
 
+  /** Move a card to a team, from the card's own menu. The same write the nudge makes. */
+  moveToTeam(id: string, team: BoardTeam | null, stage: Stage) {
+    this.setStage(id, stage, { team, review: null });
+  }
+
   setStage(id: string, stage: Stage, opts?: { team?: BoardTeam | null; review?: ReviewWith | null }) {
     const node = this.findEntry(id)?.node;
     if (node) return this.setNodeStage(node, stage, opts);

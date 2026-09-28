@@ -17,14 +17,16 @@
 
 export type Stage =
   | "bug" | "feature"
-  | "pm_handover"
+  | "pm_progress" | "pm_handover"
   | "design_progress" | "design_review" | "design_approved" | "design_to_dev"
   | "dev_progress" | "dev_review" | "dev_approved"
   | "prod";
 
 export type BoardView = "pm" | "design" | "dev" | "backlog" | "roadmap";
-/** The two teams a card can be handed to. PM hands out; it never holds the card as a team. */
-export type BoardTeam = "Design" | "Engineering";
+/** Who holds a card. PM is one of them now: the admin dashboard and the UX ideation are
+ *  PM's own work in flight, not something waiting to be handed out, and until PM could hold
+ *  a card its board was the backlog with extra columns. */
+export type BoardTeam = "Design" | "Engineering" | "PM";
 export type ReviewWith = "Design" | "PM";
 
 /** One thing a column takes. The qualifiers are per stage, not per column: PM's "Handed for
@@ -33,6 +35,8 @@ export type ReviewWith = "Design" | "PM";
  *  design QA into PM's review column as well. */
 export interface StageSpec {
   stage: Stage;
+  /** Only cards of these kinds. The intake columns split on what a card IS, not on where. */
+  kinds?: CardKind[];
   /** Only cards handed to this team. */
   team?: BoardTeam;
   /** Only cards whose dev review went this way. */
@@ -58,14 +62,35 @@ export interface BoardViewDef {
 }
 
 /** PM and CS share a lens: the two intake columns are CS's, the rest is PM's. */
+/** The two intake pairs. A card is asked for, or it is being built. */
+export const ASKED_FOR: CardKind[] = ["bug", "feature"];
+export const BUILT: CardKind[] = ["module", "template", "landing"];
+export const ALL_KINDS: CardKind[] = ["bug", "feature", "module", "template", "landing"];
+
 export const BOARD_VIEWS: BoardViewDef[] = [
   {
     id: "pm",
     label: "PM / CS",
-    blurb: "What came in, what went out to a team, and what came back approved.",
+    blurb: "What PM has picked up, what went out to a team, and what came back approved.",
     columns: [
-      { key: "bug", title: "Bugs", accepts: [{ stage: "bug" }] },
-      { key: "feature", title: "Feature requests", accepts: [{ stage: "feature" }] },
+      /* PM's board shows what PM has TAKEN. The backlog is the everything, and a PM board
+         that repeated it was the backlog with four extra columns. A card arrives here by
+         being moved here or by being created here. */
+      { key: "asked", title: "Features and bugs",
+        accepts: [
+          { stage: "bug", team: "PM", kinds: ASKED_FOR },
+          { stage: "feature", team: "PM", kinds: ASKED_FOR },
+        ],
+        hint: "Asked for by a merchant or by us." },
+      { key: "built", title: "Modules and templates",
+        accepts: [
+          { stage: "bug", team: "PM", kinds: BUILT },
+          { stage: "feature", team: "PM", kinds: BUILT },
+        ],
+        hint: "Things we are building rather than things somebody reported." },
+      /* The admin dashboard and the UX ideation are PM's own work in flight, not something
+         waiting to be handed out, and until this column existed they had nowhere to be. */
+      { key: "pmwip", title: "In progress", accepts: [{ stage: "pm_progress" }] },
       { key: "handover", title: "Handed to design or dev", accepts: [{ stage: "pm_handover" }],
         hint: "Dropping here asks which team takes it." },
       { key: "review", title: "Handed for review",
@@ -150,23 +175,23 @@ BOARD_VIEWS.push(
   {
     id: "backlog",
     label: "Backlog",
-    blurb: "Everything nobody has picked up yet. Hand one over and it leaves.",
+    blurb: "Every card, by what it is. Move one to PM, Design or Dev and it appears on their board.",
     columns: [
-      { key: "bug", title: "Bugs", accepts: [{ stage: "bug" }] },
-      { key: "feature", title: "Feature requests", accepts: [{ stage: "feature" }] },
-      { key: "handover", title: "Handed over", accepts: [{ stage: "pm_handover" }],
-        hint: "Dropping here asks which team takes it." },
+      { key: "bugs", title: "Bugs", accepts: intake(["bug"]) },
+      { key: "features", title: "Features", accepts: intake(["feature"]) },
+      { key: "templates", title: "Templates", accepts: intake(["template", "landing"]) },
+      { key: "modules", title: "Modules", accepts: intake(["module"]) },
     ],
   },
   {
     id: "roadmap",
     label: "Roadmap",
-    blurb: "Every card by where the work is, not by who holds it. The same cards as the three team boards.",
+    blurb: "Every card by where the work is, not by who holds it. The same cards as the team boards.",
     columns: [
       { key: "todo", title: "Not started",
         accepts: [{ stage: "bug" }, { stage: "feature" }, { stage: "pm_handover" }] },
       { key: "doing", title: "In progress",
-        accepts: [{ stage: "design_progress" }, { stage: "design_to_dev" }, { stage: "dev_progress" }] },
+        accepts: [{ stage: "pm_progress" }, { stage: "design_progress" }, { stage: "design_to_dev" }, { stage: "dev_progress" }] },
       { key: "review", title: "In review",
         accepts: [{ stage: "design_review" }, { stage: "dev_review" }] },
       { key: "approved", title: "Approved",
@@ -176,12 +201,20 @@ BOARD_VIEWS.push(
   },
 );
 
+/** The backlog is everything before a team holds it, split by what a card IS. A card that
+ *  has been picked up has left, which is the difference between the backlog and PM's board:
+ *  PM's shows what PM took, this shows what exists. */
+function intake(kinds: CardKind[]): StageSpec[] {
+  return [{ stage: "bug", kinds }, { stage: "feature", kinds }];
+}
+
 export const VIEW_BY_ID = Object.fromEntries(BOARD_VIEWS.map((v) => [v.id, v])) as Record<BoardView, BoardViewDef>;
 
 /** What a stage is called when it has to be named outside its own column. */
 export const STAGE_LABEL: Record<Stage, string> = {
   bug: "Bug",
   feature: "Feature request",
+  pm_progress: "PM in progress",
   pm_handover: "PM handover",
   design_progress: "Design in progress",
   design_review: "Design in review",
@@ -193,11 +226,18 @@ export const STAGE_LABEL: Record<Stage, string> = {
   prod: "Pushed to prod",
 };
 
-export type CardKind = "feature" | "bug" | "landing";
+/** What a card IS, as against where it is.
+ *
+ *  A bug and a feature are both "somebody asked for this"; a module and a template are both
+ *  "we are building a thing", and they move through the board differently, which is why the
+ *  intake columns pair them that way. `landing` is kept because cards already carry it: it
+ *  is a template with a narrower name. */
+export type CardKind = "bug" | "feature" | "module" | "template" | "landing";
 
 export const KIND_LABEL: Record<CardKind, string> = {
-  bug: "Bug", feature: "Feature", landing: "Landing page",
+  bug: "Bug", feature: "Feature", module: "Module", template: "Template", landing: "Landing page",
 };
+
 
 /** What the checkbox reads once a card is in a column. A card sitting in In progress while
  *  its own status says planned is the drift the board exists to remove, so the move writes
@@ -206,6 +246,7 @@ export const KIND_LABEL: Record<CardKind, string> = {
 export const STAGE_STATUS: Partial<Record<Stage, "planned" | "progress" | "done">> = {
   bug: "planned",
   feature: "planned",
+  pm_progress: "progress",
   pm_handover: "planned",
   design_progress: "progress",
   design_review: "progress",
@@ -284,11 +325,14 @@ export function inView(view: BoardView, stage: Stage, teams: BoardTeam[], review
  *  and the honest answer is every team the sheet names on it. The roadmap sheet's Team column
  *  says "Engineering" on cards that carry a Design team assignee, so reading that one column
  *  put every design card on Dev's board and left Design's reading zero. */
-export function fits(c: BoardColumn, stage: Stage, teams: BoardTeam[], review: ReviewWith | null): boolean {
+export function fits(
+  c: BoardColumn, stage: Stage, teams: BoardTeam[], review: ReviewWith | null, kind?: CardKind,
+): boolean {
   return c.accepts.some((a) =>
     a.stage === stage
     && (!a.team || teams.includes(a.team))
-    && (!a.review || a.review === review));
+    && (!a.review || a.review === review)
+    && (!a.kinds || (kind ? a.kinds.includes(kind) : false)));
 }
 
 /** What dropping a card on a column means.
@@ -303,9 +347,20 @@ export function fits(c: BoardColumn, stage: Stage, teams: BoardTeam[], review: R
  *  the wrong one. Dev's review column asks who reviews it. Where the answer IS the column,
  *  it is not asked: dropping on Design's Dev QA handover means design QA, and dropping on
  *  PM's Handed for review means PM. */
-export type Drop = { stage: Stage; review?: ReviewWith | null } | { ask: "team" } | { ask: "review" };
+export type Drop =
+  | { stage: Stage; review?: ReviewWith | null; team?: BoardTeam | null }
+  | { ask: "team" }
+  | { ask: "review" };
 
 export function stageForDrop(c: BoardColumn, team: BoardTeam | null): Drop {
+  /* The backlog's four columns sort by KIND, not by stage: dropping a card there puts it
+     back in the pile, and which pile is the card's own kind. */
+  if (c.key === "bugs" || c.key === "features" || c.key === "templates" || c.key === "modules") {
+    return { stage: c.key === "bugs" ? "bug" : "feature", team: null };
+  }
+  /* PM's two intake columns and its own in-progress: PM is holding it. */
+  if (c.key === "asked" || c.key === "built") return { stage: "feature", team: "PM" };
+  if (c.key === "pmwip") return { stage: "pm_progress", team: "PM" };
   // Always asks. Re-handing a card is the moment the previous answer stops being right.
   if (c.key === "handover") return { ask: "team" };
 
@@ -347,12 +402,22 @@ export function stageForDrop(c: BoardColumn, team: BoardTeam | null): Drop {
  *  columns is worse than one question. */
 export const ASK_TEAM = {
   title: "Who takes this?",
-  body: "One team at a time. It shows in that team's PM handover column and nowhere else.",
+  body: "One team at a time. It shows on that team's board and nowhere else.",
   options: [
+    { value: "PM" as BoardTeam, label: "PM" },
     { value: "Design" as BoardTeam, label: "Design" },
     { value: "Engineering" as BoardTeam, label: "Dev" },
   ],
 };
+
+/** Where a card can be moved to from its own menu, which is the same question the handover
+ *  nudge asks and has to give the same answers. */
+export const MOVE_TO: { value: BoardTeam | null; label: string; stage: Stage }[] = [
+  { value: "PM", label: "PM", stage: "feature" },
+  { value: "Design", label: "Design", stage: "pm_handover" },
+  { value: "Engineering", label: "Dev", stage: "pm_handover" },
+  { value: null, label: "Back to the backlog", stage: "feature" },
+];
 
 export const ASK_REVIEW = {
   title: "Who reviews it?",

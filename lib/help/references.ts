@@ -162,3 +162,33 @@ export function discountBand(r: CategoryReference): { low: number; mid: number; 
   const s = [...r.discounts].sort((a, b) => a - b);
   return { low: s[0], mid: median(s)!, high: s[s.length - 1] };
 }
+
+/** Every pilot category that maps onto one PLAN category, merged into a single reference.
+ *
+ *  The sheet has seven categories and the plan form has eight, and they are not the same
+ *  seven: "Coffee Brands" and "Tea Brands" both land on `coffee-tea`, and "Food & Grocery
+ *  Brands" and "Specialty Food & Snacks" both land on `food-staples`. Looking up by the
+ *  first match showed a merchant selling tea the coffee stores and nothing else, which is
+ *  half the cohort and the wrong half. */
+export function referenceFor(
+  pilots: PilotStore[], planId: string, mapId: (label: string) => string | null,
+): CategoryReference | null {
+  const parts = categoryReferences(pilots).filter((r) => mapId(r.label) === planId);
+  if (!parts.length) return null;
+  if (parts.length === 1) return parts[0];
+  return {
+    // Named for what it covers, so nobody reads a merged reference as one sheet category.
+    label: parts.map((p) => p.label).join(" and "),
+    stores: parts.flatMap((p) => p.stores),
+    discounts: parts.flatMap((p) => p.discounts),
+    everyDays: byFrequency(parts.flatMap((p) => p.everyDays)),
+    deliveries: byFrequency(parts.flatMap((p) => p.deliveries)),
+    payment: parts.reduce((a, p) => ({
+      prepaid: a.prepaid + p.payment.prepaid,
+      payg: a.payg + p.payment.payg,
+      both: a.both + p.payment.both,
+    }), { prepaid: 0, payg: 0, both: 0 }),
+    bundles: parts.reduce((a, p) => a + p.bundles, 0),
+    unlogged: parts.flatMap((p) => p.unlogged),
+  };
+}

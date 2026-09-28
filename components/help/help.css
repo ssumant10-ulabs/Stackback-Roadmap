@@ -102,13 +102,15 @@
   backdrop-filter: saturate(1.4) blur(10px);
   border-bottom: 1px solid var(--border);
 }
-/* One measure for the whole screen, set by whichever part is open: the answers read best
-   in a column, the tools need the width. Everything that spans the page reads this. */
+/* The BODY narrows for the answers; the chrome never does. `--hc-shell` changes with the
+   open part, and the bar and the sub row were reading it, so the logo and the tabs jumped
+   left and right every time you switched from How to guides to FAQs. */
+.hc { --hc-chrome: 1560px; }
 .hc[data-hc-part="help"] { --hc-shell: 1264px; }
 
 .hc-topin {
   display: flex; align-items: center; gap: 14px;
-  width: 100%; max-width: var(--hc-shell); margin: 0 auto; padding: 0 var(--hc-pad);
+  width: 100%; max-width: var(--hc-chrome); margin: 0 auto; padding: 0 var(--hc-pad);
 }
 .hc-brand { display: flex; align-items: center; gap: 9px; text-decoration: none; color: var(--ink); flex: none; }
 .hc-brand .logo { width: 34px; height: 22px; flex: none; margin: 0; }
@@ -1673,7 +1675,7 @@
    far apart as the jobs themselves. */
 .hc-subrow { border-bottom: 1px solid var(--border); background: var(--page); }
 .hc-subin {
-  display: flex; gap: 2px; width: 100%; max-width: var(--hc-shell);
+  display: flex; gap: 2px; width: 100%; max-width: var(--hc-chrome);
   margin: 0 auto; padding: 0 var(--hc-pad);
 }
 .hc-sub {

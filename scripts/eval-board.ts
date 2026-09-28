@@ -8,8 +8,8 @@
  *  Run: npx tsx scripts/eval-board.ts
  */
 import {
-  BOARD_VIEWS, VIEW_BY_ID, fits, stageForDrop, stageOf,
-  type BoardTeam, type BoardView, type ReviewWith, type Stage,
+  ALL_KINDS, BOARD_VIEWS, VIEW_BY_ID, fits, stageForDrop, stageOf,
+  type BoardTeam, type BoardView, type CardKind, type ReviewWith, type Stage,
 } from "../lib/board";
 
 let fails = 0;
@@ -23,34 +23,40 @@ const ok = (cond: boolean, what: string) => {
 const TEAM_VIEWS = BOARD_VIEWS.filter((v) => ["pm", "design", "dev"].includes(v.id));
 
 /** Which columns a card in this state appears in, as "view.columnKey". */
-function where(stage: Stage, team: BoardTeam | null, review: ReviewWith | null): string[] {
+function where(stage: Stage, team: BoardTeam | null, review: ReviewWith | null, kind: CardKind = "feature"): string[] {
   const out: string[] = [];
   const teams = team ? [team] : [];
   for (const v of TEAM_VIEWS) {
-    for (const c of v.columns) if (fits(c, stage, teams, review)) out.push(`${v.id}.${c.key}`);
+    for (const c of v.columns) if (fits(c, stage, teams, review, kind)) out.push(`${v.id}.${c.key}`);
   }
   return out;
 }
 
 /** A card nobody has handed over can name two teams, which is the case that left Design's
  *  board empty: the sheet says Engineering on cards carrying a Design assignee. */
-function whereMulti(stage: Stage, teams: BoardTeam[], review: ReviewWith | null): string[] {
+function whereMulti(stage: Stage, teams: BoardTeam[], review: ReviewWith | null, kind: CardKind = "feature"): string[] {
   const out: string[] = [];
   for (const v of TEAM_VIEWS) {
-    for (const c of v.columns) if (fits(c, stage, teams, review)) out.push(`${v.id}.${c.key}`);
+    for (const c of v.columns) if (fits(c, stage, teams, review, kind)) out.push(`${v.id}.${c.key}`);
   }
   return out;
 }
 
 console.log("\n# a stage lands in exactly the columns the spec names");
-ok(same(where("bug", null, null), ["pm.bug"]), "a bug naming no team is PM's Bugs and nowhere else");
-ok(same(where("feature", null, null), ["pm.feature"]), "a request naming no team is PM's Feature requests only");
+/* PM's board shows what PM has PICKED UP. A card nobody holds is in the backlog, which is a
+   different lens; a PM board that repeated the backlog was the backlog with four extra
+   columns, which is the thing that made it unusable. */
+ok(same(where("bug", null, null, "bug"), []), "a bug nobody holds is on no team board, only in the backlog");
+ok(same(where("bug", "PM", null, "bug"), ["pm.asked"]), "once PM takes it, it is in PM's features and bugs");
+ok(same(where("feature", "PM", null, "module"), ["pm.built"]), "a module PM holds is in modules and templates");
+ok(same(where("feature", "PM", null, "template"), ["pm.built"]), "and so is a template");
+ok(same(where("pm_progress", "PM", null), ["pm.pmwip"]), "PM's own work in flight has a column of its own");
 /* A team board has to show that team's queue or it reads zero while the sheet has work on
    it, which is exactly what happened to Design. */
-ok(same(whereMulti("feature", ["Design"], null), ["pm.feature", "design.in"]),
-  "a request the sheet puts on design is in PM's list and in Design's queue");
-ok(same(whereMulti("bug", ["Engineering"], null), ["pm.bug", "dev.in"]),
-  "a bug the sheet puts on dev is in PM's Bugs and in Dev's queue");
+ok(same(whereMulti("feature", ["Design"], null), ["design.in"]),
+  "a request the sheet puts on design is in Design's queue");
+ok(same(whereMulti("bug", ["Engineering"], null, "bug"), ["dev.in"]),
+  "a bug the sheet puts on dev is in Dev's queue");
 
 // PM hands out. One team at a time is the whole point: the other team must not see it.
 ok(same(where("pm_handover", "Design", null), ["pm.handover", "design.in"]),
@@ -148,16 +154,18 @@ ok(dropStage(col("design", "todev"), "Design") === "design_to_dev",
 
 console.log("\n# the backlog and roadmap lenses are re-cuts, not a fourth place to be");
 const inLens = (lens: BoardView, stage: Stage) =>
-  VIEW_BY_ID[lens].columns.some((c) => fits(c, stage, ["Design", "Engineering"], null));
+  VIEW_BY_ID[lens].columns.some((c) => fits(c, stage, ["Design", "Engineering", "PM"], null, "feature"));
 for (const st of ALL_STAGES()) {
-  const onTeamBoard = TEAM_VIEWS.some((v) => v.columns.some((c) => fits(c, st, ["Design", "Engineering"], null)));
+  const onTeamBoard = TEAM_VIEWS.some((v) => v.columns.some((c) => fits(c, st, ["Design", "Engineering", "PM"], null, "feature")));
   if (inLens("roadmap", st) && !onTeamBoard) {
     fails++; console.log(`  FAIL  ${st} is on the roadmap lens and on no team board`);
   }
 }
 ok(ALL_STAGES().every((st) => inLens("roadmap", st)), "every stage has a roadmap column, so no card is invisible there");
-ok(["bug", "feature", "pm_handover"].every((st) => inLens("backlog", st as Stage)), "the backlog holds the three unpicked stages");
+ok(["bug", "feature"].every((st) => inLens("backlog", st as Stage)), "the backlog holds the two intake stages");
 ok(!inLens("backlog", "dev_progress") && !inLens("backlog", "prod"), "and nothing that has been picked up");
+ok(ALL_KINDS.every((k) => VIEW_BY_ID.backlog.columns.some((c) => fits(c, "feature", [], null, k))),
+  "every kind has a backlog column, so no card is invisible there");
 
 console.log("\n# an untouched card sits in its own intake column");
 ok(stageOf({ kind: "bug" }) === "bug", "a bug with no stage is a bug");
