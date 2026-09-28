@@ -1,5 +1,5 @@
 "use client";
-import { DragEvent, useMemo, useRef, useState } from "react";
+import { DragEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import {
   ALL_KINDS, ASK_REVIEW, ASK_TEAM, BOARD_VIEWS, KIND_LABEL, MOVE_TO, STAGE_LABEL, VIEW_BY_ID,
@@ -47,6 +47,15 @@ export function WorkBoard() {
    *  one control cannot answer both. The team one is the popover; this one is the row. */
   const [kindFilter, setKindFilter] = useState<CardKind | null>(null);
   const [kindOpen, setKindOpen] = useState(false);
+  const kindWrap = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!kindOpen) return;
+    const away = (e: MouseEvent) => {
+      if (!kindWrap.current?.contains(e.target as HTMLElement)) setKindOpen(false);
+    };
+    document.addEventListener("mousedown", away);
+    return () => document.removeEventListener("mousedown", away);
+  }, [kindOpen]);
 
   const cards = useMemo(() => {
     let out = all;
@@ -133,23 +142,26 @@ export function WorkBoard() {
           {/* Two filters, two questions. "Who" is the team and person popover; "What" is the
               kind of work. They were a popover and a loose row of capsules, which read as one
               control and a decoration. */}
-          <span className="wb-kfwrap">
+          <span className="wb-kfwrap" ref={kindWrap}>
             <button type="button" className={"btn ghost" + (kindFilter ? " active-filter" : "")}
               aria-haspopup="true" aria-expanded={kindOpen}
               onClick={() => setKindOpen((v) => !v)}>
               <IcFilter /><span>{kindFilter ? KIND_LABEL[kindFilter] : "Work"}</span>
             </button>
             {kindOpen && (
-              <span className="wb-kfmenu" onMouseLeave={() => setKindOpen(false)}>
-                {ALL_KINDS.map((k) => (
-                  <button key={k} type="button" className={kindFilter === k ? "on" : ""}
-                    onClick={() => { setKindFilter(kindFilter === k ? null : k); setKindOpen(false); }}>
-                    {KIND_LABEL[k]}
-                  </button>
-                ))}
+              <span className="popover filter-pop open wb-kfmenu">
+                <h4>Filter work</h4>
+                <div className="fp-chips">
+                  {ALL_KINDS.map((k) => (
+                    <button key={k} type="button" className={"chip" + (kindFilter === k ? " active" : "")}
+                      onClick={() => { setKindFilter(kindFilter === k ? null : k); setKindOpen(false); }}>
+                      <span className={"wb-kdot k-" + k} />{KIND_LABEL[k]}
+                    </button>
+                  ))}
+                </div>
                 {kindFilter && (
-                  <button type="button" className="wb-kfclear"
-                    onClick={() => { setKindFilter(null); setKindOpen(false); }}>Clear</button>
+                  <button type="button" className="chip clear"
+                    onClick={() => { setKindFilter(null); setKindOpen(false); }}>Clear filter</button>
                 )}
               </span>
             )}
@@ -197,14 +209,16 @@ export function WorkBoard() {
               onDragOver={(e) => { e.preventDefault(); setOver(c.key); }}
               onDragLeave={() => setOver((k) => (k === c.key ? null : k))}
               onDrop={(e) => drop(e, c)}>
-              <header className="wb-colh">
-                <b>{c.title}</b><em>{list.length}</em>
+              {/* The hint was a paragraph under every heading: five of them on a board is a
+                  column of prose before the first card. It is the heading's tooltip now. */}
+              <header className="wb-colh" title={c.hint || undefined}>
+                <b>{c.title}{c.hint && <i className="wb-why" aria-hidden="true">?</i>}</b>
+                <em>{list.length}</em>
                 {isTail(i) && tailOpen && (
                   <button type="button" className="wb-colhide" title="Fold this column"
                     onClick={() => setTailOpen(false)}>&times;</button>
                 )}
               </header>
-              {c.hint && <p className="wb-hint">{c.hint}</p>}
               <div className="wb-stack">
                 {list.map((card, at) => (
                   <Card key={card.id} card={card} view={view}
@@ -360,7 +374,9 @@ function Card({ card, view, rank: at, of, siblings, onMove, dragging, onDragStar
           onChange={(e) => s.setCardKind(card.id, e.target.value as CardKind)}>
           {ALL_KINDS.map((k) => <option key={k} value={k}>{KIND_LABEL[k]}</option>)}
         </select>
-        {f?.ref && <span className="wb-ref">{f.ref}</span>}
+        {/* The sheet id is how you find a row in the spreadsheet, which is a backlog job.
+            On a team board it is four characters of noise on every card. */}
+        {f?.ref && view === "backlog" && <span className="wb-ref">{f.ref}</span>}
         {f?.urgency && <span className={"wb-urg u-" + f.urgency.toLowerCase()}>{f.urgency}</span>}
         {/* Moving a card without dragging it. Dragging is fine within a column you can see;
             it is not how you send something from the backlog to Dev on a board that scrolls

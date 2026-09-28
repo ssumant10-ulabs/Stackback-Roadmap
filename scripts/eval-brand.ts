@@ -15,9 +15,11 @@ const EXPECT: Record<string, Partial<Record<string, string>>> = {
   // the page actually paints is rgb(0,0,0); --g-label-sale is #ffa800.
   "satturmittaikadai.com": { Brand_Primary: "#000000", Product_Tile: "#371F22", Brand_Accent: "#FFA800" },
   // 2026-09-24: Dawn theme settings, --color-button #FF5F60, --color-foreground #121212.
-  "thebasicswoman.com": { Brand_Primary: "#FF5F60", Product_Tile: "#121212", Widget_Background: "#FFFFFF" },
+  // Widget_Background is deliberately transparent now: the page already has a colour and
+  // painting the widget's own on top makes it a patch. See the Dawn branch of mapTokens.
+  "thebasicswoman.com": { Brand_Primary: "#FF5F60", Product_Tile: "#121212", Widget_Background: "transparent" },
   // 2026-09-24: Dawn, 16px card radius over 40px pill buttons.
-  "thestack.club": { Brand_Primary: "#272727", Widget_Background: "#FFFFFF" },
+  "thestack.club": { Brand_Primary: "#272727", Widget_Background: "transparent" },
 };
 
 async function main() {
@@ -30,8 +32,9 @@ async function main() {
     if (d.product) console.log(`   product: ${d.product.title} at ${d.product.priceMinor != null ? d.product.priceMinor / 100 : "?"}`);
     for (const t of d.tokens as { key: string; hex: string; confidence: string; source: string }[]) {
       const want = EXPECT[store][t.key];
-      const mark = want ? (want.toUpperCase() === t.hex.toUpperCase() ? "ok  " : "WRONG") : "    ";
-      if (want && want.toUpperCase() !== t.hex.toUpperCase()) bad++;
+      const same = want && want.toLowerCase() === t.hex.toLowerCase();
+      const mark = want ? (same ? "ok  " : "WRONG") : "    ";
+      if (want && !same) bad++;
       console.log(`   ${mark} ${t.key.padEnd(24)} ${t.hex}  ${t.confidence.padEnd(8)} ${t.source}${want && mark === "WRONG" ? `   (verified: ${want})` : ""}`);
     }
     for (const n of d.notes || []) console.log(`   note: ${n}`);

@@ -399,11 +399,18 @@ export function mapTokens(css: string, url: string, html?: string): BrandResult 
        found, white is the honest guess and the most-used light surface is not: on a cream
        storefront that is the page background, which is step 1 and the thing step 2 has to
        CONTRAST with. rosierfoods came back with its page cream as the widget interior. */
-    /* Transparent is a real answer for a surface. A widget forced onto white is a white
-       patch on a themed page, and satturmittaikadai's own cards are transparent over the
-       page. When no card could be found at all we still say transparent rather than white,
-       because sitting on the store's own ground is never the wrong-looking option. */
-    const bg = card || "transparent";
+    /* Transparent by default, whatever the card read says.
+       A widget carrying its own light surface is a patch on a themed page, and that is the
+       first thing a merchant notices: the page already has a colour and the widget sits on
+       it. A card read of #FFFFFF is almost always the theme's own white card, which is the
+       page again by another name. Somebody who wants the widget to stand off the page can
+       set it, and that is a decision rather than a default. Only a card that is genuinely a
+       different colour from the canvas survives as a fill. */
+    const cardStandsOut = Boolean(
+      card && card !== "transparent" && canvas && card.toUpperCase() !== canvas.toUpperCase()
+      && !isNeutral(card),
+    );
+    const bg = cardStandsOut ? card! : "transparent";
     /* Step 1 of the skill wants the ground BETWEEN the cards, which on a site that is white
        throughout is the same white as the card. It cannot be both, and step 2 says the two
        must contrast, so it is derived: a wash of the store's own button colour, which stays
@@ -481,11 +488,11 @@ export function mapTokens(css: string, url: string, html?: string): BrandResult 
             : "darkest text colour",
           text === el?.heading?.hex ? el.heading.confidence : conf(heading || bodyText)),
         t("Widget_Background", bg,
-          bg === el?.card?.hex ? el.card.source
-            : card ? "your product card interior"
-            : "no product card found, so transparent: the widget sits on your own page colour",
-          bg === el?.card?.hex ? el.card.confidence : card ? conf(card) : "derived"),
-        t("Product_Tile_Background", inputBg || card || "transparent",
+          bg === "transparent"
+            ? "transparent, so the widget takes your page colour rather than sitting on a patch of its own"
+            : el?.card?.source ?? "your product card interior",
+          bg === "transparent" ? "derived" : (el?.card?.confidence ?? conf(card))),
+        t("Product_Tile_Background", inputBg || (cardStandsOut ? card! : "transparent"),
           inputBg ? el!.inputBackground!.source
             : card === el?.card?.hex ? el!.card!.source
             : card ? "your product card interior" : "transparent, so it takes the widget's own ground",
@@ -548,7 +555,7 @@ export function mapTokens(css: string, url: string, html?: string): BrandResult 
   const tileBg = palette.find((h) => isLight(h) && h.toUpperCase() !== bg.toUpperCase() && isNeutral(h)) || "#FFFFFF";
 
   const tk = (key: BrandToken["key"], hex: string, source: string, confidence: Confidence): BrandToken =>
-    ({ key, hex: hex.toUpperCase(), source, confidence });
+    ({ key, hex: hex === "transparent" ? "transparent" : hex.toUpperCase(), source, confidence });
 
   return {
     ok: true, url, method: "dawn",
@@ -557,7 +564,14 @@ export function mapTokens(css: string, url: string, html?: string): BrandResult 
       tk("Brand_Secondary", secondary, tinted[0] ? "your tinted section background" : "lightened from your button colour", tinted[0] ? "theme" : "derived"),
       tk("Brand_Accent", accent, saturated[0] ? "your second brand colour" : "same as your button colour", saturated[0] ? "theme" : "derived"),
       tk("Product_Tile", text, "your body text colour", "theme"),
-      tk("Widget_Background", bg, "your page background", "theme"),
+      /* Transparent, for the same reason as on a non-Dawn theme: the page already has a
+         colour and the widget sits on it. "Your page background" was the honest reading and
+         the wrong default, because painting it on produces a patch of exactly that colour a
+         pixel out from the page around it. Somebody who wants the widget to stand off can
+         set it, and that is a decision rather than a default. */
+      tk("Widget_Background", "transparent",
+        "transparent, so the widget takes your page colour rather than sitting on a patch of its own",
+        "derived"),
       tk("Product_Tile_Background", tileBg, tileBg === "#FFFFFF" ? "white card surface" : "your card background", tileBg === "#FFFFFF" ? "derived" : "theme"),
     ],
     corners, cornersCustomPx: custom, cardRadiusPx, buttonRadiusPx, fontBody, fontHeading, schemes, notes,

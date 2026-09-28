@@ -88,37 +88,7 @@ function Cat({ r, pilots, open, onToggle }: {
             </p>
           )}
           <ul className="hc-drawerstores">
-            {rows.map((p) => {
-              const plan = planOf(p);
-              return (
-                <li key={p.id} className={plan.logged ? "" : "hc-drawergap"}>
-                  <div className="hc-drawerstoreh">
-                    <b>{p.name}</b>
-                    {plan.discount != null && <span className="hc-drawerpct">{plan.discount}% off</span>}
-                  </div>
-                  {plan.logged ? (
-                    <>
-                      {/* The plans, one line each, the way a merchant would be offered them:
-                          every run length at the cadence it is sold at. The raw cell is
-                          underneath, because a parser reading a free-text column has to show
-                          its working. */}
-                      <ul className="hc-drawerplans">
-                        {plan.lines.length
-                          ? plan.lines.map((l) => <li key={l}>{l}</li>)
-                          : <li className="hc-drawerunknown">Cadence logged, no run lengths</li>}
-                      </ul>
-                      <p className="hc-drawermeta">
-                        {[plan.payment, plan.bundles ? `bundles: ${plan.bundles}` : null, plan.shipping]
-                          .filter(Boolean).join(" \u00b7 ") || "no payment or shipping logged"}
-                      </p>
-                      <p className="hc-drawerraw">{plan.raw}</p>
-                    </>
-                  ) : (
-                    <p className="hc-drawermeta">Nothing logged in the plan columns yet.</p>
-                  )}
-                </li>
-              );
-            })}
+            {rows.map((p) => <StoreCard key={p.id} p={p} />)}
           </ul>
         </>
       )}
@@ -130,10 +100,7 @@ function Cat({ r, pilots, open, onToggle }: {
  *
  *  The columns are `Monthly - 3, 6, 9` and `25%`, which is a plan ladder written as two
  *  cells. A reference list that shows the cells makes every reader parse them again. */
-function planOf(p: PilotStore): {
-  logged: boolean; lines: string[]; discount: number | null;
-  payment: string | null; bundles: string | null; shipping: string | null; raw: string;
-} {
+function planOf(p: PilotStore) {
   const clean = (v: string | null | undefined) => {
     const t = (v || "").trim();
     return !t || t === "\u2014" ? null : t;
@@ -149,13 +116,78 @@ function planOf(p: PilotStore): {
         ? `${cadence} \u00b7 ${[...pl.deliveries].sort((a, b) => a - b).join(", ")} deliveries`
         : cadence;
     }));
+  const num = (v: number | null | undefined) => (v == null ? null : String(v));
+  const fields: [string, string | null][] = [
+    ["the plans", plans.length ? "x" : null],
+    ["the discount", d.length ? "x" : null],
+    ["payment", clean(p.paymentType)],
+    ["shipping", clean(p.shipping)],
+    ["bundles", clean(p.bundles)],
+  ];
+
   return {
     logged: Boolean(plans.length || d.length || clean(p.paymentType)),
     lines,
     discount: d.length ? Math.max(...d) : null,
     payment: clean(p.paymentType),
     bundles: clean(p.bundles),
-    shipping: clean(p.shipping) ? `shipping: ${clean(p.shipping)}` : null,
+    shipping: clean(p.shipping),
+    theme: clean(p.themeNotes),
+    status: clean(p.activationStatus) || clean(p.status),
+    poc: clean(p.poc),
+    subs: num(p.activeSubs) ? `${p.activeSubs} active of ${p.totalSubs ?? "?"}` : null,
+    bugs: p.openBugs ? String(p.openBugs) : null,
+    notes: clean(p.activationNotes) || clean(p.overviewNotes),
+    missing: fields.filter(([, v]) => !v).map(([k]) => k),
     raw: raws || "",
   };
+}
+
+/** One store, as a card, with everything the app holds about how it sells.
+ *
+ *  A row of five cells made you read the sheet again. This is the store's setup as it would
+ *  be described on a call: the plans it offers, what each one saves, how it is paid for,
+ *  what shipping costs, whether bundles are on, and the state of its pilot. A field nobody
+ *  has filled in is shown as a gap rather than omitted, because a reference that quietly
+ *  drops what it does not know reads as a complete answer. */
+function StoreCard({ p }: { p: PilotStore }) {
+  const plan = planOf(p);
+  const gaps = plan.missing;
+
+  return (
+    <li className={"hc-scard" + (plan.logged ? "" : " empty")}>
+      <div className="hc-scardh">
+        <b>{p.name}</b>
+        {plan.discount != null && <span className="hc-drawerpct">up to {plan.discount}% off</span>}
+      </div>
+
+      {plan.lines.length > 0 && (
+        <ul className="hc-drawerplans">
+          {plan.lines.map((l) => <li key={l}>{l}</li>)}
+        </ul>
+      )}
+
+      <dl className="hc-scardfacts">
+        <Fact k="Payment" v={plan.payment} />
+        <Fact k="Bundles" v={plan.bundles} />
+        <Fact k="Shipping" v={plan.shipping} />
+        <Fact k="Theme" v={plan.theme} />
+        <Fact k="Status" v={plan.status} />
+        <Fact k="POC" v={plan.poc} />
+        <Fact k="Live subs" v={plan.subs} />
+        <Fact k="Open bugs" v={plan.bugs} />
+      </dl>
+
+      {plan.notes && <p className="hc-scardnote">{plan.notes}</p>}
+      {plan.raw && <p className="hc-drawerraw">{plan.raw}</p>}
+      {gaps.length > 0 && (
+        <p className="hc-scardgap">Not logged yet: {gaps.join(", ")}.</p>
+      )}
+    </li>
+  );
+}
+
+function Fact({ k, v }: { k: string; v: string | null }) {
+  if (!v) return null;
+  return <div><dt>{k}</dt><dd>{v}</dd></div>;
 }

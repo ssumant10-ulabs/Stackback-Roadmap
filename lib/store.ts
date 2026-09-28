@@ -747,8 +747,12 @@ export class Store {
     f.stage = stage;
     if (opts && "team" in opts) f.boardTeam = opts.team ?? null;
     if (opts && "review" in opts) f.reviewWith = opts.review ?? null;
-    // Back in PM's hands: the old answers no longer apply, and the next handover asks again.
-    if (stage === "bug" || stage === "feature") { f.boardTeam = null; f.reviewWith = null; }
+    /* Only when nobody named a team in the same breath. Handing a card to PM IS an intake
+       stage plus an owner, and clearing the team unconditionally meant "Hand to PM" set the
+       owner and wiped it in the next line: PM's board could not be populated by hand at all,
+       and neither could its two intake columns. */
+    const named = Boolean(opts && "team" in opts && opts.team);
+    if ((stage === "bug" || stage === "feature") && !named) { f.boardTeam = null; f.reviewWith = null; }
     // A review answer only means anything from the review onward.
     if (!["dev_review", "dev_approved", "prod"].includes(stage)) f.reviewWith = null;
     f.updatedAt = new Date().toISOString();
@@ -765,7 +769,12 @@ export class Store {
     n.stage = stage;
     if (opts && "team" in opts) n.boardTeam = opts.team ?? null;
     if (opts && "review" in opts) n.reviewWith = opts.review ?? null;
-    if (stage === "bug" || stage === "feature") { n.boardTeam = null; n.reviewWith = null; }
+    /* Only when nobody named a team in the same breath. Handing a card to PM IS an intake
+       stage plus an owner, and clearing the team unconditionally meant "Hand to PM" set the
+       owner and wiped it in the next line: PM's board could not be populated by hand at all,
+       and neither could its two intake columns. */
+    const named = Boolean(opts && "team" in opts && opts.team);
+    if ((stage === "bug" || stage === "feature") && !named) { n.boardTeam = null; n.reviewWith = null; }
     if (!["dev_review", "dev_approved", "prod"].includes(stage)) n.reviewWith = null;
     /* The checkbox follows the column, because a card that reads planned while it sits in
        In progress is exactly the drift this board exists to remove. Production is the only

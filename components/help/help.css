@@ -1790,3 +1790,33 @@
   background-position: 0 0, 3px 3px;
   background-color: transparent !important;
 }
+
+/* One store, as a card. A row of five cells made you read the sheet again. */
+.hc-scard { padding: 12px 0; border-top: 1px solid var(--border); }
+.hc-scard.empty { opacity: .6; }
+.hc-scardh { display: flex; align-items: baseline; gap: 9px; }
+.hc-scardh b { font-size: 13.5px; font-weight: 680; }
+.hc-scardfacts { margin: 8px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 3px 12px; }
+.hc-scardfacts > div { display: grid; grid-template-columns: 66px 1fr; gap: 8px; font-size: 11.5px; }
+.hc-scardfacts dt { color: var(--hc-muted); }
+.hc-scardfacts dd { margin: 0; color: var(--ink-2); }
+.hc-scardnote { margin: 8px 0 0; font-size: 11.5px; line-height: 1.55; color: var(--ink-2); }
+.hc-scardgap { margin: 6px 0 0; font-size: 11px; color: var(--hc-muted); font-style: italic; }
+
+/* The column hint is a tooltip on its heading, not a paragraph under it: five of them is a
+   column of prose before the first card. */
+.wb-why {
+  font-style: normal; font-size: 9px; font-weight: 700; margin-left: 4px;
+  display: inline-grid; place-items: center; width: 12px; height: 12px;
+  border-radius: 50%; background: rgba(0,0,0,.08); color: var(--ink-3, #888); cursor: help;
+  vertical-align: 1px;
+}
+.wb-colh b { display: inline-flex; align-items: center; }
+/* The work filter wears the same popover as the who filter. */
+.wb-kfmenu { position: absolute; top: calc(100% + 6px); right: 0; left: auto; }
+.wb-kdot { width: 9px; height: 9px; border-radius: 3px; margin-right: 6px; display: inline-block; }
+.wb-kdot.k-bug { background: #ffd79d; }
+.wb-kdot.k-feature { background: rgba(0,0,0,.22); }
+.wb-kdot.k-module { background: #b9a8ff; }
+.wb-kdot.k-template { background: #93d9b4; }
+.wb-kdot.k-landing { background: #a8c7ff; }
