@@ -7,8 +7,10 @@
  *
  *  Run: npx tsx scripts/eval-board.ts
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
-  ALL_KINDS, ALL_STAGES, BOARD_VIEWS, VIEW_BY_ID, fits, stageForDrop, stageOf,
+  ALL_KINDS, ALL_STAGES, BOARD_VIEWS, VIEW_BY_ID, fits, placeCard, stageForDrop, stageOf,
   type BoardTeam, type BoardView, type CardKind, type ReviewWith, type Stage,
 } from "../lib/board";
 
@@ -174,6 +176,8 @@ ok(stageOf({ kind: "bug" }) === "bug", "a bug with no stage is a bug");
 ok(stageOf({ kind: "feature" }) === "feature", "a request with no stage is a request");
 ok(stageOf({ kind: "bug", stage: "prod" }) === "prod", "a stored stage wins over the kind");
 
+live();
+
 console.log(fails ? `\nFAIL: ${fails}` : "\nPASS");
 process.exit(fails ? 1 : 0);
 
@@ -192,4 +196,90 @@ function dropStage(c: Parameters<typeof stageForDrop>[0], team: BoardTeam | null
 function dropReview(c: Parameters<typeof stageForDrop>[0], team: BoardTeam | null): ReviewWith | null | undefined {
   const r = stageForDrop(c, team);
   return "ask" in r ? null : r.review;
+}
+
+
+/** The board against the live cards, rather than against invented ones.
+ *
+ *  Everything above asserts the rules the board was designed to; this asserts the rules the
+ *  USER stated, over the 77 cards actually on the board. The distinction matters: the board
+ *  was self-consistent every time it was wrong, and the count in the Roadmap tab was the
+ *  only thing that could have caught it.
+ *
+ *  `scripts/fixtures/board-cards.json` is every distinct card shape in the live data, with
+ *  how many cards have it. Shapes rather than rows because 46 shapes cover all 77 cards and
+ *  nothing about placement depends on a title.
+ *
+ *  The rules, in the words they were given in:
+ *    "Move the cards to pm/design/dev accordingly as per the teams assigned"
+ *    "if it is not assigned then it moves to backlog"
+ *    "Roadmap should only have the items that is in the PM/DEV & Design tabs ... roadmap
+ *     will be a overview always"
+ *    "Backlog should have all the cards" */
+function live() {
+  const fx = JSON.parse(readFileSync(join(__dirname, "fixtures/board-cards.json"), "utf8"));
+  /* `boardStatusOf` turns a roadmap task's rolled-up state into the words the sheet uses.
+     Reproduced here so the fixture can stay as the raw `planned`/`progress`/`done` the data
+     holds. "In Dev" for progress is the common branch; the one live task in progress carries
+     an explicit stage, so the branch it takes cannot change an answer. */
+  const asStatus = (s: string) => (s === "done" ? "Done" : s === "progress" ? "In Dev" : s === "planned" ? "Planned" : "");
+
+  type Row = [number, string, string, string, string, string, string, string, string, string];
+  const placed = (fx.rows as Row[]).map((r) => {
+    const [count, type, kind, team, boardTeam, stage, status, taskTeam, taskStatus, asg] = r;
+    const linked = type === "F" && taskStatus !== "-" ? asStatus(taskStatus) : null;
+    const p = placeCard({
+      kind: (kind || null) as CardKind | null,
+      stage: (stage || null) as Stage | null,
+      boardTeam: (boardTeam || null) as BoardTeam | null,
+      status: type === "T" ? asStatus(taskStatus) : status || null,
+      linkedStatus: linked,
+      named: [team, taskTeam === "-" ? null : taskTeam, ...(asg ? asg.split("+") : [])],
+    });
+    return { count, row: r, ...p };
+  });
+
+  const seen = (stage: Stage, teams: BoardTeam[], kind: CardKind) =>
+    BOARD_VIEWS.filter((v) =>
+      (!v.ownedOnly || teams.length > 0)
+      && v.columns.some((c) => fits(c, stage, teams, null, kind))).map((v) => v.id);
+
+  const tally: Record<string, number> = {};
+  let homeless = 0, ownedOffBoard = 0, unownedOnRoadmap = 0, missingFromBacklog = 0;
+
+  for (const p of placed) {
+    const kind = (p.row[2] || "feature") as CardKind;
+    const views = seen(p.stage, p.teams, kind);
+    for (const v of views) tally[v] = (tally[v] || 0) + p.count;
+    tally[p.teams.length ? "owned" : "unowned"] = (tally[p.teams.length ? "owned" : "unowned"] || 0) + p.count;
+
+    const teamBoards = views.filter((v) => v === "pm" || v === "design" || v === "dev");
+    if (!views.length) { homeless += p.count; console.log(`  homeless  ${JSON.stringify(p.row)} -> ${p.stage}`); }
+    if (p.teams.length && !teamBoards.length) { ownedOffBoard += p.count; console.log(`  owned but on no team board  ${JSON.stringify(p.row)} -> ${p.stage} ${p.teams}`); }
+    if (!p.teams.length && views.includes("roadmap")) unownedOnRoadmap += p.count;
+    if (!views.includes("backlog")) { missingFromBacklog += p.count; console.log(`  not in the backlog  ${JSON.stringify(p.row)} -> ${p.stage}`); }
+  }
+
+  console.log("\nLive cards, by board:");
+  for (const k of ["backlog", "roadmap", "pm", "design", "dev", "owned", "unowned"]) {
+    console.log(`  ${k.padEnd(8)} ${tally[k] || 0}`);
+  }
+
+  console.log("\nThe rules, over the live data:");
+  ok(homeless === 0, "every card lands in a column somewhere");
+  ok(missingFromBacklog === 0, "the backlog holds every card");
+  ok(ownedOffBoard === 0, "every card with a team is on that team's board");
+  ok(unownedOnRoadmap === 0, "a card nobody has taken is not on the Roadmap");
+  ok((tally.roadmap || 0) === (tally.owned || 0), "the Roadmap is exactly the owned cards");
+  /* The complaint, four times: everything sitting in Roadmap / Not started. The board can
+     only be right if the cards whose own column names a stage are NOT at intake. */
+  const intake = placed.filter((p) => p.stage === "bug" || p.stage === "feature");
+  const named = placed.filter((p) => /design|dev|review|planning/i.test(p.row[6]));
+  ok(named.every((p) => p.stage !== "bug" && p.stage !== "feature"),
+    "a card whose own status names a stage is not at intake");
+  ok(intake.reduce((n, p) => n + p.count, 0) < 40,
+    `fewer than 40 of the 77 cards are still at intake (${intake.reduce((n, p) => n + p.count, 0)})`);
+  ok((tally.design || 0) > 0, `Design's board is not empty (${tally.design || 0})`);
+  ok((tally.dev || 0) > 0, `Dev's board is not empty (${tally.dev || 0})`);
+  ok((tally.pm || 0) > 0, `PM's board is not empty (${tally.pm || 0})`);
 }

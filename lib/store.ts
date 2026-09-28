@@ -5,7 +5,7 @@ import { SEED_VERSION, seed, stampIds } from "./seed";
 import { uid, newRoadmapId } from "./id";
 import { makeHelpers, pruneTasks, type Helpers } from "./teams";
 import { effStatus, normPriority, subtreeCounts, waveWord } from "./derive";
-import { STAGE_LABEL, STAGE_STATUS, defaultNodeStage, stageForStatus, stageOf, teamToBoard, type BoardTeam, type BoardView, type CardKind, type ReviewWith, type Stage } from "./board";
+import { STAGE_LABEL, STAGE_STATUS, defaultNodeStage, placeCard, stageForStatus, stageOf, teamToBoard, type BoardTeam, type BoardView, type CardKind, type ReviewWith, type Stage } from "./board";
 import { reconcile } from "./dates";
 import { featureSeed } from "./featureSeed";
 import { pilotSeed } from "./pilotSeed";
@@ -650,18 +650,21 @@ export class Store {
          more often than the roadmap does, so without this most requests were unassigned and
          sat in the backlog while the work was plainly with a team. */
       const task = this.featureTask(f);
-      const teams = f.boardTeam
-        ? [f.boardTeam]
-        : ([...new Set([
-            teamToBoard(f.team),
-            ...(f.assignees || []).map((a) => teamToBoard(this.helpers.assigneeTeam(a))),
-            ...(task ? [teamToBoard(task.team),
-              ...(task.assignees || []).map((a) => teamToBoard(this.helpers.assigneeTeam(a)))] : []),
-          ])].filter(Boolean) as BoardTeam[]);
+      const { stage, teams } = placeCard({
+        kind: f.kind, stage: f.stage, boardTeam: f.boardTeam,
+        /* The card's own column and the delivering task's, both handed over: `placeCard`
+           takes the more specific rather than a fixed winner. */
+        status: (f.sheetStatus || "").toLowerCase() === "done" ? "Done" : f.sheetStatus,
+        linkedStatus: task ? boardStatusOf(task) : null,
+        named: [
+          f.team,
+          ...(f.assignees || []).map((a) => this.helpers.assigneeTeam(a)),
+          ...(task ? [task.team, ...(task.assignees || []).map((a) => this.helpers.assigneeTeam(a))] : []),
+        ],
+      });
       out.push({
-        id: f.id, feature: f,
-        stage: f.stage || stageForStatus(this.featureStatus(f), f.team, f.kind),
-        teams, team: f.boardTeam ?? teams[0] ?? null, review: f.reviewWith ?? null,
+        id: f.id, feature: f, stage, teams,
+        team: f.boardTeam ?? teams[0] ?? null, review: f.reviewWith ?? null,
       });
     }
     for (const t of this.activeRoadmap().tasks || []) {
@@ -675,16 +678,15 @@ export class Store {
          board asks which teams are on this card, and the sheet says "Engineering" on cards
          carrying a Design team assignee. Reading the column alone is why Design's board read
          zero while the sheet had design work on it. Both answers are true, so both count. */
-      const teams = t.boardTeam
-        ? [t.boardTeam]
-        : ([...new Set([
-            teamToBoard(t.team),
-            ...(t.assignees || []).map((a) => teamToBoard(this.helpers.assigneeTeam(a))),
-          ])].filter(Boolean) as BoardTeam[]);
+      const { stage, teams } = placeCard({
+        kind: t.kind, stage: t.stage, boardTeam: t.boardTeam,
+        /* A task has no sheet column and no task above it: its own rolled-up status is the
+           only one there is, and `defaultNodeStage` is what reads it. */
+        status: boardStatusOf(t),
+        named: [t.team, ...(t.assignees || []).map((a) => this.helpers.assigneeTeam(a))],
+      });
       out.push({
-        id: t.id, node: t,
-        stage: t.stage || defaultNodeStage(effStatus(t), t.team, t.kind),
-        teams,
+        id: t.id, node: t, stage, teams,
         team: t.boardTeam ?? teamToBoard(t.team) ?? teams[0] ?? null,
         review: t.reviewWith ?? null,
       });

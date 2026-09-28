@@ -310,7 +310,10 @@ export function stageForStatus(
   if (/^(done|shipped|live|released|complete[d]?)$/.test(st)) return "prod";
   if (/design/.test(st)) return /review|qa/.test(st) ? "design_review" : "design_progress";
   if (/\bdev\b|engineering|build/.test(st)) return /review|qa/.test(st) ? "dev_review" : "dev_progress";
-  if (/review/.test(st)) return "design_review";
+  if (/review/.test(st)) return team === "Engineering" ? "dev_review" : "design_review";
+  /* "Planning" is PM at work, not work that is planned. Three live cards say it and all
+     three sat in intake, because the word contains neither "progress" nor "PM". */
+  if (/planning|scoping|discovery/.test(st)) return "pm_progress";
   if (/progress|wip|started|ongoing|doing/.test(st)) return defaultNodeStage("progress", team, kind);
   if (/blocked|hold|park/.test(st)) return "pm_handover";
   // "Planned", "Not started", "Backlog", "To do" and anything unrecognised: intake.
@@ -466,3 +469,72 @@ export const ASK_REVIEW = {
     { value: "PM" as ReviewWith, label: "PM review" },
   ],
 };
+
+
+/** How much a status actually says about where the work is.
+ *
+ *  0 nothing, 1 a not-yet word, 2 a named stage, 3 delivered. The board had one rule — the
+ *  linked roadmap task wins — and sixteen of the twenty-five live tasks are `planned`, so
+ *  every feature whose own column said "In Design", "In Dev" or "Planning" was overwritten
+ *  with "Planned" and filed under Not started. Both statuses are true; the specific one
+ *  places the card. */
+export function statusDepth(status: string | null | undefined): number {
+  const s = (status || "").trim().toLowerCase();
+  if (!s) return 0;
+  if (/^(done|shipped|live|released|complete[d]?)$/.test(s)) return 3;
+  if (/^(not started|not-started|planned|backlog|to ?do|new|open|queued|pending)$/.test(s)) return 1;
+  return 2;
+}
+
+/** The card's own status against the delivering task's, deeper wins, the task on a tie.
+ *  A tie goes to the task because it is the fresher of the two: the sheet column is what
+ *  somebody last typed, the task is what the board currently shows. */
+export function resolveStatus(own: string | null | undefined, linked: string | null | undefined): string {
+  return statusDepth(own) > statusDepth(linked) ? own! : (linked || own || "");
+}
+
+/** The team a stage belongs to by definition.
+ *
+ *  A card at `design_review` is Design's whether or not anybody wrote a name on it. The
+ *  Roadmap lens shows owned work only, so without this a card could be visibly in design
+ *  review and absent from the overview of work in hand. The two intake stages return
+ *  nothing on purpose: unclaimed is the backlog, which is the rule as stated. */
+export function teamForStage(stage: Stage): BoardTeam | null {
+  if (stage === "design_to_dev" || stage === "prod") return "Engineering";
+  if (stage.startsWith("pm_")) return "PM";
+  if (stage.startsWith("design_")) return "Design";
+  if (stage.startsWith("dev_")) return "Engineering";
+  return null;
+}
+
+/** Which of a card's teams decides an ambiguous stage. Design first: it comes first in the
+ *  flow, so a card naming both and saying only "in review" is more likely at that end. */
+function preferred(teams: BoardTeam[]): BoardTeam | null {
+  return teams.includes("Design") ? "Design" : teams.includes("Engineering") ? "Engineering" : teams[0] ?? null;
+}
+
+/** Everything the sheets say about one card, as the board reads it. */
+export interface CardFacts {
+  kind?: CardKind | null;
+  /** Set by a drag. An explicit answer always wins over a derived one. */
+  stage?: Stage | null;
+  boardTeam?: BoardTeam | null;
+  /** The card's own status column. */
+  status?: string | null;
+  /** The status of the roadmap task delivering it, when there is one. */
+  linkedStatus?: string | null;
+  /** Every team named anywhere on it: Team columns, team chips, and assignees resolved
+   *  through the roster, on the card AND on the task delivering it. Unknown words are
+   *  dropped, which is most of them: the live Team column holds "Na" and "Team". */
+  named?: (string | null | undefined)[];
+}
+
+/** Where one card sits, and whose it is. One function because it was four lines inside
+ *  `boardCards`, could only be checked by opening the board and counting, and was wrong four
+ *  times running. `scripts/eval-board.ts` puts every live card shape through it. */
+export function placeCard(f: CardFacts): { stage: Stage; teams: BoardTeam[] } {
+  const named = [...new Set((f.named || []).map(teamToBoard).filter(Boolean))] as BoardTeam[];
+  const teams = f.boardTeam ? [f.boardTeam] : named;
+  const stage = f.stage || stageForStatus(resolveStatus(f.status, f.linkedStatus), preferred(teams), f.kind);
+  return { stage, teams: teams.length ? teams : ([teamForStage(stage)].filter(Boolean) as BoardTeam[]) };
+}
