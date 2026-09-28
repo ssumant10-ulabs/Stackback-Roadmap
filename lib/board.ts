@@ -287,13 +287,35 @@ export const stageOf = (f: {
   stage?: Stage | null; kind?: CardKind | null; sheetStatus?: string | null; team?: string | null;
 }): Stage => {
   if (f.stage) return f.stage;
-  const st = (f.sheetStatus || "").trim().toLowerCase();
-  if (st === "done" || st === "shipped" || st === "live") return "prod";
-  if (st === "in progress" || st === "in-progress" || st === "wip" || st === "started") {
-    return defaultNodeStage("progress", f.team, f.kind);
-  }
-  return defaultStage(f.kind);
+  return stageForStatus(f.sheetStatus, f.team, f.kind);
 };
+
+/** A status in the sheet's own words, mapped onto a column.
+ *
+ *  `boardStatusOf` says "In Design" and "In Dev", not "In progress": it names the team on
+ *  purpose, because that is what the Features module shows. This only recognised "in
+ *  progress", so every request the board had already resolved as In Dev fell through to the
+ *  intake pile, which is why 60 cards sat in Not started while the tasks delivering them
+ *  were half built. Every word the app or the sheet actually writes is here. */
+export function stageForStatus(
+  status: string | null | undefined, team?: string | null, kind?: CardKind | null,
+): Stage {
+  const st = (status || "").trim().toLowerCase();
+  if (!st) return defaultStage(kind);
+  /* The not-yet words come first, because "Not started" contains "started" and was reading
+     as work in flight. A negation inside a keyword is the classic way a status map lies. */
+  if (/^(not started|not-started|planned|backlog|to ?do|new|open|queued|pending)$/.test(st)) {
+    return defaultStage(kind);
+  }
+  if (/^(done|shipped|live|released|complete[d]?)$/.test(st)) return "prod";
+  if (/design/.test(st)) return /review|qa/.test(st) ? "design_review" : "design_progress";
+  if (/\bdev\b|engineering|build/.test(st)) return /review|qa/.test(st) ? "dev_review" : "dev_progress";
+  if (/review/.test(st)) return "design_review";
+  if (/progress|wip|started|ongoing|doing/.test(st)) return defaultNodeStage("progress", team, kind);
+  if (/blocked|hold|park/.test(st)) return "pm_handover";
+  // "Planned", "Not started", "Backlog", "To do" and anything unrecognised: intake.
+  return defaultStage(kind);
+}
 
 /** Where a ROADMAP task sits before anybody has moved it on the board.
  *

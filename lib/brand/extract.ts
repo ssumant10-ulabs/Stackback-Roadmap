@@ -232,10 +232,16 @@ function expandVars(v: string, vars: Record<string, string>, depth = 0): string 
 }
 
 /** A colour we can use: a hex or an rgb(), not transparent, inherit or an unresolved variable. */
-function colourOf(v: string | null, vars?: Record<string, string>): string | null {
+function colourOf(v: string | null, vars?: Record<string, string>, keepTransparent = false): string | null {
   if (!v) return null;
   let t = v.trim().toLowerCase();
   if (vars && t.includes("var(")) t = expandVars(t, vars).trim();
+  /* For a SURFACE, transparent is an answer, not a gap. A widget forced onto white sits as a
+     white patch on a themed page, which is the one thing the merchant notices; letting the
+     store's own ground show through is what the colour-token spec means by the card
+     interior. For a FILL it is still a non-answer, because a button has to be painted. */
+  if (keepTransparent && /^transparent$/.test(t)) return "transparent";
+  if (keepTransparent && /^rgba\([^)]*,\s*0(\.0+)?\s*\)$/.test(t)) return "transparent";
   if (!t || t.startsWith("var(") || t.startsWith("url(") || /transparent|inherit|currentcolor|none|initial/.test(t)) return null;
   const hex = /#[0-9a-f]{3,8}\b/i.exec(t);
   if (hex) return normaliseHex(hex[0]);
@@ -393,7 +399,11 @@ export function mapTokens(css: string, url: string, html?: string): BrandResult 
        found, white is the honest guess and the most-used light surface is not: on a cream
        storefront that is the page background, which is step 1 and the thing step 2 has to
        CONTRAST with. rosierfoods came back with its page cream as the widget interior. */
-    const bg = card || "#FFFFFF";
+    /* Transparent is a real answer for a surface. A widget forced onto white is a white
+       patch on a themed page, and satturmittaikadai's own cards are transparent over the
+       page. When no card could be found at all we still say transparent rather than white,
+       because sitting on the store's own ground is never the wrong-looking option. */
+    const bg = card || "transparent";
     /* Step 1 of the skill wants the ground BETWEEN the cards, which on a site that is white
        throughout is the same white as the card. It cannot be both, and step 2 says the two
        must contrast, so it is derived: a wash of the store's own button colour, which stays
@@ -435,8 +445,10 @@ export function mapTokens(css: string, url: string, html?: string): BrandResult 
     }
     const conf = (hit: string | null, val?: string): Confidence =>
       isFrameworkDefault(val ?? hit) ? "guessed" : hit ? "theme" : "guessed";
+    /* `transparent` is a value, not a hex, so it must not go through toUpperCase and must
+       not be fed to the mixers. Everything downstream treats it as a CSS colour. */
     const t = (key: BrandToken["key"], hex: string, source: string, c: Confidence): BrandToken =>
-      ({ key, hex: hex.toUpperCase(), source, confidence: c });
+      ({ key, hex: hex === "transparent" ? "transparent" : hex.toUpperCase(), source, confidence: c });
     return {
       ok: true, url, method: "fallback",
       tokens: [
@@ -471,12 +483,12 @@ export function mapTokens(css: string, url: string, html?: string): BrandResult 
         t("Widget_Background", bg,
           bg === el?.card?.hex ? el.card.source
             : card ? "your product card interior"
-            : "no product card found on the page, so white, which is what a widget sits on",
+            : "no product card found, so transparent: the widget sits on your own page colour",
           bg === el?.card?.hex ? el.card.confidence : card ? conf(card) : "derived"),
-        t("Product_Tile_Background", inputBg || card || "#FFFFFF",
+        t("Product_Tile_Background", inputBg || card || "transparent",
           inputBg ? el!.inputBackground!.source
             : card === el?.card?.hex ? el!.card!.source
-            : card ? "your product card interior" : "assumed white card",
+            : card ? "your product card interior" : "transparent, so it takes the widget's own ground",
           inputBg ? el!.inputBackground!.confidence
             : card === el?.card?.hex ? el!.card!.confidence : conf(card)),
       ],
@@ -781,10 +793,11 @@ function findTag(html: string, tag: string, via: string): CtaElement | null {
 function resolveOn(
   el: CtaElement, rs: Rule[], vars: Record<string, string>,
   which: "background-color" | "color", reject?: (hex: string) => boolean,
+  keepTransparent = false,
 ): { hex: string; source: string; confidence: Confidence } | null {
   const pick = (decl: string) => {
     const raw = prop(decl, which) ?? (which === "background-color" ? prop(decl, "background") : null);
-    return colourOf(raw, vars);
+    return colourOf(raw, vars, keepTransparent);
   };
 
   if (el.style) {
@@ -859,7 +872,8 @@ export function elementTokens(html: string, css: string) {
   const rs = rules(css);
   const on = (
     el: CtaElement | null, which: "background-color" | "color", reject?: (hex: string) => boolean,
-  ) => (el ? resolveOn(el, rs, vars, which, reject) : null);
+    keepTransparent = false,
+  ) => (el ? resolveOn(el, rs, vars, which, reject, keepTransparent) : null);
 
   // Step 1: the page canvas, the ground between and behind the cards.
   const canvas = on(findTag(html, "body", "your page background"), "background-color")
@@ -871,7 +885,7 @@ export function elementTokens(html: string, css: string) {
      most used light surface", which on a cream storefront is the page, not a card. */
   const card = on(findByClass(html, /div|li|article|section/,
     /\bproduct-card\b|\bcard__inner\b|\bproduct-item\b|\bproduct-grid-item\b|\bpcard\b|\bcard-wrapper\b|\bproduct-block\b|\bproduct-tile\b|\bgrid-product\b|\bcard-product\b|\bproduct__card\b/,
-    "your product card interior"), "background-color");
+    "your product card interior"), "background-color", undefined, true);
 
   // Step 4: the sale badge or announcement bar.
   const accent = on(
@@ -923,7 +937,7 @@ export function elementTokens(html: string, css: string) {
     shadow,
     ctaStyle,
     fontBody: realFont(fontRaw),
-    inputBackground: on(inputEl, "background-color"),
+    inputBackground: on(inputEl, "background-color", undefined, true),
   };
 }
 

@@ -1779,3 +1779,14 @@
   font-family: ui-monospace, Menlo, monospace;
 }
 .hc-drawergap { opacity: .62; }
+
+/* Transparent is a value a surface can hold, so the swatch has to show it as one rather
+   than as a white chip that reads identically to #FFFFFF. */
+.hc-tokdot[data-transparent="1"], .hc-bfchip i[data-transparent="1"] {
+  background-image:
+    linear-gradient(45deg, rgba(0,0,0,.18) 25%, transparent 25%, transparent 75%, rgba(0,0,0,.18) 75%),
+    linear-gradient(45deg, rgba(0,0,0,.18) 25%, transparent 25%, transparent 75%, rgba(0,0,0,.18) 75%);
+  background-size: 6px 6px;
+  background-position: 0 0, 3px 3px;
+  background-color: transparent !important;
+}

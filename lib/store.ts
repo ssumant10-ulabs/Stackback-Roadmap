@@ -5,7 +5,7 @@ import { SEED_VERSION, seed, stampIds } from "./seed";
 import { uid, newRoadmapId } from "./id";
 import { makeHelpers, pruneTasks, type Helpers } from "./teams";
 import { effStatus, normPriority, subtreeCounts, waveWord } from "./derive";
-import { STAGE_LABEL, STAGE_STATUS, defaultNodeStage, stageOf, teamToBoard, type BoardTeam, type BoardView, type CardKind, type ReviewWith, type Stage } from "./board";
+import { STAGE_LABEL, STAGE_STATUS, defaultNodeStage, stageForStatus, stageOf, teamToBoard, type BoardTeam, type BoardView, type CardKind, type ReviewWith, type Stage } from "./board";
 import { reconcile } from "./dates";
 import { featureSeed } from "./featureSeed";
 import { pilotSeed } from "./pilotSeed";
@@ -638,16 +638,29 @@ export class Store {
   boardCards(): { id: string; node?: Node; feature?: Feature; stage: Stage; teams: BoardTeam[]; team: BoardTeam | null; review: ReviewWith | null }[] {
     const out: ReturnType<Store["boardCards"]> = [];
     for (const f of this.features) {
+      /* `stageOf` reads the sheet's own status, and almost every request's sheet status is
+         still "Not started" because nobody edits that column once the work is linked to a
+         roadmap task. The app already resolves this: `featureStatus` takes the LINKED task's
+         board status when there is one. Reading the raw column put 60 requests in Not started
+         while the tasks delivering them were half built. */
       /* Same question as a task: which teams are on it. The sheet's Team column, plus
          anybody assigned since it became a card on this board. */
+      /* And the same for who has it: a request whose own Team column is blank is owned by
+         whoever owns the roadmap task delivering it. The features sheet leaves Team blank far
+         more often than the roadmap does, so without this most requests were unassigned and
+         sat in the backlog while the work was plainly with a team. */
+      const task = this.featureTask(f);
       const teams = f.boardTeam
         ? [f.boardTeam]
         : ([...new Set([
             teamToBoard(f.team),
             ...(f.assignees || []).map((a) => teamToBoard(this.helpers.assigneeTeam(a))),
+            ...(task ? [teamToBoard(task.team),
+              ...(task.assignees || []).map((a) => teamToBoard(this.helpers.assigneeTeam(a)))] : []),
           ])].filter(Boolean) as BoardTeam[]);
       out.push({
-        id: f.id, feature: f, stage: stageOf(f),
+        id: f.id, feature: f,
+        stage: f.stage || stageForStatus(this.featureStatus(f), f.team, f.kind),
         teams, team: f.boardTeam ?? teams[0] ?? null, review: f.reviewWith ?? null,
       });
     }
@@ -1058,6 +1071,11 @@ export class Store {
     }
     // A subtask added under a request lives in that request's own children.
     for (const f of this.features) {
+      /* `stageOf` reads the sheet's own status, and almost every request's sheet status is
+         still "Not started" because nobody edits that column once the work is linked to a
+         roadmap task. The app already resolves this: `featureStatus` takes the LINKED task's
+         board status when there is one. Reading the raw column put 60 requests in Not started
+         while the tasks delivering them were half built. */
       if (!f.children?.length) continue;
       walk(f.children as Node[], f.id);
       if (res) return res;

@@ -55,20 +55,7 @@ export function WorkBoard() {
     return out;
   }, [all, filter, kindFilter, s]);
 
-  const byColumn = useMemo(() => {
-    const out: Record<string, BoardCard[]> = {};
-    /* The Roadmap lens is the overview of work in hand: a card nobody has taken belongs in
-       the backlog and nowhere else until somebody takes it. */
-    const pool = def.ownedOnly ? cards.filter((c) => c.teams.length > 0) : cards;
-    for (const c of def.columns) {
-      /* Rank is the priority, so it is the sort. Cards with no rank yet keep the order they
-         arrived in, behind anything that has been placed by hand. */
-      out[c.key] = cards
-        .filter((x) => fits(c, x.stage, x.teams, x.review))
-        .sort((a, b) => rank(a) - rank(b));
-    }
-    return out;
-  }, [cards, def]);
+  const byColumn = useMemo(() => columnsFor(cards, view), [cards, view]);
 
   const elsewhere = useMemo(() => {
     const shown = new Set(Object.values(byColumn).flat().map((c) => c.id));
@@ -261,10 +248,25 @@ const rank = (c: BoardCard): number => {
   return v == null ? Number.MAX_SAFE_INTEGER : v;
 };
 
+/** The tab badge, counted the same way the columns are filled: the union of what the columns
+ *  would hold. It was its own `some()` pass, which drifted from the columns by six cards on
+ *  the roadmap lens, and a badge that disagrees with the board under it is worse than no
+ *  badge. One computation, two readers. */
 function countFor(cards: BoardCard[], view: BoardView): number {
+  return new Set(Object.values(columnsFor(cards, view)).flat().map((c) => c.id)).size;
+}
+
+/** Which cards land in which column of a view. */
+function columnsFor(cards: BoardCard[], view: BoardView): Record<string, BoardCard[]> {
   const def = VIEW_BY_ID[view];
   const pool = def.ownedOnly ? cards.filter((c) => c.teams.length > 0) : cards;
-  return pool.filter((c) => def.columns.some((col) => fits(col, c.stage, c.teams, c.review, kindOf(c)))).length;
+  const out: Record<string, BoardCard[]> = {};
+  for (const c of def.columns) {
+    out[c.key] = pool
+      .filter((x) => fits(c, x.stage, x.teams, x.review, kindOf(x)))
+      .sort((a, b) => rank(a) - rank(b));
+  }
+  return out;
 }
 
 /** Add a card straight into the column you are looking at. A card born in Bugs is a bug;

@@ -66,6 +66,8 @@ function toTheme(tokens: Token[], corners: string, customPx: number | null, base
 }
 
 function mix(a: string, b: string, t: number): string {
+  // A surface can legitimately be transparent; there is nothing to blend toward.
+  if (a === "transparent" || b === "transparent") return a;
   const p = (h: string) => {
     const x = h.replace("#", "");
     const f = x.length === 3 ? x.split("").map((c) => c + c).join("") : x;
@@ -238,7 +240,7 @@ function LiveTokens({ theme, read, font, shape, storeName }: {
                   <div key={r.label}>
                     <dt>{r.label}</dt>
                     <dd>
-                      {r.swatch && <i className="hc-tokdot" style={{ background: r.value }} />}
+                      {r.swatch && <i className="hc-tokdot" data-transparent={r.value === "transparent" ? "1" : undefined} style={{ background: r.value }} />}
                       <b>{r.value}</b>
                       {r.how && <em className={"hc-tokhow h-" + r.how}>{r.how}</em>}
                       {r.note && <span>{r.note}</span>}
