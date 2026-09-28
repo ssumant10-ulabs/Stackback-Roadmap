@@ -34,44 +34,59 @@ const blank = (v: string | null | undefined) => {
   return !t || t === "—" || t === "-" || /^n\/?a$/i.test(t);
 };
 
-/** Percentages out of free text: "15%", "10-20%", "10/15/20", "upto 18 percent". */
+/** Percentages out of free text: "15%", "10-20%", "10/15/20", "upto 18 percent", and the
+ *  sheet's own "15 max, so 15, 12, 10".
+ *
+ *  The figure pattern reads a decimal whole. A `\d{1,2}` one could not, so it walked past
+ *  "12.5" in "12.52%", matched the "52%" that was left, and reported a fifty-two percent
+ *  discount: wrong in a way that reads as deliberate. */
 export function parseDiscounts(text: string | null | undefined): number[] {
   if (blank(text)) return [];
   const out: number[] = [];
+  const num = String.raw`\d{1,3}(?:\.\d+)?`;
   /* Ranges first. "10-20%" carries the sign only on the second number, so a pass that
      requires one per figure reads it as a single 20 and loses the low end of the band. */
-  const range = /(\d{1,2}(?:\.\d)?)\s*(?:-|to|\u2013|\u2014)\s*(\d{1,2}(?:\.\d)?)\s*(?:%|percent)?/gi;
+  const range = new RegExp(`(${num})\\s*(?:-|to|–|—)\\s*(${num})\\s*(?:%|percent)?`, "gi");
   let m: RegExpExecArray | null;
   while ((m = range.exec(text!))) { out.push(Number(m[1]), Number(m[2])); }
-  const re = /(\d{1,2}(?:\.\d)?)\s*(?:%|percent|pc\b)/gi;
+  const re = new RegExp(`(${num})\\s*(?:%|percent|pc\\b)`, "gi");
   while ((m = re.exec(text!))) if (!out.includes(Number(m[1]))) out.push(Number(m[1]));
   if (!out.length) {
     // "10-20" and "10/15/20" with the sign only on the last one, or missing entirely.
-    const nums = (text!.match(/\b\d{1,2}(?:\.\d)?\b/g) || []).map(Number).filter((n) => n >= 3 && n <= 60);
-    out.push(...nums);
+    const nums = (text!.match(new RegExp(`\\b${num}\\b`, "g")) || []).map(Number);
+    out.push(...nums.filter((n) => n >= 3 && n <= 60));
   }
   return out.filter((n) => n > 0 && n <= 60);
 }
 
-/* The negative lookbehind matters: "Bi-Weekly" contains "Weekly" with a word boundary in
-   front of it, so without it that cell reads as both weekly and fortnightly. */
-const WORD_DAYS: [RegExp, number][] = [
-  [/(?<!bi[- ]?)\bweekly\b/i, 7], [/\bfortnight(ly)?\b/i, 14], [/\bbi[- ]?weekly\b/i, 14],
-  [/(?<!bi[- ]?)\bmonthly\b/i, 30], [/\bbi[- ]?monthly\b/i, 60], [/\bquarterly\b/i, 90],
-  [/\b15\s*days?\b/i, 15], [/\b45\s*days?\b/i, 45],
-];
+/** Every way the sheet writes a cadence, longest first so "Bi-Monthly" is never read as a
+ *  plain "Monthly". The separator is loose on purpose: one column holds "Bi-Weekly",
+ *  "Bi- Monthly" and "BiWeekly". */
+const CADENCE = String.raw`\bbi[-\s]*monthly\b|\bbi[-\s]*weekly\b|\bfortnight(?:ly)?\b|\bquarterly\b|\bmonthly\b|\bweekly\b|\b\d{1,3}\s*days?\b|\b\d{1,2}\s*months?\b`;
+
+function cadenceDays(token: string): number {
+  const t = token.toLowerCase();
+  if (/^bi[-\s]*monthly/.test(t)) return 60;
+  if (/^bi[-\s]*weekly/.test(t)) return 14;
+  if (/^fortnight/.test(t)) return 14;
+  if (/^quarterly/.test(t)) return 90;
+  if (/^monthly/.test(t)) return 30;
+  if (/^weekly/.test(t)) return 7;
+  const n = Number((t.match(/\d+/) || ["0"])[0]);
+  return /month/.test(t) ? n * 30 : n;
+}
+
+/** Run lengths out of a fragment, however they are written: "3, 6, 12", "x 6", "6 cycles"
+ *  and "2x, 3x, 4x" are the same thing said four ways, so read the numbers and stop
+ *  requiring the word. */
+function runsIn(fragment: string): number[] {
+  return uniq((fragment.match(/\d{1,3}/g) || []).map(Number).filter((n) => n >= 2 && n <= 60));
+}
 
 /** Cadence and run lengths out of one free-text cell.
  *
  *  The sheet's own shape is `Cadence - n, n, n`: "Monthly - 3, 6, 9" is a monthly plan sold
- *  at three, six and nine deliveries. Several cadences are separated by a semicolon, as in
- *  "Weekly - 4, 6; Monthly - 3". The first version of this needed the word "cycles" or
- *  "deliveries" or an "x", none of which the sheet uses, so it read every cadence correctly
- *  and every run length as absent: 23 stores had their plans logged and the references
- *  showed run lengths for none of them.
- *
- *  Also handled, because they appear: "every 15 days, 3 cycles", "30 days / 6 deliveries",
- *  "Monthly x 6", "fortnightly". */
+ *  at three, six and nine deliveries. */
 export function parseFrequency(text: string | null | undefined): { everyDays: number[]; deliveries: number[] } {
   const plans = parsePlans(text);
   return {
@@ -80,54 +95,39 @@ export function parseFrequency(text: string | null | undefined): { everyDays: nu
   };
 }
 
-/** The same cell, clause by clause, so each cadence keeps its OWN run lengths.
+/** The same cell, one entry per cadence, so each keeps its OWN run lengths.
  *
- *  `parseFrequency` flattens, which is right for a category summary and wrong for one store:
- *  "Weekly - 4, 6; Monthly - 3" rendered as "Weekly 4, 6, 3" and "Monthly 4, 6, 3", which
- *  are two plans neither of which the store sells. */
+ *  Anchored on the cadence words rather than split on a separator. Splitting was the bug:
+ *  the 39 filled-in rows separate their clauses with a semicolon, a colon, an ampersand and
+ *  a bare comma, and a comma is also what separates the run lengths, so no split character
+ *  is safe. Reading "Weekly- 6, Monthly- 3" by splitting on the comma gives one weekly plan
+ *  and a naked "Monthly- 3"; reading it by cadence gives the two plans the store sells.
+ *
+ *  Held to `scripts/fixtures/pilot-plans.json`, which is every filled-in plan cell from the
+ *  live Pilots tab rather than shapes imagined here. */
 export function parsePlans(text: string | null | undefined): { everyDays: number[]; deliveries: number[] }[] {
   if (blank(text)) return [];
-  const out: { everyDays: number[]; deliveries: number[] }[] = [];
+  const src = text!;
+  const hits: { days: number; from: number; to: number }[] = [];
+  const re = new RegExp(CADENCE, "gi");
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(src))) hits.push({ days: cadenceDays(m[0]), from: m.index, to: m.index + m[0].length });
 
-  for (const clause of text!.split(/;|\band\b/i)) {
-    if (!clause.trim()) continue;
-
-    const days: number[] = [];
-    for (const [re, d] of WORD_DAYS) if (re.test(clause)) days.push(d);
-    const dre = /(\d{1,3})\s*(?:-|\s)?\s*days?\b/gi;
-    let m: RegExpExecArray | null;
-    while ((m = dre.exec(clause))) { const n = Number(m[1]); if (n >= 3 && n <= 180) days.push(n); }
-    const runs: number[] = [];
-
-    /* Run lengths. Named first, then the sheet's bare list after the cadence: everything
-       after the dash that is not part of a "N days" cadence we already took. */
-    const named: number[] = [];
-    const cre = /(?:x\s*|\u00d7\s*)?(\d{1,3})\s*(?:cycles?|deliveries|deliveres|months?|times)\b/gi;
-    while ((m = cre.exec(clause))) { const n = Number(m[1]); if (n >= 2 && n <= 60) named.push(n); }
-    const xre = /\b[x\u00d7]\s*(\d{1,3})\b/gi;
-    while ((m = xre.exec(clause))) { const n = Number(m[1]); if (n >= 2 && n <= 60) named.push(n); }
-
-    if (named.length) { push(days, named); continue; }
-
-    /* After the dash, or after the cadence word when somebody left the dash out: the sheet
-       has both "Monthly - 3, 6" and "Monthly 3, 6". */
-    const cadence = /\b(weekly|fortnightly|bi[- ]?weekly|monthly|bi[- ]?monthly|quarterly|\d{1,3}\s*days?)\b/i.exec(clause);
-    const dash = clause.search(/[-\u2013:]/);
-    const from = dash >= 0 ? dash + 1 : cadence ? cadence.index + cadence[0].length : -1;
-    if (from < 0) { push(days, runs); continue; }
-    const tail = clause.slice(from);
-    // "15 days" in the tail is the cadence restated, not a run length.
-    const bare = tail.replace(/\d{1,3}\s*days?/gi, "").match(/\d{1,3}/g);
-    if (bare) for (const b of bare) { const n = Number(b); if (n >= 2 && n <= 60) runs.push(n); }
-    push(days, runs);
+  /* No cadence named at all. "2x, 3x, 4x, prepaid only" is a real cell: a run ladder with
+     the cadence left out, which is worth showing as exactly that rather than as nothing. */
+  if (!hits.length) {
+    const runs = runsIn(src);
+    return runs.length ? [{ everyDays: [], deliveries: runs }] : [];
   }
 
-  return out;
-
-  function push(days: number[], runs: number[]) {
-    if (!days.length && !runs.length) return;
-    out.push({ everyDays: uniq(days), deliveries: uniq(runs) });
-  }
+  return hits.map((h, i) => {
+    const tail = src.slice(h.to, hits[i + 1]?.from ?? src.length);
+    let runs = runsIn(tail);
+    /* "3, 6 & 12 monthly & bi-weekly 3, 6, 12": the first ladder is written before its own
+       cadence. Only the first cadence in a cell can claim what came before it. */
+    if (!runs.length && i === 0) runs = runsIn(src.slice(0, h.from));
+    return { everyDays: [h.days], deliveries: runs };
+  });
 }
 
 const uniq = (a: number[]) => [...new Set(a)];

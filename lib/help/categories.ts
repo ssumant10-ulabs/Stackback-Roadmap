@@ -168,7 +168,9 @@ const CATEGORY_WORDS: Record<string, RegExp> = {
   "coffee-tea": /coffee|tea(?!m)/i,
   supplements: /supplement|protein|nutrition|nutra|wellness/i,
   pet: /pet|dog|cat\b/i,
-  "personal-care": /skin|hair|personal|bath|body|beauty/i,
+  /* "Female Hygiene Products" is a live pilot category and matched nothing, so those
+     stores were shown an empty reference. The neighbours are listed with it. */
+  "personal-care": /skin|hair|personal|bath|body|beauty|hygiene|feminine|menstrual|sanitary|intimate/i,
   "food-staples": /food|grocer|staple|snack|speciality|specialty/i,
   beverages: /beverage|juice|kombucha|water|drink/i,
   home: /home|clean|household/i,
