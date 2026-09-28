@@ -9,7 +9,7 @@ import { CATEGORY_BY_ID, SCALE_BY_ID, freqWord } from "@/lib/help/categories";
 import { drawPlanSheet } from "@/lib/help/sheet-png";
 import OrderImport from "./OrderImport";
 import type { PilotStore } from "@/lib/types";
-import { categoryReferences, coverage, discountBand } from "@/lib/help/references";
+import { categoryReferences, coverage, discountBand, type CategoryReference } from "@/lib/help/references";
 import { CATEGORY_DEFAULTS, categoryIdFor } from "@/lib/help/categories";
 import type { WidgetSettings } from "@/lib/help/widget";
 
@@ -28,6 +28,15 @@ function spread(band: { low: number; mid: number; high: number }, n: number): nu
   if (n <= 1) return [band.mid];
   const step = (band.high - band.low) / (n - 1);
   return Array.from({ length: n }, (_, i) => Math.round(band.low + step * i));
+}
+
+/** Prepaid / pay as you go, counted, in one line. */
+function payWord(r: CategoryReference): string {
+  const parts: string[] = [];
+  if (r.payment.prepaid) parts.push(`${r.payment.prepaid} prepaid`);
+  if (r.payment.payg) parts.push(`${r.payment.payg} pay as you go`);
+  if (r.payment.both) parts.push(`${r.payment.both} both`);
+  return parts.join(", ");
 }
 
 export default function PlanForm({ answers, onAnswers, storeName, onDone, settings, pilots = [] }: {
@@ -214,15 +223,45 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
           <p className="hc-note">Pick a category and a size, and this fills in.</p>
         )}
 
+        {/* The cohort's own numbers where enough of the category is logged, ours where it is
+            not. This used to be the written-down category default with the cohort as a line
+            underneath, and a separate References tab holding the real numbers, which is two
+            places to read the same thing and one of them stale. */}
         {cat && (
           <section className="hc-sugblock">
             <h3>{cat.label}</h3>
-            <ul className="hc-sugfacts">
-              <li><span>Frequency</span><b>{cat.everyDays.map(freqWord).join(", ").toLowerCase()}</b></li>
-              <li><span>Run lengths</span><b>{cat.deliveries.join(", ")} deliveries</b></li>
-              <li><span>Discount</span><b>{cat.deliveries.map((d, i) => `${cat.discounts[i]}% at ${d}`).join(", ")}</b></li>
-            </ul>
-            <p className="hc-sugwhy">{cat.why}</p>
+            {ref?.solid && ref.band ? (
+              <>
+                <ul className="hc-sugfacts">
+                  <li><span>Frequency</span><b>{ref.ref.everyDays.length ? ref.ref.everyDays.map(freqWord).join(", ").toLowerCase() : cat.everyDays.map(freqWord).join(", ").toLowerCase()}</b></li>
+                  <li><span>Run lengths</span><b>{(ref.ref.deliveries.length ? ref.ref.deliveries : cat.deliveries).join(", ")} deliveries</b></li>
+                  <li><span>Discount</span><b>{ref.band.mid}%{ref.band.low !== ref.band.high ? `, ${ref.band.low} to ${ref.band.high}` : ""}</b></li>
+                  <li><span>Paid</span><b>{payWord(ref.ref) || "not logged"}</b></li>
+                </ul>
+                <p className="hc-sugwhy">
+                  Read off {ref.ref.stores.length - ref.ref.unlogged.length} of your{" "}
+                  {ref.ref.stores.length} {cat.label.toLowerCase()} stores, as the Pilots tab
+                  stands right now. {cat.why}
+                </p>
+                <details className="hc-sugmore">
+                  <summary>Which stores</summary>
+                  <p>{ref.ref.stores.join(", ")}.</p>
+                  {ref.ref.unlogged.length > 0 && <p className="hc-sugunlogged">Nothing logged yet: {ref.ref.unlogged.join(", ")}.</p>}
+                </details>
+              </>
+            ) : (
+              <>
+                <ul className="hc-sugfacts">
+                  <li><span>Frequency</span><b>{cat.everyDays.map(freqWord).join(", ").toLowerCase()}</b></li>
+                  <li><span>Run lengths</span><b>{cat.deliveries.join(", ")} deliveries</b></li>
+                  <li><span>Discount</span><b>{cat.deliveries.map((d, i) => `${cat.discounts[i]}% at ${d}`).join(", ")}</b></li>
+                </ul>
+                <p className="hc-sugwhy">
+                  {cat.why}
+                  {ref && <> {" "}Only {ref.ref.stores.length - ref.ref.unlogged.length} of your {ref.ref.stores.length} stores in this category have their plan columns filled in, so these are the category default rather than yours.</>}
+                </p>
+              </>
+            )}
           </section>
         )}
 
@@ -230,8 +269,8 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
           <section className="hc-sugblock">
             <h3>{scale.hint}</h3>
             <p className="hc-sugwhy">{scale.why}</p>
-            {ref?.band && (
-              <p className={"hc-sugcohort" + (ref.solid ? "" : " thin")}>
+            {ref?.band && !ref.solid && (
+              <p className={"hc-sugcohort thin"}>
                 <b>Your cohort:</b> {ref.ref.stores.length} {ref.ref.label} store{ref.ref.stores.length === 1 ? "" : "s"} run{ref.ref.stores.length === 1 ? "s" : ""}{" "}
                 {ref.band.mid}%{ref.band.low !== ref.band.high ? ` (${ref.band.low} to ${ref.band.high})` : ""}
                 {ref.ref.everyDays[0] ? `, every ${ref.ref.everyDays[0]} days` : ""}

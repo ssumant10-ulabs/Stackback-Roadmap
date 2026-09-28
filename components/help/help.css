@@ -150,7 +150,7 @@
 }
 /* No inner scrollbar. A rail with its own scroller inside a page that already scrolls is two
    scrollbars and a guess about which one you are in; grouped, it is short enough to sit. */
-.hc-nav { position: sticky; top: 68px; align-self: start; display: flex; flex-direction: column; gap: 1px; }
+.hc-nav { position: sticky; top: calc(var(--hc-bar) + 14px); align-self: start; display: flex; flex-direction: column; gap: 1px; }
 .hc-navitem {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
   appearance: none; border: 0; background: transparent; color: var(--ink-2);
@@ -388,6 +388,7 @@
   /* Sticky headings would pin under a bar that is two rows tall here, and the sections are
      a swipe apart on a phone anyway. */
   .hc-faqgrouph { position: static; background: none; }
+  .hc-subrow { position: static; }
 }
 @media (max-width: 767px) {
   /* The gutter is one number now, so the bar, the rail and the answers narrow together. */
@@ -1529,7 +1530,7 @@
   display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 750;
 }
 .hc-tlnav em { font-style: normal; font-size: 11px; color: var(--hc-muted); }
-.hc-tlphase { scroll-margin-top: 90px; }
+.hc-tlphase { scroll-margin-top: calc(var(--hc-bar) + 24px); }
 
 /* FAQ typography and section anchors. A group heading was the same weight as the questions
    under it, which is why "The plans" read as another question rather than as the thing the
@@ -1537,7 +1538,7 @@
 .hc-faqgrouph {
   margin: 0 0 6px; font-size: 16.5px; font-weight: 720; letter-spacing: -.012em; color: var(--ink);
 }
-.hc-faqgroup { margin-bottom: 26px; scroll-margin-top: 90px; }
+.hc-faqgroup { margin-bottom: 26px; scroll-margin-top: calc(var(--hc-bar) + var(--hc-sub) + 10px); }
 .hc-faq .hc-h1 { font-size: 27px; letter-spacing: -.022em; }
 .hc-faqq { font-size: 14px; font-weight: 600; padding-top: 13px; padding-bottom: 13px; }
 .hc-faqlist li.on .hc-faqq { font-weight: 680; }
@@ -1689,7 +1690,16 @@
 .hc-sub:focus-visible { outline: 2px solid var(--brand-deep); outline-offset: -3px; }
 .hc-navfirst { margin-top: 0; padding-top: 0; border-top: 0; }
 /* The sub row is sticky under the bar, so the group's halves stay reachable while reading. */
+/* One number for the stack, so the three sticky layers cannot disagree. They were 52, 96
+   and 68 hard-coded in three places, and the bar is 53px on one breakpoint and two rows on
+   another, so each of them was right on one screen and wrong on the rest. */
+.hc { --hc-bar: 53px; --hc-sub: 39px; }
 @media (min-width: 768px) {
-  .hc-subrow { position: sticky; top: 52px; z-index: 29; }
-  .hc-faqgrouph { top: 96px; }
+  .hc-subrow { position: sticky; top: var(--hc-bar); z-index: 29; }
+  .hc-faqgrouph { top: calc(var(--hc-bar) + var(--hc-sub)); }
+  .hc-nav { top: calc(var(--hc-bar) + var(--hc-sub) + 14px); }
+  .hc-tlphase { scroll-margin-top: calc(var(--hc-bar) + var(--hc-sub) + 14px); }
 }
+/* No sub row on those parts, so the rail and the headings sit one layer higher. */
+.hc[data-hc-part="queries"] .hc-nav,
+.hc[data-hc-part="internal"] .hc-nav { top: calc(var(--hc-bar) + 14px); }

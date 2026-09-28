@@ -222,8 +222,23 @@ export const STAGE_STATUS: Partial<Record<Stage, "planned" | "progress" | "done"
 export function defaultStage(kind: CardKind | undefined | null): Stage {
   return kind === "bug" ? "bug" : "feature";
 }
-export const stageOf = (f: { stage?: Stage | null; kind?: CardKind | null }): Stage =>
-  f.stage || defaultStage(f.kind);
+/** Where a REQUEST sits before anybody has moved it on the board.
+ *
+ *  Read off the status the pilot sheet already carries, the same way a roadmap task is read
+ *  off its own: a request the sheet calls Done is in production and one it calls In progress
+ *  is with whoever owns it. Without this every request sat in the intake pile whatever the
+ *  live dashboard said, and the board and the sheet disagreed on day one. */
+export const stageOf = (f: {
+  stage?: Stage | null; kind?: CardKind | null; sheetStatus?: string | null; team?: string | null;
+}): Stage => {
+  if (f.stage) return f.stage;
+  const st = (f.sheetStatus || "").trim().toLowerCase();
+  if (st === "done" || st === "shipped" || st === "live") return "prod";
+  if (st === "in progress" || st === "in-progress" || st === "wip" || st === "started") {
+    return defaultNodeStage("progress", f.team, f.kind);
+  }
+  return defaultStage(f.kind);
+};
 
 /** Where a ROADMAP task sits before anybody has moved it on the board.
  *

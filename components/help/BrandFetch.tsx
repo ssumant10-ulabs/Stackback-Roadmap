@@ -164,14 +164,11 @@ export default function BrandFetch({ theme, onTheme, settings, storeName, onProd
 
       {tokens && (
         <>
-          <div className="hc-bfchips">
-            {tokens.map((t) => (
-              <span key={t.key} className="hc-bfchip">
-                <i style={{ background: t.hex }} />
-                <b>{t.hex}</b> {t.source}
-              </span>
-            ))}
-          </div>
+          {/* The six flat tokens are the READING, and they are named for the new subscription
+              widget's schema, which is not what the colour-token spec calls anything. Leading
+              with them and hiding the spec's own twenty-seven behind a "Show" is why this
+              panel kept reading as not matching the skill: the names on screen were from a
+              different model. They are the provenance column of that table now. */}
           {product && (
             <p className="hc-bfnote">
               Showing <b>{product.title}</b>
@@ -195,7 +192,8 @@ export default function BrandFetch({ theme, onTheme, settings, storeName, onProd
 function LiveTokens({ theme, read, font, storeName }: {
   theme: WidgetTheme; read?: ReadSources; font: string | null; storeName: string | null;
 }) {
-  const [open, setOpen] = useState(false);
+  /* Open. This is the token set, not an appendix to it. */
+  const [open, setOpen] = useState(true);
   const [copied, setCopied] = useState(false);
   const sections = canonicalTokens(theme, read, font);
   const count = sections.reduce((n, s) => n + s.rows.length, 0);
@@ -213,7 +211,7 @@ function LiveTokens({ theme, read, font, storeName }: {
   return (
     <div className="hc-tok">
       <button type="button" className="hc-tokh" onClick={() => setOpen(!open)} aria-expanded={open}>
-        <b>All {count} widget tokens</b>
+        <b>Widget tokens ({count})</b>
         <span>{open ? "Hide" : "Show"}</span>
       </button>
       {open && (

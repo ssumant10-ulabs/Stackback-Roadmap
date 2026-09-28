@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FAQ_SECTIONS, FAQ_COUNT, FAQ_JUMPS, FAQ_MEDIA, resolveFaq } from "@/lib/help/faq";
 import { ALL_CLIPS } from "@/lib/help/videos";
 import { STATUS_LABEL, type HelpArticle } from "@/lib/help/types";
@@ -15,7 +15,16 @@ export default function Faq({ onOpen, onJump }: {
    *  the widget than by another paragraph about it. */
   onJump?: (step: 2 | 3) => void;
 }) {
-  const [phase, setPhase] = useState<"pre" | "post">("pre");
+  /* The stage lives on the address, because the rail changes it too and two copies of one
+     piece of state is two answers to "which one is showing". */
+  const [phase, setPhase] = useState<"pre" | "post">(
+    typeof window !== "undefined" && window.location.hash.includes("post") ? "post" : "pre",
+  );
+  useEffect(() => {
+    const sync = () => setPhase(window.location.hash.includes("post") ? "post" : "pre");
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
+  }, []);
   const [open, setOpen] = useState<string | null>(null);
   const section = FAQ_SECTIONS.find((s) => s.phase === phase) ?? FAQ_SECTIONS[0];
   const slug = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -36,7 +45,11 @@ export default function Faq({ onOpen, onJump }: {
         {FAQ_SECTIONS.map((sec) => (
           <button key={sec.phase} role="tab" aria-selected={phase === sec.phase}
             className={"hc-part" + (phase === sec.phase ? " on" : "")}
-            onClick={() => { setPhase(sec.phase); setOpen(null); }}>
+            onClick={() => {
+              setOpen(null);
+              window.location.hash = sec.phase === "post" ? "#/faq/post" : "#/faq";
+              setPhase(sec.phase);
+            }}>
             {sec.title}<em>{sec.groups.reduce((n, g) => n + g.ids.length, 0)}</em>
           </button>
         ))}

@@ -638,7 +638,14 @@ export class Store {
   boardCards(): { id: string; node?: Node; feature?: Feature; stage: Stage; teams: BoardTeam[]; team: BoardTeam | null; review: ReviewWith | null }[] {
     const out: ReturnType<Store["boardCards"]> = [];
     for (const f of this.features) {
-      const teams = f.boardTeam ? [f.boardTeam] : ([teamToBoard(f.team)].filter(Boolean) as BoardTeam[]);
+      /* Same question as a task: which teams are on it. The sheet's Team column, plus
+         anybody assigned since it became a card on this board. */
+      const teams = f.boardTeam
+        ? [f.boardTeam]
+        : ([...new Set([
+            teamToBoard(f.team),
+            ...(f.assignees || []).map((a) => teamToBoard(this.helpers.assigneeTeam(a))),
+          ])].filter(Boolean) as BoardTeam[]);
       out.push({
         id: f.id, feature: f, stage: stageOf(f),
         teams, team: f.boardTeam ?? teams[0] ?? null, review: f.reviewWith ?? null,
@@ -1032,7 +1039,25 @@ export class Store {
       });
     };
     walk(this.tasks, "root");
-    return res;
+    if (res) return res;
+    /* A request is a card on the same board, so everything that edits a card has to reach
+       one. It carries the same work fields, so it IS a Node for these purposes; what it is
+       not is a member of the roadmap tree, which is why it comes back with its own array. */
+    const fi = this.features.findIndex((f) => f.id === id);
+    if (fi >= 0) {
+      const f = this.features[fi] as unknown as Node;
+      f.status = f.status || "planned";
+      f.assignees = f.assignees || [];
+      f.children = f.children || [];
+      return { node: f, arr: this.features as unknown as Node[], index: fi, parentId: "root" };
+    }
+    // A subtask added under a request lives in that request's own children.
+    for (const f of this.features) {
+      if (!f.children?.length) continue;
+      walk(f.children as Node[], f.id);
+      if (res) return res;
+    }
+    return null;
   }
   find(id: string): Node | null {
     const e = this.findEntry(id);

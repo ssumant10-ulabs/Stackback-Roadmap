@@ -7,7 +7,7 @@ import {
   type BoardColumn, type BoardTeam, type BoardView, type CardKind, type ReviewWith, type Stage,
 } from "@/lib/board";
 import { normPriority, subtreeCounts, waveWord } from "@/lib/derive";
-import { TEAM_ORDER, TEAM_VAR } from "@/lib/constants";
+import type { Node } from "@/lib/types";
 import { Assignees } from "../Assignees";
 import { CommentChip, DateChip, StatusButton } from "../bits";
 import { CommentsThread } from "../CommentsThread";
@@ -40,15 +40,6 @@ export function WorkBoard() {
 
   const all = s.boardCards();
   const filter = s.ui.filter;
-
-  /* The chosen team's roster, or the team of whoever is filtered for, so the people row is
-     the people you are actually choosing between rather than everyone in the company. */
-  const people = useMemo(() => {
-    const team = filter?.type === "team" ? filter.name
-      : filter?.type === "person" ? s.helpers.teamOf(filter.name)
-      : null;
-    return team ? (s.data.roster[team] || []) : [];
-  }, [filter, s]);
 
   /** The team and person filter, which applied to two views and silently did nothing here.
    *  A card matches on who is assigned to it, or on the team it was handed to. */
@@ -121,35 +112,11 @@ export function WorkBoard() {
             </button>
           ))}
         </nav>
-        {/* The filter, out where the tabs are, because "show me Design's cards" is a thing
-            you do constantly and a popover is two clicks and a hunt. Picking a team reveals
-            that team's people as a second row: the two are the same question at two scopes. */}
-        <div className="wb-filters">
-          {TEAM_ORDER.map((t) => {
-            const on = filter?.type === "team" && filter.name === t;
-            return (
-              <button key={t} type="button" className={"wb-fchip t-" + TEAM_VAR[t] + (on ? " on" : "")}
-                onClick={() => s.setFilter(on ? null : { type: "team", name: t })}>
-                {t === "Engineering" ? "Dev" : t}
-              </button>
-            );
-          })}
-          {people.length > 0 && (
-            <span className="wb-fpeople">
-              {people.map((p) => {
-                const on = filter?.type === "person" && filter.name === p;
-                return (
-                  <button key={p} type="button" className={"wb-fchip person" + (on ? " on" : "")}
-                    onClick={() => s.setFilter(on ? null : { type: "person", name: p })}>{p}</button>
-                );
-              })}
-            </span>
-          )}
-          {filter && <button type="button" className="wb-fclear" onClick={() => s.setFilter(null)}>Clear</button>}
-        </div>
-
         {/* Filter and Add task live here, on the tabs row, rather than in a strip of their
             own above it. Three stacked rows of chrome before the first column. */}
+        {/* Fixed to the right of the row, not pushed there by the tabs: the tab strip is a
+            different width on every lens, so `margin-left: auto` moved Filter and Add task
+            every time you switched. */}
         <span className="wb-actions">
           <button ref={filterBtn} type="button" className={"btn ghost" + (filter ? " active-filter" : "")}
             data-filter-anchor aria-haspopup="true"
@@ -303,22 +270,25 @@ function Card({ card, view, rank: at, of, siblings, dragging, onDragStart, onDra
 }) {
   const s = useStore();
   const [open, setOpen] = useState(false);
-  const node = card.node;
   /* The comment chip writes `ui.commentsOpen`, which nothing on this card was reading, so
      clicking it did nothing at all. Either way of opening the card opens the thread. */
-  const cmt = node ? s.ui.commentsOpen[node.id] === true : false;
+  const cmt = s.ui.commentsOpen[card.id] === true;
   const body = open || cmt;
   const f = card.feature;
-  const title = node ? node.title : f!.title;
-  const kind: CardKind = (node?.kind || f?.kind || "feature") as CardKind;
-  const counts = node ? subtreeCounts(node) : null;
-  const shots = (node?.shots || f?.shots || []) as { id: string; name: string; src: string; bytes: number }[];
+  /* A request carries the same work fields as a task and `findEntry` returns it as a Node,
+     so the whole card body below is one piece of code: assignees, dates, checklist and
+     comments, on either record. A card with half the buttons is not the same card. */
+  const node: Node = card.node ?? (f as unknown as Node);
+  const title = node.title;
+  const kind: CardKind = (card.node?.kind || f?.kind || "feature") as CardKind;
+  const counts = subtreeCounts(node);
+  const shots = (card.node?.shots || f?.shots || []) as { id: string; name: string; src: string; bytes: number }[];
   const task = f ? s.featureTask(f) : null;
 
   return (
     <article className={"wb-card" + (dragging ? " dragging" : "")} draggable
       onDragStart={onDragStart} onDragEnd={onDragEnd}
-      data-node-id={node?.id} data-feature-id={f?.id}>
+      data-node-id={card.node?.id} data-feature-id={f?.id}>
       <div className="wb-cardtop">
         <span className="wb-move">
           <button type="button" aria-label="Move up" disabled={at === 1}
@@ -334,22 +304,20 @@ function Card({ card, view, rank: at, of, siblings, dragging, onDragStart, onDra
         </button>
         {f?.ref && <span className="wb-ref">{f.ref}</span>}
         {f?.urgency && <span className={"wb-urg u-" + f.urgency.toLowerCase()}>{f.urgency}</span>}
-        {node && <span className="wb-status"><StatusButton node={node} size={15} /></span>}
+        <span className="wb-status"><StatusButton node={node} size={15} /></span>
       </div>
 
       <h4 className="wb-title">{title}</h4>
       {f?.storeName && <p className="wb-store">{f.storeName}</p>}
 
       {/* The old card's meta row, unchanged: who has it, when it is due, what was said. */}
-      {node && (
-        <div className="wb-meta">
-          <span className="assignees"><Assignees node={node} small /></span>
-          <DateChip node={node} variant="icon" />
-          <CommentChip node={node} />
-        </div>
-      )}
+      <div className="wb-meta">
+        <span className="assignees"><Assignees node={node} small /></span>
+        <DateChip node={node} variant="icon" />
+        <CommentChip node={node} />
+      </div>
 
-      {counts && counts.total > 0 && (
+      {counts.total > 0 && (
         <div className="wb-prog">
           <div className="wb-progtrack">
             <div className="wb-progfill" style={{ width: Math.round((counts.done / counts.total) * 100) + "%" }} />
@@ -373,7 +341,7 @@ function Card({ card, view, rank: at, of, siblings, dragging, onDragStart, onDra
         {/* Position is the priority, so the number is the point: "second in this column" is
             a fact anybody can act on, where "Next" was a word three people read three ways.
             The horizon is still there and still clickable, in front of it. */}
-        {node && (
+        {card.node && (
           <button type="button" className={"wb-prio p-" + normPriority(node.priority)}
             title="Now, Next or Future" onClick={() => s.setPriority(node.id, nextPriority(node.priority))}>
             {waveWord(normPriority(node.priority))}
@@ -386,13 +354,13 @@ function Card({ card, view, rank: at, of, siblings, dragging, onDragStart, onDra
       </div>
 
       <button type="button" className={"wb-more" + (body ? " on" : "")}
-        onClick={() => { setOpen(!body); if (node && cmt) s.toggleComments(node.id); }}>
-        <IcChevron />{body ? "Less" : counts && counts.total ? `Checklist and files (${counts.total})` : "Files and notes"}
+        onClick={() => { setOpen(!body); if (cmt) s.toggleComments(card.id); }}>
+        <IcChevron />{body ? "Less" : counts.total ? `Checklist and files (${counts.total})` : "Files and notes"}
       </button>
 
       {body && (
         <div className="wb-open">
-          {node && counts && counts.total > 0 && (
+          {counts.total > 0 && (
             <ul className="wb-subs">
               {node.children.map((k) => (
                 <li key={k.id}>
@@ -402,12 +370,12 @@ function Card({ card, view, rank: at, of, siblings, dragging, onDragStart, onDra
               ))}
             </ul>
           )}
-          {node && <AddSub parentId={node.id} />}
+          <AddSub parentId={node.id} />
           <Files id={card.id} shots={shots} />
-          {node && <CommentsThread node={node} />}
+          <CommentsThread node={node} />
           <button type="button" className="wb-del"
             onClick={() => {
-              const n = counts?.total || 0;
+              const n = counts.total;
               if (n && !confirm(`Delete "${title}" and its ${n} subtask${n === 1 ? "" : "s"}?`)) return;
               if (!n && !confirm(`Delete "${title}"?`)) return;
               s.delCard(card.id);

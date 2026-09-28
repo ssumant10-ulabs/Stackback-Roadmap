@@ -1961,6 +1961,15 @@
 .app > main { padding-bottom: 18px; }
 
 /* The tabs, the team chips, the filter and Add task on one row. */
-.wb-actions { display: inline-flex; gap: 8px; margin-left: auto; order: 2; }
-.wb-filters { order: 1; }
-.wb-head .wb-blurb { order: 4; }
+
+
+
+
+
+/* One row: the tabs on the left, the actions pinned right, the blurb under both. The actions
+   used to be pushed right by the tab strip, which is a different width on every lens, so
+   they shifted every time you switched tab. */
+.wb-head { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px 14px; }
+.wb-head .wb-tabs { grid-column: 1; justify-self: start; }
+.wb-actions { grid-column: 2; display: inline-flex; gap: 8px; justify-self: end; }
+.wb-head .wb-blurb { grid-column: 1 / -1; margin: 0; }

@@ -13,9 +13,8 @@ import Article from "./Article";
 import Brief from "./Brief";
 import Internal from "./Internal";
 import Faq from "./Faq";
-import { FAQ_COUNT, NAV_GROUPS } from "@/lib/help/faq";
+import { FAQ_COUNT, FAQ_SECTIONS, NAV_GROUPS, resolveFaq } from "@/lib/help/faq";
 import HowTo from "./HowTo";
-import References from "./References";
 import Simulator from "./Simulator";
 import type { LoggedQuery, StoreRecord, StoreSummary } from "@/lib/sanity/queries";
 import { helpFont } from "./font";
@@ -31,12 +30,12 @@ type View =
   | { kind: "sim" }
   | { kind: "internal" }
   | { kind: "howto" }
-  | { kind: "refs" };
+;
 
 /** The Help Centre is two parts, and they answer different questions.
  *  Queries is live and incomplete by nature: what came in, what we answered.
  *  Help Centre is the settled corpus: the FAQs, the order flow, the simulator. */
-type Part = "queries" | "refs" | "howto" | "help" | "internal";
+type Part = "queries" | "howto" | "help" | "internal";
 
 /** Topics where the question underneath is usually "what would that actually do", which
  *  a simulator answers and a paragraph does not. */
@@ -58,7 +57,7 @@ function parseHash(): View {
   const { route } = splitHash();
   // `#/` used to be an overview that listed the same answers the FAQ does under another
   // name, so it lands on the FAQ now and old links still resolve.
-  if (route === "" || route === "home") return { kind: "faq" };
+  if (route === "" || route === "home" || route.startsWith("faq")) return { kind: "faq" };
   if (route.startsWith("cat/")) return { kind: "cat", id: decodeURIComponent(route.slice(4)) };
   if (route.startsWith("search/")) return { kind: "search", q: decodeURIComponent(route.slice(7)) };
   if (route === "insights") return { kind: "insights" };
@@ -69,10 +68,10 @@ function parseHash(): View {
     return { kind: "queries", step: n >= 1 && n <= 3 ? n : 1 };
   }
   if (route === "sim") return { kind: "sim" };
-  if (route === "faq") return { kind: "faq" };
   if (route === "internal") return { kind: "internal" };
   if (route === "howto") return { kind: "howto" };
-  if (route === "refs") return { kind: "refs" };
+  // References folded into the plan form's own panel; the old address still resolves.
+  if (route === "refs") return { kind: "queries", step: 1 };
   /* The FAQs are the landing. The overview is the 236-answer index you go to when the FAQ
      did not have it, which is the second thing you want, not the first. */
   return { kind: "faq" };
@@ -149,13 +148,23 @@ export default function HelpApp({
   }, [internal, ourSurface]);
 
   const go = useCallback((v: View) => {
-    const h = v.kind === "home" ? "#/" : v.kind === "cat" ? `#/cat/${v.id}`
-      : v.kind === "search" ? `#/search/${encodeURIComponent(v.q)}`
-      : v.kind === "queries" ? (v.step > 1 ? `#/queries/${v.step}` : "#/queries")
-      : v.kind === "sim" ? "#/sim"
-      : v.kind === "internal" ? "#/internal"
-      : v.kind === "howto" ? "#/howto"
-      : v.kind === "refs" ? "#/refs" : "#/insights";
+    /* Exhaustive, and it has to stay that way. This was a chain of ternaries ending in
+       "#/insights", so `faq` had no branch and fell off the end: clicking FAQs set the
+       address to Insights, which is why the Help Centre kept opening on the internal tab
+       with Internal lit. A record makes a missing kind a type error rather than a redirect
+       to whatever happens to be last. */
+    const ROUTE: Record<View["kind"], (v: View) => string> = {
+      faq: () => "#/faq",
+      home: () => "#/faq",
+      cat: (x) => `#/cat/${(x as { id: string }).id}`,
+      search: (x) => `#/search/${encodeURIComponent((x as { q: string }).q)}`,
+      queries: (x) => { const n = (x as { step: number }).step; return n > 1 ? `#/queries/${n}` : "#/queries"; },
+      sim: () => "#/sim",
+      howto: () => "#/howto",
+      internal: () => "#/internal",
+      insights: () => "#/insights",
+    };
+    const h = ROUTE[v.kind](v);
     if (window.location.hash !== h) window.location.hash = h; else setView(v);
     setNavOpen(false);
     // Back to following the view: arriving at a topic from a search result or a card should
@@ -211,12 +220,11 @@ export default function HelpApp({
 
   /** Which of the two jobs the reader is on. Internal is its own, and only ours. */
   const group: "setup" | "help" | "internal" =
-    view.kind === "queries" || view.kind === "refs" ? "setup"
+    view.kind === "queries" ? "setup"
       : view.kind === "internal" || view.kind === "insights" ? "internal"
       : "help";
 
   const part: Part = view.kind === "queries" ? "queries"
-    : view.kind === "refs" ? "refs"
     : view.kind === "howto" ? "howto"
     : view.kind === "internal" ? "internal" : "help";
   const cat = view.kind === "cat" ? COUNTS.find((c) => c.id === view.id) : undefined;
@@ -313,30 +321,20 @@ export default function HelpApp({
         )}
       </div></header>
 
-      {/* The row under the group: which half of it. Only where a group has two. */}
-      {group !== "internal" && (
+      {/* Only the Help Centre has halves now. Setup StackBack is one screen: References
+          folded into "What similar stores run" beside the fields it argues about, which is
+          where somebody filling the form is already looking. */}
+      {group === "help" && (
         <div className="hc-subrow">
           <div className="hc-subin">
-            {group === "setup" ? (
-              <>
-                <button className={"hc-sub" + (part === "queries" ? " on" : "")}
-                  onClick={() => go({ kind: "queries", step: 1 })}>Your plans</button>
-                <button className={"hc-sub" + (part === "refs" ? " on" : "")}
-                  onClick={() => go({ kind: "refs" })}>References</button>
-              </>
-            ) : (
-              <>
-                {/* How to first: somebody opening the Help Centre is trying to do something,
-                    and the guides are the answer to that. "Every answer" came off, it was the
-                    FAQ's index under a second name, and the topic rail is the way in. */}
-                <button className={"hc-sub" + (part === "howto" ? " on" : "")}
-                  onClick={() => go({ kind: "howto" })}>How to guides</button>
-                <button className={"hc-sub" + (["faq", "home", "cat", "search"].includes(view.kind) ? " on" : "")}
-                  onClick={() => go({ kind: "faq" })}>FAQs</button>
-                <button className={"hc-sub" + (view.kind === "sim" ? " on" : "")}
-                  onClick={() => go({ kind: "sim" })}>Simulate</button>
-              </>
-            )}
+            {/* How to first: somebody opening the Help Centre is trying to do something, and
+                the guides are the answer to that. */}
+            <button className={"hc-sub" + (part === "howto" ? " on" : "")}
+              onClick={() => go({ kind: "howto" })}>How to guides</button>
+            <button className={"hc-sub" + (["faq", "home", "cat", "search"].includes(view.kind) ? " on" : "")}
+              onClick={() => go({ kind: "faq" })}>FAQs</button>
+            <button className={"hc-sub" + (view.kind === "sim" ? " on" : "")}
+              onClick={() => go({ kind: "sim" })}>Simulate</button>
           </div>
         </div>
       )}
@@ -349,10 +347,11 @@ export default function HelpApp({
             the group holding whatever is open expands itself. Eight rows, and the counts say
             where the mass is before you click into it. */}
         <nav className={"hc-nav" + (navOpen ? " open" : "") + (part !== "help" ? " hidden" : "")} aria-label="Topics">
-          {/* FAQs, Every answer and Simulate moved to the row under the tabs, where they are
-              siblings of How to rather than three entries above seventeen topics. The rail is
-              the topics now, which is the one thing it was always for. */}
-          <p className="hc-navrule hc-navfirst">Browse by topic</p>
+          {/* On the FAQ the rail carries the FAQ's own structure first: the stage and the
+              groups inside it. Scrolling back to the top to change stage, on the one screen
+              that has a second axis, was the navigation working against itself. */}
+          {view.kind === "faq" && <FaqRail />}
+          <p className={"hc-navrule" + (view.kind === "faq" ? "" : " hc-navfirst")}>Browse by topic</p>
 
           {NAV_GROUPS.map((grp) => {
             const items = grp.ids.map((id) => COUNTS.find((c) => c.id === id)).filter(Boolean) as typeof COUNTS;
@@ -398,7 +397,6 @@ export default function HelpApp({
                   ? <button className="hc-btn primary" onClick={auth.signIn}>Sign in</button>
                   : <p className="hc-note">Sign-in is not configured on this build, so it cannot be opened here.</p>}
               </div>)}
-          {view.kind === "refs" && <References pilots={pilots} />}
           {view.kind === "sim" && <Simulator />}
           {view.kind === "howto" && <HowTo internal={internal} />}
           {view.kind === "faq" && (
@@ -551,5 +549,42 @@ function ArticleList({ list, open, setOpen, internal, showCat }: {
           internal={internal} showCat={showCat} />
       ))}
     </div>
+  );
+}
+
+/** The FAQ's own structure, in the rail.
+ *
+ *  The stage switch and the group headings live at the top of the FAQ column, so on a long
+ *  answer you scroll away from both. The rail is already sticky and already the navigation,
+ *  so it carries them: pick a stage, jump to a group, without leaving where you are.
+ *
+ *  The stage is read from and written to the same place the panel uses, a query on the
+ *  address, so the two cannot disagree about which one is showing. */
+function FaqRail() {
+  const phase = (typeof window !== "undefined" && window.location.hash.includes("post")) ? "post" : "pre";
+  const set = (p: "pre" | "post") => {
+    window.location.hash = p === "post" ? "#/faq/post" : "#/faq";
+  };
+  const section = FAQ_SECTIONS.find((x) => x.phase === phase) ?? FAQ_SECTIONS[0];
+  const { groups } = resolveFaq(section);
+  const slug = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+  return (
+    <>
+      <p className="hc-navrule hc-navfirst">The questions</p>
+      {FAQ_SECTIONS.map((sec) => (
+        <button key={sec.phase} className={"hc-navitem" + (sec.phase === phase ? " on" : "")}
+          onClick={() => set(sec.phase)}>
+          <span>{sec.title}</span>
+          <em>{sec.groups.reduce((n, g) => n + g.ids.length, 0)}</em>
+        </button>
+      ))}
+      {groups.map((g) => (
+        <button key={g.title} className="hc-navitem hc-navsub"
+          onClick={() => document.getElementById(`faq-${slug(g.title)}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}>
+          <span>{g.title}</span><em>{g.articles.length}</em>
+        </button>
+      ))}
+    </>
   );
 }

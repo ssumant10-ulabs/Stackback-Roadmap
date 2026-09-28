@@ -137,6 +137,17 @@ export interface Feature {
   reviewWith?: import("./board").ReviewWith | null;
   /** Rank within its board column. See the Node field of the same name. */
   boardOrder?: number | null;
+  /* ---- the work fields, so a request behaves like every other card on the board.
+     Shaped exactly like a Node's, and `findEntry` returns a request as one, so assigning,
+     dating, checking off, adding a subtask and commenting are the same code for both. A
+     request that can only be linked and deleted is a card with half the buttons. */
+  status?: Status;
+  assignees?: Assignee[];
+  children?: Node[];
+  comments?: Comment[];
+  start?: string | null;
+  end?: string | null;
+  eta?: string | null;
   /** Screenshots. Downscaled to a data URL because there is no file storage yet; they move
    *  to Firebase Storage the moment it is on. See SHOT_* limits in lib/shots.ts. */
   shots?: Shot[];
