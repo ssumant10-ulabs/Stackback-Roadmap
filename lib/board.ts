@@ -44,6 +44,9 @@ export interface StageSpec {
   /** Only cards on the Now horizon. Setting a backlog card to Now is PM picking it up, and
    *  it has to show on PM's board without waiting for somebody to also name the team. */
   now?: true;
+  /** Only cards nobody is named on. Pairs with `now`: a card set to Now with a team already
+   *  on it belongs to that team, not to PM's triage pile. */
+  unowned?: true;
 }
 
 export interface BoardColumn {
@@ -101,10 +104,11 @@ export const BOARD_VIEWS: BoardViewDef[] = [
         accepts: [
           { stage: "bug", team: "PM", kinds: ASKED_FOR },
           { stage: "feature", team: "PM", kinds: ASKED_FOR },
-          /* Or simply Now. Moving a backlog card to Now IS picking it up, and asking for a
-             team as well made the horizon a label rather than the action it reads as. */
-          { stage: "bug", now: true, kinds: ASKED_FOR },
-          { stage: "feature", now: true, kinds: ASKED_FOR },
+          /* Or simply Now, when nobody is named on it. Moving a backlog card to Now IS
+             picking it up. A Now card that already names Design or Dev is theirs and shows
+             on their board; sending it here as well would make PM's queue the backlog. */
+          { stage: "bug", now: true, unowned: true, kinds: ASKED_FOR },
+          { stage: "feature", now: true, unowned: true, kinds: ASKED_FOR },
         ],
         drop: (_t, k) => { const kind = refile(k, ASKED_FOR, "feature"); return { stage: defaultStage(kind), kind, team: "PM" }; },
         hint: "Asked for by a merchant or by us." },
@@ -112,8 +116,8 @@ export const BOARD_VIEWS: BoardViewDef[] = [
         accepts: [
           { stage: "bug", team: "PM", kinds: BUILT },
           { stage: "feature", team: "PM", kinds: BUILT },
-          { stage: "bug", now: true, kinds: BUILT },
-          { stage: "feature", now: true, kinds: BUILT },
+          { stage: "bug", now: true, unowned: true, kinds: BUILT },
+          { stage: "feature", now: true, unowned: true, kinds: BUILT },
         ],
         drop: (_t, k) => { const kind = refile(k, BUILT, "module"); return { stage: defaultStage(kind), kind, team: "PM" }; },
         hint: "Things we are building rather than things somebody reported." },
@@ -414,6 +418,7 @@ export function fits(
     && (!a.team || teams.includes(a.team))
     && (!a.review || a.review === review)
     && (!a.now || horizon === 1)
+    && (!a.unowned || teams.length === 0)
     && (!a.kinds || (kind ? a.kinds.includes(kind) : false)));
 }
 

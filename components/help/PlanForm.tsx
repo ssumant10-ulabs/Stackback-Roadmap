@@ -7,6 +7,7 @@ import {
 } from "@/lib/help/questions";
 import { CATEGORY_BY_ID, SCALE_BY_ID, freqWord } from "@/lib/help/categories";
 import { drawPlanSheet } from "@/lib/help/sheet-png";
+import { planDoc } from "@/lib/help/plan-doc";
 import OrderImport from "./OrderImport";
 import type { PilotStore } from "@/lib/types";
 import { coverage, discountBand, referenceFor, type CategoryReference } from "@/lib/help/references";
@@ -183,6 +184,29 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
     } finally { setBusy(false); }
   }
 
+  /** The same configuration as text, for pasting into an email or a ticket.
+   *
+   *  "A document or a screenshot" was the ask, and the screenshot already existed. A picture
+   *  cannot be searched, quoted or diffed against the next version, and half of what this
+   *  gets used for is a paragraph in a reply. */
+  function downloadDoc() {
+    if (busy) return;
+    setBusy(true); setResult(null);
+    try {
+      const brand = String(answers.brand_name || storeName || "plans").trim();
+      const slug = brand.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "plans";
+      const blob = new Blob([planDoc(answers, brand, settings)], { type: "text/markdown;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `stackback-plans-${slug}-${new Date().toISOString().slice(0, 10)}.md`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      setResult({ ok: true, msg: "Downloaded as a document. Paste it straight into a reply." });
+    } catch {
+      setResult({ ok: false, msg: "The document could not be written in this browser." });
+    } finally { setBusy(false); }
+  }
+
   const scale = SCALE_BY_ID.get(String(answers.scale || ""));
 
   return (
@@ -204,16 +228,26 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
         ))}
 
         <div className="hc-formactions" data-noexport="true">
-          <button className="hc-btn primary" onClick={download} disabled={!done || busy}>
+          {/* Not gated on a complete form any more. Half a plan is exactly what you want to
+              send somebody mid-conversation — "here is where we have got to" — and a button
+              that does nothing when you press it reads as broken, not as a rule. The sheet
+              says what is still unanswered instead. */}
+          <button className="hc-btn primary" onClick={download} disabled={busy}>
             {busy ? "Making the image" : "Download these plans"}
           </button>
+          <button className="hc-btn" onClick={downloadDoc} disabled={busy}>Download as a document</button>
           <button className="hc-btn" onClick={onDone}>
             {done ? "Next: what your customers see" : "Skip ahead and look first"}
           </button>
           <span className="hc-savedat">Saved on this device as you type.</span>
         </div>
 
-        {!done && <p className="hc-note hc-incomplete" data-noexport="true">Every field above needs an answer before this can be downloaded.</p>}
+        {!done && (
+          <p className="hc-note hc-incomplete" data-noexport="true">
+            Some fields are still blank. You can download what is set so far; the unanswered
+            ones are listed on the sheet.
+          </p>
+        )}
         {result && <p className={"hc-result " + (result.ok ? "ok" : "bad")} role="status" data-noexport="true">{result.msg}</p>}
       </div>
 

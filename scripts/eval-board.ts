@@ -180,6 +180,7 @@ ok(stageOf({ kind: "bug", stage: "prod" }) === "prod", "a stored stage wins over
 live();
 roundTrip();
 horizons();
+roadmap();
 
 console.log(fails ? `\nFAIL: ${fails}` : "\nPASS");
 process.exit(fails ? 1 : 0);
@@ -393,10 +394,73 @@ function horizons() {
   ok(VIEW_BY_ID.backlog.columns.some((c) => fits(c, "feature", [], null, "feature")),
     "a card with no team is still in the backlog");
 
+  /* "If the status has been changed to Now and the team is assigned then it should move to
+     the relevant tab." Two halves, and the second is the one that was wrong: Now used to
+     overwrite the owner with PM, which took the card off the very board it belonged on. */
+  const pmIntake = VIEW_BY_ID.pm.columns.filter((c) => c.key === "asked" || c.key === "built");
+  const onPmIntake = (teams: BoardTeam[], h: 1 | 2 | 3) =>
+    pmIntake.some((c) => fits(c, "feature", teams, null, "feature", h));
+  ok(onPmIntake([], 1), "a Now card nobody is named on is on PM's intake");
+  ok(!onPmIntake([], 2) && !onPmIntake([], 3), "a Next or Future card with no team is not");
+  ok(!onPmIntake(["Design"], 1) && !onPmIntake(["Engineering"], 1),
+    "a Now card that names a team is NOT dragged into PM's pile");
+  for (const [team, view] of [["Design", "design"], ["Engineering", "dev"]] as [BoardTeam, BoardView][]) {
+    ok(VIEW_BY_ID[view].columns.some((c) => fits(c, "feature", [team], null, "feature", 1)),
+      `a Now card naming ${team} is on that team's own board`);
+  }
+
   /* The order: Now, Next, Future, then position. Same comparator the columns sort by. */
   const h = (p: 1 | 2 | 3, order: number) => ({ priority: p, boardOrder: order });
   const sorted = [h(3, 0), h(1, 5), h(2, 1), h(1, 2)]
     .sort((a, b) => a.priority - b.priority || a.boardOrder - b.boardOrder)
     .map((x) => `${x.priority}:${x.boardOrder}`).join(" ");
   ok(sorted === "1:2 1:5 2:1 3:0", `the horizon orders a column and position orders within it (${sorted})`);
+}
+
+
+/** The Roadmap lens, on its own, because it is the tab that keeps being wrong.
+ *
+ *  It is the overview: "everything a team has, by where the work is". Four claims follow
+ *  from that sentence and none of them was ever asserted — the tab was checked by opening
+ *  it and counting, which is how it shipped showing every card in Not started twice over.
+ *
+ *  1. Its columns PARTITION the stages: every stage lands in exactly one, so the column
+ *     counts sum to the tab badge and a card cannot be in two places at once.
+ *  2. It covers every stage, so no card in hand can be missing from the overview.
+ *  3. It shows owned work only, and the backlog holds the rest.
+ *  4. Dropping a card on one of its columns keeps the owner, or the card falls off the lens
+ *     it was dropped on. */
+function roadmap() {
+  console.log("\n# the Roadmap lens");
+  const rm = VIEW_BY_ID.roadmap;
+  const teams: BoardTeam[] = ["Design"];
+
+  const where = (st: Stage) =>
+    rm.columns.filter((c) => fits(c, st, teams, null, "feature", 2)).map((c) => c.key);
+
+  const twice = ALL_STAGES.filter((st) => where(st).length > 1);
+  const nowhere = ALL_STAGES.filter((st) => where(st).length === 0);
+  ok(twice.length === 0, `no stage lands in two Roadmap columns${twice.length ? ` (${twice.join(", ")})` : ""}`);
+  ok(nowhere.length === 0, `every stage has a Roadmap column${nowhere.length ? ` (${nowhere.join(", ")})` : ""}`);
+  ok(rm.ownedOnly === true, "the Roadmap shows owned work only");
+
+  /* Every column count sums to the badge, which is only true while the columns partition. */
+  ok(ALL_STAGES.every((st) => where(st).length === 1),
+    "the column counts sum to the tab badge, because each card is in exactly one column");
+
+  /* A drop on a Roadmap column must not un-own the card: this lens hides unowned work, so
+     clearing the team would delete the card from the board it was dropped on. */
+  for (const col of rm.columns) {
+    for (const team of ["PM", "Design", "Engineering"] as BoardTeam[]) {
+      const r = stageForDrop(col, team, "feature");
+      if ("ask" in r) continue;
+      const clears = "stage" in r && "team" in r && !r.team;
+      ok(!clears, `roadmap.${col.key} does not clear the owner when a ${team} card is dropped on it`);
+    }
+  }
+
+  /* And the five columns are the five the blurb promises, in order. */
+  const titles = rm.columns.map((c) => c.title).join(" | ");
+  ok(titles === "Not started | In progress | In review | Approved | Pushed to prod",
+    `the columns read left to right as the work moves (${titles})`);
 }

@@ -797,10 +797,16 @@ export class Store {
        `pm_handover` counts as not started: it has been handed over, not begun.
        Read from the board rather than from `n.stage`, which is only set once somebody has
        moved the card: a shipped request derives `prod` and has no stored stage at all. */
-    const stage = this.boardCards().find((c) => c.id === id)?.stage || defaultStage(n.kind);
+    const card = this.boardCards().find((c) => c.id === id);
+    const stage = card?.stage || defaultStage(n.kind);
     const inThePile = stage === "bug" || stage === "feature" || stage === "pm_handover";
-    if (inThePile && p === 1) this.setNodeStage(n, defaultStage(n.kind), { team: "PM", review: null });
-    else if (inThePile && p === 3) this.setNodeStage(n, defaultStage(n.kind), { team: null, review: null });
+    /* Now on a card nobody is named on hands it to PM, who triages. Now on a card that
+       already names Design or Dev does NOT: it is already theirs and already on their
+       board, and overwriting the owner with PM was taking it off the very tab it belongs
+       on. Future sends an unclaimed card back to the pile the same way. */
+    const owned = (card?.teams.length ?? 0) > 0;
+    if (inThePile && p === 1 && !owned) this.setNodeStage(n, defaultStage(n.kind), { team: "PM", review: null });
+    else if (inThePile && p === 3 && !owned) this.setNodeStage(n, defaultStage(n.kind), { team: null, review: null });
     this.log("move", n.title, `to ${waveWord(p)}`, n.id);
     this.commit();
   }
