@@ -41,18 +41,23 @@ const show = (p: { everyDays: number[]; deliveries: number[] }[]) =>
   p.map((x) => `${x.everyDays.join("/")}:${x.deliveries.join(",")}`).join("|");
 
 let bad = 0;
-fx.rows.forEach(([cat, pct, freq]: [string, string, string], i: number) => {
+interface Row { name: string; category: string; discountMargin: string; frequency: string }
+/* Only the rows with both plan columns filled: the other sixteen are stores nobody has set
+   up yet, and asserting a parse of an empty cell asserts nothing. */
+const filled = (fx.rows as Row[]).filter((r) => r.discountMargin && r.frequency);
+filled.forEach((row, i) => {
+  const { category: cat, discountMargin: pct, frequency: freq } = row;
   const got = show(parsePlans(freq));
   if (got !== PLANS[i]) { bad++; console.log(`FREQ  row ${i + 1}  ${JSON.stringify(freq)}\n      want ${PLANS[i]}\n      got  ${got}`); }
   const d = parseDiscounts(pct);
   const max = d.length ? Math.max(...d) : null;
   if (max !== MAXPCT[i]) { bad++; console.log(`PCT   row ${i + 1}  ${JSON.stringify(pct)}  want ${MAXPCT[i]}  got ${max}`); }
-  if (!categoryIdFor(cat)) { bad++; console.log(`CAT   row ${i + 1}  ${JSON.stringify(cat)} maps to nothing`); }
+  if (cat && !categoryIdFor(cat)) { bad++; console.log(`CAT   row ${i + 1}  ${JSON.stringify(cat)} maps to nothing`); }
 });
 
 /* Every category the live cohort uses has to map onto a plan category, including the ones
    with a single store in them: an unmapped category shows a merchant an empty reference. */
-for (const c of fx.categories as string[]) {
+for (const c of [...new Set((fx.rows as Row[]).map((r) => r.category).filter(Boolean))]) {
   if (!categoryIdFor(c)) { bad++; console.log(`CAT   ${JSON.stringify(c)} maps to nothing`); }
 }
 
@@ -63,7 +68,7 @@ for (const [cell, want] of fx.alsoSeen.rows as [string, string][]) {
   if (got !== want) { bad++; console.log(`SEEN  ${JSON.stringify(cell)}\n      want ${want}\n      got  ${got}`); }
 }
 
-const rows = fx.rows.length;
-const read = fx.rows.filter(([, , f]: string[]) => parsePlans(f).length).length;
+const rows = filled.length;
+const read = filled.filter((r) => parsePlans(r.frequency).length).length;
 console.log(`\n${read}/${rows} live plan cells read, ${rows - bad ? "" : ""}${bad} failure${bad === 1 ? "" : "s"}`);
 process.exit(bad ? 1 : 0);
