@@ -5,7 +5,13 @@ import {
   categoryReferences, coverage, discountBand, freqLabel, parseDiscounts, parsePlans,
   type CategoryReference,
 } from "@/lib/help/references";
-import { REFERENCE_SNAPSHOT, REFERENCE_SNAPSHOT_TAKEN } from "@/lib/help/reference-snapshot";
+import { REFERENCE_SNAPSHOT, REFERENCE_SNAPSHOT_TAKEN, type ReferenceSnapshotStore } from "@/lib/help/reference-snapshot";
+
+/** Every store the snapshot names, by lowercased name, so a row handed to this drawer can be
+ *  filled in from the live read when the screen that handed it over has nothing. */
+const SNAPSHOT_BY_NAME = new Map<string, ReferenceSnapshotStore>(
+  REFERENCE_SNAPSHOT.flatMap((c) => c.named.map((st) => [st.name.trim().toLowerCase(), st] as const)),
+);
 
 /** What our live stores run, by category, read off the store rows as the page renders.
  *
@@ -36,8 +42,11 @@ export default function ReferenceDrawer({ pilots, onClose, anonymous }: {
     return () => document.removeEventListener("keydown", esc);
   }, [onClose]);
 
-  const withPlans = refs.reduce((n, r) => n + r.stores.length - r.unlogged.length, 0);
+  /* Counted over what the cards actually show, not over the page's own columns. The cards
+     fill from the live read where the page has nothing, so counting the page said "11 with
+     their plans" above a list where forty of them had plans printed underneath. */
   const total = refs.reduce((n, r) => n + r.stores.length, 0);
+  const withPlans = pilots.filter((p) => planOf(p).logged).length;
   /* Nothing to read off this page: `/help` has no signed-in store list, and that is exactly
      where the merchant link points. The snapshot is the same answer, by category. */
   if (!refs.length || anonymous) return <Snapshot onClose={onClose} />;
@@ -81,26 +90,38 @@ export default function ReferenceDrawer({ pilots, onClose, anonymous }: {
 }
 
 function Category({ r, pilots }: { r: CategoryReference; pilots: PilotStore[] }) {
-  const band = discountBand(r);
-  const thin = coverage(r) < 0.34;
   const rows = pilots.filter((p) => (p.category || "").trim() === r.label);
-  const set = rows.length - r.unlogged.length;
+  /* The summary follows whichever source knows more about this category. The page's rows are
+     fresher when they are filled in; the snapshot is a live read and covers the categories
+     the page happens to be thin on, which locally is all of them. */
+  const snap = REFERENCE_SNAPSHOT.find((x) => x.label === r.label);
+  const pageSet = rows.length - r.unlogged.length;
+  const useSnap = Boolean(snap && snap.withPlans > pageSet);
+  const everyDays = useSnap ? snap!.everyDays : r.everyDays;
+  const deliveries = useSnap ? snap!.deliveries : r.deliveries;
+  const pageBand = discountBand(r);
+  const band = useSnap && snap!.discountLow != null
+    ? { low: snap!.discountLow, mid: snap!.discountLow, high: snap!.discountHigh ?? snap!.discountLow }
+    : pageBand;
+  const set = useSnap ? snap!.withPlans : pageSet;
+  const of = useSnap ? snap!.stores : rows.length;
+  const thin = of > 0 && set / of < 0.34;
 
   return (
     <>
       {/* The category in one line, before the stores: it is the answer most calls need, and
           the stores under it are the working. */}
       <p className="hc-drawersum">
-        {r.everyDays[0]
-          ? <>Most of them deliver <b>{freqLabel(r.everyDays[0]).toLowerCase()}</b></>
+        {everyDays[0]
+          ? <>Most of them deliver <b>{freqLabel(everyDays[0]).toLowerCase()}</b></>
           : <>None of them has a delivery schedule set yet</>}
-        {r.deliveries.length > 0 && <>, sold at <b>{r.deliveries.slice(0, 4).sort((a, b) => a - b).join(", ")} deliveries</b></>}
+        {deliveries.length > 0 && <>, sold at <b>{deliveries.slice(0, 4).sort((a, b) => a - b).join(", ")} deliveries</b></>}
         {band && <>, discounting <b>{band.low === band.high ? `${band.mid}%` : `${band.low} to ${band.high}%`}</b></>}
         .
       </p>
       {thin && (
         <p className="hc-drawerthin">
-          {set} of {r.stores.length} {set === 1 ? "store has" : "stores have"} their plans set up, so read
+          {set} of {of} {set === 1 ? "store has" : "stores have"} their plans set up, so read
           this as one or two stores rather than as the category.
         </p>
       )}
@@ -120,6 +141,14 @@ function planOf(p: PilotStore) {
     const t = (v || "").trim();
     return !t || t === "—" ? null : t;
   };
+  /* The page's own row first, the snapshot behind it, field by field.
+   *
+   *  The rows this drawer is handed come from whatever screen opened it, and that is not
+   *  always the live sheet: locally it is the seed, where most plan columns are blank, so
+   *  every store read "we do not have their plans yet" while the live data sat in the
+   *  snapshot beside it. The page row still wins where it has something, because on the live
+   *  Pilots screen it is fresher than a file generated last Tuesday. */
+  const snap = SNAPSHOT_BY_NAME.get((p.name || "").trim().toLowerCase());
   const plans = parsePlans(p.frequency);
   const d = parseDiscounts(p.discountMargin);
   /* One line per clause, each cadence with its OWN run lengths. */
@@ -130,21 +159,29 @@ function planOf(p: PilotStore) {
         ? `${cadence} · ${[...pl.deliveries].sort((a, b) => a - b).join(", ")} deliveries`
         : cadence;
     }));
+  const snapLines = (snap?.plans || []).map((pl) =>
+    pl.deliveries.length
+      ? `${pl.cadence ?? "Schedule not set"} \u00b7 ${pl.deliveries.join(", ")} deliveries`
+      : (pl.cadence ?? "Schedule not set"));
+
+  const shownLines = lines.length ? lines : snapLines;
+  const discount = d.length ? Math.max(...d) : snap?.discount ?? null;
+  const payment = clean(p.paymentType) ?? snap?.payment ?? null;
+  const shipping = clean(p.shipping) ?? snap?.shipping ?? null;
+  const bundles = clean(p.bundles) ?? snap?.bundles ?? null;
+
   const fields: [string, string | null][] = [
-    ["their plans", plans.length ? "x" : null],
-    ["their discount", d.length ? "x" : null],
-    ["how it is paid for", clean(p.paymentType)],
-    ["shipping", clean(p.shipping)],
-    ["bundles", clean(p.bundles)],
+    ["their plans", shownLines.length ? "x" : null],
+    ["their discount", discount != null ? "x" : null],
+    ["how it is paid for", payment],
+    ["shipping", shipping],
+    ["bundles", bundles],
   ];
 
   return {
-    logged: Boolean(plans.length || d.length || clean(p.paymentType)),
-    lines,
-    discount: d.length ? Math.max(...d) : null,
-    payment: clean(p.paymentType),
-    bundles: clean(p.bundles),
-    shipping: clean(p.shipping),
+    logged: Boolean(shownLines.length || discount != null || payment),
+    lines: shownLines,
+    discount, payment, bundles, shipping,
     theme: clean(p.themeNotes),
     missing: fields.filter(([, v]) => !v).map(([k]) => k),
   };
