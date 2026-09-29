@@ -115,23 +115,6 @@ export default function Simulator({ config, onConfig }: {
         three payment types.
       </p>
 
-      <div className="hc-simbar hc-simbar-order">
-        <label className="hc-field hc-simnum">
-          <span>Lead time, days</span>
-          <input type="number" min={0} max={30} value={c.leadDays}
-            onChange={(e) => set("leadDays", Math.min(30, Math.max(0, +e.target.value || 0)))} />
-        </label>
-        <label className="hc-field">
-          <span>First delivery</span>
-          <input type="date" value={c.startDate || startOf(c).toISOString().slice(0, 10)}
-            onChange={(e) => set("startDate", e.target.value)} />
-        </label>
-        <p className="hc-simnote">
-          Everything else comes from the plans you set in step one. These two are about your
-          warehouse, so they live here.
-        </p>
-      </div>
-
       <div className="hc-surfaces" role="tablist" aria-label="Which screen">
         <button role="tab" aria-selected={surface === "shopify"}
           className={"hc-surface" + (surface === "shopify" ? " on" : "")}
@@ -642,22 +625,6 @@ function Widget({ c, set, p, onSubscribe }: {
 
   return (
     <div className="hc-simwrap">
-      {/* The merchant's knobs, above the widget and visibly not part of it: a customer does
-          not choose the discount. */}
-      <div className="hc-simbar">
-        <label className="hc-field hc-simnum">
-          <span>Price per delivery</span>
-          <input type="number" min={1} value={c.unitPrice}
-            onChange={(e) => set("unitPrice", Math.max(1, +e.target.value || 0))} />
-        </label>
-        <label className="hc-field hc-simnum">
-          <span>Discount, %</span>
-          <input type="number" min={0} max={60} value={c.discountPct}
-            onChange={(e) => set("discountPct", Math.min(60, Math.max(0, +e.target.value || 0)))} />
-        </label>
-        <p className="hc-simnote">Yours to set. Everything below is what the customer sees.</p>
-      </div>
-
       <div className="hc-widget">
         <div className="hc-wprod">
           <b>{c.productName}</b>
@@ -718,6 +685,39 @@ function Widget({ c, set, p, onSubscribe }: {
         </button>
         <p className="hc-wfoot">Pressing this is step two: the orders it creates.</p>
       </div>
+
+      {/* Beside the widget, not above it. Every knob a merchant sets is here and nothing a
+          customer chooses is: the widget on the left is the customer's half of the screen. */}
+      <aside className="hc-simset">
+        <h3>Yours to set</h3>
+        <label className="hc-field hc-simnum">
+          <span>Price per delivery</span>
+          <input type="number" min={1} value={c.unitPrice}
+            onChange={(e) => set("unitPrice", Math.max(1, +e.target.value || 0))} />
+        </label>
+        <label className="hc-field hc-simnum">
+          <span>Discount, %</span>
+          <input type="number" min={0} max={60} value={c.discountPct}
+            onChange={(e) => set("discountPct", Math.min(60, Math.max(0, +e.target.value || 0)))} />
+        </label>
+        <label className="hc-field hc-simnum">
+          <span>Time to delivery, days</span>
+          <input type="number" min={0} max={30} value={c.leadDays}
+            onChange={(e) => set("leadDays", Math.min(30, Math.max(0, +e.target.value || 0)))} />
+        </label>
+        <p className="hc-simnote">
+          <code>time_to_delivery</code>: how far ahead of a delivery its order is created. On pay
+          as you go it is also when the invoice goes out.
+        </p>
+        <label className="hc-field">
+          <span>First delivery</span>
+          <input type="date" value={c.startDate || startOf(c).toISOString().slice(0, 10)}
+            onChange={(e) => set("startDate", e.target.value)} />
+        </label>
+        <p className="hc-simnote">
+          These are your settings, not the customer&rsquo;s. Everything on the left is what they see.
+        </p>
+      </aside>
     </div>
   );
 }
