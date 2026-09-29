@@ -292,7 +292,7 @@ function columnsFor(cards: BoardCard[], view: BoardView): Record<string, BoardCa
   const out: Record<string, BoardCard[]> = {};
   for (const c of def.columns) {
     out[c.key] = pool
-      .filter((x) => fits(c, x.stage, x.teams, x.review, kindOf(x)))
+      .filter((x) => fits(c, x.stage, x.teams, x.review, kindOf(x), horizon(x) as 1 | 2 | 3))
       .sort(byPriority);
   }
   return out;
@@ -413,7 +413,7 @@ function Card({ card, view, rank: at, of, siblings, onMove, dragging, onDragStar
             <span className="wb-movemenu">
               {VIEW_BY_ID[view].columns.map((c) => (
                 <button key={c.key} type="button"
-                  className={fits(c, card.stage, card.teams, card.review, kind) ? "on" : ""}
+                  className={fits(c, card.stage, card.teams, card.review, kind, cardPriority(card.node ?? card.feature)) ? "on" : ""}
                   onClick={() => { onMove(card.id, c); setMoveOpen(false); }}>
                   {c.title}
                 </button>

@@ -1,7 +1,7 @@
 /** Retrieval over the article corpus. Runs entirely in the browser: no API key, no
  *  server round trip, no third-party widget. The corpus is small enough that an honest
  *  ranked scan beats anything that needs a network hop, and it keeps working offline. */
-import { ARTICLES, CATEGORIES } from "./corpus";
+import { ARTICLES, CATEGORIES } from "./articles";
 import { FAQ_IDS, INTENTS } from "./faq";
 import type { HelpArticle } from "./types";
 

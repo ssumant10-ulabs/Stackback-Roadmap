@@ -41,6 +41,9 @@ export interface StageSpec {
   team?: BoardTeam;
   /** Only cards whose dev review went this way. */
   review?: ReviewWith;
+  /** Only cards on the Now horizon. Setting a backlog card to Now is PM picking it up, and
+   *  it has to show on PM's board without waiting for somebody to also name the team. */
+  now?: true;
 }
 
 export interface BoardColumn {
@@ -98,6 +101,10 @@ export const BOARD_VIEWS: BoardViewDef[] = [
         accepts: [
           { stage: "bug", team: "PM", kinds: ASKED_FOR },
           { stage: "feature", team: "PM", kinds: ASKED_FOR },
+          /* Or simply Now. Moving a backlog card to Now IS picking it up, and asking for a
+             team as well made the horizon a label rather than the action it reads as. */
+          { stage: "bug", now: true, kinds: ASKED_FOR },
+          { stage: "feature", now: true, kinds: ASKED_FOR },
         ],
         drop: (_t, k) => { const kind = refile(k, ASKED_FOR, "feature"); return { stage: defaultStage(kind), kind, team: "PM" }; },
         hint: "Asked for by a merchant or by us." },
@@ -105,6 +112,8 @@ export const BOARD_VIEWS: BoardViewDef[] = [
         accepts: [
           { stage: "bug", team: "PM", kinds: BUILT },
           { stage: "feature", team: "PM", kinds: BUILT },
+          { stage: "bug", now: true, kinds: BUILT },
+          { stage: "feature", now: true, kinds: BUILT },
         ],
         drop: (_t, k) => { const kind = refile(k, BUILT, "module"); return { stage: defaultStage(kind), kind, team: "PM" }; },
         hint: "Things we are building rather than things somebody reported." },
@@ -397,12 +406,14 @@ export function inView(view: BoardView, stage: Stage, teams: BoardTeam[], review
  *  says "Engineering" on cards that carry a Design team assignee, so reading that one column
  *  put every design card on Dev's board and left Design's reading zero. */
 export function fits(
-  c: BoardColumn, stage: Stage, teams: BoardTeam[], review: ReviewWith | null, kind?: CardKind,
+  c: BoardColumn, stage: Stage, teams: BoardTeam[], review: ReviewWith | null,
+  kind?: CardKind, horizon?: 1 | 2 | 3,
 ): boolean {
   return c.accepts.some((a) =>
     a.stage === stage
     && (!a.team || teams.includes(a.team))
     && (!a.review || a.review === review)
+    && (!a.now || horizon === 1)
     && (!a.kinds || (kind ? a.kinds.includes(kind) : false)));
 }
 

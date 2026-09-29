@@ -13,13 +13,26 @@
  */
 import { search } from "../lib/help/search";
 import { reply } from "../lib/help/chat";
-import { ARTICLES } from "../lib/help/corpus";
+import { ARTICLES } from "../lib/help/articles";
 
 /** [what the merchant typed, the id that answers it, acceptable alternates] */
 const CASES: [string, string, string[]?][] = [
   ["cod", "does-cod-need-to-be-disabled-for-subscriptions", ["how-do-we-disable-cod-only-on-subscriptions-not-the-whole-store"]],
   ["how do I turn off cash on delivery", "how-do-we-disable-cod-only-on-subscriptions-not-the-whole-store", ["does-cod-need-to-be-disabled-for-subscriptions"]],
   ["autopay", "how-does-upi-autopay-work-and-what-do-you-need-from-us"],
+  /* The nine answers mined from the Orchard Lane, G-Shot and Nice Guys threads. Their words,
+     as typed, because an answer nobody can find is an answer nobody has. */
+  ["when is the mandate created", "when-is-the-autopay-mandate-created"],
+  ["mandate from the second invoice", "when-is-the-autopay-mandate-created"],
+  ["powered by stackback visible to customers", "will-powered-by-stackback-be-visible-to-our-customers"],
+  ["no accept button on the collaborator request", "what-role-do-i-pick-to-accept-the-collaborator-request"],
+  ["what role do I select to accept", "what-role-do-i-pick-to-accept-the-collaborator-request"],
+  ["which theme do you duplicate", "can-we-choose-which-theme-you-duplicate"],
+  ["you updated the app and lost access", "you-updated-the-app-and-lost-access-to-our-store"],
+  ["can we edit the landing page text ourselves", "can-we-edit-the-landing-page-text-and-images-ourselves"],
+  ["can you build our own widget design", "can-you-match-a-widget-design-we-have-already-drawn"],
+  ["customer already logged in on our site checkout session", "will-your-checkout-use-our-sites-existing-login-session"],
+  ["why does a logged in customer see the address screen", "why-does-a-signed-in-customer-still-see-the-address-screen"],
   ["mandate cancelled", "how-do-we-know-who-cancelled-an-autopay-mandate"],
   ["why two orders", "what-does-one-subscription-create-in-shopify", ["what-happens-the-moment-a-customer-subscribes"]],
   ["does the checkout order double my revenue", "will-the-checkout-order-inflate-our-revenue-and-inventory-number"],

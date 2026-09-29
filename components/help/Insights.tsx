@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { ARTICLES, CATEGORIES } from "@/lib/help/corpus";
+import { ARTICLES, CATEGORIES } from "@/lib/help/articles";
 import { RISK_STATUSES, STATUS_LABEL, type HelpStatus } from "@/lib/help/types";
 import { readLocal, readShared, type AskRecord } from "@/lib/help/log";
 

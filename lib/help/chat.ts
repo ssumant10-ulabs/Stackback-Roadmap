@@ -6,7 +6,7 @@
  *  What it adds over the search box is judgement about the shape of the reply: answer when
  *  one article clearly wins, ask which one when several are close, and say plainly that
  *  there is no answer when there is not. */
-import { ARTICLES, CATEGORIES } from "./corpus";
+import { ARTICLES, CATEGORIES } from "./articles";
 import { related, search, stripTags, tokenize } from "./search";
 import type { HelpArticle } from "./types";
 

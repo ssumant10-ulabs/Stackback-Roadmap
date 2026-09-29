@@ -4,7 +4,7 @@ import { OPENER, reply, transcript, you, type Turn } from "@/lib/help/chat";
 import Jump from "./Jump";
 import { STATUS_LABEL } from "@/lib/help/types";
 import { record } from "@/lib/help/log";
-import { ARTICLES, CATEGORIES } from "@/lib/help/corpus";
+import { ARTICLES, CATEGORIES } from "@/lib/help/articles";
 import { FAQ_IDS } from "@/lib/help/faq";
 
 const CAT_NAME = new Map(CATEGORIES.map((c) => [c.id, c.name]));

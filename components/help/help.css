@@ -1706,12 +1706,16 @@
   .hc-tlphase { scroll-margin-top: calc(var(--hc-bar) + 14px); }
 }
 .hc-totop {
+  /* Faded, not unmounted: it appears after a scroll or two and has something to animate. */
+  opacity: 0; pointer-events: none; transform: translateY(6px);
+  transition: opacity .16s ease, transform .16s ease;
   position: fixed; right: 18px; bottom: 18px; z-index: 40;
   appearance: none; cursor: pointer; font: inherit; font-size: 12px; font-weight: 620;
   display: inline-flex; align-items: center; gap: 6px; padding: 8px 13px;
   border: 1px solid var(--border-2); border-radius: 999px;
   background: var(--card); color: var(--ink-2); box-shadow: 0 8px 22px rgba(0,0,0,.14);
 }
+.hc-totop.on { opacity: 1; pointer-events: auto; transform: none; }
 .hc-totop:hover { color: var(--ink); border-color: var(--brand-deep); }
 .hc-totop svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2.2; }
 /* The chat button owns the bottom right corner, so this sits above it when both are up. */

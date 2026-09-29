@@ -1,4 +1,4 @@
-import { ARTICLES } from "./corpus";
+import { ARTICLES } from "./articles";
 import type { HelpArticle } from "./types";
 
 /** The questions that actually come up, trimmed to the ones that come up most.

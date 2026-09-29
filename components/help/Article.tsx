@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { CATEGORIES } from "@/lib/help/corpus";
+import { CATEGORIES } from "@/lib/help/articles";
 import { APP_NAME, STATUS_LABEL, type HelpArticle } from "@/lib/help/types";
 import Jump from "./Jump";
 

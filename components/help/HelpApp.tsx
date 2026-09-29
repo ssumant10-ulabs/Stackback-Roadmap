@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ARTICLES, CATEGORIES, CORPUS_BUILT, CORPUS_SOURCE, FLOWS } from "@/lib/help/corpus";
+import { ARTICLES, CATEGORIES, CORPUS_BUILT, CORPUS_SOURCE, FLOWS } from "@/lib/help/articles";
 import { APP_NAME, APP_LOCATION, RISK_STATUSES, STATUS_LABEL, type HelpArticle } from "@/lib/help/types";
 import { search, stripTags } from "@/lib/help/search";
 import { record } from "@/lib/help/log";
@@ -302,6 +302,11 @@ export default function HelpApp({
           <kbd className="hc-kbd">/</kbd>
         </form>
 
+        {/* Beside the search, on the Help Centre part only. It is the link you hand a
+            merchant, so it belongs where you are when you are reading what they will read,
+            not in the tray with the theme toggle. */}
+        {internal && group === "help" && <PublicLink />}
+
         {!embedded && (
           <div className="hc-topright">
             <button className="hc-btn ghost hc-theme" onClick={flipTheme}
@@ -311,7 +316,6 @@ export default function HelpApp({
                 : <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2" /><path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4L17 7M7 17l-1.6 1.6" /></svg>}
             </button>
             {internal && <button className="hc-btn hc-int" onClick={() => go({ kind: "insights" })}>Insights</button>}
-            {internal && <MerchantLink />}
             {!publicView && auth.available && (auth.internal
               ? <button className="hc-btn ghost" onClick={auth.signOut} title={auth.user?.email || ""}>Internal · sign out</button>
               : <button className="hc-btn ghost" onClick={auth.signIn}>ULABS sign in</button>)}
@@ -469,7 +473,7 @@ export default function HelpApp({
 
 /** The link to send a merchant: this Help Centre with Internal, Insights and the sign-in
  *  taken out. One button because the alternative is somebody pasting the internal URL. */
-function MerchantLink() {
+function PublicLink() {
   const [done, setDone] = useState(false);
   const copy = async () => {
     const url = new URL("/help", window.location.origin);
@@ -478,8 +482,9 @@ function MerchantLink() {
     catch { window.prompt("Copy this link", url.toString()); }
   };
   return (
-    <button className="hc-btn ghost" onClick={copy} title="A link with Internal and Insights removed">
-      {done ? "Link copied" : "Merchant link"}
+    <button className="hc-btn ghost hc-publink" onClick={copy}
+      title="This Help Centre with Internal, Insights and the sign-in removed">
+      {done ? "Copied" : "Copy public link"}
     </button>
   );
 }
@@ -487,25 +492,21 @@ function MerchantLink() {
 /** Back to the top, and to the tabs that scrolled away with the page.
  *
  *  The sub row used to be pinned under an already-pinned bar: two bands of chrome over the
- *  reading column, and on Simulate it cut through the card beneath it. The row scrolls away
- *  now, so this is how you get back to it.
+ *  reading column, and on Simulate it cut through the card beneath it.
  *
- *  Always rendered rather than shown past a scroll threshold. A threshold reads well and is
- *  wrong on exactly the pages that need it: the FAQ list at this width scrolls 437px in
- *  total, so a control that waits for 300 or 500 never appeared on the screen it was written
- *  for. `hidden` when the page cannot scroll at all is the honest version of the same idea. */
+ *  Shown after a scroll or two, and faded rather than mounted: a threshold that mounts the
+ *  node makes it impossible to animate, and a React state toggle on a scroll listener is one
+ *  more thing to get wrong. The class is written straight onto the element. */
 function ToTop() {
-  const [canScroll, setCanScroll] = useState(true);
+  const ref = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    const on = () => setCanScroll(document.documentElement.scrollHeight > window.innerHeight + 120);
+    const on = () => ref.current?.classList.toggle("on", window.scrollY > 220);
     on();
-    window.addEventListener("resize", on);
-    const t = setInterval(on, 1200);
-    return () => { window.removeEventListener("resize", on); clearInterval(t); };
+    window.addEventListener("scroll", on, { passive: true });
+    return () => window.removeEventListener("scroll", on);
   }, []);
-  if (!canScroll) return null;
   return (
-    <button type="button" className="hc-totop withfab"
+    <button ref={ref} type="button" className="hc-totop withfab"
       onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6" /></svg>
       Top
