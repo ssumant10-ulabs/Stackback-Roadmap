@@ -288,11 +288,13 @@ function countFor(cards: BoardCard[], view: BoardView): number {
 /** Which cards land in which column of a view. */
 function columnsFor(cards: BoardCard[], view: BoardView): Record<string, BoardCard[]> {
   const def = VIEW_BY_ID[view];
-  const pool = def.ownedOnly ? cards.filter((c) => c.teams.length > 0) : cards;
+  /* The lens decides which cards it is about before any column sees them: work in hand on
+     the four working lenses, everything unclaimed or parked on the backlog. */
+  const pool = cards.filter((c) => def.holds(c.teams, cardPriority(c.node ?? c.feature)));
   const out: Record<string, BoardCard[]> = {};
   for (const c of def.columns) {
     out[c.key] = pool
-      .filter((x) => fits(c, x.stage, x.teams, x.review, kindOf(x), horizon(x) as 1 | 2 | 3))
+      .filter((x) => fits(c, x.stage, x.teams, x.review, kindOf(x)))
       .sort(byPriority);
   }
   return out;
@@ -413,7 +415,7 @@ function Card({ card, view, rank: at, of, siblings, onMove, dragging, onDragStar
             <span className="wb-movemenu">
               {VIEW_BY_ID[view].columns.map((c) => (
                 <button key={c.key} type="button"
-                  className={fits(c, card.stage, card.teams, card.review, kind, cardPriority(card.node ?? card.feature)) ? "on" : ""}
+                  className={fits(c, card.stage, card.teams, card.review, kind) ? "on" : ""}
                   onClick={() => { onMove(card.id, c); setMoveOpen(false); }}>
                   {c.title}
                 </button>

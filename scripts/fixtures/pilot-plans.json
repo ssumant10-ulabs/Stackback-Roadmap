@@ -1,213 +1,557 @@
 {
-  "note": "Every non-empty Discount margin / Frequency & cycles pair from the live Pilots tab, read out of the app's own state on 2026-09-28. 39 of 55 stores have their plan columns filled in. This is the fixture the parser is held to: if a shape here stops reading, the references stop working for that store.",
-  "read": "2026-09-28",
+  "note": "Every pilot store on the live Pilots tab, read out of the running app on 2026-09-29 through a signed-in browser. 55 stores; 39 have both plan columns filled in. This is the fixture the parser is held to and the source the reference snapshot is built from: if a shape here stops reading, the references stop working for that store. No subscriber counts, no POC, no activation notes — the references do not show them.",
+  "read": "2026-09-29",
   "rows": [
-    [
-      "Food & Grocery Brands",
-      "25%",
-      "Monthly"
-    ],
-    [
-      "Protein & Supplement Brands",
-      "25%",
-      "Monthly - 3, 6, 9"
-    ],
-    [
-      "Food & Grocery Brands",
-      "15%",
-      "Monthly - 3, 6"
-    ],
-    [
-      "Protein & Supplement Brands",
-      "20%",
-      "Monthly - 3, 6, 12"
-    ],
-    [
-      "Specialty Food & Snacks",
-      "15%",
-      "Monthly 3, 6"
-    ],
-    [
-      "Tea Brands",
-      "20%",
-      "Monthly 3, 6"
-    ],
-    [
-      "Water, Juices, Kombucha & Bottled Beverages",
-      "20%",
-      "Weekly - 3, 6"
-    ],
-    [
-      "Water, Juices, Kombucha & Bottled Beverages",
-      "20%",
-      "Weekly- 3, 6; Monthly - 3,6"
-    ],
-    [
-      "Food & Grocery Brands",
-      "20%",
-      "Weekly - 4,8; Monthly - 3"
-    ],
-    [
-      "Protein & Supplement Brands",
-      "35%",
-      "Monthly - 6, 12; Bi-monthly - 3, 6 : 3 months - 2,4"
-    ],
-    [
-      "Water, Juices, Kombucha & Bottled Beverages",
-      "7%",
-      "Weekly- 6, Monthly- 3"
-    ],
-    [
-      "Protein & Supplement Brands",
-      "8%",
-      "Monthly - 3"
-    ],
-    [
-      "Bath & Body Products",
-      "6%",
-      "Weekly - 2,4; Monthly - 2"
-    ],
-    [
-      "Protein & Supplement Brands",
-      "12.52%",
-      "Monthly - 3, 6, 12"
-    ],
-    [
-      "Food & Grocery Brands",
-      "6%",
-      "Monthly - 6"
-    ],
-    [
-      "Coffee Brands",
-      "10%",
-      "Bi-Weekly - 24, 48; Monthly - 6, 12; Bi- Monthly - 6,12"
-    ],
-    [
-      "Protein & Supplement Brands",
-      "20%",
-      "Monthly - 3,6,12"
-    ],
-    [
-      "Food & Grocery Brands",
-      "15 max, so 15, 12, 10",
-      "3, 6 & 12 monthly & bi-weekly 3, 6, 12"
-    ],
-    [
-      "Protein & Supplement Brands",
-      "15%",
-      "Monthly - 3,6"
-    ],
-    [
-      "Food & Grocery Brands",
-      "20%",
-      "Monthly - 12"
-    ],
-    [
-      "Bath & Body Products",
-      "36%",
-      "Weekly - 6, 12; Monthly - 6"
-    ],
-    [
-      "Protein & Supplement Brands",
-      "15%",
-      "2x, 3x, 4x, prepaid only"
-    ],
-    [
-      "Food & Grocery Brands",
-      "15%",
-      "Monthly - 3, 6, 12"
-    ],
-    [
-      "Water, Juices, Kombucha & Bottled Beverages",
-      "18%",
-      "Weekly- 6,12"
-    ],
-    [
-      "Protein & Supplement Brands",
-      "12%",
-      "Monthly - 3, 6, 12"
-    ],
-    [
-      "Bath & Body Products",
-      "15%",
-      "Monthly - 2, 4, 6"
-    ],
-    [
-      "Food & Grocery Brands",
-      "25%",
-      "Monthly- 3,6,12"
-    ],
-    [
-      "Protein & Supplement Brands",
-      "15%",
-      "Monthly - 3"
-    ],
-    [
-      "Coffee Brands",
-      "20%",
-      "Monthly- 3,6, BiWeekly- 3,6,12"
-    ],
-    [
-      "Food & Grocery Brands",
-      "20%",
-      "Monthly - 3, 6"
-    ],
-    [
-      "Specialty Food & Snacks",
-      "10%",
-      "Monthly 3,6,12"
-    ],
-    [
-      "Protein & Supplement Brands",
-      "15%",
-      "Monthly - 12"
-    ],
-    [
-      "Bath & Body Products",
-      "15%",
-      "Monthly - 3, 6"
-    ],
-    [
-      "Food & Grocery Brands",
-      "25%",
-      "Monthly- 2,3,4"
-    ],
-    [
-      "Water, Juices, Kombucha & Bottled Beverages",
-      "12.5%",
-      "Weekly - 3, 6, 9, 12; Bi-weekly - 3, 6, 9, 12; Monthly - 3, 6, 9, 12"
-    ],
-    [
-      "Protein & Supplement Brands",
-      "5%",
-      "Monthly - 3, 6"
-    ],
-    [
-      "Food & Grocery Brands",
-      "10%",
-      "Monthly - CC"
-    ],
-    [
-      "Bath & Body Products",
-      "15%",
-      "Monthly - 3,6"
-    ],
-    [
-      "Tea Brands",
-      "10%",
-      "Bi-Weekly- 3,6,12"
-    ]
-  ],
-  "categories": [
-    "Food & Grocery Brands",
-    "Protein & Supplement Brands",
-    "Bath & Body Products",
-    "Specialty Food & Snacks",
-    "Coffee Brands",
-    "Tea Brands",
-    "Water, Juices, Kombucha & Bottled Beverages",
-    "Female Hygiene Products",
-    "Pet Food & Supplies"
+    {
+      "name": "MillD",
+      "category": "Food & Grocery Brands",
+      "discountMargin": "25%",
+      "frequency": "Monthly",
+      "paymentType": "Auto-Pay",
+      "shipping": "60",
+      "bundles": "No",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "Everpure",
+      "category": "Protein & Supplement Brands",
+      "discountMargin": "25%",
+      "frequency": "Monthly - 3, 6, 9",
+      "paymentType": "Prepaid",
+      "shipping": "Free",
+      "bundles": "No",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "Arusha Foods",
+      "category": "Food & Grocery Brands",
+      "discountMargin": "15%",
+      "frequency": "Monthly - 3, 6",
+      "paymentType": "Both",
+      "shipping": "Free",
+      "bundles": "Yes",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "The Basics Woman",
+      "category": "Protein & Supplement Brands",
+      "discountMargin": "20%",
+      "frequency": "Monthly - 3, 6, 12",
+      "paymentType": "Both",
+      "shipping": "Free",
+      "bundles": "Yes",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "Mittai Kadai",
+      "category": "Specialty Food & Snacks",
+      "discountMargin": "15%",
+      "frequency": "Monthly 3, 6",
+      "paymentType": "Both",
+      "shipping": "Free",
+      "bundles": "Yes",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "Glow Glossary",
+      "category": "Tea Brands",
+      "discountMargin": "20%",
+      "frequency": "Monthly 3, 6",
+      "paymentType": "Both",
+      "shipping": "Free",
+      "bundles": "Yes",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "Tripitaka",
+      "category": "Water, Juices, Kombucha & Bottled Beverages",
+      "discountMargin": "20%",
+      "frequency": "Weekly - 3, 6",
+      "paymentType": "Both",
+      "shipping": "150",
+      "bundles": "Yes",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "ActivHippy",
+      "category": "Water, Juices, Kombucha & Bottled Beverages",
+      "discountMargin": "20%",
+      "frequency": "Weekly- 3, 6; Monthly - 3,6",
+      "paymentType": "Both",
+      "shipping": "0",
+      "bundles": "Yes",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "Yin N Yang",
+      "category": "Food & Grocery Brands",
+      "discountMargin": "20%",
+      "frequency": "Weekly - 4,8; Monthly - 3",
+      "paymentType": "Prepaid",
+      "shipping": "99 - Maharashtra",
+      "bundles": "Yes",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "The Stack",
+      "category": "Protein & Supplement Brands",
+      "discountMargin": "35%",
+      "frequency": "Monthly - 6, 12; Bi-monthly - 3, 6 : 3 months - 2,4",
+      "paymentType": "Prepaid",
+      "shipping": "Free",
+      "bundles": "Yes",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "BLND",
+      "category": "Water, Juices, Kombucha & Bottled Beverages",
+      "discountMargin": "7%",
+      "frequency": "Weekly- 6, Monthly- 3",
+      "paymentType": "Prepaid",
+      "shipping": "0",
+      "bundles": "Yes",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "The Func. Lab",
+      "category": "Protein & Supplement Brands",
+      "discountMargin": "8%",
+      "frequency": "Monthly - 3",
+      "paymentType": "Prepaid",
+      "shipping": "Free",
+      "bundles": "Yes",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "My Pahadi Dukan",
+      "category": "Food & Grocery Brands",
+      "discountMargin": "",
+      "frequency": "",
+      "paymentType": "Both",
+      "shipping": "",
+      "bundles": "",
+      "themeNotes": ""
+    },
+    {
+      "name": "Dearist",
+      "category": "Bath & Body Products",
+      "discountMargin": "6%",
+      "frequency": "Weekly - 2,4; Monthly - 2",
+      "paymentType": "Prepaid",
+      "shipping": "100 below 1000, Free over 1000",
+      "bundles": "Yes",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "NuFyt",
+      "category": "Protein & Supplement Brands",
+      "discountMargin": "12.52%",
+      "frequency": "Monthly - 3, 6, 12",
+      "paymentType": "Prepaid",
+      "shipping": "Free",
+      "bundles": "No",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "Toffee Coffee Roasters",
+      "category": "Coffee Brands",
+      "discountMargin": "",
+      "frequency": "",
+      "paymentType": "Prepaid",
+      "shipping": "",
+      "bundles": "",
+      "themeNotes": ""
+    },
+    {
+      "name": "Jab Marji",
+      "category": "Food & Grocery Brands",
+      "discountMargin": "6%",
+      "frequency": "Monthly - 6",
+      "paymentType": "Both",
+      "shipping": "35",
+      "bundles": "No",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "Boojee",
+      "category": "Coffee Brands",
+      "discountMargin": "10%",
+      "frequency": "Bi-Weekly - 24, 48; Monthly - 6, 12; Bi- Monthly - 6,12",
+      "paymentType": "Prepaid",
+      "shipping": "100 below 1000, Free over 1000",
+      "bundles": "No",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "EatSlow",
+      "category": "Specialty Food & Snacks",
+      "discountMargin": "",
+      "frequency": "",
+      "paymentType": "",
+      "shipping": "",
+      "bundles": "",
+      "themeNotes": ""
+    },
+    {
+      "name": "Soulflower",
+      "category": "Bath & Body Products",
+      "discountMargin": "",
+      "frequency": "",
+      "paymentType": "",
+      "shipping": "",
+      "bundles": "",
+      "themeNotes": ""
+    },
+    {
+      "name": "Meru Activs",
+      "category": "Protein & Supplement Brands",
+      "discountMargin": "20%",
+      "frequency": "Monthly - 3,6,12",
+      "paymentType": "Prepaid",
+      "shipping": "20",
+      "bundles": "Yes",
+      "themeNotes": "Not Compatible"
+    },
+    {
+      "name": "Monks Bouffe",
+      "category": "Food & Grocery Brands",
+      "discountMargin": "15 max, so 15, 12, 10",
+      "frequency": "3, 6 & 12 monthly & bi-weekly 3, 6, 12",
+      "paymentType": "Prepaid",
+      "shipping": "100rs below 999rs",
+      "bundles": "Yes",
+      "themeNotes": "Gems landing page, dynamic banner requested on PDP redirecting to the relevant landing page"
+    },
+    {
+      "name": "Go Swasthya",
+      "category": "Food & Grocery Brands",
+      "discountMargin": "15%",
+      "frequency": "Monthly - 3,6",
+      "paymentType": "Both",
+      "shipping": "",
+      "bundles": "Yes",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "Shatabdi Organics",
+      "category": "Food & Grocery Brands",
+      "discountMargin": "",
+      "frequency": "",
+      "paymentType": "Both",
+      "shipping": "",
+      "bundles": "",
+      "themeNotes": ""
+    },
+    {
+      "name": "Iron Asylum (Prosupps)",
+      "category": "Protein & Supplement Brands",
+      "discountMargin": "20%",
+      "frequency": "Monthly - 12",
+      "paymentType": "Prepaid",
+      "shipping": "Free",
+      "bundles": "No",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "SUPR",
+      "category": "Protein & Supplement Brands",
+      "discountMargin": "36%",
+      "frequency": "Weekly - 6, 12; Monthly - 6",
+      "paymentType": "Both",
+      "shipping": "Free",
+      "bundles": "Yes",
+      "themeNotes": "Not Compatible"
+    },
+    {
+      "name": "Drink Elixir",
+      "category": "Water, Juices, Kombucha & Bottled Beverages",
+      "discountMargin": "",
+      "frequency": "",
+      "paymentType": "",
+      "shipping": "",
+      "bundles": "",
+      "themeNotes": ""
+    },
+    {
+      "name": "Anvika Wellness",
+      "category": "Protein & Supplement Brands",
+      "discountMargin": "15%",
+      "frequency": "2x, 3x, 4x, prepaid only",
+      "paymentType": "Prepaid",
+      "shipping": "0",
+      "bundles": "Yes",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "LightYearsHealth",
+      "category": "Protein & Supplement Brands",
+      "discountMargin": "15%",
+      "frequency": "Monthly - 3, 6, 12",
+      "paymentType": "Prepaid",
+      "shipping": "Free",
+      "bundles": "No",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "Millegram",
+      "category": "Food & Grocery Brands",
+      "discountMargin": "18%",
+      "frequency": "Weekly- 6,12",
+      "paymentType": "Both",
+      "shipping": "0",
+      "bundles": "No",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "Hesthetics",
+      "category": "Bath & Body Products",
+      "discountMargin": "12%",
+      "frequency": "Monthly - 3, 6, 12",
+      "paymentType": "Both",
+      "shipping": "Free",
+      "bundles": "Yes",
+      "themeNotes": "Custom Section had to be added."
+    },
+    {
+      "name": "Orchard Lane",
+      "category": "Food & Grocery Brands",
+      "discountMargin": "15%",
+      "frequency": "Monthly - 2, 4, 6",
+      "paymentType": "Both",
+      "shipping": "Free",
+      "bundles": "Yes",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "Skin Inspired",
+      "category": "Bath & Body Products",
+      "discountMargin": "",
+      "frequency": "",
+      "paymentType": "",
+      "shipping": "",
+      "bundles": "",
+      "themeNotes": ""
+    },
+    {
+      "name": "Origami Tissues",
+      "category": "Bath & Body Products",
+      "discountMargin": "25%",
+      "frequency": "Monthly- 3,6,12",
+      "paymentType": "Prepaid",
+      "shipping": "0",
+      "bundles": "Yes",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "BlueTea",
+      "category": "Tea Brands",
+      "discountMargin": "15%",
+      "frequency": "Monthly - 3",
+      "paymentType": "Prepaid",
+      "shipping": "Free",
+      "bundles": "No",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "Protocol 35",
+      "category": "",
+      "discountMargin": "",
+      "frequency": "",
+      "paymentType": "",
+      "shipping": "",
+      "bundles": "",
+      "themeNotes": ""
+    },
+    {
+      "name": "Rosier Foods",
+      "category": "Food & Grocery Brands",
+      "discountMargin": "20%",
+      "frequency": "Monthly- 3,6, BiWeekly- 3,6,12",
+      "paymentType": "Prepaid",
+      "shipping": "0",
+      "bundles": "No",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "Ace Blend",
+      "category": "Protein & Supplement Brands",
+      "discountMargin": "20%",
+      "frequency": "Monthly - 3, 6",
+      "paymentType": "Both",
+      "shipping": "Free",
+      "bundles": "Yes",
+      "themeNotes": "Not Compatible"
+    },
+    {
+      "name": "Zoy Care",
+      "category": "Female Hygiene Products",
+      "discountMargin": "10%",
+      "frequency": "Monthly 3,6,12",
+      "paymentType": "Auto-Pay",
+      "shipping": "Free",
+      "bundles": "Yes",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "Zama",
+      "category": "Food & Grocery Brands",
+      "discountMargin": "",
+      "frequency": "",
+      "paymentType": "Both",
+      "shipping": "",
+      "bundles": "Yes",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "Frais Farms",
+      "category": "Food & Grocery Brands",
+      "discountMargin": "",
+      "frequency": "",
+      "paymentType": "",
+      "shipping": "",
+      "bundles": "",
+      "themeNotes": ""
+    },
+    {
+      "name": "WellWith",
+      "category": "Bath & Body Products",
+      "discountMargin": "",
+      "frequency": "",
+      "paymentType": "",
+      "shipping": "",
+      "bundles": "",
+      "themeNotes": ""
+    },
+    {
+      "name": "Simply Nam",
+      "category": "Bath & Body Products",
+      "discountMargin": "",
+      "frequency": "",
+      "paymentType": "",
+      "shipping": "",
+      "bundles": "",
+      "themeNotes": ""
+    },
+    {
+      "name": "Kaidoo Kids",
+      "category": "Specialty Food & Snacks",
+      "discountMargin": "",
+      "frequency": "",
+      "paymentType": "",
+      "shipping": "",
+      "bundles": "",
+      "themeNotes": ""
+    },
+    {
+      "name": "Kilobeaters",
+      "category": "",
+      "discountMargin": "15%",
+      "frequency": "Monthly - 12",
+      "paymentType": "Prepaid",
+      "shipping": "Free",
+      "bundles": "No",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "Oak Age",
+      "category": "Protein & Supplement Brands",
+      "discountMargin": "",
+      "frequency": "",
+      "paymentType": "",
+      "shipping": "",
+      "bundles": "",
+      "themeNotes": ""
+    },
+    {
+      "name": "Avni Wellness",
+      "category": "Female Hygiene Products",
+      "discountMargin": "15%",
+      "frequency": "Monthly - 3, 6",
+      "paymentType": "Both",
+      "shipping": "Free",
+      "bundles": "Yes",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "Honest Pet Co.",
+      "category": "Pet Food & Supplies",
+      "discountMargin": "25%",
+      "frequency": "Monthly- 2,3,4",
+      "paymentType": "Both",
+      "shipping": "0",
+      "bundles": "Yes",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "Nice Guys Coffee",
+      "category": "Coffee Brands",
+      "discountMargin": "12.5%",
+      "frequency": "Weekly - 3, 6, 9, 12; Bi-weekly - 3, 6, 9, 12; Monthly - 3, 6, 9, 12",
+      "paymentType": "Prepaid",
+      "shipping": "Free",
+      "bundles": "Yes",
+      "themeNotes": "Not Compatible"
+    },
+    {
+      "name": "Local Ferment .Co",
+      "category": "Water, Juices, Kombucha & Bottled Beverages",
+      "discountMargin": "5%",
+      "frequency": "Monthly - 3, 6",
+      "paymentType": "Prepaid",
+      "shipping": "Free",
+      "bundles": "No",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "G-Shot Coffee",
+      "category": "Coffee Brands",
+      "discountMargin": "10%",
+      "frequency": "Monthly - CC",
+      "paymentType": "PAYG",
+      "shipping": "Free",
+      "bundles": "No",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "Varalife",
+      "category": "Protein & Supplement Brands",
+      "discountMargin": "",
+      "frequency": "",
+      "paymentType": "",
+      "shipping": "",
+      "bundles": "",
+      "themeNotes": ""
+    },
+    {
+      "name": "Up&Run",
+      "category": "Protein & Supplement Brands",
+      "discountMargin": "15%",
+      "frequency": "Monthly - 3,6",
+      "paymentType": "Both",
+      "shipping": "Free",
+      "bundles": "No",
+      "themeNotes": "Compatible"
+    },
+    {
+      "name": "Orignally Desi",
+      "category": "",
+      "discountMargin": "",
+      "frequency": "",
+      "paymentType": "",
+      "shipping": "",
+      "bundles": "",
+      "themeNotes": ""
+    },
+    {
+      "name": "The Food RX Store",
+      "category": "Food & Grocery Brands",
+      "discountMargin": "10%",
+      "frequency": "Bi-Weekly- 3,6,12",
+      "paymentType": "Prepaid",
+      "shipping": "40rs below 400",
+      "bundles": "No",
+      "themeNotes": "Compatible"
+    }
   ],
   "alsoSeen": {
     "note": "Shapes not in the live Pilots tab today but in the seed or in earlier captures. Same contract: they have to read.",

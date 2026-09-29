@@ -84,9 +84,13 @@ export function normPriority(p: number | null | undefined): 1 | 2 | 3 {
 export function cardPriority(
   rec: { priority?: unknown; boardPriority?: number | null } | null | undefined,
 ): 1 | 2 | 3 {
-  if (!rec) return 3;
+  if (!rec) return 2;
   if (rec.boardPriority === 1 || rec.boardPriority === 2 || rec.boardPriority === 3) return rec.boardPriority;
-  return typeof rec.priority === "number" ? normPriority(rec.priority) : 3;
+  /* A roadmap task's horizon is real data and absent has always meant Future there. A card
+     nobody has tagged is NEXT, not Future: Future parks a card in the backlog now, and
+     defaulting to it parked 63 of 71 cards on a board where nobody had set a horizon at all.
+     Parking is something you do to a card, not something that happens to it. */
+  return typeof rec.priority === "number" ? normPriority(rec.priority) : 2;
 }
 
 /** Which of the four states a milestone sits in. Done wins over the horizon: once every

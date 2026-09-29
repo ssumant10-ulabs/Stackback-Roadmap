@@ -41,12 +41,6 @@ export interface StageSpec {
   team?: BoardTeam;
   /** Only cards whose dev review went this way. */
   review?: ReviewWith;
-  /** Only cards on the Now horizon. Setting a backlog card to Now is PM picking it up, and
-   *  it has to show on PM's board without waiting for somebody to also name the team. */
-  now?: true;
-  /** Only cards nobody is named on. Pairs with `now`: a card set to Now with a team already
-   *  on it belongs to that team, not to PM's triage pile. */
-  unowned?: true;
 }
 
 export interface BoardColumn {
@@ -68,12 +62,22 @@ export interface BoardColumn {
   hint?: string;
 }
 
+/** In hand and not parked: somebody has taken it and it is not sitting on Future. */
+const ACTIVE = (teams: BoardTeam[], horizon: 1 | 2 | 3) => teams.length > 0 && horizon !== 3;
+/** The other half, and it is exactly the other half: unclaimed, or parked on Future. */
+const PARKED = (teams: BoardTeam[], horizon: 1 | 2 | 3) => !ACTIVE(teams, horizon);
+
 export interface BoardViewDef {
   id: BoardView;
   label: string;
-  /** Only cards a team has. The Roadmap lens is the overview of work in hand, so a card
-   *  nobody owns is in the backlog and nowhere else until somebody takes it. */
-  ownedOnly?: true;
+  /** Which cards this lens is about at all, before any column sees them.
+   *
+   *  Two questions decide it and neither is about a stage, which is why it sits here rather
+   *  than as another qualifier on a column: has somebody taken the card, and is it work for
+   *  now. The backlog is everything that fails either test — unclaimed, or parked on the
+   *  Future horizon — and the four working lenses are everything that passes both. So the
+   *  board splits in two, every card in exactly one half. */
+  holds: (teams: BoardTeam[], horizon: 1 | 2 | 3) => boolean;
   /** What this lens is for, one line, shown under the tabs. */
   blurb: string;
   columns: BoardColumn[];
@@ -94,6 +98,7 @@ export const ALL_KINDS: CardKind[] = ["bug", "feature", "module", "template", "l
 export const BOARD_VIEWS: BoardViewDef[] = [
   {
     id: "pm",
+    holds: ACTIVE,
     label: "PM / CS",
     blurb: "What PM has picked up, what went out to a team, and what came back approved.",
     columns: [
@@ -104,11 +109,6 @@ export const BOARD_VIEWS: BoardViewDef[] = [
         accepts: [
           { stage: "bug", team: "PM", kinds: ASKED_FOR },
           { stage: "feature", team: "PM", kinds: ASKED_FOR },
-          /* Or simply Now, when nobody is named on it. Moving a backlog card to Now IS
-             picking it up. A Now card that already names Design or Dev is theirs and shows
-             on their board; sending it here as well would make PM's queue the backlog. */
-          { stage: "bug", now: true, unowned: true, kinds: ASKED_FOR },
-          { stage: "feature", now: true, unowned: true, kinds: ASKED_FOR },
         ],
         drop: (_t, k) => { const kind = refile(k, ASKED_FOR, "feature"); return { stage: defaultStage(kind), kind, team: "PM" }; },
         hint: "Asked for by a merchant or by us." },
@@ -116,8 +116,6 @@ export const BOARD_VIEWS: BoardViewDef[] = [
         accepts: [
           { stage: "bug", team: "PM", kinds: BUILT },
           { stage: "feature", team: "PM", kinds: BUILT },
-          { stage: "bug", now: true, unowned: true, kinds: BUILT },
-          { stage: "feature", now: true, unowned: true, kinds: BUILT },
         ],
         drop: (_t, k) => { const kind = refile(k, BUILT, "module"); return { stage: defaultStage(kind), kind, team: "PM" }; },
         hint: "Things we are building rather than things somebody reported." },
@@ -146,6 +144,7 @@ export const BOARD_VIEWS: BoardViewDef[] = [
   },
   {
     id: "design",
+    holds: ACTIVE,
     label: "Design",
     blurb: "Handed in by PM, out to dev, and back again for QA.",
     columns: [
@@ -183,6 +182,7 @@ export const BOARD_VIEWS: BoardViewDef[] = [
   },
   {
     id: "dev",
+    holds: ACTIVE,
     label: "Dev",
     blurb: "Handed in by PM or design, out for review, and shipped.",
     columns: [
@@ -220,7 +220,8 @@ BOARD_VIEWS.push(
   {
     id: "backlog",
     label: "Backlog",
-    blurb: "What nobody has picked up yet, by what it is. Hand a card to a team and it leaves here for their board.",
+    holds: PARKED,
+    blurb: "What nobody has picked up, and what is parked on Future. Hand a card to a team and set it to Now or Next, and it leaves here for their board.",
     columns: [
       { key: "bugs", title: "Bugs", filesAs: "bug", accepts: intake(["bug"]) },
       { key: "features", title: "Features", filesAs: "feature", accepts: intake(["feature"]) },
@@ -231,8 +232,8 @@ BOARD_VIEWS.push(
   {
     id: "roadmap",
     label: "Roadmap",
-    ownedOnly: true,
-    blurb: "The overview: everything a team has, by where the work is. Anything nobody has taken is in the backlog.",
+    holds: ACTIVE,
+    blurb: "The overview: the work in hand, by where it is. Anything nobody has taken, or parked on Future, is in the backlog.",
     columns: [
       /* The Roadmap groups by where the work is, so none of its columns is a handover: a
           card dropped here keeps whoever already had it, and no drop names a team. */
@@ -265,7 +266,7 @@ BOARD_VIEWS.push(
  *  Roadmap is what somebody has. Together they are every card, and no card is in both. It
  *  is still every STAGE, because a card can be unclaimed at any of them. */
 function intake(kinds: CardKind[]): StageSpec[] {
-  return ALL_STAGES.map((stage) => ({ stage, kinds, unowned: true as const }));
+  return ALL_STAGES.map((stage) => ({ stage, kinds }));
 }
 
 
@@ -415,15 +416,12 @@ export function inView(view: BoardView, stage: Stage, teams: BoardTeam[], review
  *  says "Engineering" on cards that carry a Design team assignee, so reading that one column
  *  put every design card on Dev's board and left Design's reading zero. */
 export function fits(
-  c: BoardColumn, stage: Stage, teams: BoardTeam[], review: ReviewWith | null,
-  kind?: CardKind, horizon?: 1 | 2 | 3,
+  c: BoardColumn, stage: Stage, teams: BoardTeam[], review: ReviewWith | null, kind?: CardKind,
 ): boolean {
   return c.accepts.some((a) =>
     a.stage === stage
     && (!a.team || teams.includes(a.team))
     && (!a.review || a.review === review)
-    && (!a.now || horizon === 1)
-    && (!a.unowned || teams.length === 0)
     && (!a.kinds || (kind ? a.kinds.includes(kind) : false)));
 }
 

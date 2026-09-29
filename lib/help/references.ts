@@ -260,3 +260,29 @@ export function freqLabel(days: number): string {
   if (days > 90 && days % 30 === 0) return `Every ${days / 30} months`;
   return `Every ${days} days`;
 }
+
+/** The payment column, said the way a merchant says it.
+ *
+ *  The sheet writes "Both", which is our shorthand for the two modes and tells a reader
+ *  nothing about which two. It also writes "PAYG" and "Auto-Pay", which are ours rather than
+ *  anybody's product language. */
+export function paymentLabel(v: string | null | undefined): string | null {
+  const t = (v || "").trim();
+  if (!t) return null;
+  if (/^both$/i.test(t)) return "Prepaid and pay as you go";
+  if (/^payg$|^pay.?as.?you.?go$/i.test(t)) return "Pay as you go";
+  if (/^auto.?pay$|^auto.?debit$/i.test(t)) return "AutoPay";
+  if (/^prepaid$/i.test(t)) return "Prepaid";
+  return t;
+}
+
+/** The shipping column, which is a rupee figure as often as a word. A bare "60" is a
+ *  per-delivery charge and a bare "0" is free; printing either as itself reads as a code. */
+export function shippingLabel(v: string | null | undefined): string | null {
+  const t = (v || "").trim();
+  if (!t) return null;
+  if (/^free$/i.test(t)) return "Free";
+  if (/^0+$/.test(t)) return "Free";
+  if (/^\d{1,5}$/.test(t)) return `₹${t} per delivery`;
+  return t;
+}

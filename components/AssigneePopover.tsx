@@ -3,16 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import { RosterPicker } from "./RosterPicker";
 import { IcCheck, IcClose } from "./icons";
-import type { Node } from "@/lib/types";
-
-function findNode(nodes: Node[], id: string): Node | null {
-  for (const n of nodes) {
-    if (n.id === id) return n;
-    const c = findNode(n.children || [], id);
-    if (c) return c;
-  }
-  return null;
-}
 
 export function AssigneePopover({ pos, nodeId, onClose }: { pos: { left: number; top: number }; nodeId: string; onClose: () => void }) {
   const s = useStore();
@@ -23,7 +13,10 @@ export function AssigneePopover({ pos, nodeId, onClose }: { pos: { left: number;
      nothing on screen said so, so promoting a feature and picking an owner ended with no
      sign the owner had stuck. The chip below confirms the write and Done closes it. */
   const [saved, setSaved] = useState(0);
-  const node = findNode(s.tasks, nodeId);
+  /* `s.find` reaches a REQUEST as well as a roadmap task — `findEntry` returns one as a
+     Node. Walking `s.tasks` by hand found only the tree, so on a request card this rendered
+     null: the picker opened onto nothing and there was no way to put anybody on the card. */
+  const node = s.find(nodeId);
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
