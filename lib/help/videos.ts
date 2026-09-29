@@ -10,6 +10,12 @@
 
 export interface Clip {
   id: string;
+  /** Held back from the merchant view. Used for a recording that still shows real
+   *  customer or merchant detail: a clip nobody has redacted is not a help article. */
+  internalOnly?: boolean;
+  /** Asked for and not recorded yet. Listed so the gap is visible rather than a question
+   *  nobody can answer with a link, and not playable. */
+  pending?: boolean;
   title: string;
   src: string;
   /** Set when the file is served from this app rather than ClickUp. */
@@ -26,9 +32,8 @@ export interface ClipGroup {
 
 export const CLIP_GROUPS: ClipGroup[] = [
   {
-    id: "setup", title: "Setting up", blurb: "Getting the store and the app ready. Do these once, in order.",
+    id: "setup", title: "Setting up StackBack", blurb: "Installing the app and setting its payment, shipping and tax rules. Do these once, in order.",
     clips: [
-      { id: "3c7e948e", title: "Shopify: Creating a Store", src: "https://t9016928151.p.clickup-attachments.com/t9016928151/3c7e948e-ccf1-4c92-a518-af4f9ce48472/3c7e948e-ccf1-4c92-a518-af4f9ce48472.webm?filename=Shopify%20-%20Creating%20a%20Store.webm" },
       { id: "430ca588", title: "Install and Setup", src: "https://t9016928151.p.clickup-attachments.com/t9016928151/430ca588-1e8a-4871-8802-3b07ab3888b6/430ca588-1e8a-4871-8802-3b07ab3888b6.webm?filename=Stackback%20-%20Install%20and%20Setup.webm" },
       { id: "eeea4461", title: "Payment, Shipping & Tax", src: "https://t9016928151.p.clickup-attachments.com/t9016928151/eeea4461-8bf2-4a8b-a129-e8693094b86a/eeea4461-8bf2-4a8b-a129-e8693094b86a.webm?filename=Stackback%20-%20Payment%2C%20Shipping%20%26%20Tax.webm" },
     ],
@@ -71,13 +76,41 @@ export const CLIP_GROUPS: ClipGroup[] = [
     clips: [
       {
         id: "managing-subs",
-        title: "Managing subscriptions end to end",
-        src: "/help/videos/managing-subscriptions.mov",
+        title: "Reschedule, pause and resume a subscription",
+        src: "/help/videos/managing-subscriptions.mp4",
         local: true,
-        note: "Served from this app. QuickTime does not play in Firefox, so this should move to ClickUp with the others.",
       },
     ],
   },
 ];
 
-export const ALL_CLIPS = CLIP_GROUPS.flatMap((g) => g.clips);
+/** Asked for by the FAQ and not recorded yet. Listed rather than left as a silence, because
+ *  a gap somebody can see gets filled and a gap nobody can see does not. Each one names the
+ *  question it exists to answer, so the recording has a brief before anybody opens QuickTime. */
+export const PENDING_CLIPS: ClipGroup = {
+  id: "pending",
+  title: "Not recorded yet",
+  blurb: "Questions from the FAQ that have no walkthrough. Each one is a brief, not a wish.",
+  clips: [
+    { id: "p-widget-place", pending: true, src: "", title: "Placing the widget on your product page",
+      note: "For: where can the widget sit on the product page. The theme editor, the app block, and what to do on a theme that has no block." },
+    { id: "p-cod", pending: true, src: "", title: "Turning COD off for subscription products",
+      note: "For: does COD need to be disabled. The payment-method rule, and what a customer sees if it is left on." },
+    { id: "p-autopay", pending: true, src: "", title: "Setting up AutoPay with Razorpay",
+      note: "For: how does UPI AutoPay work. The runbook already exists on the Internal tab; this is it on screen, including charge-at-will and the webhook." },
+    { id: "p-discount-stack", pending: true, src: "", title: "Subscription discounts alongside a store-wide sale",
+      note: "For: will our existing discounts stack. What the customer is charged when both apply, and the compare-at setting." },
+    { id: "p-revenue-filter", pending: true, src: "", title: "Filtering subscription orders in a revenue report",
+      note: "For: will the checkout order inflate our revenue. Building the filter on parent and child in Shopify reports." },
+    { id: "p-payg-billing", pending: true, src: "", title: "Pay as you go: reminders, links and non-payment",
+      note: "For: how pay as you go decides to charge or pause, and can a customer cancel by not paying." },
+    { id: "p-notifications", pending: true, src: "", title: "Notification templates and when each one fires",
+      note: "For: which notifications does StackBack send. Editing a template, and the WhatsApp path." },
+    { id: "p-mandates", pending: true, src: "", title: "AutoPay mandates: cancellations and what happens next",
+      note: "For: how do we know who cancelled a mandate. Including the downgrade to pay as you go." },
+    { id: "p-cancellations", pending: true, src: "", title: "Cancellation requests, approvals and refunds",
+      note: "For: a subscription order shows as cancelled and we did not cancel it." },
+  ],
+};
+
+export const ALL_CLIPS = [...CLIP_GROUPS, PENDING_CLIPS].flatMap((g) => g.clips);

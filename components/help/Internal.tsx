@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
-import { CHECKLIST, TOTAL_STEPS, type Step } from "@/lib/help/checklist";
+import { CHECKLIST, RUNBOOKS, TOTAL_STEPS, type Step } from "@/lib/help/checklist";
 import type { StepState, StoreRecord, StoreSummary } from "@/lib/sanity/queries";
 
 const OWNER_LABEL: Record<Step["owner"], string> = { ulabs: "Us", client: "Client", both: "Together" };
@@ -47,12 +47,6 @@ export default function Internal({ store, stores, connected, getToken }: {
     return (
       <section>
         <p className="hc-eyebrow">Internal</p>
-        <h1 className="hc-h1">Store checklists</h1>
-        <div className="hc-empty">
-          <p>Not connected to the CMS yet, so there are no stores to track. The checklist below is the
-          spine every store gets measured against; it lives in the code, not in Sanity, so it is the same
-          for everybody.</p>
-        </div>
         <Spine />
       </section>
     );
@@ -89,9 +83,17 @@ export default function Internal({ store, stores, connected, getToken }: {
 
       {err && <p className="hc-result bad" role="status">{err}</p>}
 
-      {CHECKLIST.map((phase) => (
-        <div key={phase.id} className="hc-phase">
-          <h2 className="hc-h2">{phase.title}</h2>
+      <ol className="hc-timeline">
+      {CHECKLIST.map((phase, pi) => {
+        const steps = phase.steps;
+        const doneHere = steps.filter((x) => state.get(x.id)?.done).length;
+        const state_ = doneHere === steps.length ? "done" : doneHere > 0 ? "doing" : "todo";
+        return (
+        <li key={phase.id} className={"hc-tlphase " + state_}>
+          <span className="hc-tlnode" aria-hidden="true">{state_ === "done" ? "\u2713" : pi + 1}</span>
+          <div className="hc-tlbody">
+            <h2 className="hc-h2">{phase.title}<em>{doneHere} of {steps.length}</em></h2>
+            <p className="hc-tlpurpose">{phase.purpose}</p>
           <ul className="hc-steps">
             {phase.steps.map((step) => {
               const st = state.get(step.id);
@@ -107,6 +109,7 @@ export default function Internal({ store, stores, connected, getToken }: {
                     </span>
                   </label>
                   <p className="hc-stepdetail">{step.detail}</p>
+                  {step.message && <Message step={step} />}
                   {blocked && !st?.done && <p className="hc-stepblock">Waiting on the step above it.</p>}
                   {st?.done && st.at && (
                     <p className="hc-stepwho">{new Date(st.at).toLocaleDateString()}{st.by ? ` · ${st.by}` : ""}</p>
@@ -115,8 +118,11 @@ export default function Internal({ store, stores, connected, getToken }: {
               );
             })}
           </ul>
-        </div>
-      ))}
+          </div>
+        </li>
+        );
+      })}
+      </ol>
     </section>
   );
 }
@@ -146,20 +152,86 @@ function StoreTable({ stores }: { stores: StoreSummary[] }) {
 function Spine() {
   return (
     <>
-      <h2 className="hc-h2">The spine</h2>
-      {CHECKLIST.map((phase) => (
-        <div key={phase.id} className="hc-phase">
-          <h3 className="hc-h3">{phase.title}</h3>
-          <ul className="hc-steps flat">
-            {phase.steps.map((step) => (
-              <li key={step.id}>
-                <span className="hc-steptitle">{step.title}<em className={"hc-owner o-" + step.owner}>{OWNER_LABEL[step.owner]}</em></span>
-                <p className="hc-stepdetail">{step.detail}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
+      <h1 className="hc-h1">Onboarding</h1>
+      <p className="hc-blurb">
+        Five phases, in order. Every store is measured against the same spine, and the message we
+        send at a step sits on that step.
+      </p>
+
+      {/* Buttons, not anchors. `href="#phase-access"` writes the document hash, and the hash
+          is this app's router: `parseHash` did not recognise it, fell back to the FAQ, and
+          the click left the Internal tab entirely instead of scrolling down it. Scrolling the
+          element directly never touches the address. The landing offset is
+          `scroll-margin-top` on the phase, so the sticky bar does not sit over the heading. */}
+      <nav className="hc-tlnav" aria-label="Phases">
+        {CHECKLIST.map((phase, i) => (
+          <button key={phase.id} type="button"
+            onClick={() => document.getElementById(`phase-${phase.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}>
+            <b>{i + 1}</b><span>{phase.title}</span><em>{phase.steps.length}</em>
+          </button>
+        ))}
+      </nav>
+
+      <ol className="hc-timeline">
+        {CHECKLIST.map((phase, pi) => (
+          <li key={phase.id} id={`phase-${phase.id}`} className="hc-tlphase">
+            <span className="hc-tlnode" aria-hidden="true">{pi + 1}</span>
+            <div className="hc-tlbody">
+              <h3 className="hc-h2">{phase.title}<em>{phase.steps.length} steps</em></h3>
+              <p className="hc-tlpurpose">{phase.purpose}</p>
+              <ul className="hc-steps flat">
+                {phase.steps.map((step) => (
+                  <li key={step.id}>
+                    <span className="hc-steptitle">{step.title}<em className={"hc-owner o-" + step.owner}>{OWNER_LABEL[step.owner]}</em></span>
+                    <p className="hc-stepdetail">{step.detail}</p>
+                    {step.message && <Message step={step} />}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </li>
+        ))}
+      </ol>
+
+      <h2 className="hc-h2">Copy we hand over</h2>
+      <p className="hc-blurb">
+        Not messages we send: text the merchant puts on their own pages, and one runbook that only
+        applies to stores taking AutoPay.
+      </p>
+      {RUNBOOKS.map((r) => (
+        <details key={r.id} className="hc-runbook">
+          <summary><b>{r.title}</b><span>{r.blurb}</span></summary>
+          <pre>{r.body}</pre>
+          <CopyBtn text={r.body} label="Copy" />
+        </details>
       ))}
     </>
+  );
+}
+
+/** The message we send at a step, with the thread's own wording. */
+function Message({ step }: { step: Step }) {
+  const m = step.message;
+  if (!m) return null;
+  return (
+    <details className="hc-msg">
+      <summary>What we send: <b>{m.subject}</b></summary>
+      <pre>{m.body}</pre>
+      {m.note && <p className="hc-msgnote">{m.note}</p>}
+      <CopyBtn text={m.body} label="Copy the message" />
+    </details>
+  );
+}
+
+function CopyBtn({ text, label }: { text: string; label: string }) {
+  const [done, setDone] = useState(false);
+  return (
+    <button type="button" className="hc-btn ghost hc-msgcopy"
+      onClick={() => {
+        navigator.clipboard?.writeText(text).then(() => setDone(true), () => setDone(false));
+        setTimeout(() => setDone(false), 2000);
+      }}>
+      {done ? "Copied" : label}
+    </button>
   );
 }

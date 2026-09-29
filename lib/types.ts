@@ -29,6 +29,21 @@ export interface Node {
   team?: string | null;
   /** Roadmap sheet: Handover Timeline column. */
   handover?: string | null;
+  /* ---- the work board. A roadmap task is a card on it too, not only a bug or a request. */
+  /** Where it sits. Absent means derived from the status and team it already had, so the
+   *  board was right on the first load without anything being backfilled. */
+  stage?: import("./board").Stage | null;
+  /** Who it was handed to, one team at a time. Falls back to the sheet's Team column. */
+  boardTeam?: import("./board").BoardTeam | null;
+  /** Design QA or PM, for dev work going out for review. */
+  reviewWith?: import("./board").ReviewWith | null;
+  /** What kind of card it is, for the tag. Roadmap work is a feature unless said otherwise. */
+  kind?: import("./board").CardKind;
+  /** Handover files and screenshots. Same shape and same uploader as a request's. */
+  shots?: Shot[];
+  /** Rank within its board column. The position IS the priority, so it has to be stored:
+   *  array order is shared with the roadmap tree and cannot be reordered per column. */
+  boardOrder?: number | null;
   /** Roadmap sheet: Deadline column. */
   deadline?: string | null;
   /** Scheduled window, ISO `yyyy-mm-dd`. Settable on a milestone or any subtask.
@@ -54,7 +69,7 @@ export interface Roadmap {
 
 export type ActivityKind =
   | "status" | "done" | "undone" | "move" | "nest" | "add" | "delete"
-  | "dates" | "assign" | "comment" | "roadmap" | "rename";
+  | "dates" | "assign" | "comment" | "roadmap" | "rename" | "stage";
 
 export interface Activity {
   id: string;
@@ -110,7 +125,33 @@ export interface Feature {
   issueType?: string | null;
   /** A merchant raises both. Bugs are the gap the pilot sheet never covered: it counts
    *  open bugs per store but never says what they are. */
-  kind?: "feature" | "bug";
+  kind?: import("./board").CardKind;
+  /** Where this sits on the work board. One field, read by all three lenses, so two columns
+   *  that are "in sync" are the same stage rather than two that have to be kept level.
+   *  Absent on anything that predates the board; see DEFAULT_STAGE. */
+  stage?: import("./board").Stage | null;
+  /** Who PM handed it to. One team at a time, asked at handover rather than inferred from
+   *  who is assigned, which is how a card reaches two teams' columns at once. */
+  boardTeam?: import("./board").BoardTeam | null;
+  /** Who reviews the dev work: design QA or PM. Asked when it leaves dev. */
+  reviewWith?: import("./board").ReviewWith | null;
+  /** Rank within its board column. See the Node field of the same name. */
+  boardOrder?: number | null;
+  /** Now, Next or Future on the board. Its own field because a request's `priority` is a
+   *  sheet TEXT column — the live rows hold "PMFv1" — and writing 1, 2 or 3 into it would
+   *  destroy what the team typed. A roadmap task has one horizon and it is `priority`. */
+  boardPriority?: 1 | 2 | 3 | null;
+  /* ---- the work fields, so a request behaves like every other card on the board.
+     Shaped exactly like a Node's, and `findEntry` returns a request as one, so assigning,
+     dating, checking off, adding a subtask and commenting are the same code for both. A
+     request that can only be linked and deleted is a card with half the buttons. */
+  status?: Status;
+  assignees?: Assignee[];
+  children?: Node[];
+  comments?: Comment[];
+  start?: string | null;
+  end?: string | null;
+  eta?: string | null;
   /** Screenshots. Downscaled to a data URL because there is no file storage yet; they move
    *  to Firebase Storage the moment it is on. See SHOT_* limits in lib/shots.ts. */
   shots?: Shot[];

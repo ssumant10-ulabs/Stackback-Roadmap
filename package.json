@@ -8,7 +8,8 @@
     "start": "next start",
     "studio": "npm --prefix studio install && npm --prefix studio run dev",
     "studio:deploy": "npm --prefix studio run deploy",
-    "help:corpus": "node scripts/gen-help-corpus.js"
+    "help:corpus": "node scripts/gen-help-corpus.js",
+    "refs:snapshot": "tsx scripts/snapshot-references.ts"
   },
   "dependencies": {
     "@portabletext/react": "^8.0.1",

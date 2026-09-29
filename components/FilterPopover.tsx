@@ -23,10 +23,25 @@ export function FilterPopover({ pos, onClose }: { pos: { left: number; top: numb
   const teamCount = (team: string) => tasks.filter((t) => helpers.teamSet(t).indexOf(team) >= 0).length;
   const personCount = (name: string) => tasks.filter((t) => helpers.subtreeHasAssignee(t, (a) => !a.isTeam && a.name === name)).length;
 
+  /* People under the team they are on, rather than one flat list beneath all three. A flat
+     list makes you know the roster to use the filter: picking "the design team's work" and
+     "Neel's work" are the same question at two scopes, and they were two unrelated rows. */
   const seen: Record<string, 1> = {};
-  const people: string[] = [];
-  TEAM_ORDER.forEach((tm) => (s.data.roster[tm] || []).forEach((n) => { if (!seen[n]) { seen[n] = 1; people.push(n); } }));
-  const walk = (nodes: Node[]) => nodes.forEach((n) => { (n.assignees || []).forEach((a: Assignee) => { if (!a.isTeam && !seen[a.name]) { seen[a.name] = 1; people.push(a.name); } }); walk(n.children || []); });
+  const byTeam: Record<string, string[]> = {};
+  const loose: string[] = [];
+  TEAM_ORDER.forEach((tm) => {
+    byTeam[tm] = [];
+    (s.data.roster[tm] || []).forEach((n) => { if (!seen[n]) { seen[n] = 1; byTeam[tm].push(n); } });
+  });
+  const walk = (nodes: Node[]) => nodes.forEach((n) => {
+    (n.assignees || []).forEach((a: Assignee) => {
+      if (a.isTeam || seen[a.name]) return;
+      seen[a.name] = 1;
+      const tm = helpers.teamOf(a.name);
+      if (tm && byTeam[tm]) byTeam[tm].push(a.name); else loose.push(a.name);
+    });
+    walk(n.children || []);
+  });
   walk(tasks);
 
   const setTeam = (t: string) => s.setFilter(s.ui.filter && s.ui.filter.type === "team" && s.ui.filter.name === t ? null : { type: "team", name: t });
@@ -37,35 +52,45 @@ export function FilterPopover({ pos, onClose }: { pos: { left: number; top: numb
       <button className="icon-btn pop-close" aria-label="Close" onClick={onClose}><IcClose /></button>
       <h4>Filter roadmap</h4>
       <div>
-        <div className="fp-group">
-          <div className="fp-lbl">Team</div>
-          <div className="fp-chips">
-            {TEAM_ORDER.map((t) => {
-              const active = s.ui.filter?.type === "team" && s.ui.filter.name === t;
-              return (
-                <button key={t} type="button" className={`chip${active ? " active" : ""}`} onClick={() => setTeam(t)}>
-                  <span className={`tbadge sm av-${TEAM_VAR[t]}`}><IcTeam />{TEAM_SHORT[t]}</span>{t}
-                  <span className="count">{teamCount(t)}</span>
-                </button>
-              );
-            })}
+        {TEAM_ORDER.map((t) => {
+          const teamActive = s.ui.filter?.type === "team" && s.ui.filter.name === t;
+          return (
+            <div className="fp-group" key={t}>
+              <button type="button" className={`chip fp-team${teamActive ? " active" : ""}`} onClick={() => setTeam(t)}>
+                <span className={`tbadge sm av-${TEAM_VAR[t]}`}><IcTeam />{TEAM_SHORT[t]}</span>{t}
+                <span className="count">{teamCount(t)}</span>
+              </button>
+              <div className="fp-chips fp-people">
+                {(byTeam[t] || []).map((p) => {
+                  const active = s.ui.filter?.type === "person" && s.ui.filter.name === p;
+                  return (
+                    <button key={p} type="button" className={`chip${active ? " active" : ""}`} onClick={() => setPerson(p)}>
+                      <span className={`avatar sm av-${TEAM_VAR[t]}${FOUNDERS[p] ? " founder" : ""}`}>{initials(p)}</span>{p}
+                      <span className="count">{personCount(p)}</span>
+                    </button>
+                  );
+                })}
+                {!(byTeam[t] || []).length && <span className="fp-none">Nobody on the roster</span>}
+              </div>
+            </div>
+          );
+        })}
+        {loose.length > 0 && (
+          <div className="fp-group">
+            <div className="fp-lbl">Assigned, not on a team roster</div>
+            <div className="fp-chips fp-people">
+              {loose.map((p) => {
+                const active = s.ui.filter?.type === "person" && s.ui.filter.name === p;
+                return (
+                  <button key={p} type="button" className={`chip${active ? " active" : ""}`} onClick={() => setPerson(p)}>
+                    <span className="avatar sm av-neutral">{initials(p)}</span>{p}
+                    <span className="count">{personCount(p)}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
-        <div className="fp-group">
-          <div className="fp-lbl">People</div>
-          <div className="fp-chips">
-            {people.map((p) => {
-              const active = s.ui.filter?.type === "person" && s.ui.filter.name === p;
-              const v = helpers.teamVar(helpers.teamOf(p));
-              return (
-                <button key={p} type="button" className={`chip${active ? " active" : ""}`} onClick={() => setPerson(p)}>
-                  <span className={`avatar sm av-${v}${FOUNDERS[p] ? " founder" : ""}`}>{initials(p)}</span>{p}
-                  <span className="count">{personCount(p)}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        )}
         {s.ui.filter && <button type="button" className="chip clear" onClick={() => s.setFilter(null)}>Clear filter</button>}
       </div>
     </div>

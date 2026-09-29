@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ALL_CLIPS, CLIP_GROUPS, type Clip } from "@/lib/help/videos";
+import { ALL_CLIPS, CLIP_GROUPS, PENDING_CLIPS, type Clip, type ClipGroup } from "@/lib/help/videos";
 import { APP_NAME } from "@/lib/help/types";
 
 const WATCHED = "sb-help-watched";
@@ -13,11 +13,28 @@ const WATCHED = "sb-help-watched";
  *
  *  What has been watched is remembered on the device, because sixteen videos is more than
  *  anybody finishes in a sitting and "where was I" is the question that stops them returning. */
-export default function HowTo() {
+export default function HowTo({ internal = false }: {
+  /** Signed in on a ULABS account. An unredacted recording is held back below this. */
+  internal?: boolean;
+}) {
   const [current, setCurrent] = useState<Clip>(ALL_CLIPS[0]);
   const [watched, setWatched] = useState<string[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [failed, setFailed] = useState(false);
+
+  /* A copied link has to open the clip it names, or the button is a lie. The hash is read on
+     mount and whenever it changes, so a link pasted into a live tab works too. */
+  useEffect(() => {
+    const open = () => {
+      const m = /#\/howto\/([a-z0-9-]+)/i.exec(location.hash);
+      if (!m) return;
+      const hit = ALL_CLIPS.find((c) => c.id === m[1]);
+      if (hit) setCurrent(hit);
+    };
+    open();
+    window.addEventListener("hashchange", open);
+    return () => window.removeEventListener("hashchange", open);
+  }, []);
 
   useEffect(() => {
     try { setWatched(JSON.parse(localStorage.getItem(WATCHED) || "[]")); }
@@ -42,7 +59,14 @@ export default function HowTo() {
     v.load();
   }, [current]);
 
-  const flat = useMemo(() => CLIP_GROUPS.flatMap((g) => g.clips.map((c) => ({ ...c, group: g.title }))), []);
+  const groups: ClipGroup[] = useMemo(
+    () => [...CLIP_GROUPS, PENDING_CLIPS]
+      .map((g) => ({ ...g, clips: g.clips.filter((c) => internal || !c.internalOnly) }))
+      .filter((g) => g.clips.length > 0),
+    [internal],
+  );
+  const flat = useMemo(() => groups.flatMap((g) => g.clips.filter((c) => !c.pending).map((c) => ({ ...c, group: g.title }))), [groups]);
+  const [copied, setCopied] = useState<string | null>(null);
   const index = flat.findIndex((c) => c.id === current.id);
   const next = flat[index + 1];
 
@@ -92,6 +116,31 @@ export default function HowTo() {
             <div>
               <p className="hc-htnowt">{current.title}</p>
               {current.note && <p className="hc-htnote">{current.note}</p>}
+              {/* Every clip has an address. Without this the only way to send somebody one
+                  recording was to tell them which row to click. */}
+              <div className="hc-htshare">
+                <button type="button" className="hc-btn ghost hc-htcopy"
+                  onClick={() => {
+                    /* A page with this one recording on it. A link to the file makes the
+                       browser download it, and a link into the Help Centre needs the recipient
+                       to find the right row. `navigator.clipboard` is undefined on an insecure
+                       origin, so the textarea fallback is the one that runs on localhost. */
+                    const link = `${location.origin}/watch/${current.id}`;
+                    const ok = () => { setCopied(current.id); setTimeout(() => setCopied(null), 2200); };
+                    const fallback = () => {
+                      const t = document.createElement("textarea");
+                      t.value = link; t.style.position = "fixed"; t.style.opacity = "0";
+                      document.body.appendChild(t); t.select();
+                      try { document.execCommand("copy"); ok(); }
+                      catch { setCopied("fail"); setTimeout(() => setCopied(null), 2200); }
+                      finally { t.remove(); }
+                    };
+                    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(link).then(ok, fallback);
+                    else fallback();
+                  }}>
+                  {copied === current.id ? "Link copied" : copied === "fail" ? "Copy failed" : "Copy the link"}
+                </button>
+              </div>
             </div>
             {next && (
               <button className="hc-btn" onClick={() => setCurrent(next)}>
@@ -102,7 +151,7 @@ export default function HowTo() {
         </div>
 
         <nav className="hc-htlist" aria-label="Recordings">
-          {CLIP_GROUPS.map((g) => (
+          {groups.map((g) => (
             <div key={g.id} className="hc-htgroup">
               <p className="hc-htgrouph">{g.title}</p>
               <p className="hc-htgroupb">{g.blurb}</p>
@@ -112,12 +161,14 @@ export default function HowTo() {
                   const done = watched.includes(c.id);
                   return (
                     <li key={c.id}>
-                      <button className={"hc-htitem" + (on ? " on" : "")} onClick={() => setCurrent(c)}
+                      <button className={"hc-htitem" + (on ? " on" : "") + (c.pending ? " pending" : "")}
+                        onClick={() => { if (!c.pending) setCurrent(c); }} disabled={c.pending}
                         aria-current={on ? "true" : undefined}>
                         <span className={"hc-htmark" + (done ? " done" : "")} aria-hidden="true">
-                          {done ? "✓" : on ? "▶" : ""}
+                          {c.pending ? "" : done ? "\u2713" : on ? "\u25B6" : ""}
                         </span>
                         <span className="hc-htname">{c.title}</span>
+                        {c.pending && <em className="hc-htpending">Pending</em>}
                       </button>
                     </li>
                   );

@@ -7,7 +7,7 @@
  *
  *  So this draws the sheet itself. More code, but it cannot hang, it needs no dependency,
  *  and the output is identical everywhere because nothing is inherited from the page. */
-import { parseBands, parseFreebies, parseList, type Answers } from "./questions";
+import { QUESTIONS, parseBands, parseFreebies, parseList, visible, type Answers } from "./questions";
 import { DEFAULT_CONFIG } from "./sim";
 import type { WidgetSettings } from "./widget";
 import { DEFAULT_WIDGET, EXPORT_ROWS, matrixValue, toggleOn } from "./widget";
@@ -273,6 +273,30 @@ function render(t: Ctx, a: Answers, dry: boolean, settings?: WidgetSettings): nu
       if (draw) rule(t);
     }
     t.y += 16;
+  }
+
+  /* ---------- what is still blank ----------
+     The sheet downloads from a half-filled form now, deliberately: "here is where we have
+     got to" is exactly what gets sent mid-conversation. A picture that quietly omits what
+     it does not know reads as a finished specification, so it says. */
+  const unanswered: string[] = [];
+  for (const q of QUESTIONS) {
+    for (const f of q.fields) {
+      if (f.optional || !visible(f, a)) continue;
+      const v = a[f.id];
+      const empty = Array.isArray(v) ? v.filter(Boolean).length === 0 : !String(v ?? "").trim();
+      if (empty) unanswered.push(`${q.title}: ${f.label}`);
+    }
+  }
+  if (unanswered.length) {
+    t.y += 12;
+    if (draw) rule(t);
+    t.y += 24;
+    if (draw) label(t, "Still to answer");
+    t.y += 20;
+    const list = unanswered.join("   ·   ");
+    t.y += draw ? wrap(t, list, PAD, W - PAD * 2, 12.5, MUTED) : measureWrap(t.c, list, W - PAD * 2, 12.5);
+    t.y += 10;
   }
 
   /* ---------- footer ---------- */

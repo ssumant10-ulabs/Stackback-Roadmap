@@ -76,6 +76,19 @@ export function normPriority(p: number | null | undefined): 1 | 2 | 3 {
   return p === 1 ? 1 : p === 2 ? 2 : 3;
 }
 
+/** The horizon of a card on the work board, whichever record it is.
+ *
+ *  A roadmap task has one, `priority`, and the roadmap tree and the board show the same
+ *  value. A request does not: its `priority` is a sheet text column holding things like
+ *  "PMFv1", so the board keeps `boardPriority` beside it rather than overwriting it. */
+export function cardPriority(
+  rec: { priority?: unknown; boardPriority?: number | null } | null | undefined,
+): 1 | 2 | 3 {
+  if (!rec) return 3;
+  if (rec.boardPriority === 1 || rec.boardPriority === 2 || rec.boardPriority === 3) return rec.boardPriority;
+  return typeof rec.priority === "number" ? normPriority(rec.priority) : 3;
+}
+
 /** Which of the four states a milestone sits in. Done wins over the horizon: once every
  *  subtask is checked off, a milestone has shipped and no longer belongs on a horizon. */
 export function stateOf(t: Node): RoadmapState {

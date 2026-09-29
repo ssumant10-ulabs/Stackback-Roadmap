@@ -1,59 +1,46 @@
 "use client";
 import { useStore } from "@/lib/store";
-import { STATES, effStatus, nodeState, type RoadmapState } from "@/lib/derive";
-import { TEAM_ORDER } from "@/lib/constants";
-import type { Node } from "@/lib/types";
+import type { Stage } from "@/lib/board";
 
-function walkAll(nodes: Node[], cb: (n: Node) => void) {
-  nodes.forEach((n) => { cb(n); walkAll(n.children || [], cb); });
-}
+/** The header, counting the board rather than the tree.
+ *
+ *  It used to be four horizon counts, a three-segment bar, a pip per milestone and three
+ *  totals: eleven numbers describing how much work exists. None of them answered the question
+ *  somebody opening this screen actually has, which is where the work is right now. These
+ *  five are the board's own stages, grouped, and every one is a column you can go and look
+ *  at, so a number here and a column there can never disagree. */
+const GROUPS: { key: string; label: string; stages: Stage[] }[] = [
+  { key: "bugs", label: "Bugs posted", stages: ["bug"] },
+  { key: "features", label: "Features posted", stages: ["feature"] },
+  { key: "design", label: "Design in progress", stages: ["design_progress", "design_review"] },
+  { key: "dev", label: "With dev", stages: ["design_to_dev", "dev_progress", "dev_review"] },
+  { key: "prod", label: "Pushed to prod", stages: ["prod"] },
+];
 
 export function HeroMetrics() {
   const s = useStore();
-  const tasks = s.tasks;
-  let total = 0, done = 0, prog = 0;
-  walkAll(tasks, (n) => { total++; if (n.status === "done") done++; else if (n.status === "progress") prog++; });
-  const planned = total - done - prog;
-  /** Every task and subtask placed in exactly one of the four states: Done if it is
-   *  checked off, otherwise the state of the milestone it belongs to. The four numbers
-   *  add up to the task total. */
-  const perState: Record<RoadmapState, number> = { now: 0, next: 0, future: 0, done: 0 };
-  tasks.forEach((ms) => walkAll([ms], (n) => { perState[nodeState(n, ms)]++; }));
-  const horizons = STATES.map((st) => ({ key: st.k, word: st.word, n: perState[st.k] }));
-  const pd = total ? (done / total) * 100 : 0;
-  const pp = total ? (prog / total) * 100 : 0;
-  const pl = total ? (planned / total) * 100 : 0;
-  const pct = total ? Math.round((done / total) * 100) : 0;
-  const msTotal = tasks.length;
-  const msDone = tasks.filter((t) => effStatus(t) === "done").length;
+  const cards = s.boardCards();
+
+  const n = (stages: Stage[]) => cards.filter((c) => stages.includes(c.stage)).length;
+  const total = cards.length;
+  const shipped = n(["prod"]);
+  const pct = total ? Math.round((shipped / total) * 100) : 0;
 
   return (
-    <div className="hero-metrics">
-      <div className="hm-lead"><span className="hm-pct">{pct}%</span><span className="lbl">complete</span></div>
-      <div className="hm-mid">
-        <div className="hm-bar">
-          <span className="hm-seg done" style={{ width: pd + "%" }} />
-          <span className="hm-seg prog" style={{ width: pp + "%" }} />
-          <span className="hm-seg plan" style={{ width: pl + "%" }} />
-        </div>
-        <div className="hm-sub">
-          <span><i className="d" />Done {done}</span>
-          <span><i className="p" />In progress {prog}</span>
-          <span><i className="l" />Planned {planned}</span>
-          <span className="hm-pips" title="One marker per milestone">
-            {tasks.map((t) => <span key={t.id} className={`hm-pip ${effStatus(t)}`} title={t.title} />)}
-          </span>
-        </div>
+    <div className="hero-metrics hm-flat">
+      <div className="hm-lead">
+        <span className="hm-pct">{pct}%</span>
+        <span className="lbl">in production</span>
       </div>
-      <div className="hm-horizons" title="Every task and subtask, split across the four states">
-        {horizons.map((h) => (
-          <div className="hm-horizon" key={h.key} data-word={h.word}><b>{h.n}</b><span>{h.word}</span></div>
+      <div className="hm-groups">
+        {GROUPS.map((g) => (
+          <div className="hm-group" key={g.key}>
+            <b>{n(g.stages)}</b><span>{g.label}</span>
+          </div>
         ))}
       </div>
       <div className="hm-stats">
-        <div className="hm-stat"><b>{msDone}/{msTotal}</b><span>Milestones</span></div>
-        <div className="hm-stat"><b>{total}</b><span>Tasks</span></div>
-        <div className="hm-stat"><b>{TEAM_ORDER.length}</b><span>Teams</span></div>
+        <div className="hm-stat"><b>{total}</b><span>Cards</span></div>
       </div>
     </div>
   );

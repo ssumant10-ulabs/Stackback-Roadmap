@@ -7,6 +7,12 @@ import {
 } from "@/lib/help/questions";
 import { CATEGORY_BY_ID, SCALE_BY_ID, freqWord } from "@/lib/help/categories";
 import { drawPlanSheet } from "@/lib/help/sheet-png";
+import { planDoc } from "@/lib/help/plan-doc";
+import OrderImport from "./OrderImport";
+import type { PilotStore } from "@/lib/types";
+import { coverage, discountBand, referenceFor, type CategoryReference } from "@/lib/help/references";
+import ReferenceDrawer from "./ReferenceDrawer";
+import { CATEGORY_DEFAULTS, categoryIdFor } from "@/lib/help/categories";
 import type { WidgetSettings } from "@/lib/help/widget";
 
 const DRAFT = "sb-help-planform";
@@ -17,13 +23,83 @@ const DRAFT = "sb-help-planform";
  *  is "what does everyone else do", and having an answer on the page turns a two-day email
  *  round trip into a click. It proposes, it never fills, because a store's own repeat gap
  *  beats a category average every time and quietly overwriting their number would hide that. */
-export default function PlanForm({ answers, onAnswers, storeName, onDone, settings }: {
+/** A discount per run length out of a single observed band: the shortest run gets the low
+ *  end, the longest the high end. A cohort logs one number per store, not a ladder, and a
+ *  ladder is what a merchant has to be shown. */
+function spread(band: { low: number; mid: number; high: number }, n: number): number[] {
+  if (n <= 1) return [band.mid];
+  const step = (band.high - band.low) / (n - 1);
+  return Array.from({ length: n }, (_, i) => Math.round(band.low + step * i));
+}
+
+/** Prepaid / pay as you go, counted, in one line. */
+function payWord(r: CategoryReference): string {
+  const parts: string[] = [];
+  if (r.payment.prepaid) parts.push(`${r.payment.prepaid} prepaid`);
+  if (r.payment.payg) parts.push(`${r.payment.payg} pay as you go`);
+  if (r.payment.both) parts.push(`${r.payment.both} both`);
+  return parts.join(", ");
+}
+
+export default function PlanForm({ answers, onAnswers, storeName, onDone, settings, pilots = [] }: {
   answers: Answers; onAnswers: (a: Answers) => void;
   /** Snapshotted into the export, so the picture records what was toggled as well as priced. */
   settings: WidgetSettings;
   storeId: string | null; storeName: string | null;
   connected: boolean; onDone: () => void;
+  /** Pilot rows, for naming stores already on this setup. */
+  pilots?: PilotStore[];
 }) {
+  /* Stores already on this setup, named. A category average is an argument; "three of your
+     own pilots run exactly this" is a fact, and it is the thing that ends the discussion on a
+     call. Matched on the sheet's own category wording, then narrowed by payment type once one
+     is chosen, because that is what makes two setups the same rather than adjacent. */
+  const like = (() => {
+    const id = String(answers.category || "");
+    if (!id || !pilots.length) return [] as PilotStore[];
+    const modes = Array.isArray(answers.modes) ? answers.modes : [];
+    const wantsPrepaid = modes.includes("prepaid");
+    const wantsPayg = modes.includes("payg");
+    return pilots
+      .filter((st) => categoryIdFor(st.category) === id)
+      .filter((st) => {
+        if (!modes.length) return true;
+        const pay = (st.paymentType || "").toLowerCase();
+        if (!pay || pay === "\u2014") return true;
+        if (pay.includes("both")) return true;
+        if (wantsPrepaid && pay.includes("prepaid")) return true;
+        if (wantsPayg && (pay.includes("payg") || pay.includes("pay as"))) return true;
+        return false;
+      })
+      .slice(0, 6);
+  })();
+
+  /* What this store's own category actually runs, off the pilot rows, so the suggestion is
+     the cohort's numbers rather than the ones somebody typed into categories.ts in July. It
+     only overrides the default where enough of the category is logged to mean anything;
+     below that the default stands and the cohort line is shown beside it as a check. */
+  const ref = (() => {
+    const id = String(answers.category || "");
+    if (!id || !pilots.length) return null;
+    /* Merged, not the first match: two sheet categories land on one plan category and
+       taking the first showed a tea merchant the coffee stores and nothing else. */
+    const mine = referenceFor(pilots, id, categoryIdFor);
+    if (!mine) return null;
+    const band = discountBand(mine);
+    return { ref: mine, band, cov: coverage(mine), solid: coverage(mine) >= 0.34 && Boolean(band) };
+  })();
+
+  const [showLike, setShowLike] = useState(false);
+  const [refsOpen, setRefsOpen] = useState(false);
+  /* `#/refs` is a route an answer can link to, and the Help Centre resolves it to this
+     screen. The drawer is this component's state, so it listens for the route itself rather
+     than having one threaded down through two parents. */
+  useEffect(() => {
+    const check = () => { if (location.hash.replace(/^#\/?/, "") === "refs") setRefsOpen(true); };
+    check();
+    window.addEventListener("hashchange", check);
+    return () => window.removeEventListener("hashchange", check);
+  }, []);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
@@ -108,6 +184,29 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
     } finally { setBusy(false); }
   }
 
+  /** The same configuration as text, for pasting into an email or a ticket.
+   *
+   *  "A document or a screenshot" was the ask, and the screenshot already existed. A picture
+   *  cannot be searched, quoted or diffed against the next version, and half of what this
+   *  gets used for is a paragraph in a reply. */
+  function downloadDoc() {
+    if (busy) return;
+    setBusy(true); setResult(null);
+    try {
+      const brand = String(answers.brand_name || storeName || "plans").trim();
+      const slug = brand.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "plans";
+      const blob = new Blob([planDoc(answers, brand, settings)], { type: "text/markdown;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `stackback-plans-${slug}-${new Date().toISOString().slice(0, 10)}.md`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      setResult({ ok: true, msg: "Downloaded as a document. Paste it straight into a reply." });
+    } catch {
+      setResult({ ok: false, msg: "The document could not be written in this browser." });
+    } finally { setBusy(false); }
+  }
+
   const scale = SCALE_BY_ID.get(String(answers.scale || ""));
 
   return (
@@ -129,35 +228,95 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
         ))}
 
         <div className="hc-formactions" data-noexport="true">
-          <button className="hc-btn primary" onClick={download} disabled={!done || busy}>
+          {/* Not gated on a complete form any more. Half a plan is exactly what you want to
+              send somebody mid-conversation — "here is where we have got to" — and a button
+              that does nothing when you press it reads as broken, not as a rule. The sheet
+              says what is still unanswered instead. */}
+          <button className="hc-btn primary" onClick={download} disabled={busy}>
             {busy ? "Making the image" : "Download these plans"}
           </button>
+          <button className="hc-btn" onClick={downloadDoc} disabled={busy}>Download as a document</button>
           <button className="hc-btn" onClick={onDone}>
             {done ? "Next: what your customers see" : "Skip ahead and look first"}
           </button>
           <span className="hc-savedat">Saved on this device as you type.</span>
         </div>
 
-        {!done && <p className="hc-note hc-incomplete" data-noexport="true">Every field above needs an answer before this can be downloaded.</p>}
+        {!done && (
+          <p className="hc-note hc-incomplete" data-noexport="true">
+            Some fields are still blank. You can download what is set so far; the unanswered
+            ones are listed on the sheet.
+          </p>
+        )}
         {result && <p className={"hc-result " + (result.ok ? "ok" : "bad")} role="status" data-noexport="true">{result.msg}</p>}
       </div>
 
       <aside className={"hc-suggest" + (!cat && !scale ? " empty" : "")}>
-        <p className="hc-suggesth">What similar stores run</p>
+        <OrderImport onApply={({ everyDays, runs, products }) => {
+          const next: Answers = {
+            ...answers,
+            every_days: [String(everyDays)],
+            ...(runs.length ? { deliveries: runs.join(", ") } : {}),
+            ...(products.length && !String(answers.scope_detail || "").trim()
+              ? { scope_kind: "products", scope_detail: products.join(", ") }
+              : {}),
+          };
+          onAnswers(next); save(next);
+        }} />
+
+        <p className="hc-suggesth">
+          What similar stores run
+          {/* The panel answers "what does MY category do". The drawer answers "show me all of
+              them", which is the question the moment a merchant says their category is
+              different, and it was a tab nobody opened. */}
+          <button type="button" className="hc-refbtn" onClick={() => setRefsOpen(true)}>
+            References
+          </button>
+        </p>
 
         {!cat && !scale && (
           <p className="hc-note">Pick a category and a size, and this fills in.</p>
         )}
 
+        {/* The cohort's own numbers where enough of the category is logged, ours where it is
+            not. This used to be the written-down category default with the cohort as a line
+            underneath, and a separate References tab holding the real numbers, which is two
+            places to read the same thing and one of them stale. */}
         {cat && (
           <section className="hc-sugblock">
             <h3>{cat.label}</h3>
-            <ul className="hc-sugfacts">
-              <li><span>Frequency</span><b>{cat.everyDays.map(freqWord).join(", ").toLowerCase()}</b></li>
-              <li><span>Run lengths</span><b>{cat.deliveries.join(", ")} deliveries</b></li>
-              <li><span>Discount</span><b>{cat.deliveries.map((d, i) => `${cat.discounts[i]}% at ${d}`).join(", ")}</b></li>
-            </ul>
-            <p className="hc-sugwhy">{cat.why}</p>
+            {ref?.solid && ref.band ? (
+              <>
+                <ul className="hc-sugfacts">
+                  <li><span>Frequency</span><b>{ref.ref.everyDays.length ? ref.ref.everyDays.map(freqWord).join(", ").toLowerCase() : cat.everyDays.map(freqWord).join(", ").toLowerCase()}</b></li>
+                  <li><span>Run lengths</span><b>{(ref.ref.deliveries.length ? ref.ref.deliveries : cat.deliveries).join(", ")} deliveries</b></li>
+                  <li><span>Discount</span><b>{ref.band.mid}%{ref.band.low !== ref.band.high ? `, ${ref.band.low} to ${ref.band.high}` : ""}</b></li>
+                  <li><span>Paid</span><b>{payWord(ref.ref) || "not logged"}</b></li>
+                </ul>
+                <p className="hc-sugwhy">
+                  Read off {ref.ref.stores.length - ref.ref.unlogged.length} of your{" "}
+                  {ref.ref.stores.length} {cat.label.toLowerCase()} stores, as the Pilots tab
+                  stands right now. {cat.why}
+                </p>
+                <details className="hc-sugmore">
+                  <summary>Which stores</summary>
+                  <p>{ref.ref.stores.join(", ")}.</p>
+                  {ref.ref.unlogged.length > 0 && <p className="hc-sugunlogged">Nothing logged yet: {ref.ref.unlogged.join(", ")}.</p>}
+                </details>
+              </>
+            ) : (
+              <>
+                <ul className="hc-sugfacts">
+                  <li><span>Frequency</span><b>{cat.everyDays.map(freqWord).join(", ").toLowerCase()}</b></li>
+                  <li><span>Run lengths</span><b>{cat.deliveries.join(", ")} deliveries</b></li>
+                  <li><span>Discount</span><b>{cat.deliveries.map((d, i) => `${cat.discounts[i]}% at ${d}`).join(", ")}</b></li>
+                </ul>
+                <p className="hc-sugwhy">
+                  {cat.why}
+                  {ref && <> {" "}Only {ref.ref.stores.length - ref.ref.unlogged.length} of your {ref.ref.stores.length} stores in this category have their plan columns filled in, so these are the category default rather than yours.</>}
+                </p>
+              </>
+            )}
           </section>
         )}
 
@@ -165,17 +324,34 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
           <section className="hc-sugblock">
             <h3>{scale.hint}</h3>
             <p className="hc-sugwhy">{scale.why}</p>
+            {ref?.band && !ref.solid && (
+              <p className={"hc-sugcohort thin"}>
+                <b>Your cohort:</b> {ref.ref.stores.length} {ref.ref.label} store{ref.ref.stores.length === 1 ? "" : "s"} run{ref.ref.stores.length === 1 ? "s" : ""}{" "}
+                {ref.band.mid}%{ref.band.low !== ref.band.high ? ` (${ref.band.low} to ${ref.band.high})` : ""}
+                {ref.ref.everyDays[0] ? `, every ${ref.ref.everyDays[0]} days` : ""}
+                {ref.ref.deliveries[0] ? `, ${ref.ref.deliveries[0]} deliveries` : ""}.
+                {ref.solid
+                  ? " The rates below are theirs."
+                  : ` Only ${ref.ref.stores.length - ref.ref.unlogged.length} of ${ref.ref.stores.length} are logged, so the rates below are still the category default.`}
+              </p>
+            )}
             <ul className="hc-sugoffers">
               {scale.modes.map((m) => {
                 const rate = MODE_RATE[m];
-                const runs = m === "auto_debit" ? null : cat.deliveries;
+                /* The cohort's own run lengths and discounts once enough of the category is
+                   logged, because "what your category runs" beats "what we wrote down". */
+                const runs = m === "auto_debit" ? null
+                  : (ref?.solid && ref.ref.deliveries.length ? ref.ref.deliveries.slice(0, 3) : cat.deliveries);
+                const base = ref?.solid && ref.band
+                  ? spread(ref.band, (runs || cat.deliveries).length)
+                  : cat.discounts;
                 return (
                   <li key={m}>
                     <b>{MODE_NAME[m]}</b>
                     <span>
                       {runs
-                        ? runs.map((d, i) => `${Math.round(cat.discounts[i] * rate)}% at ${d}`).join(", ")
-                        : `${Math.round(cat.discounts[0] * rate)}% off, no run length`}
+                        ? runs.map((d, i) => `${Math.round((base[i] ?? base[base.length - 1]) * rate)}% at ${d}`).join(", ")
+                        : `${Math.round(base[0] * rate)}% off, no run length`}
                     </span>
                     <em>{m === "auto_debit"
                       ? "One plan that runs until they stop it."
@@ -198,6 +374,32 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
           </section>
         )}
 
+        {like.length > 0 && !showLike && (
+          <button type="button" className="hc-btn ghost hc-sugask" data-noexport="true"
+            onClick={() => setShowLike(true)}>What other stores are doing</button>
+        )}
+
+        {like.length > 0 && showLike && (
+          <section className="hc-sugblock hc-sugstores">
+            <h3>What other stores are doing</h3>
+            <ul className="hc-sugpilots">
+              {like.map((st) => (
+                <li key={st.id || st.name}>
+                  <b>{st.name}</b>
+                  <span>
+                    {[st.paymentType, st.frequency, st.discountMargin, st.shipping]
+                      .map((x) => (x || "").trim()).filter((x) => x && x !== "\u2014").join(" \u00b7 ") || "setup not logged yet"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="hc-sugwhy">
+              From the pilot sheet, matched on category{Array.isArray(answers.modes) && answers.modes.length ? " and payment type" : ""}.
+              Blank columns mean nobody has logged that store&rsquo;s setup, not that it has none.
+            </p>
+          </section>
+        )}
+
         {(cat || scale) && (
           <div data-noexport="true">
             <button className="hc-btn hc-sugapply" onClick={applySuggestion}>Use these as a starting point</button>
@@ -208,6 +410,8 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
           </div>
         )}
       </aside>
+
+      {refsOpen && <ReferenceDrawer pilots={pilots} onClose={() => setRefsOpen(false)} />}
     </div>
   );
 }

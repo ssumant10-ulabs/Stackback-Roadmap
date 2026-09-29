@@ -1,11 +1,11 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import {
-  TOGGLE_GROUPS, applyMatrix, matrixValue, setToggle, settingCount, toggleOn,
+  TOGGLE_GROUPS, applyMatrix, matrixValue, readTheme, setToggle, settingCount, toggleOn, writeTheme,
   type ToggleDef, type WidgetSettings,
 } from "@/lib/help/widget";
 import type { PlanOption } from "@/lib/help/sim";
-import BrandFetch from "./BrandFetch";
+import BrandFetch, { type ReadProduct } from "./BrandFetch";
 
 /** The storefront widget, rendered from the settings object.
  *
@@ -15,9 +15,14 @@ import BrandFetch from "./BrandFetch";
  *
  *  Hovering a setting highlights what it touches. That is the explorer's affordance, and
  *  the only thing that makes twenty switches legible on a call. */
+/** Every row in "Shape and type" is `key: "theme"` and differs only by `themePath`, so the
+ *  settings key alone is not unique and React was dropping and reusing rows across renders. */
+const rowKey = (d: { key?: unknown; themePath?: string }) =>
+  String(d.key) + (d.themePath ? ":" + d.themePath : "");
+
 export default function WidgetPreview({
   s, onChange, unitPrice, compareAt, plans, productName, variantLine, currency = "₹", onSubscribe,
-  rates, shippingRate = 0, freebieRuns = [], scale = "",
+  rates, shippingRate = 0, freebieRuns = [], scale = "", storeName, onProduct,
 }: {
   s: WidgetSettings;
   onChange: (next: WidgetSettings) => void;
@@ -36,6 +41,9 @@ export default function WidgetPreview({
    *  preference, so below the band that carries it the row is locked rather than absent:
    *  a control that vanishes reads as a bug, one that is locked reads as a price. */
   scale?: string;
+  storeName?: string | null;
+  /** A real product read off the merchant's storefront, forwarded from BrandFetch. */
+  onProduct?: (p: ReadProduct) => void;
 }) {
   const t = s.theme;
   const [hot, setHot] = useState<string | null>(null);
@@ -100,7 +108,11 @@ export default function WidgetPreview({
    * setting says to use it, otherwise the one-time price. */
   const listPrice = s.use_compare_at_price_for_discount_label && compareAt ? compareAt : unitPrice;
 
-  const radius = t.shape.radius;
+  /* Capped, and every derived corner floored at 0. A container cannot take a pill radius
+     without becoming a blob, and `radius - 6` on a small radius used to go negative. */
+  const radius = Math.min(24, Math.max(0, t.shape.radius));
+  const rad = (less: number) => Math.max(0, radius - less);
+  const btnRadius = Math.min(999, Math.max(0, t.shape.buttonRadius ?? 10));
   const lit = (tag: string) => (hot === tag ? " sb-lit" : "");
   const shadow = t.chrome.shadow === "none" ? "none"
     : t.chrome.shadow === "strong" ? "0 12px 32px rgba(15,23,42,.18)" : "0 1px 3px rgba(15,23,42,.08)";
@@ -136,7 +148,7 @@ export default function WidgetPreview({
 
           {!s.hide_product_row && (
             <div className={"hc-wprow" + lit("product-row")}>
-              <span className="hc-wthumb" style={{ background: t.surfaces.mutedSurface, borderRadius: radius - 6 }} />
+              <span className="hc-wthumb" style={{ background: t.surfaces.mutedSurface, borderRadius: rad(6) }} />
               <span className="hc-wprowl">
                 <b style={{ color: t.text.primary }}>{productName}</b>
                 <em className={lit("price")} style={{ color: t.text.secondary }}>
@@ -144,14 +156,14 @@ export default function WidgetPreview({
                   {compareAt && compareAt > unitPrice && <s style={{ color: t.text.muted }}>{money(compareAt)}</s>}
                 </em>
               </span>
-              <span className="hc-wqty" style={{ borderColor: t.borders.default, borderRadius: radius - 6, color: t.text.secondary }}>
+              <span className="hc-wqty" style={{ borderColor: t.borders.default, borderRadius: rad(6), color: t.text.secondary }}>
                 <i>&minus;</i><b style={{ color: t.text.primary }}>1</b><i>+</i>
               </span>
             </div>
           )}
 
           {modes.length > 1 && (
-            <div className="hc-wmodewrap" style={{ borderColor: t.borders.default, borderRadius: radius - 2 }}>
+            <div className="hc-wmodewrap" style={{ borderColor: t.borders.default, borderRadius: rad(2) }}>
               <div className="hc-wsegs" style={{ background: t.surfaces.mutedSurface }}>
                 {modes.map((m) => (
                   <button key={m.id} type="button" onClick={() => setMode(m.id)}
@@ -173,7 +185,7 @@ export default function WidgetPreview({
           )}
 
           {intent === "onetime" ? (
-            <div className="hc-wonetime" style={{ background: t.surfaces.mutedSurface, borderRadius: radius - 4 }}>
+            <div className="hc-wonetime" style={{ background: t.surfaces.mutedSurface, borderRadius: rad(4) }}>
               <p style={{ color: t.text.secondary }}>
                 No schedule on a one-time purchase. The quantity above is the whole order.
               </p>
@@ -193,7 +205,7 @@ export default function WidgetPreview({
               return (
                 <button key={plan.title + i} type="button" onClick={() => setPicked(i)} className="hc-wplan"
                   style={{
-                    borderRadius: radius - 2,
+                    borderRadius: rad(2),
                     border: `${on ? 1.5 : 1}px solid ${on ? t.colors.subscriptionAccent : t.borders.default}`,
                     background: on && t.components.selectedCardState === "border-and-fill" ? t.surfaces.mutedSurface : t.surfaces.inputBackground,
                   }}>
@@ -214,7 +226,7 @@ export default function WidgetPreview({
                   </span>
                   <span className="hc-wplanr">
                     {s.tag_shows_per_delivery_price && (
-                      <i className="hc-wper" style={{ background: t.colors.primary, color: "#fff", borderRadius: radius - 6 }}>
+                      <i className="hc-wper" style={{ background: t.colors.primary, color: "#fff", borderRadius: rad(6) }}>
                         {money(plan.perDelivery)}/delivery
                       </i>
                     )}
@@ -261,7 +273,7 @@ export default function WidgetPreview({
           </div>
 
           {s.promo_line && (
-            <p className={"hc-wpromo" + lit("promo")} style={{ background: withAlpha(t.colors.savings, .1), color: t.colors.savings, borderRadius: radius - 4 }}>
+            <p className={"hc-wpromo" + lit("promo")} style={{ background: withAlpha(t.colors.savings, .1), color: t.colors.savings, borderRadius: rad(4) }}>
               {s.promo_line}
             </p>
           )}
@@ -315,20 +327,29 @@ export default function WidgetPreview({
           </span>
           <button className={"hc-wcta" + lit("cta")} type="button" onClick={onSubscribe}
             style={{
-              borderRadius: radius - 4,
+              borderRadius: btnRadius,
               background: t.components.ctaButton === "solid" ? t.colors.primary : "transparent",
               color: t.components.ctaButton === "solid" ? "#fff" : t.colors.primary,
               border: `1px solid ${t.colors.primary}`,
             }}>
-            Subscribe Now
+            {/* `direct_checkout` was a control that changed nothing: it was declared, it was
+                defaulted true, it was drawn on the panel, and no line in this repo read it.
+                Off, the widget adds to the cart and the customer carries on shopping, which
+                is a different button and a different sentence underneath. */}
+            {s.direct_checkout ? "Subscribe Now" : "Add subscription to cart"}
           </button>
         </div>
 
-        <p className="hc-wtax" style={{ color: t.text.muted }}>Prices inclusive of all taxes</p>
+        <p className="hc-wtax" style={{ color: t.text.muted }}>
+          {s.direct_checkout
+            ? "Prices inclusive of all taxes"
+            : "Prices inclusive of all taxes. Goes to the cart, not to checkout."}
+        </p>
       </div>
 
       <div className="hc-wtoggles">
-        <BrandFetch theme={t} onTheme={(next) => onChange({ ...s, theme: next })} />
+        <BrandFetch theme={t} onTheme={(next) => onChange({ ...s, theme: next })}
+          settings={s} storeName={storeName} onProduct={onProduct} />
         <p className="hc-wtogglesh">What the customer sees</p>
         <p className="hc-note hc-wtoggleshelp">
           Every setting on the Purchase Options block. Hover a row to see what it changes in the
@@ -341,7 +362,7 @@ export default function WidgetPreview({
             <div className="hc-tgrid">
               {g.items.filter((d) => !d.showWhen || String(s[d.showWhen.key]) === d.showWhen.is)
                 .map((d) => (d.kind === "checks" ? (
-                <div key={String(d.key)} className="hc-wtoggle wide hc-wchecks"
+                <div key={rowKey(d)} className="hc-wtoggle wide hc-wchecks"
                   onMouseOver={() => setHot(d.touches)} onMouseOut={() => setHot(null)}>
                   <span>
                     {d.label}<Tip help={d.help} note={d.note} path={d.path} />
@@ -360,7 +381,7 @@ export default function WidgetPreview({
                   </span>
                 </div>
               ) : (
-                <label key={String(d.key)} className={"hc-wtoggle" + (d.kind ? " wide" : "") + (locked(d.gatedFromScale) ? " locked" : "")}
+                <label key={rowKey(d)} className={"hc-wtoggle" + (d.kind ? " wide" : "") + (locked(d.gatedFromScale) ? " locked" : "")}
                   onMouseOver={() => setHot(d.touches)} onMouseOut={() => setHot(null)}
                   onFocus={() => setHot(d.touches)} onBlur={() => setHot(null)}>
                   {!d.kind && (
@@ -376,8 +397,10 @@ export default function WidgetPreview({
                       </select>
                     )}
                     {d.kind === "select" && (
-                      <select value={String(s[d.key] ?? "")}
-                        onChange={(e) => onChange({ ...s, [d.key]: e.target.value })}>
+                      <select value={String(d.themePath ? readTheme(s, d.themePath) : (s[d.key] ?? ""))}
+                        onChange={(e) => onChange(d.themePath
+                          ? writeTheme(s, d.themePath, /^\d+$/.test(e.target.value) ? Number(e.target.value) : e.target.value)
+                          : { ...s, [d.key]: e.target.value })}>
                         {d.options?.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                       </select>
                     )}
@@ -438,7 +461,7 @@ function Tab({ t, on, label, sub, onClick, accentWord, className = "" }: {
     <button type="button" onClick={onClick} className={"hc-wtab" + (on ? " on" : "") + " " + className}
       style={{
         background: on && pill ? t.surfaces.widgetBackground : "transparent",
-        borderRadius: pill ? t.shape.radius - 4 : 0,
+        borderRadius: pill ? Math.max(0, Math.min(24, t.shape.radius) - 4) : 0,
         borderBottom: pill ? "none" : `2px solid ${on ? t.colors.subscriptionAccent : "transparent"}`,
         boxShadow: on && pill ? "0 1px 3px rgba(15,23,42,.14)" : "none",
         color: on ? t.text.primary : t.text.secondary,

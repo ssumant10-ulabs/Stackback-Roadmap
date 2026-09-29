@@ -9,6 +9,7 @@ import { useAppUi } from "./appui";
 
 const VERB: Record<ActivityKind, string> = {
   status: "set",
+  stage: "moved on the board",
   rename: "renamed",
   done: "checked off",
   undone: "reopened",

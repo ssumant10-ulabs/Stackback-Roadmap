@@ -11,7 +11,11 @@ export interface WidgetTheme {
   surfaces: { widgetBackground: string; mutedSurface: string; inputBackground: string };
   borders: { default: string; strong: string };
   text: { primary: string; secondary: string; muted: string };
-  shape: { radius: number };
+  /** `radius` is the container and the cards. `buttonRadius` is the subscribe button, which
+   *  is a different number on most themes: thestack.club runs 40px pill buttons over 16px
+   *  cards. A container cannot take the button's radius without becoming a blob, which is why
+   *  the two are separate and why `radius` is capped. */
+  shape: { radius: number; buttonRadius: number };
   chrome: { borderVisible: boolean; borderColor: string; shadow: "none" | "subtle" | "strong" };
   components: {
     ctaButton: "solid" | "outline";
@@ -64,7 +68,7 @@ export const DEFAULT_WIDGET: WidgetSettings = {
     surfaces: { widgetBackground: "#ffffff", mutedSurface: "#f8fafc", inputBackground: "#ffffff" },
     borders: { default: "#e2e8f0", strong: "#0f172a" },
     text: { primary: "#0f172a", secondary: "#64748b", muted: "#94a3b8" },
-    shape: { radius: 12 },
+    shape: { radius: 12, buttonRadius: 10 },
     chrome: { borderVisible: true, borderColor: "#e2e8f0", shadow: "subtle" },
     components: { ctaButton: "solid", discountBadge: "filled", selectedCardState: "border-and-fill", tabStyle: "pill" },
     typography: { fontScale: 100 },
@@ -147,7 +151,7 @@ export interface ToggleDef {
   /** kind "checks": several switches that answer ONE question, on one row under one
    *  explanation. Three rows each saying "ignored when it is the only mode offered" is
    *  three readings of the same sentence. */
-  checks?: { key: keyof WidgetSettings; path: string; label: string; invert?: boolean }[];
+  checks?: { key: keyof WidgetSettings; path: string; label: string; invert?: boolean; notPreviewable?: true }[];
   /** kind "matrix": one dropdown over the real combinations of two fields, labelled with
    *  what the customer actually reads. A format select plus a wording checkbox is a 2x2 the
    *  merchant has to hold in their head; the four strings are the thing being chosen. */
@@ -163,6 +167,23 @@ export interface ToggleDef {
   gatedFromScale?: string;
   /** Only rendered while another setting holds a given value. */
   showWhen?: { key: keyof WidgetSettings; is: string };
+  /** Dot path into `theme` for the shape and type settings, which are nested rather than
+   *  top-level. When set, `key` is unused for reading and writing. */
+  themePath?: string;
+}
+
+/** Read or write a dot path inside the theme object. */
+export function readTheme(s: WidgetSettings, path: string): string | number {
+  return path.split(".").reduce<unknown>((o, k) => (o as Record<string, unknown>)?.[k], s.theme) as string | number;
+}
+
+export function writeTheme(s: WidgetSettings, path: string, value: string | number): WidgetSettings {
+  const keys = path.split(".");
+  const theme = structuredClone(s.theme) as unknown as Record<string, unknown>;
+  let node = theme;
+  for (const k of keys.slice(0, -1)) node = node[k] as Record<string, unknown>;
+  node[keys[keys.length - 1]] = value;
+  return { ...s, theme: theme as unknown as WidgetTheme };
 }
 
 /** Whether the row's checkbox is ticked, which is not the stored value for an inverted one. */
@@ -286,10 +307,59 @@ export const TOGGLE_GROUPS: ToggleGroup[] = [
       { key: "bundle_selector_tabs", label: "Bundles", path: "bundle_selector_tabs", touches: "tab-bundle", kind: "checks",
         checks: [
           { key: "bundle_selector_tabs", path: "bundle_selector_tabs", label: "Show the bundle choice as tabs, not a dropdown" },
-          { key: "group_bundle_variants", path: "group_bundle_variants", label: "Group products by variant" },
+          /* Mix and match bundles only, which this preview does not draw, so nothing here
+             reads it and nothing should. Declared rather than left to be discovered: without
+             the flag `scripts/eval-settings.ts` reports it as a control that changes
+             nothing, which is the defect it exists to catch. */
+          { key: "group_bundle_variants", path: "group_bundle_variants", label: "Group products by variant", notPreviewable: true },
         ],
         help: "Tabs apply when a variant belongs to several bundles of the same type. Grouping combines variants of one product into a single row with a variant picker.",
         note: "Mix & match bundles only, which this preview does not draw." },
+    ],
+  },
+  {
+    title: "Shape and type",
+    source: "theme",
+    items: [
+      { key: "theme", themePath: "shape.radius", label: "Corner radius", path: "theme.shape.radius",
+        touches: "plan-card", kind: "select",
+        options: [
+          { value: "0", label: "Sharp \u00b7 0px" }, { value: "6", label: "Slight \u00b7 6px" },
+          { value: "12", label: "Semi \u00b7 12px" }, { value: "16", label: "Rounded \u00b7 16px" },
+          { value: "24", label: "Very rounded \u00b7 24px" },
+        ],
+        help: "The container and the plan cards. It stops at 24 because a container any rounder stops reading as a panel and starts reading as a pill with content in it.",
+        note: "Read from your theme's card radius when you fetch your colours, not its button radius: most themes run pill buttons over square-ish cards." },
+      { key: "theme", themePath: "shape.buttonRadius", label: "Button shape", path: "theme.shape.buttonRadius",
+        touches: "cta", kind: "select",
+        options: [
+          { value: "0", label: "Square" }, { value: "6", label: "Slight" },
+          { value: "10", label: "Rounded" }, { value: "999", label: "Pill" },
+        ],
+        help: "The subscribe button only, so it can match your Add to cart while the panel behind it stays a panel. Read from your theme's button radius." },
+      { key: "theme", themePath: "components.tabStyle", label: "Tab style", path: "theme.components.tabStyle",
+        touches: "tabs", kind: "select",
+        options: [{ value: "pill", label: "Pill" }, { value: "underline", label: "Underline" }],
+        help: "Pill fills the selected tab, underline rules it. Pill is the default and reads as a control; underline reads as navigation." },
+      { key: "theme", themePath: "components.ctaButton", label: "Button style", path: "theme.components.ctaButton",
+        touches: "cta", kind: "select",
+        options: [{ value: "solid", label: "Solid" }, { value: "outline", label: "Outline" }],
+        help: "Match whatever your Add to cart already does, so the two buttons on the page do not argue." },
+      { key: "theme", themePath: "components.discountBadge", label: "Discount badge", path: "theme.components.discountBadge",
+        touches: "plan-card", kind: "select",
+        options: [{ value: "filled", label: "Filled" }, { value: "outline", label: "Outline" }],
+        help: "Filled shouts the saving, outline states it." },
+      { key: "theme", themePath: "components.selectedCardState", label: "Selected plan card", path: "theme.components.selectedCardState",
+        touches: "plan-card", kind: "select",
+        options: [{ value: "border-and-fill", label: "Border and fill" }, { value: "border-only", label: "Border only" }],
+        help: "How obviously the chosen plan is chosen. Fill wins on a busy product page." },
+      { key: "theme", themePath: "typography.fontScale", label: "Text size", path: "theme.typography.fontScale",
+        touches: "plan-card", kind: "select",
+        options: [
+          { value: "90", label: "90% \u00b7 compact" }, { value: "100", label: "100% \u00b7 default" },
+          { value: "110", label: "110% \u00b7 large" },
+        ],
+        help: "Scales the whole widget. Your theme's own font family comes across when you fetch your colours; this is the size." },
     ],
   },
   {

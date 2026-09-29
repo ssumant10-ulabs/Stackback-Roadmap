@@ -19,7 +19,47 @@
  *
  *  If a rule here ever disagrees with the corpus, the corpus is right and this is stale. */
 
-export type Mode = "prepaid" | "payg";
+export type Mode = "prepaid" | "payg" | "autopay";
+
+/** The tags we actually write, per payment type, quoted from the code that writes them.
+ *  Parent: applyParentTags in webhooks.app.orders-create.tsx, plus the two conversion tags
+ *  from delivery-conversion.server.ts, plus autopay-order.server.ts for the Razorpay order.
+ *  Delivery: the createorders payload in utils/scheduler.ts, identical for all three. */
+export const ORDER_TAGS: Record<Mode, { parent: string[]; delivery: string[] }> = {
+  /* All six sets, checked against four live orders on 2026-09-24 and against the code that
+     writes each one. Two things this used to get wrong: a prepaid or pay-as-you-go checkout
+     order carries NO `subscription` tag, and AutoPay DOES carry `pay-as-you-go`, because
+     `payment-types.ts` maps auto_debit onto pay_as_you_go and applyParentTags reads that.
+
+     Delivery orders are identical across all three, because `createorders` in
+     `utils/scheduler.ts` places every one of them. AutoPay's FIRST order deliberately does
+     not go through it, which is exactly why that order has no `child` tag. */
+  prepaid: {
+    parent: ["parent", "id-<n>", "sb-delivery-1-converted", "sb-delivery-1-value-<amount>"],
+    delivery: ["subscription", "automated", "scheduler", "child", "id-<n>"],
+  },
+  payg: {
+    parent: ["parent", "pay-as-you-go", "id-<n>", "sb-delivery-1-converted", "sb-delivery-1-value-<amount>"],
+    delivery: ["subscription", "automated", "scheduler", "child", "id-<n>"],
+  },
+  autopay: {
+    parent: ["subscription", "autopay", "razorpay", "parent", "pay-as-you-go", "id-<n>"],
+    delivery: ["subscription", "automated", "scheduler", "child", "id-<n>"],
+  },
+};
+
+/** A bundle swaps `id-<n>` for `bundle-id-<n>` and adds `bundle`, on every row above. */
+export const BUNDLE_NOTE =
+  "A bundle carries `bundle` as well, and `bundle-id-<n>` in place of `id-<n>`.";
+
+/** Written to the CUSTOMER, not the order, and spelled differently on purpose. */
+export const CUSTOMER_TAGS = ["subscription-id-<n>", "bundle-id-<n> (bundles)"];
+
+export const MODE_LABEL: Record<Mode, string> = {
+  prepaid: "Prepaid",
+  payg: "Pay as you go",
+  autopay: "Pay per delivery (AutoPay)",
+};
 
 export interface SimConfig {
   productName: string;
@@ -69,7 +109,7 @@ export function runLabel(everyDays: number, deliveries: number): string {
 }
 
 export const DEFAULT_CONFIG: SimConfig = {
-  productName: "Dummy product",
+  productName: "Store Product",
   unitPrice: 750,
   deliveries: 6,
   everyDays: 14,
@@ -116,13 +156,16 @@ export interface ChildOrder {
   deliveryDate: Date;
   /** When StackBack creates the Shopify order. */
   createdOn: Date;
-  /** Cut at checkout, in the same moment as the parent order. True for delivery 1, always.
-   *  This is the pair a merchant reads as a duplicate. */
-  withParent: boolean;
+  /** Delivery 1 has no order of its own. Its goods are added to the storefront order that
+   *  already carried the money, by an order edit on that same order. Changed 2026-09-24:
+   *  before this, delivery 1 was a second order cut at checkout beside a parent, and a
+   *  merchant reading these two rows as a duplicate is why it is one order now. */
+  onParent: boolean;
   /** A later delivery whose lead window has already passed, so its order is cut now too. */
   early: boolean;
-  /** Does a Shopify order exist for this delivery today? Being paid for is necessary and
-   *  not sufficient: a prepaid delivery three months out is paid and has no order. */
+  /** Is this delivery in Shopify today, as its own order or as lines on the storefront
+   *  order? Being paid for is necessary and not sufficient: a prepaid delivery three months
+   *  out is paid and has nothing in the admin. */
   existsToday: boolean;
   /** PAYG only: when the invoice for this delivery goes out. */
   invoicedOn: Date | null;
@@ -154,27 +197,109 @@ export function schedule(c: SimConfig, mode: Mode = c.mode): ChildOrder[] {
 
   return Array.from({ length: c.deliveries }, (_, i) => {
     const deliveryDate = addDays(first, i * c.everyDays);
-    // Delivery 1's order is cut at checkout, alongside the parent. Later ones wait for
-    // their lead window. Treating delivery 1 like the rest is what makes a simulator
-    // disagree with the store a merchant is looking at.
+    // Delivery 1 goes onto the checkout order itself. Later ones wait for their lead
+    // window and become orders of their own.
     const atCheckout = i === 0;
     const due = addDays(deliveryDate, -c.leadDays);
     const createdOn = atCheckout ? today : (due <= today ? today : due);
-    const paid = mode === "prepaid" || i === 0;
+    /* Prepaid pays the run at checkout. AutoPay debits each delivery through the mandate
+       ahead of its date, so a delivery is paid by the time its order is placed, the same as
+       prepaid from the order's point of view. PAYG waits on a person. */
+    const paid = mode === "prepaid" || mode === "autopay" || i === 0;
     return {
       n: i + 1,
       deliveryDate,
       createdOn,
-      withParent: atCheckout,
+      onParent: atCheckout,
       early: !atCheckout && due <= today,
       // Paid and inside the lead window. Prepaid pays for everything up front, which is why
       // "paid" on its own was the wrong test and made the whole run look like it exists.
       existsToday: atCheckout || (paid && due <= today),
-      invoicedOn: mode === "payg" && i > 0 ? addDays(due, -3) : null,
+      invoicedOn: mode === "payg" && i > 0 ? addDays(due, -3) : mode === "autopay" && i > 0 ? addDays(due, -1) : null,
       amount: p.perDelivery,
       paidAtCheckout: paid,
     };
   });
+}
+
+/** One line on the storefront order, as Shopify shows it. */
+export interface OrderLine {
+  title: string;
+  sub?: string;
+  qty: number;
+  unit: number;
+  /** Struck-through original, when an edit discounted the line. */
+  was?: number;
+  /** The `_sb_*` note attributes Shopify prints under a subscription line. */
+  attrs?: [string, string][];
+}
+
+export interface ParentOrder {
+  /** False for AutoPay: nothing was converted, so there is no Removed line to show. */
+  converted: boolean;
+  /** Dummy line after the edit: one unit per delivery still to come. */
+  held: OrderLine | null;
+  /** Delivery 1's real goods, added by the edit. */
+  shipping: OrderLine;
+  /** The dummy line as it stood before the edit, which Shopify keeps under Removed. */
+  removed: OrderLine;
+  subtotal: number;
+  discount: number;
+  total: number;
+  /** What the value tag records for delivery 1. */
+  deliveryValue: number;
+  tags: string[];
+}
+
+/** What one checkout puts in the admin.
+ *
+ *  Shape taken from `app/services/delivery-conversion.server.ts` and a real order: the cart
+ *  transform expands the line into a placeholder variant at one unit per delivery, priced per
+ *  delivery, so the whole run is paid on one line. A job then edits that same order, drops the
+ *  placeholder by one delivery and adds the real goods at the timeline price. The pre-edit
+ *  line stays visible under Removed, which is Shopify keeping the history, not a cancellation.
+ */
+export function parentOrder(c: SimConfig, mode: Mode = c.mode, productName = "Your product"): ParentOrder {
+  const p = price({ ...c, mode });
+  /* AutoPay's first order is placed by us through Razorpay and already carries the REAL
+     variant, price, shipping and tax: the money moved inside the mandate authorisation, so
+     there is no placeholder to hold and nothing to convert. Prepaid holds the rest of the
+     run on the placeholder; PAYG paid for one delivery, so it holds nothing. */
+  const held = mode === "prepaid" ? c.deliveries - 1 : 0;
+  const converted = mode !== "autopay";
+  const planTitle = runLabel(c.everyDays, c.deliveries);
+  const attrs: [string, string][] = [
+    ["_sb_subscription", "true"],
+    ["_payment_method", mode === "prepaid" ? "prepaid" : "pay_as_you_go"],
+    ...(mode === "autopay" ? [["_sb_autopay_mandate_ready", "true"] as [string, string]] : []),
+    ["_sb_plan_title", planTitle],
+    ["Info", `${freqWord(c.everyDays)} for ${c.deliveries} deliveries`],
+    ["_sb_shipping_service", "Free Shipping"],
+  ];
+  if (!converted) {
+    return {
+      held: null,
+      shipping: { title: productName, sub: "Delivery 1, charged on the mandate", qty: 1, unit: p.perDelivery, attrs },
+      removed: { title: "Payment For", sub: productName, qty: 1, unit: p.perDelivery },
+      converted, subtotal: c.unitPrice, discount: c.unitPrice - p.perDelivery,
+      total: p.perDelivery, deliveryValue: p.perDelivery, tags: ORDER_TAGS.autopay.parent,
+    };
+  }
+  return {
+    converted,
+    held: held > 0
+      ? { title: planTitle, sub: `${productName} · held for ${held} more deliver${held === 1 ? "y" : "ies"}`, qty: held, unit: p.perDelivery, attrs }
+      : null,
+    shipping: { title: productName, sub: "Delivery 1", qty: 1, unit: p.perDelivery, was: c.unitPrice },
+    // Shopify shows the released placeholder under Removed as "Payment For", not as the
+    // plan title. Checked on a live pay-as-you-go order.
+    removed: { title: "Payment For", sub: productName, qty: mode === "prepaid" ? c.deliveries : 1, unit: p.perDelivery },
+    subtotal: c.unitPrice * (mode === "prepaid" ? c.deliveries : 1),
+    discount: (c.unitPrice - p.perDelivery) * (mode === "prepaid" ? c.deliveries : 1),
+    total: p.chargedNow,
+    deliveryValue: p.perDelivery,
+    tags: ORDER_TAGS[mode].parent,
+  };
 }
 
 export const fmtDate = (d: Date) =>

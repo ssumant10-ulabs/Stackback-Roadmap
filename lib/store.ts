@@ -4,7 +4,8 @@ import { DEFAULT_ROSTER, STATUS_CYCLE } from "./constants";
 import { SEED_VERSION, seed, stampIds } from "./seed";
 import { uid, newRoadmapId } from "./id";
 import { makeHelpers, pruneTasks, type Helpers } from "./teams";
-import { effStatus, normPriority, subtreeCounts, waveWord } from "./derive";
+import { cardPriority, effStatus, normPriority, subtreeCounts, waveWord } from "./derive";
+import { STAGE_LABEL, STAGE_STATUS, defaultNodeStage, defaultStage, placeCard, stageForStatus, stageOf, teamToBoard, type BoardTeam, type BoardView, type CardKind, type ReviewWith, type Stage } from "./board";
 import { reconcile } from "./dates";
 import { featureSeed } from "./featureSeed";
 import { pilotSeed } from "./pilotSeed";
@@ -93,6 +94,8 @@ export interface UiState {
   /** Board checklist disclosure. Opt-in: a card is closed unless its id is true here,
    *  so a fresh board opens quiet no matter how many subtasks a milestone carries. */
   boardOpen: Record<string, boolean>;
+  /** Which lens the work board is showing: PM/CS, Design or Dev. */
+  boardView: BoardView;
   simpleOpen: Record<string, boolean>;
   /** Which cards have their comment thread showing. */
   commentsOpen: Record<string, boolean>;
@@ -135,11 +138,12 @@ function clone<T>(v: T): T {
   return JSON.parse(JSON.stringify(v));
 }
 
-class Store {
+export class Store {
   data: Data = defaultData();
   ui: UiState = {
-    view: "timeline", tlMode: "swim", simpleMode: "stage", teamGran: "team",
-    filter: null, boardOpen: {}, simpleOpen: {}, commentsOpen: {}, sort: null,
+    // The board is the only view left; a stored "timeline" from before still lands there.
+    view: "board", tlMode: "swim", simpleMode: "stage", teamGran: "team",
+    filter: null, boardOpen: {}, boardView: "pm", simpleOpen: {}, commentsOpen: {}, sort: null,
     theme: "auto", palette: "lime", activityOpen: false,
   };
   /** Display name used for authorship on comments and activity. Local to this browser. */
@@ -585,6 +589,242 @@ class Store {
     this.pilots.forEach((p) => { if (p.custom) delete p.custom[key]; });
     this.commit();
   }
+  setBoardView(v: BoardView) { this.ui.boardView = v; this.commit(); }
+
+  /** Move a card up or down its column. The position is the priority, so this is what
+   *  setting a priority IS; the number on the card is the rank it produces.
+   *
+   *  `siblings` is the column as the board draws it, in the order it draws it, because only
+   *  the board knows which cards share a column. Ranks are rewritten across the whole column
+   *  on every move, so a column with no ranks yet gets them on the first nudge rather than
+   *  needing a migration. */
+  reorderCard(id: string, siblings: string[], dir: -1 | 1) {
+    const at = siblings.indexOf(id);
+    const to = at + dir;
+    if (at < 0 || to < 0 || to >= siblings.length) return;
+    const next = [...siblings];
+    next.splice(to, 0, next.splice(at, 1)[0]);
+    next.forEach((cardId, i) => {
+      const n = this.findEntry(cardId)?.node;
+      if (n) { n.boardOrder = i; return; }
+      const f = this.features.find((x) => x.id === cardId);
+      if (f) { f.boardOrder = i; f.updatedAt = new Date().toISOString(); }
+    });
+    const e = this.findEntry(id);
+    this.log("move", e?.node.title || this.features.find((x) => x.id === id)?.title || "Card",
+      `to ${to + 1} of ${next.length}`, e?.node.id);
+    this.commit();
+  }
+
+  /** Delete a card from the board, whichever record it is. */
+  delCard(id: string) {
+    if (this.findEntry(id)) { this.del(id); return; }
+    const i = this.features.findIndex((x) => x.id === id);
+    if (i < 0) return;
+    this.log("delete", this.features[i].title);
+    this.data.features.splice(i, 1);
+    this.commit();
+  }
+
+  /** Move a card to a stage on the work board.
+   *
+   *  `team` and `review` are written in the same commit as the stage, never after it: a card
+   *  in `pm_handover` for one render with no team on it is a card in nobody's column.
+   *  Clearing them on the way back is deliberate too, so re-handing a card asks again rather
+   *  than quietly reusing an answer from a fortnight ago. */
+  /** Every card on the board, roadmap tasks and requests alike, with the stage each one
+   *  sits at. A task's stage is derived from the status and team it already carried unless
+   *  somebody has moved it, so nothing was backfilled to make the board right. */
+  boardCards(): { id: string; node?: Node; feature?: Feature; stage: Stage; teams: BoardTeam[]; team: BoardTeam | null; review: ReviewWith | null }[] {
+    const out: ReturnType<Store["boardCards"]> = [];
+    for (const f of this.features) {
+      /* `stageOf` reads the sheet's own status, and almost every request's sheet status is
+         still "Not started" because nobody edits that column once the work is linked to a
+         roadmap task. The app already resolves this: `featureStatus` takes the LINKED task's
+         board status when there is one. Reading the raw column put 60 requests in Not started
+         while the tasks delivering them were half built. */
+      /* Same question as a task: which teams are on it. The sheet's Team column, plus
+         anybody assigned since it became a card on this board. */
+      /* And the same for who has it: a request whose own Team column is blank is owned by
+         whoever owns the roadmap task delivering it. The features sheet leaves Team blank far
+         more often than the roadmap does, so without this most requests were unassigned and
+         sat in the backlog while the work was plainly with a team. */
+      const task = this.featureTask(f);
+      const { stage, teams } = placeCard({
+        kind: f.kind, stage: f.stage, boardTeam: f.boardTeam,
+        /* The card's own column and the delivering task's, both handed over: `placeCard`
+           takes the more specific rather than a fixed winner. */
+        status: (f.sheetStatus || "").toLowerCase() === "done" ? "Done" : f.sheetStatus,
+        linkedStatus: task ? boardStatusOf(task) : null,
+        named: [
+          f.team,
+          ...(f.assignees || []).map((a) => this.helpers.assigneeTeam(a)),
+          ...(task ? [task.team, ...(task.assignees || []).map((a) => this.helpers.assigneeTeam(a))] : []),
+        ],
+      });
+      out.push({
+        id: f.id, feature: f, stage, teams,
+        team: f.boardTeam ?? teams[0] ?? null, review: f.reviewWith ?? null,
+      });
+    }
+    for (const t of this.activeRoadmap().tasks || []) {
+      /* Handed over: one team, theirs. Not handed over: every team the sheet names on it,
+         which is the Team column AND the team assignees, because the column says
+         "Engineering" on cards carrying a Design assignee and reading it alone left Design's
+         board empty. `team` stays for the chip and for resolving a drop; `teams` is what
+         decides which boards it appears on. */
+      /* `nodeTeams` returns the sheet's Team column ALONE when it is set, and ignores the
+         assignees, which is right for the roadmap's own attribution and wrong here: the
+         board asks which teams are on this card, and the sheet says "Engineering" on cards
+         carrying a Design team assignee. Reading the column alone is why Design's board read
+         zero while the sheet had design work on it. Both answers are true, so both count. */
+      const { stage, teams } = placeCard({
+        kind: t.kind, stage: t.stage, boardTeam: t.boardTeam,
+        /* A task has no sheet column and no task above it: its own rolled-up status is the
+           only one there is, and `defaultNodeStage` is what reads it. */
+        status: boardStatusOf(t),
+        named: [t.team, ...(t.assignees || []).map((a) => this.helpers.assigneeTeam(a))],
+      });
+      out.push({
+        id: t.id, node: t, stage, teams,
+        team: t.boardTeam ?? teamToBoard(t.team) ?? teams[0] ?? null,
+        review: t.reviewWith ?? null,
+      });
+    }
+    return out;
+  }
+
+  /** Does this roadmap card match the active team or person filter? Matches on the card
+   *  itself OR anything under it, because a milestone whose only Design subtask is the one
+   *  you filtered for is a card Design needs to see. */
+  nodeInFilter(n: Node): boolean {
+    const f = this.ui.filter;
+    if (!f) return true;
+    const hit = (x: Node): boolean =>
+      (f.type === "person"
+        ? (x.assignees || []).some((a) => !a.isTeam && a.name === f.name)
+        : this.helpers.nodeInTeam(x, f.name))
+      || (x.children || []).some(hit);
+    return hit(n);
+  }
+
+  /** The same question for a request. It has no assignees, so it matches on the team it was
+   *  handed to, the team column the sheet carried, or who raised it. */
+  featureInFilter(f: Feature, boardTeam: BoardTeam | null): boolean {
+    const flt = this.ui.filter;
+    if (!flt) return true;
+    if (flt.type === "person") return (f.requestedBy || "") === flt.name;
+    return boardTeam === flt.name || f.team === flt.name;
+  }
+
+  /** A new card on the board. A roadmap task, because that is what the board's cards are
+   *  and what everything else in the app already understands: Features links to it, the
+   *  activity log names it, the metrics count it. */
+  addBoardCard(title: string, kind: CardKind): string | null {
+    title = (title || "").trim();
+    if (!title) return null;
+    const r = this.activeRoadmap();
+    const node: Node = stampIds({
+      id: "", title, status: "planned" as Status, assignees: [], children: [],
+      priority: 1, kind,
+    });
+    r.tasks.push(node);
+    this.log("add", title, `new ${kind} on the board`, node.id);
+    this.commit();
+    return node.id;
+  }
+
+  /** Move a card to a team, from the card's own menu. The same write the nudge makes. */
+  moveToTeam(id: string, team: BoardTeam | null, stage: Stage) {
+    /* Sent back to the pile: which pile is the card's own kind. The menu cannot know it, so
+       it passes the request and the answer is worked out here. */
+    const node = this.findEntry(id)?.node;
+    const kind = (node?.kind ?? this.features.find((x) => x.id === id)?.kind ?? "feature") as CardKind;
+    this.setStage(id, team ? stage : defaultStage(kind), { team, review: null });
+  }
+
+  setStage(id: string, stage: Stage, opts?: { team?: BoardTeam | null; review?: ReviewWith | null }) {
+    const node = this.findEntry(id)?.node;
+    /* `findEntry` returns a request AS a Node, so there is one path and this is it. There
+       used to be a second copy below for requests, unreachable for that reason, and by the
+       time anybody noticed the rule in it had drifted from the rule in this one. */
+    if (node) this.setNodeStage(node, stage, opts);
+  }
+
+  /** The same move on a roadmap task. Kept apart because the two records store different
+   *  things, not because the rule differs: it is the same stage field either way. */
+  private setNodeStage(n: Node, stage: Stage, opts?: { team?: BoardTeam | null; review?: ReviewWith | null }) {
+    const was = n.stage || defaultNodeStage(effStatus(n), n.team, n.kind);
+    if (was === stage && !opts) return;
+    n.stage = stage;
+    if (opts && "team" in opts) n.boardTeam = opts.team ?? null;
+    if (opts && "review" in opts) n.reviewWith = opts.review ?? null;
+    /* Only when the caller EXPLICITLY passes `team: null`, which is "Back to the backlog"
+       saying nobody has this. Clearing it whenever a team was not mentioned broke two things
+       in turn: "Hand to PM" set the owner and wiped it in the next line, and dragging a card
+       to the Roadmap's Not started cleared its owner — and that lens shows owned work only,
+       so the card vanished from the board it had just been dropped on. */
+    const cleared = Boolean(opts && "team" in opts && !opts.team);
+    if ((stage === "bug" || stage === "feature") && cleared) { n.boardTeam = null; n.reviewWith = null; }
+    if (!["dev_review", "dev_approved", "prod"].includes(stage)) n.reviewWith = null;
+    /* The checkbox follows the column, because a card that reads planned while it sits in
+       In progress is exactly the drift this board exists to remove. Production is the only
+       one that reaches the whole subtree: shipping a milestone ships its checklist, while
+       starting one does not finish anything. */
+    if (stage === "prod") { if (effStatus(n) !== "done") this.setDeep(n, "done"); }
+    else if (STAGE_STATUS[stage] && n.status !== STAGE_STATUS[stage]) {
+      n.status = STAGE_STATUS[stage] as Status;
+    }
+    if ("updatedAt" in n) (n as { updatedAt?: string }).updatedAt = new Date().toISOString();
+    const team = n.boardTeam ?? teamToBoard(n.team);
+    const who = team === "Engineering" ? "dev" : team === "Design" ? "design" : null;
+    this.log("stage", n.title, `${STAGE_LABEL[was]} to ${STAGE_LABEL[stage]}${who ? `, with ${who}` : ""}`, n.id);
+    this.commit();
+  }
+
+  /** The horizon a card sits on. It used to be which column the board drew it in; the board
+   *  is a workflow now, so it is a tag on the card and a new card was born without one. */
+  setPriority(id: string, p: 1 | 2 | 3) {
+    const n = this.findEntry(id)?.node;
+    if (!n || cardPriority(n) === p) return;
+    /* A request's `priority` is the sheet's text column, so its horizon goes in its own
+       field. A roadmap task has one horizon and the roadmap tree shares it. */
+    if (this.features.some((f) => f.id === id)) (n as unknown as Feature).boardPriority = p;
+    else n.priority = p;
+    /* The horizon routes a card that nobody has started: Now means PM has picked it up,
+       Future means it goes back in the pile. A card already in flight only gets the tag —
+       marking live design work "Future" should not take it off the designer's board.
+       `pm_handover` counts as not started: it has been handed over, not begun.
+       Read from the board rather than from `n.stage`, which is only set once somebody has
+       moved the card: a shipped request derives `prod` and has no stored stage at all. */
+    const card = this.boardCards().find((c) => c.id === id);
+    const stage = card?.stage || defaultStage(n.kind);
+    const inThePile = stage === "bug" || stage === "feature" || stage === "pm_handover";
+    /* Now on a card nobody is named on hands it to PM, who triages. Now on a card that
+       already names Design or Dev does NOT: it is already theirs and already on their
+       board, and overwriting the owner with PM was taking it off the very tab it belongs
+       on. Future sends an unclaimed card back to the pile the same way. */
+    const owned = (card?.teams.length ?? 0) > 0;
+    if (inThePile && p === 1 && !owned) this.setNodeStage(n, defaultStage(n.kind), { team: "PM", review: null });
+    else if (inThePile && p === 3 && !owned) this.setNodeStage(n, defaultStage(n.kind), { team: null, review: null });
+    this.log("move", n.title, `to ${waveWord(p)}`, n.id);
+    this.commit();
+  }
+
+  /** The card type tag: bug, feature or landing page. Set on either record. */
+  setCardKind(id: string, kind: CardKind) {
+    /* Intake has one column per kind, so a card re-tagged while it is still in the pile has
+       to move with its tag. In flight it does not: the stage is where the work is and the
+       kind is what the work is, which are different questions. */
+    const atIntake = (st: Stage | null | undefined) => st === "bug" || st === "feature";
+    const node = this.findEntry(id)?.node;
+    if (!node) return;
+    node.kind = kind;
+    if (atIntake(node.stage)) node.stage = defaultStage(kind);
+    if ("updatedAt" in node) (node as { updatedAt?: string }).updatedAt = new Date().toISOString();
+    this.commit();
+  }
+
   /** Bugs carry which layer the fault is in; features do not. */
   setRequestIssueType(id: string, value: string) {
     const f = this.features.find((x) => x.id === id);
@@ -840,7 +1080,30 @@ class Store {
       });
     };
     walk(this.tasks, "root");
-    return res;
+    if (res) return res;
+    /* A request is a card on the same board, so everything that edits a card has to reach
+       one. It carries the same work fields, so it IS a Node for these purposes; what it is
+       not is a member of the roadmap tree, which is why it comes back with its own array. */
+    const fi = this.features.findIndex((f) => f.id === id);
+    if (fi >= 0) {
+      const f = this.features[fi] as unknown as Node;
+      f.status = f.status || "planned";
+      f.assignees = f.assignees || [];
+      f.children = f.children || [];
+      return { node: f, arr: this.features as unknown as Node[], index: fi, parentId: "root" };
+    }
+    // A subtask added under a request lives in that request's own children.
+    for (const f of this.features) {
+      /* `stageOf` reads the sheet's own status, and almost every request's sheet status is
+         still "Not started" because nobody edits that column once the work is linked to a
+         roadmap task. The app already resolves this: `featureStatus` takes the LINKED task's
+         board status when there is one. Reading the raw column put 60 requests in Not started
+         while the tasks delivering them were half built. */
+      if (!f.children?.length) continue;
+      walk(f.children as Node[], f.id);
+      if (res) return res;
+    }
+    return null;
   }
   find(id: string): Node | null {
     const e = this.findEntry(id);
@@ -1233,16 +1496,31 @@ class Store {
 
   /* ---- screenshots ---- */
   shotBytesUsed(): number {
-    return this.features.reduce((a, f) => a + (f.shots || []).reduce((b, s2) => b + (s2.bytes || 0), 0), 0);
+    const sum = (list: { shots?: Shot[] }[]) =>
+      list.reduce((a, f) => a + (f.shots || []).reduce((b, s2) => b + (s2.bytes || 0), 0), 0);
+    // Roadmap cards carry attachments too, so leaving them out of the budget would let the
+    // browser's storage fill while the counter said there was room.
+    return sum(this.features) + sum(this.activeRoadmap().tasks || []);
   }
   /** Adds a screenshot, or explains exactly why it could not. Rolls the image back out of
    *  state if the write is refused, so a rejected upload never costs the surrounding edits. */
+  /** Handover files and screenshots hang off a board card, and a board card is a roadmap
+   *  task as often as it is a request. Same limits, same budget, same uploader: the only
+   *  difference is which record holds the array. */
+  private shotHolder(id: string): { shots?: Shot[]; title: string; touch: () => void } | null {
+    const f = this.features.find((x) => x.id === id);
+    if (f) return { get shots() { return f.shots; }, set shots(v) { f.shots = v; }, title: f.title, touch: () => { f.updatedAt = new Date().toISOString(); } } as never;
+    const n = this.findEntry(id)?.node;
+    if (n) return { get shots() { return n.shots; }, set shots(v) { n.shots = v; }, title: n.title, touch: () => {} } as never;
+    return null;
+  }
+
   addShot(featureId: string, name: string, src: string, bytes: number): { ok: boolean; error?: string } {
-    const f = this.features.find((x) => x.id === featureId);
-    if (!f) return { ok: false, error: "That request no longer exists." };
+    const f = this.shotHolder(featureId);
+    if (!f) return { ok: false, error: "That card no longer exists." };
     f.shots = f.shots || [];
     if (f.shots.length >= SHOT_MAX_PER_REQUEST) {
-      return { ok: false, error: `Up to ${SHOT_MAX_PER_REQUEST} screenshots per request.` };
+      return { ok: false, error: `Up to ${SHOT_MAX_PER_REQUEST} files per card.` };
     }
     const projected = this.shotBytesUsed() + bytes;
     if (projected > SHOT_TOTAL_BUDGET) {
@@ -1255,35 +1533,35 @@ class Store {
       this.persist();
       return { ok: false, error: "This browser's storage is full, so the screenshot was not saved. Nothing else was lost. Download a backup and clear some screenshots." };
     }
-    f.updatedAt = new Date().toISOString();
-    this.log("comment", f.title, `screenshot: ${shot.name}`, undefined);
+    f.touch();
+    this.log("comment", f.title, `attachment: ${shot.name}`, undefined);
     this.notify();
     return { ok: true };
   }
   /** A hosted image, pasted as a URL. Costs nothing against the storage budget, which is
    *  why it is the better default once a team has somewhere to put images. */
   addShotLink(featureId: string, url: string): { ok: boolean; error?: string } {
-    const f = this.features.find((x) => x.id === featureId);
-    if (!f) return { ok: false, error: "That request no longer exists." };
+    const f = this.shotHolder(featureId);
+    if (!f) return { ok: false, error: "That card no longer exists." };
     const clean = (url || "").trim();
     if (!/^https?:\/\//i.test(clean)) return { ok: false, error: "Paste a full link starting with http:// or https://" };
     f.shots = f.shots || [];
     if (f.shots.length >= SHOT_MAX_PER_REQUEST) {
-      return { ok: false, error: `Up to ${SHOT_MAX_PER_REQUEST} images per request.` };
+      return { ok: false, error: `Up to ${SHOT_MAX_PER_REQUEST} files per card.` };
     }
     let name = clean;
     try { name = decodeURIComponent(new URL(clean).pathname.split("/").pop() || clean); } catch {}
     f.shots.push({ id: uid("s_"), name: name.slice(0, 80), src: clean, at: new Date().toISOString(), bytes: 0 });
-    f.updatedAt = new Date().toISOString();
-    this.log("comment", f.title, `image link: ${name}`, undefined);
+    f.touch();
+    this.log("comment", f.title, `link: ${name}`, undefined);
     this.commit();
     return { ok: true };
   }
   delShot(featureId: string, shotId: string) {
-    const f = this.features.find((x) => x.id === featureId);
+    const f = this.shotHolder(featureId);
     if (!f || !f.shots) return;
     f.shots = f.shots.filter((x) => x.id !== shotId);
-    f.updatedAt = new Date().toISOString();
+    f.touch();
     this.commit();
   }
 

@@ -14,6 +14,15 @@
   --primary:#0E1A08; --primary-ink:#EAF7CF;
   --track:#E4E3D8;
 
+  /* The page measure, and the gutter inside it. Everything that spans the screen reads
+     from these two, so the bar, the rail and the answers cannot drift apart again. */
+  --hc-shell: 1560px;
+  --hc-pad: 24px;
+  /* Out at the window edge, not tucked in level with the content column: the dock is a
+     persistent affordance and belongs out of the reading path, which is what the inset
+     version cost it. A quarter of the gutter keeps it off the very glass on a wide screen. */
+  --hc-dockright: max(20px, calc((100vw - var(--hc-shell)) / 8));
+
   /* Muted text. The app's --ink-3 is 3.4:1 on this ground and the obvious darkening to
      #6A7163 still only reaches 4.11 on --sunken, which is where the inactive part tab and
      the eyebrows sit. Chosen against the DARKEST light surface rather than the page, so
@@ -88,11 +97,20 @@
 /* ---------------------------------------------------------------- top bar */
 .hc-top {
   position: sticky; top: 0; z-index: 30;
-  display: flex; align-items: center; gap: 14px;
-  padding: 11px 22px;
+  padding: 11px 0;
   background: color-mix(in srgb, var(--page) 88%, transparent);
   backdrop-filter: saturate(1.4) blur(10px);
   border-bottom: 1px solid var(--border);
+}
+/* The BODY narrows for the answers; the chrome never does. `--hc-shell` changes with the
+   open part, and the bar and the sub row were reading it, so the logo and the tabs jumped
+   left and right every time you switched from How to guides to FAQs. */
+.hc { --hc-chrome: 1560px; }
+.hc[data-hc-part="help"] { --hc-shell: 1264px; }
+
+.hc-topin {
+  display: flex; align-items: center; gap: 14px;
+  width: 100%; max-width: var(--hc-chrome); margin: 0 auto; padding: 0 var(--hc-pad);
 }
 .hc-brand { display: flex; align-items: center; gap: 9px; text-decoration: none; color: var(--ink); flex: none; }
 .hc-brand .logo { width: 34px; height: 22px; flex: none; margin: 0; }
@@ -128,8 +146,13 @@
 .hc-navtoggle { display: none; }
 
 /* ---------------------------------------------------------------- layout */
-.hc-body { display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 30px; max-width: 1240px; margin: 0 auto; padding: 26px 22px 90px; }
-.hc-nav { position: sticky; top: 68px; align-self: start; display: flex; flex-direction: column; gap: 1px; max-height: calc(100vh - 96px); overflow-y: auto; }
+.hc-body {
+  display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 30px;
+  width: 100%; max-width: var(--hc-shell); margin: 0 auto; padding: 26px var(--hc-pad) 90px;
+}
+/* No inner scrollbar. A rail with its own scroller inside a page that already scrolls is two
+   scrollbars and a guess about which one you are in; grouped, it is short enough to sit. */
+.hc-nav { position: sticky; top: calc(var(--hc-bar) + 14px); align-self: start; display: flex; flex-direction: column; gap: 1px; }
 .hc-navitem {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
   appearance: none; border: 0; background: transparent; color: var(--ink-2);
@@ -142,6 +165,11 @@
 .hc-navint { margin-top: 8px; border-top: 1px solid var(--border); padding-top: 13px; border-radius: 0 0 8px 8px; }
 
 .hc-main { min-width: 0; }
+.hc-searchmore { margin-top: 14px; }
+.hc-linkish {
+  appearance: none; border: 0; background: none; padding: 0; font: inherit;
+  color: var(--brand-deep); text-decoration: underline; text-underline-offset: 2px; cursor: pointer;
+}
 .hc-eyebrow { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--hc-muted); font-weight: 700; margin: 0 0 6px; }
 .hc-h1 { font-size: 28px; line-height: 1.18; letter-spacing: -0.02em; margin: 0 0 8px; font-weight: 800; }
 .hc-hero { font-size: 34px; max-width: 20ch; }
@@ -279,7 +307,7 @@
 
 /* ---------------------------------------------------------------- chat */
 .hc-fab {
-  position: fixed; right: 20px; bottom: 20px; z-index: 40;
+  position: fixed; right: var(--hc-dockright); bottom: 20px; z-index: 40;
   display: flex; align-items: center; gap: 8px;
   appearance: none; border: 0; cursor: pointer; font: inherit; font-size: 13px; font-weight: 680;
   background: var(--primary); color: var(--primary-ink);
@@ -290,7 +318,7 @@
 .hc-fab svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
 .hc-chat {
-  position: fixed; right: 20px; bottom: 20px; z-index: 40;
+  position: fixed; right: var(--hc-dockright); bottom: 20px; z-index: 40;
   display: flex; flex-direction: column;
   width: min(408px, calc(100vw - 32px)); height: min(624px, calc(100vh - 100px));
   background: var(--card); border: 1px solid var(--border-2); border-radius: 15px;
@@ -350,6 +378,7 @@
 
 /* ---------------------------------------------------------------- responsive */
 @media (max-width: 1023px) {
+  .hc { --hc-pad: 18px; }
   .hc-body { grid-template-columns: minmax(0, 1fr); gap: 0; padding-top: 20px; }
   .hc-nav {
     position: static; display: none; max-height: none; margin-bottom: 20px;
@@ -357,13 +386,21 @@
   }
   .hc-nav.open { display: flex; }
   .hc-navtoggle { display: block; flex: none; }
+  .hc-navrule { margin-top: 8px; padding-top: 8px; }
+  /* Sticky headings would pin under a bar that is two rows tall here, and the sections are
+     a swipe apart on a phone anyway. */
+  .hc-faqgrouph { position: static; background: none; }
+  .hc-subrow { position: static; }
 }
 @media (max-width: 767px) {
-  .hc-top { padding: 9px 14px; gap: 9px; flex-wrap: wrap; }
+  /* The gutter is one number now, so the bar, the rail and the answers narrow together. */
+  .hc { --hc-pad: 14px; }
+  .hc-top { padding: 9px 0; }
+  .hc-topin { gap: 9px; flex-wrap: wrap; }
   .hc-brandname { display: none; }
   .hc-searchwrap { order: 3; max-width: none; flex-basis: 100%; }
   .hc-kbd { display: none; }
-  .hc-body { padding: 18px 14px 96px; }
+  .hc-body { padding-top: 18px; padding-bottom: 96px; }
   .hc-h1 { font-size: 23px; }
   .hc-hero { font-size: 26px; max-width: none; }
   .hc-fab span { display: none; }
@@ -387,7 +424,7 @@
 .hc-part.on { background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
 .hc-part:focus-visible { outline: 2px solid var(--brand-deep); outline-offset: 1px; }
 
-.hc-body.solo { grid-template-columns: minmax(0, 1fr); max-width: 1560px; }
+.hc-body.solo { grid-template-columns: minmax(0, 1fr); }
 .hc-nav.hidden { display: none; }
 
 /* ---------------------------------------------------------------- query form */
@@ -562,8 +599,17 @@
 .hc-flowlede { max-width: var(--hc-measure); }
 .hc-flowlede b { color: var(--ink); font-weight: 680; }
 
-.hc-modecols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
-.hc-modecol { background: var(--card); border: 1px solid var(--border); border-radius: 13px; padding: 15px 16px; box-shadow: var(--shadow); }
+/* One mode per row, each the full width of the column. Three-up put a Shopify Orders table
+   into 430px and a horizontal scroller, so the tags were always the half you could not see. */
+.hc-modecols { display: flex; flex-direction: column; gap: 16px; }
+.hc-modecol { border-radius: 13px; padding: 15px 16px; }
+/* `.pl` on the same element supplies Polaris' surface and its light colour-scheme, so the
+   heading above the table reads in the same ink as the table. */
+.hc-modecol.pl { margin: 0; border: 1px solid var(--border); }
+.hc-modecol .hc-modehead { border-bottom-color: var(--pl-line); }
+.hc-modecol .hc-modehead b { font-size: 15px; font-weight: 650; }
+.hc-modecol .hc-modehead span { color: var(--pl-sub); }
+.hc-modecol .hc-modekey { margin-top: 12px; }
 .hc-modehead { padding-bottom: 11px; margin-bottom: 11px; border-bottom: 1px solid var(--border); }
 .hc-modehead b { display: block; font-size: 14.5px; font-weight: 750; }
 .hc-modehead span { display: block; font-size: 12px; color: var(--hc-muted); margin-top: 2px; }
@@ -896,7 +942,7 @@
 .hc-cempty { margin: 0; padding: 26px 14px; text-align: center; font-size: 13px; color: var(--hc-muted); background: var(--sunken); border-radius: 10px; }
 
 /* The order tables carry more per row now, so give them the page rather than a column. */
-.hc-modecols { grid-template-columns: repeat(auto-fit, minmax(430px, 1fr)); }
+
 
 @media (max-width: 767px) { .hc-surfaces { grid-template-columns: minmax(0, 1fr); } }
 
@@ -1077,10 +1123,13 @@
   background: var(--ink); color: var(--page); border-radius: 9px; padding: 9px 11px;
   font-size: 12px; font-weight: 450; line-height: 1.5; text-transform: none; letter-spacing: 0;
   box-shadow: 0 8px 24px rgba(15, 23, 42, .28);
-  opacity: 0; visibility: hidden; transition: opacity .12s;
+  /* `visibility: hidden` still takes part in layout, and an absolutely positioned box does
+     count towards the document's scrollWidth. Twenty of these hanging past the right edge is
+     what put a horizontal scrollbar and a dead strip of page beside this screen. */
+  display: none;
 }
 .hc-tipbox b { display: block; margin-top: 6px; font-weight: 700; opacity: .85; }
-.hc-tip:hover .hc-tipbox, .hc-tip:focus-within .hc-tipbox { opacity: 1; visibility: visible; }
+.hc-tip:hover .hc-tipbox, .hc-tip:focus-within .hc-tipbox { display: block; }
 /* A row in the right-hand column would push its box off the card. */
 .hc-tgrid > *:nth-child(even) .hc-tipbox { left: auto; right: -8px; }
 
@@ -1120,3 +1169,698 @@
 .hc-bfchip i { width: 13px; height: 13px; border-radius: 4px; border: 1px solid rgba(0,0,0,.12); display: block; }
 .hc-bfchip b { font-weight: 650; color: var(--ink); }
 .hc-bfnote { margin: 8px 0 0; font-size: 11.5px; line-height: 1.55; color: var(--hc-muted); }
+
+/* ---------------------------------------------------------------- the Shopify order, 1:1
+   Polaris' own surface, light in both themes. A merchant recognises this screen by its look,
+   and a dark-mode Shopify admin is a screen they have never seen. Metrics are Polaris': 12px
+   card radius, #E3E3E3 hairline, 13px body on #F1F1F1. */
+.pl {
+  --pl-bg: #f1f1f1; --pl-card: #fff; --pl-line: #e3e3e3; --pl-ink: #303030;
+  --pl-sub: #616161; --pl-ok-bg: #cdfee1; --pl-ok-ink: #0c5132;
+  background: var(--pl-bg); color: var(--pl-ink); border-radius: 12px; padding: 16px;
+  margin: 4px 0 14px; border: 1px solid var(--border);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 13px;
+  line-height: 1.45; color-scheme: light;
+}
+.pl-top { margin-bottom: 14px; }
+.pl-titlerow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pl-back { color: var(--pl-sub); font-size: 18px; line-height: 1; }
+.pl-titlerow h3 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -.01em; }
+.pl-badge {
+  display: inline-flex; align-items: center; gap: 5px; background: #ebebeb; color: var(--pl-ink);
+  border-radius: 8px; padding: 2px 8px; font-size: 12px; font-weight: 550;
+}
+.pl-badge.ok { background: var(--pl-ok-bg); color: var(--pl-ok-ink); }
+.pl-badge i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.pl-sub { margin: 5px 0 0; color: var(--pl-sub); font-size: 12.5px; }
+
+.pl-grid { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 14px; align-items: start; }
+.pl-main, .pl-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.pl-card {
+  background: var(--pl-card); border: 1px solid var(--pl-line); border-radius: 12px;
+  padding: 12px 14px; box-shadow: 0 1px 0 rgba(0, 0, 0, .05);
+}
+.pl-cardh { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pl-cardh b { font-size: 13.5px; font-weight: 650; display: inline-flex; align-items: center; gap: 6px; }
+.pl-fico {
+  width: 16px; height: 16px; border-radius: 4px; background: var(--pl-ok-bg); color: var(--pl-ok-ink);
+  display: inline-flex; align-items: center; justify-content: center; font-size: 10px;
+}
+.pl-chip { background: #ebebeb; border-radius: 8px; padding: 1px 8px; font-size: 12px; }
+.pl-muted { color: var(--pl-sub); font-size: 12.5px; margin: 0; }
+.pl-line2 { margin: 7px 0 0; color: var(--pl-sub); font-size: 12.5px; display: flex; gap: 14px; flex-wrap: wrap; }
+.pl-loc, .pl-flag { color: var(--pl-sub); }
+.pl-line2 a { color: #005bd3; text-decoration: none; }
+.pl-empty { margin: 9px 0 0; color: var(--pl-sub); font-size: 12.5px; }
+
+.pl-item {
+  display: grid; grid-template-columns: 40px minmax(0, 1fr) auto auto auto; gap: 12px;
+  align-items: start; margin-top: 11px; padding-top: 11px; border-top: 1px solid var(--pl-line);
+}
+.pl-item.dim { opacity: .62; }
+.pl-thumb { width: 40px; height: 40px; border-radius: 8px; border: 1px solid var(--pl-line); background: #fafafa; }
+.pl-itemmain b { display: block; font-size: 13px; font-weight: 600; }
+.pl-itemmain em { display: block; font-style: normal; color: var(--pl-sub); font-size: 12.5px; margin-top: 1px; }
+.pl-price { font-size: 13px; white-space: nowrap; }
+.pl-price s { margin-left: 6px; color: var(--pl-sub); }
+.pl-qty, .pl-tot1 { font-size: 13px; white-space: nowrap; }
+.pl-tot1 { font-weight: 600; }
+.pl-attrb {
+  appearance: none; border: 0; background: none; padding: 4px 0 0; cursor: pointer;
+  font: inherit; font-size: 12px; color: #005bd3;
+}
+.pl-attrb code { font-family: ui-monospace, Menlo, monospace; }
+.pl-attrs {
+  margin: 7px 0 0; padding: 8px 10px; background: #f7f7f7; border-radius: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px;
+}
+.pl-attrs > div { display: flex; gap: 8px; padding: 1px 0; }
+.pl-attrs dt { color: var(--pl-sub); min-width: 168px; }
+.pl-attrs dd { margin: 0; word-break: break-word; }
+
+.pl-tot { width: 100%; border-collapse: collapse; margin-top: 9px; font-size: 13px; }
+.pl-tot td { padding: 5px 0; vertical-align: top; }
+.pl-tot td:nth-child(2) { color: var(--pl-sub); }
+.pl-r { text-align: right; white-space: nowrap; }
+.pl-totrow td { border-top: 1px solid var(--pl-line); padding-top: 9px; }
+
+.pl-link { margin: 8px 0 2px; color: #005bd3; font-size: 13px; }
+.pl-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.pl-tags span { background: #ebebeb; border-radius: 8px; padding: 2px 8px; font-size: 12px; }
+.pl-tagnote { margin-top: 9px; line-height: 1.5; }
+.pl-tagnote code { font-family: ui-monospace, Menlo, monospace; font-size: 11px; }
+
+@media (max-width: 899px) {
+  .pl-grid { grid-template-columns: minmax(0, 1fr); }
+  .pl-item { grid-template-columns: 40px minmax(0, 1fr); }
+  .pl-price, .pl-qty, .pl-tot1 { grid-column: 2; }
+}
+
+.hc-flowwas { margin: -4px 0 16px; }
+.hc-orderafter { margin: 0 0 12px; }
+
+/* Pilot stores already on this setup. A category average is an argument; three of your own
+   stores running exactly this is a fact. */
+.hc-sugstores h3 { margin-bottom: 8px; }
+.hc-sugpilots { list-style: none; margin: 0 0 9px; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.hc-sugpilots li {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 7px 9px; background: var(--page); border: 1px solid var(--border-2); border-radius: 9px;
+}
+.hc-sugpilots b { font-size: 12.5px; font-weight: 700; }
+.hc-sugpilots span { font-size: 11.5px; color: var(--hc-muted); line-height: 1.45; }
+
+/* Which payment type the drawn order is showing. */
+.hc-modepick { display: flex; gap: 2px; padding: 2px; background: var(--sunken); border-radius: 10px; width: max-content; margin: 0 0 10px; flex-wrap: wrap; }
+.hc-modepillb {
+  appearance: none; border: 0; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 640;
+  color: var(--hc-muted); background: transparent; padding: 6px 13px; border-radius: 8px;
+}
+.hc-modepillb:hover { color: var(--ink); }
+.hc-modepillb.on { background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
+.hc-tagcell { max-width: 210px; }
+
+
+
+/* Tags wrap. A clipped tag is worse than a wrapped one: "sb-delivery-1-" is not a tag. */
+.hc-tagcell { display: flex; flex-wrap: wrap; gap: 4px; max-width: none; }
+.hc-tagcell > * { white-space: nowrap; }
+.pl-note {
+  margin: 0; padding: 11px 13px; background: var(--pl-card); border: 1px solid var(--pl-line);
+  border-radius: 12px; color: var(--pl-sub); font-size: 12.5px; line-height: 1.55;
+}
+
+/* ---------------------------------------------------------------- order import
+   The store's own repeat gap, read in the browser. */
+.hc-import { padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--border); }
+.hc-importh { margin: 0 0 4px; font-size: 13px; font-weight: 700; }
+.hc-importrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.hc-importfile { display: none; }
+.hc-importhow { flex: 1 1 180px; min-width: 0; font-size: 11px; }
+.hc-importerr { margin: 10px 0 0; font-size: 12px; color: var(--hc-limit); line-height: 1.5; }
+.hc-importstats { list-style: none; margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.hc-importstats li { background: var(--page); border: 1px solid var(--border-2); border-radius: 9px; padding: 8px 10px; }
+.hc-importstats b { display: block; font-size: 16px; font-weight: 750; letter-spacing: -.01em; }
+.hc-importstats span { font-size: 11px; color: var(--hc-muted); }
+.hc-importsug { margin-top: 11px; padding: 10px 12px; background: var(--sunken); border-radius: 10px; }
+.hc-importsug p { margin: 0 0 9px; font-size: 12.5px; line-height: 1.55; }
+.hc-importtop { margin-top: 12px; }
+.hc-importsub { margin: 0 0 6px; font-size: 11.5px; font-weight: 700; color: var(--ink-2); text-transform: uppercase; letter-spacing: .05em; }
+.hc-importtop ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; counter-reset: p; }
+.hc-importtop li { display: flex; flex-direction: column; gap: 1px; font-size: 12px; }
+.hc-importtop li b { font-weight: 650; }
+.hc-importtop li span { font-size: 11px; color: var(--hc-muted); }
+.hc-importwarn { margin: 11px 0 0; padding: 0 0 0 16px; display: flex; flex-direction: column; gap: 6px; }
+.hc-importwarn li { font-size: 11.5px; color: var(--hc-muted); line-height: 1.5; }
+
+/* Every recording has an address. */
+.hc-htshare { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 9px; }
+.hc-htshare .hc-btn { font-size: 12px; padding: 5px 11px; }
+
+/* The message we send at a step, and the copy we hand over. Kept folded: the checklist is
+   read as a list of states, and five open emails inside it is not a list. */
+.hc-msg, .hc-runbook { margin-top: 8px; }
+.hc-msg > summary, .hc-runbook > summary {
+  cursor: pointer; font-size: 12px; color: var(--ink-2); list-style: none;
+  padding: 5px 9px; background: var(--sunken); border-radius: 8px; display: inline-block;
+}
+.hc-runbook > summary { display: block; }
+.hc-runbook > summary span { display: block; font-size: 11.5px; color: var(--hc-muted); margin-top: 2px; font-weight: 400; }
+.hc-msg > summary::-webkit-details-marker, .hc-runbook > summary::-webkit-details-marker { display: none; }
+.hc-msg > summary:hover, .hc-runbook > summary:hover { color: var(--ink); }
+.hc-msg pre, .hc-runbook pre {
+  margin: 8px 0 0; padding: 11px 13px; background: var(--page); border: 1px solid var(--border-2);
+  border-radius: 9px; font: inherit; font-size: 12.5px; line-height: 1.6; white-space: pre-wrap;
+  color: var(--ink-2); max-height: 420px; overflow: auto;
+}
+.hc-msgnote { margin: 7px 0 0; font-size: 11.5px; color: var(--hc-muted); line-height: 1.5; }
+.hc-msgcopy { margin-top: 8px; font-size: 12px; padding: 5px 11px; }
+
+/* All six tag sets, because "the delivery tags are the same for all three" is a sentence
+   people have to take on trust and a table is not. */
+.hc-tagtable { margin: 14px 0 10px; }
+.hc-tagtableh { margin: 0 0 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-2); }
+.hc-tagtable table { width: 100%; border-collapse: collapse; }
+.hc-tagtable th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--hc-muted); padding: 0 10px 6px 0; font-weight: 700; }
+.hc-tagtable td { padding: 8px 10px 8px 0; border-top: 1px solid var(--border); vertical-align: top; font-size: 12.5px; font-weight: 650; }
+.hc-tagtable td em { display: block; font-style: normal; font-weight: 400; font-size: 11px; color: var(--hc-muted); }
+
+/* ---------------------------------------------------------------- FAQs
+   The front door. Two stages, because a merchant choosing plans and a merchant running a
+   live store are not asking the same questions, and mixing them is why 236 reads as a wall. */
+.hc-faq { max-width: 860px; }
+.hc-faqphase { display: inline-flex; margin: 4px 0 14px; }
+.hc-faqphase .hc-part em {
+  font-style: normal; margin-left: 7px; font-size: 11px; opacity: .62; font-variant-numeric: tabular-nums;
+}
+.hc-faqblurb { margin: 0 0 18px; }
+.hc-faqgroup { margin-bottom: 20px; }
+.hc-faqgrouph {
+  position: sticky; top: 52px; z-index: 5;
+  display: flex; align-items: baseline; gap: 8px;
+  margin: 0 0 6px; padding: 9px 0 7px;
+  font-size: 13px; font-weight: 740; letter-spacing: -0.005em;
+  background: linear-gradient(var(--page) 72%, transparent);
+}
+.hc-faqgrouph em { font-style: normal; font-size: 11px; font-weight: 600; color: var(--hc-muted); font-variant-numeric: tabular-nums; }
+.hc-faqgroup .hc-h3 { margin: 0 0 8px; }
+.hc-faqlist { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); }
+.hc-faqlist li { border-bottom: 1px solid var(--border); }
+.hc-faqq {
+  appearance: none; border: 0; background: none; cursor: pointer; font: inherit; width: 100%;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 11px 2px; text-align: left; font-size: 13.5px; font-weight: 620; color: var(--ink);
+}
+.hc-faqq:hover { color: var(--brand-deep); }
+.hc-faqlist li.on .hc-faqq { color: var(--brand-deep); }
+.hc-faqa { padding: 0 2px 14px; }
+.hc-faqpath { margin: 10px 0 0; font-size: 11.5px; color: var(--hc-muted); font-family: ui-monospace, Menlo, monospace; }
+.hc-faqfull { margin-top: 10px; font-size: 12px; padding: 5px 11px; }
+@media (max-width: 719px) { .hc-faqphase { display: flex; width: 100%; } .hc-faqphase .hc-part { flex: 1 1 0; justify-content: center; } }
+
+/* Parent and child, said out loud in every column rather than left to the tags. */
+.hc-splitrow td {
+  padding: 12px 0 5px; font-size: 10.5px; font-weight: 700; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--hc-muted); border: 0;
+}
+
+/* The rail, grouped. Seventeen flat categories is a list you read rather than scan. */
+/* The topic rail. A group is a row until it is opened, so the whole spine is eight rows
+   rather than twenty-five, and the count on each says where the mass is before you click. */
+.hc-navrule {
+  margin: 14px 0 5px; padding: 11px 10px 0; border-top: 1px solid var(--border);
+  font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--hc-muted);
+}
+.hc-navgroup { margin: 0; }
+.hc-navgrouph {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+  appearance: none; border: 0; background: transparent; color: var(--ink-2);
+  text-align: left; font: inherit; font-size: 13px; font-weight: 640;
+  padding: 7px 10px; border-radius: 8px; cursor: pointer;
+}
+.hc-navgrouph:hover { background: var(--card-2); color: var(--ink); }
+.hc-navgrouph:focus-visible { outline: 2px solid var(--brand-deep); outline-offset: -2px; }
+.hc-navgrouph.holds { color: var(--ink); }
+.hc-navgrouph span { flex: 1 1 auto; }
+.hc-navgrouph em { font-style: normal; font-size: 11px; color: var(--hc-muted); font-variant-numeric: tabular-nums; }
+.hc-navcaret {
+  flex: none; width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2.4;
+  stroke-linecap: round; stroke-linejoin: round; opacity: .55;
+  transition: transform .14s ease;
+}
+.hc-navgroup.open .hc-navcaret { transform: rotate(90deg); opacity: .8; }
+/* Indented under its heading, and hung off a rule so the group reads as one block. */
+.hc-navsub { margin-left: 19px; padding-left: 10px; border-left: 1px solid var(--border); border-radius: 0 8px 8px 0; font-size: 12.5px; }
+.hc-navsub.on { border-left-color: var(--brand-deep); }
+
+/* A question you can open should look like one. */
+.hc-faqq { position: relative; padding-right: 26px; }
+.hc-faqq::after {
+  content: ""; position: absolute; right: 6px; top: 50%; width: 7px; height: 7px;
+  border-right: 1.8px solid currentColor; border-bottom: 1.8px solid currentColor;
+  transform: translateY(-70%) rotate(45deg); opacity: .55; transition: transform .15s;
+}
+.hc-faqlist li.on .hc-faqq::after { transform: translateY(-30%) rotate(225deg); opacity: 1; }
+.hc-faqq:hover { background: var(--card-2); }
+.hc-faqq > span { flex: 1 1 auto; }
+.hc-faqlist li { border-radius: 8px; }
+.hc-faqlist li.on { background: var(--card-2); }
+.hc-faqa { padding: 0 12px 14px; }
+.hc-faqq { padding-left: 10px; padding-right: 30px; }
+
+/* Where an answer is really a screen in this app. */
+.hc-faqjump { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.hc-faqjump .hc-btn { font-size: 12px; padding: 5px 11px; }
+.hc-sugask { width: 100%; margin-top: 4px; }
+
+/* Purchase Contracts on Polaris' own surface, so the two admin screens in this step look
+   like the two admin screens they are rather than like this page. */
+.hc-contracts.pl .pl-card { padding: 0; overflow: hidden; }
+.hc-contracts .hc-ctabs {
+  display: flex; gap: 0; border-bottom: 1px solid var(--pl-line); padding: 0 14px;
+}
+.hc-contracts .hc-ctab {
+  appearance: none; border: 0; background: none; cursor: pointer; font: inherit;
+  font-size: 13px; font-weight: 600; color: var(--pl-sub); padding: 12px 10px;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.hc-contracts .hc-ctab.on { color: var(--pl-ink); border-bottom-color: #303030; }
+.hc-contracts .hc-cfilters { display: flex; gap: 6px; padding: 12px 14px; flex-wrap: wrap; }
+.hc-contracts .hc-cfilter {
+  appearance: none; border: 0; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 550;
+  background: #ebebeb; color: var(--pl-ink); border-radius: 8px; padding: 4px 11px;
+}
+.hc-contracts .hc-cfilter.on { background: #303030; color: #fff; }
+.hc-contracts .hc-shopscroll { padding: 0 14px 12px; }
+.hc-contracts .hc-ctable { color: var(--pl-ink); font-size: 13px; }
+.hc-contracts .hc-ctable th {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--pl-sub);
+  border-bottom: 1px solid var(--pl-line); padding: 8px 12px 8px 0; font-weight: 650;
+}
+.hc-contracts .hc-ctable td { border-top: 1px solid var(--pl-line); padding: 12px 12px 12px 0; }
+.hc-contracts .hc-ctable td em { color: var(--pl-sub); }
+.hc-contracts .hc-cbar { background: #e3e3e3; }
+.hc-contracts .hc-cbar i { background: #0c5132; }
+.hc-contracts .hc-pill { background: #ebebeb; color: var(--pl-ink); }
+.hc-contracts .hc-pill.p-w { background: #cdfee1; color: #0c5132; }
+.hc-contracts .hc-pill.p-l { background: #ffd8a8; color: #5e4200; }
+.hc-contracts .hc-cempty, .hc-contracts .hc-cfoot { color: var(--pl-sub); padding: 14px; }
+.hc-contracts .hc-noorder { color: #005bd3; }
+
+/* ---------------------------------------------------------------- onboarding timeline
+   Five phases on one rail, each saying what it is for, with its own steps inside it. A flat
+   list of twenty-five told you the order and nothing about where a store actually is. */
+.hc-timeline { list-style: none; margin: 18px 0 0; padding: 0; }
+.hc-tlphase { position: relative; padding: 0 0 26px 40px; }
+.hc-tlphase::before {
+  content: ""; position: absolute; left: 13px; top: 26px; bottom: 0; width: 2px; background: var(--border);
+}
+.hc-tlphase:last-child::before { display: none; }
+.hc-tlphase.done::before { background: var(--brand-deep); }
+.hc-tlnode {
+  position: absolute; left: 0; top: 0; width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12.5px; font-weight: 750; background: var(--sunken); color: var(--hc-muted);
+  border: 2px solid var(--border);
+}
+.hc-tlphase.doing .hc-tlnode { border-color: var(--brand-deep); color: var(--brand-deep); background: var(--card); }
+.hc-tlphase.done .hc-tlnode { background: var(--brand-deep); border-color: var(--brand-deep); color: #fff; }
+.hc-tlbody .hc-h2 { display: flex; align-items: baseline; gap: 10px; margin: 2px 0 2px; }
+.hc-tlbody .hc-h2 em {
+  font-style: normal; font-size: 11.5px; font-weight: 650; color: var(--hc-muted);
+  background: var(--sunken); border-radius: 999px; padding: 2px 9px;
+}
+.hc-tlpurpose { margin: 0 0 10px; font-size: 12.5px; line-height: 1.55; color: var(--hc-muted); max-width: 70ch; }
+
+/* One recording, on its own page. */
+.hc-watch { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
+.hc-watchbox { width: 100%; max-width: 1000px; }
+.hc-watchbox h1 { margin: 0 0 12px; font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
+.hc-watchbox video { width: 100%; border-radius: 12px; background: #000; display: block; }
+.hc-watchnote { margin: 12px 0 0; font-size: 12.5px; color: var(--hc-muted); line-height: 1.55; }
+.hc-watchfoot { margin: 16px 0 0; font-size: 12.5px; }
+.hc-watchfoot a { color: var(--brand-deep); }
+
+/* A walkthrough that has been asked for and not recorded. Visible, and not clickable. */
+.hc-htitem.pending { cursor: default; opacity: .72; }
+.hc-htitem.pending:hover { background: transparent; }
+.hc-htpending {
+  margin-left: auto; font-style: normal; font-size: 10.5px; font-weight: 700;
+  letter-spacing: .05em; text-transform: uppercase; color: var(--hc-limit);
+  background: var(--hc-limit-soft); border-radius: 999px; padding: 2px 8px;
+}
+
+.hc-faqpending {
+  display: inline-flex; align-items: center; font-size: 11.5px; font-weight: 650;
+  color: var(--hc-limit); background: var(--hc-limit-soft); border-radius: 8px; padding: 5px 10px;
+}
+
+/* Phase anchors, at the top, so a five-phase timeline does not have to be scrolled to be
+   navigated. `scroll-margin-top` keeps a jumped-to phase clear of the sticky header. */
+.hc-tlnav { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 20px; }
+.hc-tlnav button {
+  display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+  appearance: none; font: inherit;
+  background: var(--card); border: 1px solid var(--border); border-radius: 999px;
+  padding: 6px 13px 6px 7px; color: var(--ink-2); font-size: 12.5px; font-weight: 620;
+}
+.hc-tlnav button:focus-visible { outline: 2px solid var(--brand-deep); outline-offset: 2px; }
+.hc-tlnav button:hover { border-color: var(--brand-deep); color: var(--ink); }
+.hc-tlnav b {
+  width: 20px; height: 20px; border-radius: 50%; background: var(--sunken); color: var(--hc-muted);
+  display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 750;
+}
+.hc-tlnav em { font-style: normal; font-size: 11px; color: var(--hc-muted); }
+.hc-tlphase { scroll-margin-top: calc(var(--hc-bar) + 24px); }
+
+/* FAQ typography and section anchors. A group heading was the same weight as the questions
+   under it, which is why "The plans" read as another question rather than as the thing the
+   next six are about. */
+.hc-faqgrouph {
+  margin: 0 0 6px; font-size: 16.5px; font-weight: 720; letter-spacing: -.012em; color: var(--ink);
+}
+.hc-faqgroup { margin-bottom: 26px; scroll-margin-top: calc(var(--hc-bar) + var(--hc-sub) + 10px); }
+.hc-faq .hc-h1 { font-size: 27px; letter-spacing: -.022em; }
+.hc-faqq { font-size: 14px; font-weight: 600; padding-top: 13px; padding-bottom: 13px; }
+.hc-faqlist li.on .hc-faqq { font-weight: 680; }
+.hc-navfaq { font-weight: 700; }
+
+
+/* ---------------------------------------------------- Shopify's Orders index, 1:1
+   Column order, badges, hairlines and metrics are Polaris': 13px body, #E3E3E3 rules, the
+   status badge as a tinted pill with a plain filled dot and no glyph. Lives inside `.pl`,
+   so it is on Shopify's light ground in either theme. */
+.pl-orders {
+  width: 100%; border-collapse: collapse; font-size: 13px;
+  background: var(--pl-card); border: 1px solid var(--pl-line); border-radius: 12px;
+  overflow: hidden; table-layout: auto;
+}
+.pl-orders thead th {
+  text-align: left; font-size: 12px; font-weight: 600; color: var(--pl-sub);
+  background: #fafafa; border-bottom: 1px solid var(--pl-line);
+  padding: 9px 12px; white-space: nowrap;
+}
+.pl-orders td { padding: 11px 12px; border-top: 1px solid var(--pl-line); vertical-align: top; }
+.pl-orders tbody tr:first-child td { border-top: 0; }
+.pl-orders .pl-r { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pl-orders td b { font-weight: 600; }
+.pl-orders td em {
+  display: block; font-style: normal; font-size: 12px; color: var(--pl-sub); margin-top: 3px;
+}
+.pl-orow:hover td { background: #fafafa; }
+.pl-oparent td { background: #fff8e8; }
+.pl-oparent:hover td { background: #fff4db; }
+.pl-orowsplit td {
+  padding: 9px 12px 7px; border-top: 1px solid var(--pl-line); background: #f6f6f6;
+  font-size: 11px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--pl-sub);
+}
+/* A delivery with no order yet is not a faint row, it is an absent one. Hatched, because a
+   merchant reading this needs "nothing is in your admin" to be the loudest thing on the row. */
+.pl-opending td {
+  background: repeating-linear-gradient(135deg, transparent 0 7px, rgba(0, 0, 0, .035) 7px 14px);
+}
+.pl-onone { color: #8a8a8a; }
+.pl-sched { color: #005bd3; }
+.pl-await { color: #8a6116; }
+.pl-otags { max-width: 260px; }
+.pl-badge.warn { background: #ffd79d; color: #5e4200; }
+.pl-orders .pl-badge { white-space: nowrap; }
+.pl .hc-shoptag { background: #ebebeb; color: var(--pl-ink); }
+
+@media (max-width: 899px) {
+  .pl-orders { font-size: 12px; min-width: 760px; }
+  .pl-orders thead th, .pl-orders td { padding: 8px 9px; }
+}
+
+/* ------------------------------------------------------------ category references
+   Derived from the pilot rows at render, never copied into a file, so the page shows what
+   the team last logged. A thinly logged category says so rather than quoting a median. */
+.hc-refgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 11px; margin: 4px 0 18px; }
+.hc-ref { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+.hc-ref.on { border-color: var(--border-2); }
+.hc-refh {
+  display: flex; align-items: baseline; gap: 8px; width: 100%;
+  appearance: none; border: 0; background: none; padding: 0; cursor: pointer;
+  font: inherit; color: var(--ink); text-align: left;
+}
+.hc-refh b { font-size: 13.5px; font-weight: 700; flex: 1 1 auto; }
+.hc-refh em { font-style: normal; font-size: 11.5px; color: var(--hc-muted); font-variant-numeric: tabular-nums; }
+.hc-refh:focus-visible { outline: 2px solid var(--brand-deep); outline-offset: 3px; }
+.hc-reffacts { margin: 10px 0 0; display: grid; gap: 3px; }
+.hc-reffacts > div { display: grid; grid-template-columns: 74px 1fr; gap: 8px; font-size: 12.5px; }
+.hc-reffacts dt { color: var(--hc-muted); }
+.hc-reffacts dd { margin: 0; font-variant-numeric: tabular-nums; }
+.hc-refgap { color: var(--hc-muted); font-style: italic; }
+.hc-refthin {
+  margin: 10px 0 0; font-size: 11.5px; line-height: 1.5; color: var(--hc-limit);
+  background: var(--hc-limit-soft); border-radius: 8px; padding: 7px 9px;
+}
+.hc-refopen { margin-top: 11px; padding-top: 10px; border-top: 1px solid var(--border); }
+.hc-refline { margin: 0 0 6px; font-size: 12px; line-height: 1.55; color: var(--ink-2); }
+.hc-refline:last-child { margin-bottom: 0; }
+.hc-reffoot { margin-top: 2px; }
+
+/* The cohort's own numbers, beside the suggestion they replace. */
+.hc-sugcohort {
+  margin: 0 0 12px; font-size: 12.5px; line-height: 1.55;
+  background: var(--hc-ok-soft); color: var(--ink-2); border-radius: 9px; padding: 8px 10px;
+}
+.hc-sugcohort.thin { background: var(--sunken); }
+.hc-sugcohort b { color: var(--ink); }
+
+/* ---- the widget's whole token set ------------------------------------------------------
+   A reference, not a control, so it is collapsed: the call wants six chips and a preview,
+   dev wants all twenty-six to paste into the app. */
+.hc-tok { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 10px; }
+.hc-tokh {
+  display: flex; align-items: baseline; gap: 10px; width: 100%;
+  appearance: none; border: 0; background: none; padding: 0; cursor: pointer;
+  font: inherit; color: var(--ink); text-align: left;
+}
+.hc-tokh b { font-size: 12.5px; font-weight: 700; flex: 1 1 auto; }
+.hc-tokh span { font-size: 11.5px; color: var(--brand-deep); }
+.hc-tokh:focus-visible { outline: 2px solid var(--brand-deep); outline-offset: 3px; }
+.hc-toknote { margin: 8px 0 10px; font-size: 11.5px; line-height: 1.55; color: var(--hc-muted); }
+.hc-toksec { margin-bottom: 11px; }
+.hc-toksech {
+  margin: 0 0 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--hc-muted);
+}
+.hc-tokrows { margin: 0; display: grid; gap: 2px; }
+.hc-tokrows > div { display: grid; grid-template-columns: 150px 1fr; gap: 10px; align-items: baseline; font-size: 12px; }
+.hc-tokrows dt { color: var(--ink-2); }
+.hc-tokrows dd { margin: 0; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; min-width: 0; }
+.hc-tokrows dd b { font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; font-weight: 600; }
+.hc-tokrows dd span { color: var(--hc-muted); font-size: 11px; line-height: 1.45; }
+.hc-tokdot {
+  width: 11px; height: 11px; border-radius: 3px; align-self: center;
+  border: 1px solid var(--border-2); flex: none;
+}
+.hc-tokhow { font-style: normal; font-size: 9.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; border-radius: 4px; padding: 0 4px; }
+.hc-tokhow.h-direct { background: var(--hc-ok-soft); color: var(--hc-ok); }
+.hc-tokhow.h-derived { background: var(--sunken); color: var(--hc-muted); }
+.hc-tokhow.h-logic { background: var(--card-2); color: var(--hc-muted); }
+.hc-tokcopy { font-size: 12px; padding: 5px 11px; }
+
+/* Which order is being drawn: the edited checkout order, or one of the deliveries after it.
+   Sits under the payment-type tabs, indented, because it is a choice within that choice. */
+.hc-whichorder { margin-top: 8px; }
+.hc-whichorder .hc-modepillb { font-size: 12.5px; }
+.pl-badge.warn { background: #ffd79d; color: #5e4200; }
+
+/* ---- two jobs, two rows ---------------------------------------------------------------
+   Setting a store up is work we do once, on a call. The Help Centre is what a merchant
+   opens six weeks later on their own. As five flat tabs the two halves of each job sat as
+   far apart as the jobs themselves. */
+.hc-subrow { border-bottom: 1px solid var(--border); background: var(--page); }
+.hc-subin {
+  display: flex; gap: 2px; width: 100%; max-width: var(--hc-chrome);
+  margin: 0 auto; padding: 0 var(--hc-pad);
+}
+.hc-sub {
+  appearance: none; border: 0; background: none; cursor: pointer; font: inherit;
+  font-size: 13px; font-weight: 600; color: var(--hc-muted);
+  padding: 10px 12px; position: relative;
+}
+.hc-sub:hover { color: var(--ink); }
+.hc-sub.on { color: var(--ink); font-weight: 700; }
+.hc-sub.on::after {
+  content: ""; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 2px;
+  background: var(--brand-deep); border-radius: 2px 2px 0 0;
+}
+.hc-sub:focus-visible { outline: 2px solid var(--brand-deep); outline-offset: -3px; }
+.hc-navfirst { margin-top: 0; padding-top: 0; border-top: 0; }
+/* The sub row is sticky under the bar, so the group's halves stay reachable while reading. */
+/* One number for the stack, so the three sticky layers cannot disagree. They were 52, 96
+   and 68 hard-coded in three places, and the bar is 53px on one breakpoint and two rows on
+   another, so each of them was right on one screen and wrong on the rest. */
+.hc { --hc-bar: 53px; --hc-sub: 39px; }
+/* The sub row scrolls away with the page. Pinned under an already-pinned bar it was a
+   second band of chrome over the reading column, and on the Simulate tab it cut through the
+   card underneath it. Getting back to it is one button, bottom right, and only once you are
+   far enough down to have lost it. */
+@media (min-width: 768px) {
+  .hc-faqgrouph { top: var(--hc-bar); }
+  .hc-nav { top: calc(var(--hc-bar) + 14px); }
+  .hc-tlphase { scroll-margin-top: calc(var(--hc-bar) + 14px); }
+}
+.hc-totop {
+  /* Faded, not unmounted: it appears after a scroll or two and has something to animate. */
+  opacity: 0; pointer-events: none; transform: translateY(6px);
+  transition: opacity .16s ease, transform .16s ease;
+  position: fixed; right: 18px; bottom: 18px; z-index: 40;
+  appearance: none; cursor: pointer; font: inherit; font-size: 12px; font-weight: 620;
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 13px;
+  border: 1px solid var(--border-2); border-radius: 999px;
+  background: var(--card); color: var(--ink-2); box-shadow: 0 8px 22px rgba(0,0,0,.14);
+}
+.hc-totop.on { opacity: 1; pointer-events: auto; transform: none; }
+.hc-totop:hover { color: var(--ink); border-color: var(--brand-deep); }
+.hc-totop svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2.2; }
+/* The chat button owns the bottom right corner, so this sits above it when both are up. */
+.hc-totop.withfab { bottom: 74px; }
+/* No sub row on those parts, so the rail and the headings sit one layer higher. */
+.hc[data-hc-part="queries"] .hc-nav,
+.hc[data-hc-part="internal"] .hc-nav { top: calc(var(--hc-bar) + 14px); }
+
+/* ---- the references drawer -------------------------------------------------------------
+   Every store and what it runs, by category, glanced at mid-form and closed. The panel
+   beside the fields answers "what does my category do"; this answers "show me all of them". */
+.hc-refbtn {
+  appearance: none; border: 1px solid var(--border-2); background: var(--card); cursor: pointer;
+  font: inherit; font-size: 11px; font-weight: 620; color: var(--ink-2);
+  border-radius: 999px; padding: 2px 9px; margin-left: 8px; vertical-align: middle;
+}
+.hc-refbtn:hover { border-color: var(--brand-deep); color: var(--ink); }
+.hc-drawerwrap { position: fixed; inset: 0; z-index: 80; }
+.hc-drawerscrim { position: absolute; inset: 0; background: rgba(0, 0, 0, .34); }
+.hc-drawer {
+  position: absolute; top: 0; right: 0; bottom: 0; width: min(620px, 100%);
+  background: var(--page); border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; box-shadow: -18px 0 46px rgba(0, 0, 0, .22);
+}
+.hc-drawerh {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 16px 18px; border-bottom: 1px solid var(--border);
+}
+.hc-drawerh b { display: block; font-size: 15px; }
+.hc-drawerh span { display: block; font-size: 12px; color: var(--hc-muted); margin-top: 2px; }
+.hc-drawerh button {
+  margin-left: auto; appearance: none; border: 0; background: none; cursor: pointer;
+  font-size: 22px; line-height: 1; color: var(--hc-muted); padding: 0 2px;
+}
+.hc-drawerh button:hover { color: var(--ink); }
+.hc-drawerbody { flex: 1 1 auto; overflow: auto; padding: 12px 18px 26px; }
+/* The category rail. It is the drawer's navigation, so it stays put while the stores under
+   it scroll: a merchant looking for their own category should never have to scroll back up
+   to change it. */
+.hc-drawerrail {
+  display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 18px;
+  border-bottom: 1px solid var(--border); background: var(--card);
+  position: sticky; top: 0; z-index: 2;
+}
+.hc-drawercat {
+  appearance: none; cursor: pointer; font: inherit; font-size: 12px; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px;
+  border: 1px solid var(--border); border-radius: 100px;
+  background: var(--sunken); color: var(--ink-2);
+}
+.hc-drawercat:hover { border-color: var(--border-2); color: var(--ink); }
+.hc-drawercat.on { background: var(--brand); color: var(--brand-ink); border-color: transparent; }
+.hc-drawercat em { font-style: normal; font-size: 10.5px; opacity: .72; font-variant-numeric: tabular-nums; }
+/* The category in one sentence, above its stores. */
+.hc-drawersum { margin: 0 0 4px; font-size: 13px; line-height: 1.55; color: var(--ink-2); }
+.hc-drawersum b { color: var(--ink); font-weight: 700; }
+.hc-drawercath {
+  display: flex; align-items: baseline; gap: 9px; width: 100%;
+  appearance: none; border: 0; background: none; cursor: pointer; font: inherit;
+  color: var(--ink); text-align: left; padding: 12px 0;
+}
+.hc-drawercath b { font-size: 13.5px; font-weight: 700; }
+.hc-drawercath em { font-style: normal; font-size: 11px; color: var(--hc-muted); }
+.hc-drawercath span { margin-left: auto; font-size: 12px; color: var(--hc-muted); text-align: right; }
+.hc-drawerthin {
+  margin: 0 0 10px; font-size: 11.5px; line-height: 1.5;
+  background: var(--hc-limit-soft); color: var(--hc-limit); border-radius: 8px; padding: 7px 9px;
+}
+.hc-drawertable { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 14px; }
+.hc-drawertable th {
+  text-align: left; font-size: 10.5px; font-weight: 700; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--hc-muted); padding: 0 8px 6px 0;
+}
+.hc-drawertable td { padding: 6px 8px 6px 0; border-top: 1px solid var(--border); vertical-align: top; }
+.hc-drawertable i { font-style: normal; color: var(--hc-muted); }
+.hc-drawergap td { opacity: .62; }
+@media (max-width: 719px) { .hc-drawer { width: 100%; } }
+
+/* One store, one plan, said plainly. The columns are "Monthly - 3, 6, 9" and "25%", which
+   is a ladder written as two cells; showing the cells makes every reader parse them again. */
+.hc-drawerstores { list-style: none; margin: 0 0 16px; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.hc-drawerstores > li { padding: 10px 0; border-top: 1px solid var(--border); }
+.hc-drawerstoreh { display: flex; align-items: baseline; gap: 9px; }
+.hc-drawerstoreh b { font-size: 13px; font-weight: 640; }
+.hc-drawerpct {
+  margin-left: auto; font-size: 11.5px; font-weight: 700;
+  background: var(--hc-ok-soft); color: var(--hc-ok); border-radius: 5px; padding: 1px 7px;
+}
+.hc-drawerplans { list-style: none; margin: 5px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 5px; }
+.hc-drawerplans li {
+  font-size: 11.5px; background: var(--sunken); color: var(--ink-2);
+  border-radius: 6px; padding: 2px 8px;
+}
+.hc-drawerunknown { color: var(--hc-muted) !important; font-style: italic; }
+.hc-drawermeta { margin: 6px 0 0; font-size: 11.5px; color: var(--hc-muted); }
+.hc-drawerraw {
+  margin: 4px 0 0; font-size: 10.5px; color: var(--hc-muted); opacity: .75;
+  font-family: ui-monospace, Menlo, monospace;
+}
+.hc-drawergap { opacity: .62; }
+
+/* Transparent is a value a surface can hold, so the swatch has to show it as one rather
+   than as a white chip that reads identically to #FFFFFF. */
+.hc-tokdot[data-transparent="1"], .hc-bfchip i[data-transparent="1"] {
+  background-image:
+    linear-gradient(45deg, rgba(0,0,0,.18) 25%, transparent 25%, transparent 75%, rgba(0,0,0,.18) 75%),
+    linear-gradient(45deg, rgba(0,0,0,.18) 25%, transparent 25%, transparent 75%, rgba(0,0,0,.18) 75%);
+  background-size: 6px 6px;
+  background-position: 0 0, 3px 3px;
+  background-color: transparent !important;
+}
+
+/* One store, as a card. A row of five cells made you read the sheet again. */
+.hc-scard { padding: 12px 0; border-top: 1px solid var(--border); }
+.hc-scard.empty { opacity: .6; }
+.hc-scardh { display: flex; align-items: baseline; gap: 9px; }
+.hc-scardh b { font-size: 13.5px; font-weight: 680; }
+.hc-scardfacts { margin: 8px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 3px 12px; }
+.hc-scardfacts > div { display: grid; grid-template-columns: 66px 1fr; gap: 8px; font-size: 11.5px; }
+.hc-scardfacts dt { color: var(--hc-muted); }
+.hc-scardfacts dd { margin: 0; color: var(--ink-2); }
+.hc-scardnote { margin: 8px 0 0; font-size: 11.5px; line-height: 1.55; color: var(--ink-2); }
+.hc-scardgap { margin: 6px 0 0; font-size: 11px; color: var(--hc-muted); font-style: italic; }
+
+/* The column hint is a tooltip on its heading, not a paragraph under it: five of them is a
+   column of prose before the first card. */
+/* The board's own styles live in `app/globals.css`, which is the stylesheet the board
+   page loads. This file is the Help Centre's and nine `.wb-` rules were written into it
+   by mistake: they had no effect at all, and the Work filter opened unstyled and in the
+   wrong place for as long as they sat here. */
+
+/* ---- into the module, out of the answer -------------------------------------------------
+   An answer that ends in "so set it up like this" needs a way to the place you set it up.
+   Quiet by default and only louder on hover: it is an exit, not the point of the answer. */
+.hc-jump { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.hc-jumpbtn {
+  appearance: none; cursor: pointer; font: inherit; font-size: 11.5px; font-weight: 620;
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px;
+  border: 1px solid var(--border); border-radius: 999px;
+  background: var(--sunken); color: var(--ink-2);
+}
+.hc-jumpbtn:hover { border-color: var(--brand-deep); color: var(--ink); }
+.hc-jumpbtn svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2.2; }
+
+/* The public link sits at the right edge of the bar, not against the search box. It is the
+   link you hand a merchant, so it reads as its own action rather than as part of searching. */
+.hc-publink { margin-left: auto; flex: none; }
+@media (max-width: 1023px) { .hc-publink { margin-left: 0; } }
