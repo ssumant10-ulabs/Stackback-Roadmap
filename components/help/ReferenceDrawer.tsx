@@ -2,8 +2,8 @@
 import { useEffect, useMemo, useState } from "react";
 import type { PilotStore } from "@/lib/types";
 import {
-  categoryReferences, coverage, discountBand, freqLabel, parseDiscounts, parsePlans,
-  type CategoryReference,
+  categoryReferences, discountBand, freqLabel, parseDiscounts, parsePlans,
+  paymentLabel, shippingLabel, type CategoryReference,
 } from "@/lib/help/references";
 import { REFERENCE_SNAPSHOT, REFERENCE_SNAPSHOT_TAKEN, type ReferenceSnapshotStore } from "@/lib/help/reference-snapshot";
 
@@ -52,12 +52,12 @@ export default function ReferenceDrawer({ pilots, onClose, anonymous }: {
   if (!refs.length || anonymous) return <Snapshot onClose={onClose} />;
 
   return (
-    <div className="hc-drawerwrap" role="dialog" aria-modal="true" aria-label="What our live stores run">
+    <div className="hc-drawerwrap" role="dialog" aria-modal="true" aria-label="What some of our live stores run on">
       <div className="hc-drawerscrim" onClick={onClose} role="presentation" />
       <aside className="hc-drawer">
         <header className="hc-drawerh">
           <div>
-            <b>What our live stores run</b>
+            <b>Here&rsquo;s what some of our live stores run on</b>
             <span>{total} stores across {refs.length} categories, {withPlans} with their plans set up.</span>
           </div>
           <button type="button" onClick={onClose} aria-label="Close">&times;</button>
@@ -166,8 +166,8 @@ function planOf(p: PilotStore) {
 
   const shownLines = lines.length ? lines : snapLines;
   const discount = d.length ? Math.max(...d) : snap?.discount ?? null;
-  const payment = clean(p.paymentType) ?? snap?.payment ?? null;
-  const shipping = clean(p.shipping) ?? snap?.shipping ?? null;
+  const payment = paymentLabel(clean(p.paymentType) ?? snap?.payment);
+  const shipping = shippingLabel(clean(p.shipping) ?? snap?.shipping);
   const bundles = clean(p.bundles) ?? snap?.bundles ?? null;
 
   const fields: [string, string | null][] = [
@@ -182,7 +182,6 @@ function planOf(p: PilotStore) {
     logged: Boolean(shownLines.length || discount != null || payment),
     lines: shownLines,
     discount, payment, bundles, shipping,
-    theme: clean(p.themeNotes),
     missing: fields.filter(([, v]) => !v).map(([k]) => k),
   };
 }
@@ -213,12 +212,10 @@ function StoreCard({ p }: { p: PilotStore }) {
         </ul>
       )}
 
-      <dl className="hc-scardfacts">
-        <Fact k="Payment" v={plan.payment} />
-        <Fact k="Bundles" v={plan.bundles} />
-        <Fact k="Shipping" v={plan.shipping} />
-        <Fact k="Theme" v={plan.theme} />
-      </dl>
+      {/* The plans are what a merchant compares; how it is paid for and what shipping costs
+          are the follow-up question, so they fold away. `details` rather than state: it is
+          one per card in a list of forty and the browser already knows how to do this. */}
+      <Facts payment={plan.payment} bundles={plan.bundles} shipping={plan.shipping} />
 
       {plan.missing.length > 0 && (
         <p className="hc-scardgap">We do not have {plan.missing.join(", ")} for this store yet.</p>
@@ -227,9 +224,23 @@ function StoreCard({ p }: { p: PilotStore }) {
   );
 }
 
-function Fact({ k, v }: { k: string; v: string | null }) {
-  if (!v) return null;
-  return <div><dt>{k}</dt><dd>{v}</dd></div>;
+function Facts({ payment, bundles, shipping }: { payment: string | null; bundles: string | null; shipping: string | null }) {
+  const rows: [string, string][] = [
+    ["Payment", payment ?? ""], ["Shipping", shipping ?? ""], ["Bundles", bundles ?? ""],
+  ].filter(([, v]) => v) as [string, string][];
+  if (!rows.length) return null;
+  return (
+    <details className="hc-scarddet">
+      <summary>
+        <span className="hc-scardsum">
+          {payment}{payment && shipping ? " \u00b7 " : ""}{shipping ? `Shipping ${shipping}` : ""}
+        </span>
+      </summary>
+      <dl className="hc-scardfacts">
+        {rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
+      </dl>
+    </details>
+  );
 }
 
 /** The same question, answered from the snapshot, for the pages with no store list to read.
@@ -256,12 +267,12 @@ function Snapshot({ onClose }: { onClose: () => void }) {
   }, [onClose]);
 
   return (
-    <div className="hc-drawerwrap" role="dialog" aria-modal="true" aria-label="What our live stores run">
+    <div className="hc-drawerwrap" role="dialog" aria-modal="true" aria-label="What some of our live stores run on">
       <div className="hc-drawerscrim" onClick={onClose} role="presentation" />
       <aside className="hc-drawer">
         <header className="hc-drawerh">
           <div>
-            <b>What our live stores run</b>
+            <b>Here&rsquo;s what some of our live stores run on</b>
             <span>{total} stores across {REFERENCE_SNAPSHOT.length} categories, {withPlans} with their plans set up.</span>
           </div>
           <button type="button" onClick={onClose} aria-label="Close">&times;</button>
@@ -315,11 +326,8 @@ function Snapshot({ onClose }: { onClose: () => void }) {
                           ))}
                         </ul>
                       )}
-                      <dl className="hc-scardfacts">
-                        <Fact k="Payment" v={st.payment} />
-                        <Fact k="Bundles" v={st.bundles} />
-                        <Fact k="Shipping" v={st.shipping} />
-                      </dl>
+                      <Facts payment={paymentLabel(st.payment)} bundles={st.bundles}
+                        shipping={shippingLabel(st.shipping)} />
                     </li>
                   ))}
                 </ul>

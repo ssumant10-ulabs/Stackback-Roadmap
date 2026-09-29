@@ -1864,3 +1864,114 @@
    link you hand a merchant, so it reads as its own action rather than as part of searching. */
 .hc-publink { margin-left: auto; flex: none; }
 @media (max-width: 1023px) { .hc-publink { margin-left: 0; } }
+
+/* ---- a store's detail, folded ----------------------------------------------------------
+   The plan ladder is what a merchant compares. How it is paid for and what shipping costs
+   are the follow-up, so the summary line carries them in prose and the breakdown opens. */
+.hc-scarddet { margin: 7px 0 0; }
+.hc-scarddet summary {
+  list-style: none; cursor: pointer; display: flex; align-items: center; gap: 6px;
+  font-size: 11.5px; color: var(--ink-2);
+}
+.hc-scarddet summary::-webkit-details-marker { display: none; }
+.hc-scarddet summary::before {
+  content: ""; width: 0; height: 0; flex: none;
+  border-left: 4px solid currentColor; border-top: 3.5px solid transparent; border-bottom: 3.5px solid transparent;
+  opacity: .5; transition: transform .12s ease;
+}
+.hc-scarddet[open] summary::before { transform: rotate(90deg); }
+.hc-scarddet summary:hover { color: var(--ink); }
+.hc-scardsum { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Label above value, not beside it: at 66px the label column truncated every one of them. */
+.hc-scarddet .hc-scardfacts {
+  margin: 8px 0 2px; display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 10px;
+}
+.hc-scarddet .hc-scardfacts > div { display: block; }
+.hc-scarddet .hc-scardfacts dt {
+  font-size: 9.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--hc-muted); margin-bottom: 2px;
+}
+.hc-scarddet .hc-scardfacts dd { margin: 0; font-size: 12.5px; color: var(--ink); line-height: 1.4; }
+
+/* ---- Simulate, in two steps ------------------------------------------------------------
+   The customer picks a plan, and THEN there are orders. Opening on the orders made the
+   screen a diagram of something nobody had done yet. */
+.hc-simsteps {
+  list-style: none; margin: 0 0 14px; padding: 0; display: flex; gap: 6px; flex-wrap: wrap;
+}
+.hc-simsteps li, .hc-simsteps li button {
+  display: inline-flex; align-items: center; gap: 7px; font: inherit; font-size: 12px;
+  padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border);
+  background: var(--card); color: var(--hc-muted);
+}
+.hc-simsteps li button { border: 0; padding: 0; background: none; cursor: pointer; color: inherit; }
+.hc-simsteps li:has(button) { padding: 0; }
+.hc-simsteps li:has(button) button { padding: 6px 12px; }
+.hc-simsteps li b {
+  display: inline-grid; place-items: center; width: 17px; height: 17px; border-radius: 50%;
+  background: var(--sunken); font-size: 10.5px; font-weight: 700; color: var(--ink-2);
+}
+.hc-simsteps li.on { border-color: transparent; background: var(--brand); color: var(--brand-ink); }
+.hc-simsteps li.on b { background: color-mix(in srgb, var(--brand-ink) 18%, transparent); color: var(--brand-ink); }
+.hc-simchose { margin: -6px 0 12px; font-size: 12.5px; color: var(--ink-2); }
+
+.hc-simwrap { display: flex; flex-direction: column; gap: 14px; }
+/* The widget wears this page's own type and colours: it is here to be FOLLOWED, not judged.
+   `WidgetPreview` is the one that wears the store's. */
+.hc-widget {
+  max-width: 420px; border: 1px solid var(--border-2); border-radius: 14px; padding: 16px;
+  background: var(--card); display: flex; flex-direction: column; gap: 12px;
+}
+.hc-wprod { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.hc-wprod b { font-size: 14.5px; font-weight: 700; }
+.hc-wprod span { font-size: 12px; color: var(--hc-muted); }
+.hc-wbuy { display: flex; flex-direction: column; gap: 6px; }
+.hc-wopt {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  border: 1px solid var(--border); border-radius: 10px;
+}
+.hc-wopt.on { border-color: var(--brand-deep); background: var(--hc-ok-soft, var(--sunken)); }
+.hc-wopt div { display: flex; flex-direction: column; gap: 1px; }
+.hc-wopt b { font-size: 12.5px; font-weight: 640; }
+.hc-wopt em { font-style: normal; font-size: 11.5px; color: var(--hc-muted); }
+.hc-wradio {
+  width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--border-2); flex: none;
+}
+.hc-wradio.on { border-color: var(--brand-deep); box-shadow: inset 0 0 0 3px var(--brand-deep); }
+.hc-wfield { display: flex; align-items: center; gap: 9px; font-size: 12.5px; }
+.hc-wfield span { color: var(--hc-muted); }
+.hc-wfield select {
+  font: inherit; font-size: 12.5px; padding: 6px 9px; border-radius: 8px;
+  border: 1px solid var(--border-2); background: var(--card); color: var(--ink);
+}
+.hc-wplans { display: flex; flex-direction: column; gap: 6px; }
+.hc-wlabel {
+  font-size: 9.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--hc-muted);
+}
+.hc-wplan {
+  appearance: none; cursor: pointer; font: inherit; text-align: left;
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--ink);
+}
+.hc-wplan.on { border-color: var(--brand-deep); background: var(--hc-ok-soft, var(--sunken)); }
+.hc-wplan.on .hc-wradio { border-color: var(--brand-deep); box-shadow: inset 0 0 0 3px var(--brand-deep); }
+.hc-wplan b { font-size: 12.5px; font-weight: 640; }
+.hc-wplan em { font-style: normal; font-size: 11.5px; color: var(--hc-muted); margin-left: auto; }
+.hc-wplan i {
+  font-style: normal; font-size: 10px; font-weight: 700; letter-spacing: .03em;
+  padding: 2px 7px; border-radius: 999px; background: var(--hc-ok-soft, var(--sunken)); color: var(--brand-deep);
+}
+.hc-wmodes { display: flex; gap: 4px; padding: 3px; border-radius: 10px; background: var(--sunken); }
+.hc-wmode {
+  appearance: none; border: 0; cursor: pointer; font: inherit; font-size: 11.5px;
+  flex: 1; padding: 7px 6px; border-radius: 8px; background: none; color: var(--hc-muted);
+}
+.hc-wmode.on { background: var(--card); color: var(--ink); font-weight: 640; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.hc-wcharge { margin: 0; font-size: 12.5px; color: var(--ink-2); }
+.hc-wcta {
+  appearance: none; border: 0; cursor: pointer; font: inherit; font-size: 13px; font-weight: 680;
+  padding: 11px; border-radius: 10px; background: var(--brand); color: var(--brand-ink);
+}
+.hc-wcta:hover { filter: brightness(.96); }
+.hc-wfoot { margin: 0; font-size: 11px; color: var(--hc-muted); text-align: center; }
