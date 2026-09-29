@@ -5,7 +5,7 @@ import { SEED_VERSION, seed, stampIds } from "./seed";
 import { uid, newRoadmapId } from "./id";
 import { makeHelpers, pruneTasks, type Helpers } from "./teams";
 import { effStatus, normPriority, subtreeCounts, waveWord } from "./derive";
-import { STAGE_LABEL, STAGE_STATUS, defaultNodeStage, placeCard, stageForStatus, stageOf, teamToBoard, type BoardTeam, type BoardView, type CardKind, type ReviewWith, type Stage } from "./board";
+import { STAGE_LABEL, STAGE_STATUS, defaultNodeStage, defaultStage, placeCard, stageForStatus, stageOf, teamToBoard, type BoardTeam, type BoardView, type CardKind, type ReviewWith, type Stage } from "./board";
 import { reconcile } from "./dates";
 import { featureSeed } from "./featureSeed";
 import { pilotSeed } from "./pilotSeed";
@@ -736,31 +736,19 @@ export class Store {
 
   /** Move a card to a team, from the card's own menu. The same write the nudge makes. */
   moveToTeam(id: string, team: BoardTeam | null, stage: Stage) {
-    this.setStage(id, stage, { team, review: null });
+    /* Sent back to the pile: which pile is the card's own kind. The menu cannot know it, so
+       it passes the request and the answer is worked out here. */
+    const node = this.findEntry(id)?.node;
+    const kind = (node?.kind ?? this.features.find((x) => x.id === id)?.kind ?? "feature") as CardKind;
+    this.setStage(id, team ? stage : defaultStage(kind), { team, review: null });
   }
 
   setStage(id: string, stage: Stage, opts?: { team?: BoardTeam | null; review?: ReviewWith | null }) {
     const node = this.findEntry(id)?.node;
-    if (node) return this.setNodeStage(node, stage, opts);
-    const f = this.features.find((x) => x.id === id);
-    if (!f) return;
-    const was = stageOf(f);
-    if (was === stage && !opts) return;
-    f.stage = stage;
-    if (opts && "team" in opts) f.boardTeam = opts.team ?? null;
-    if (opts && "review" in opts) f.reviewWith = opts.review ?? null;
-    /* Only when nobody named a team in the same breath. Handing a card to PM IS an intake
-       stage plus an owner, and clearing the team unconditionally meant "Hand to PM" set the
-       owner and wiped it in the next line: PM's board could not be populated by hand at all,
-       and neither could its two intake columns. */
-    const named = Boolean(opts && "team" in opts && opts.team);
-    if ((stage === "bug" || stage === "feature") && !named) { f.boardTeam = null; f.reviewWith = null; }
-    // A review answer only means anything from the review onward.
-    if (!["dev_review", "dev_approved", "prod"].includes(stage)) f.reviewWith = null;
-    f.updatedAt = new Date().toISOString();
-    const who = f.boardTeam === "Engineering" ? "dev" : f.boardTeam === "Design" ? "design" : null;
-    this.log("stage", f.title, `${STAGE_LABEL[was]} to ${STAGE_LABEL[stage]}${who ? `, with ${who}` : ""}`);
-    this.commit();
+    /* `findEntry` returns a request AS a Node, so there is one path and this is it. There
+       used to be a second copy below for requests, unreachable for that reason, and by the
+       time anybody noticed the rule in it had drifted from the rule in this one. */
+    if (node) this.setNodeStage(node, stage, opts);
   }
 
   /** The same move on a roadmap task. Kept apart because the two records store different
@@ -771,12 +759,13 @@ export class Store {
     n.stage = stage;
     if (opts && "team" in opts) n.boardTeam = opts.team ?? null;
     if (opts && "review" in opts) n.reviewWith = opts.review ?? null;
-    /* Only when nobody named a team in the same breath. Handing a card to PM IS an intake
-       stage plus an owner, and clearing the team unconditionally meant "Hand to PM" set the
-       owner and wiped it in the next line: PM's board could not be populated by hand at all,
-       and neither could its two intake columns. */
-    const named = Boolean(opts && "team" in opts && opts.team);
-    if ((stage === "bug" || stage === "feature") && !named) { n.boardTeam = null; n.reviewWith = null; }
+    /* Only when the caller EXPLICITLY passes `team: null`, which is "Back to the backlog"
+       saying nobody has this. Clearing it whenever a team was not mentioned broke two things
+       in turn: "Hand to PM" set the owner and wiped it in the next line, and dragging a card
+       to the Roadmap's Not started cleared its owner — and that lens shows owned work only,
+       so the card vanished from the board it had just been dropped on. */
+    const cleared = Boolean(opts && "team" in opts && !opts.team);
+    if ((stage === "bug" || stage === "feature") && cleared) { n.boardTeam = null; n.reviewWith = null; }
     if (!["dev_review", "dev_approved", "prod"].includes(stage)) n.reviewWith = null;
     /* The checkbox follows the column, because a card that reads planned while it sits in
        In progress is exactly the drift this board exists to remove. Production is the only
@@ -786,6 +775,7 @@ export class Store {
     else if (STAGE_STATUS[stage] && n.status !== STAGE_STATUS[stage]) {
       n.status = STAGE_STATUS[stage] as Status;
     }
+    if ("updatedAt" in n) (n as { updatedAt?: string }).updatedAt = new Date().toISOString();
     const team = n.boardTeam ?? teamToBoard(n.team);
     const who = team === "Engineering" ? "dev" : team === "Design" ? "design" : null;
     this.log("stage", n.title, `${STAGE_LABEL[was]} to ${STAGE_LABEL[stage]}${who ? `, with ${who}` : ""}`, n.id);
@@ -804,12 +794,15 @@ export class Store {
 
   /** The card type tag: bug, feature or landing page. Set on either record. */
   setCardKind(id: string, kind: CardKind) {
+    /* Intake has one column per kind, so a card re-tagged while it is still in the pile has
+       to move with its tag. In flight it does not: the stage is where the work is and the
+       kind is what the work is, which are different questions. */
+    const atIntake = (st: Stage | null | undefined) => st === "bug" || st === "feature";
     const node = this.findEntry(id)?.node;
-    if (node) { node.kind = kind; this.commit(); return; }
-    const f = this.features.find((x) => x.id === id);
-    if (!f) return;
-    f.kind = kind;
-    f.updatedAt = new Date().toISOString();
+    if (!node) return;
+    node.kind = kind;
+    if (atIntake(node.stage)) node.stage = defaultStage(kind);
+    if ("updatedAt" in node) (node as { updatedAt?: string }).updatedAt = new Date().toISOString();
     this.commit();
   }
 

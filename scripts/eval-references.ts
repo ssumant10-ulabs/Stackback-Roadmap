@@ -56,6 +56,13 @@ for (const c of fx.categories as string[]) {
   if (!categoryIdFor(c)) { bad++; console.log(`CAT   ${JSON.stringify(c)} maps to nothing`); }
 }
 
+/* Shapes the live tab does not hold today but the seed and earlier captures do. They are
+   part of the contract: a cell the parser has already been taught must not stop reading. */
+for (const [cell, want] of fx.alsoSeen.rows as [string, string][]) {
+  const got = show(parsePlans(cell));
+  if (got !== want) { bad++; console.log(`SEEN  ${JSON.stringify(cell)}\n      want ${want}\n      got  ${got}`); }
+}
+
 const rows = fx.rows.length;
 const read = fx.rows.filter(([, , f]: string[]) => parsePlans(f).length).length;
 console.log(`\n${read}/${rows} live plan cells read, ${rows - bad ? "" : ""}${bad} failure${bad === 1 ? "" : "s"}`);

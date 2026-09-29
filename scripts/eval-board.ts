@@ -10,7 +10,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  ALL_KINDS, ALL_STAGES, BOARD_VIEWS, VIEW_BY_ID, fits, placeCard, stageForDrop, stageOf,
+  ALL_KINDS, ALL_STAGES, BOARD_VIEWS, VIEW_BY_ID, defaultStage, fits, placeCard, stageForDrop, stageOf,
+  type BoardColumn, type Drop,
   type BoardTeam, type BoardView, type CardKind, type ReviewWith, type Stage,
 } from "../lib/board";
 
@@ -177,6 +178,7 @@ ok(stageOf({ kind: "feature" }) === "feature", "a request with no stage is a req
 ok(stageOf({ kind: "bug", stage: "prod" }) === "prod", "a stored stage wins over the kind");
 
 live();
+roundTrip();
 
 console.log(fails ? `\nFAIL: ${fails}` : "\nPASS");
 process.exit(fails ? 1 : 0);
@@ -191,11 +193,11 @@ function dropAsk(c: Parameters<typeof stageForDrop>[0], team: BoardTeam | null):
 }
 function dropStage(c: Parameters<typeof stageForDrop>[0], team: BoardTeam | null): Stage | null {
   const r = stageForDrop(c, team);
-  return "ask" in r ? null : r.stage;
+  return "ask" in r || !("stage" in r) ? null : r.stage;
 }
 function dropReview(c: Parameters<typeof stageForDrop>[0], team: BoardTeam | null): ReviewWith | null | undefined {
   const r = stageForDrop(c, team);
-  return "ask" in r ? null : r.review;
+  return "ask" in r || !("stage" in r) ? null : r.review;
 }
 
 
@@ -282,4 +284,86 @@ function live() {
   ok((tally.design || 0) > 0, `Design's board is not empty (${tally.design || 0})`);
   ok((tally.dev || 0) > 0, `Dev's board is not empty (${tally.dev || 0})`);
   ok((tally.pm || 0) > 0, `PM's board is not empty (${tally.pm || 0})`);
+}
+
+
+/** Dropping a card on a column puts it in that column. Every column, every card.
+ *
+ *  The one property the board never had, and the one that would have caught all of it: the
+ *  backlog's four columns sort by kind and every drop wrote a stage, so dragging a card
+ *  there did nothing whatever; Design's and Dev's "To pick up" handed cards over without
+ *  naming the team, so they landed in neither queue; and a drop on the Roadmap's Not started
+ *  cleared the owner, so the card left the lens it was dropped on.
+ *
+ *  A drop that asks a question is followed through every answer it offers, because the
+ *  answer is where a card actually lands. */
+function roundTrip() {
+  console.log("\n# dropping a card on a column puts it in that column");
+  type Card = { stage: Stage; teams: BoardTeam[]; team: BoardTeam | null; review: ReviewWith | null; kind: CardKind };
+
+  /** The write the board makes, as a card. Mirrors `moveTo` and `answer` in WorkBoard: a
+   *  kind is re-filed, a stage is moved to, and a team is only written when one is named. */
+  function after(c: Card, d: Exclude<Drop, { ask: string }>): Card {
+    const kind = ("kind" in d && d.kind) || c.kind;
+    const atIntake = (st: Stage) => st === "bug" || st === "feature";
+    const stage = "stage" in d ? d.stage : atIntake(c.stage) ? defaultStage(kind) : c.stage;
+    const boardTeam = "stage" in d && "team" in d ? d.team ?? null : c.team;
+    let review = "stage" in d && "review" in d ? d.review ?? null : c.review;
+    // The store zeroes a review answer outside the stages it can mean anything at.
+    if (!["dev_review", "dev_approved", "prod"].includes(stage)) review = null;
+    const p = placeCard({ kind, stage, boardTeam, named: c.teams });
+    return { ...p, team: boardTeam ?? p.teams[0] ?? null, review, kind };
+  }
+
+  /** Every answer a drop can end in. A question is not a landing place. */
+  function landings(c: BoardColumn, card: Card): Card[] {
+    const r = stageForDrop(c, card.team, card.kind);
+    if (!("ask" in r)) return [after(card, r)];
+    if (r.ask === "review") {
+      // WorkBoard's answer(): a review answer is always a dev review.
+      return (["Design", "PM"] as ReviewWith[]).map((review) => after(card, { stage: "dev_review", review }));
+    }
+    return (["PM", "Design", "Engineering"] as BoardTeam[]).map((team) => {
+      const r2 = stageForDrop(c, team, card.kind);
+      const stage: Stage = "ask" in r2 || !("stage" in r2) ? "pm_handover" : r2.stage;
+      const review = "ask" in r2 || !("stage" in r2) ? undefined : r2.review;
+      return after(card, { stage, team, ...(review !== undefined ? { review } : {}) });
+    });
+  }
+
+  let bad = 0, checked = 0;
+  const STAGES: Stage[] = ["feature", "bug", "pm_handover", "design_progress", "dev_review", "prod"];
+  for (const v of BOARD_VIEWS) {
+    let viewBad = 0;
+    for (const col of v.columns) {
+      for (const kind of ALL_KINDS) {
+        for (const team of [null, "PM", "Design", "Engineering"] as (BoardTeam | null)[]) {
+          for (const stage of STAGES) {
+            const card: Card = { stage, teams: team ? [team] : [], team, review: null, kind };
+            // A card the lens does not show is a card nobody can drag on it.
+            if (v.ownedOnly && !card.teams.length) continue;
+            for (const l of landings(col, card)) {
+              checked++;
+              const lands = fits(col, l.stage, l.teams, l.review, l.kind);
+              const onLens = !v.ownedOnly || l.teams.length > 0;
+              if (lands && onLens) continue;
+              bad++; viewBad++;
+              if (viewBad <= 3) {
+                console.log(`  FAIL  ${v.id}.${col.key}  a ${kind} at ${stage} (${team ?? "no team"})`
+                  + ` -> ${l.stage} (${l.teams.join("+") || "no team"})${lands ? " left the lens" : " missed the column"}`);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  ok(bad === 0, `${checked} drops, every one lands in the column it was dropped on`);
+
+  /* The backlog is the one lens whose columns re-file rather than move, and every kind needs
+     one or a card dropped there has nowhere to go. */
+  const files = VIEW_BY_ID.backlog.columns.filter((c) => c.filesAs).map((c) => c.filesAs);
+  ok(VIEW_BY_ID.backlog.columns.every((c) => c.filesAs), "every backlog column re-files rather than moves");
+  ok(ALL_KINDS.every((k) => files.includes(k) || k === "landing"),
+    "every kind but landing has a backlog column to be dropped into");
 }

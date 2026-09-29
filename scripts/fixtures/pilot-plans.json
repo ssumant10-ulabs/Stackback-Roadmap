@@ -2,49 +2,248 @@
   "note": "Every non-empty Discount margin / Frequency & cycles pair from the live Pilots tab, read out of the app's own state on 2026-09-28. 39 of 55 stores have their plan columns filled in. This is the fixture the parser is held to: if a shape here stops reading, the references stop working for that store.",
   "read": "2026-09-28",
   "rows": [
-    ["Food & Grocery Brands", "25%", "Monthly"],
-    ["Protein & Supplement Brands", "25%", "Monthly - 3, 6, 9"],
-    ["Food & Grocery Brands", "15%", "Monthly - 3, 6"],
-    ["Protein & Supplement Brands", "20%", "Monthly - 3, 6, 12"],
-    ["Specialty Food & Snacks", "15%", "Monthly 3, 6"],
-    ["Tea Brands", "20%", "Monthly 3, 6"],
-    ["Water, Juices, Kombucha & Bottled Beverages", "20%", "Weekly - 3, 6"],
-    ["Water, Juices, Kombucha & Bottled Beverages", "20%", "Weekly- 3, 6; Monthly - 3,6"],
-    ["Food & Grocery Brands", "20%", "Weekly - 4,8; Monthly - 3"],
-    ["Protein & Supplement Brands", "35%", "Monthly - 6, 12; Bi-monthly - 3, 6 : 3 months - 2,4"],
-    ["Water, Juices, Kombucha & Bottled Beverages", "7%", "Weekly- 6, Monthly- 3"],
-    ["Protein & Supplement Brands", "8%", "Monthly - 3"],
-    ["Bath & Body Products", "6%", "Weekly - 2,4; Monthly - 2"],
-    ["Protein & Supplement Brands", "12.52%", "Monthly - 3, 6, 12"],
-    ["Food & Grocery Brands", "6%", "Monthly - 6"],
-    ["Coffee Brands", "10%", "Bi-Weekly - 24, 48; Monthly - 6, 12; Bi- Monthly - 6,12"],
-    ["Protein & Supplement Brands", "20%", "Monthly - 3,6,12"],
-    ["Food & Grocery Brands", "15 max, so 15, 12, 10", "3, 6 & 12 monthly & bi-weekly 3, 6, 12"],
-    ["Protein & Supplement Brands", "15%", "Monthly - 3,6"],
-    ["Food & Grocery Brands", "20%", "Monthly - 12"],
-    ["Bath & Body Products", "36%", "Weekly - 6, 12; Monthly - 6"],
-    ["Protein & Supplement Brands", "15%", "2x, 3x, 4x, prepaid only"],
-    ["Food & Grocery Brands", "15%", "Monthly - 3, 6, 12"],
-    ["Water, Juices, Kombucha & Bottled Beverages", "18%", "Weekly- 6,12"],
-    ["Protein & Supplement Brands", "12%", "Monthly - 3, 6, 12"],
-    ["Bath & Body Products", "15%", "Monthly - 2, 4, 6"],
-    ["Food & Grocery Brands", "25%", "Monthly- 3,6,12"],
-    ["Protein & Supplement Brands", "15%", "Monthly - 3"],
-    ["Coffee Brands", "20%", "Monthly- 3,6, BiWeekly- 3,6,12"],
-    ["Food & Grocery Brands", "20%", "Monthly - 3, 6"],
-    ["Specialty Food & Snacks", "10%", "Monthly 3,6,12"],
-    ["Protein & Supplement Brands", "15%", "Monthly - 12"],
-    ["Bath & Body Products", "15%", "Monthly - 3, 6"],
-    ["Food & Grocery Brands", "25%", "Monthly- 2,3,4"],
-    ["Water, Juices, Kombucha & Bottled Beverages", "12.5%", "Weekly - 3, 6, 9, 12; Bi-weekly - 3, 6, 9, 12; Monthly - 3, 6, 9, 12"],
-    ["Protein & Supplement Brands", "5%", "Monthly - 3, 6"],
-    ["Food & Grocery Brands", "10%", "Monthly - CC"],
-    ["Bath & Body Products", "15%", "Monthly - 3,6"],
-    ["Tea Brands", "10%", "Bi-Weekly- 3,6,12"]
+    [
+      "Food & Grocery Brands",
+      "25%",
+      "Monthly"
+    ],
+    [
+      "Protein & Supplement Brands",
+      "25%",
+      "Monthly - 3, 6, 9"
+    ],
+    [
+      "Food & Grocery Brands",
+      "15%",
+      "Monthly - 3, 6"
+    ],
+    [
+      "Protein & Supplement Brands",
+      "20%",
+      "Monthly - 3, 6, 12"
+    ],
+    [
+      "Specialty Food & Snacks",
+      "15%",
+      "Monthly 3, 6"
+    ],
+    [
+      "Tea Brands",
+      "20%",
+      "Monthly 3, 6"
+    ],
+    [
+      "Water, Juices, Kombucha & Bottled Beverages",
+      "20%",
+      "Weekly - 3, 6"
+    ],
+    [
+      "Water, Juices, Kombucha & Bottled Beverages",
+      "20%",
+      "Weekly- 3, 6; Monthly - 3,6"
+    ],
+    [
+      "Food & Grocery Brands",
+      "20%",
+      "Weekly - 4,8; Monthly - 3"
+    ],
+    [
+      "Protein & Supplement Brands",
+      "35%",
+      "Monthly - 6, 12; Bi-monthly - 3, 6 : 3 months - 2,4"
+    ],
+    [
+      "Water, Juices, Kombucha & Bottled Beverages",
+      "7%",
+      "Weekly- 6, Monthly- 3"
+    ],
+    [
+      "Protein & Supplement Brands",
+      "8%",
+      "Monthly - 3"
+    ],
+    [
+      "Bath & Body Products",
+      "6%",
+      "Weekly - 2,4; Monthly - 2"
+    ],
+    [
+      "Protein & Supplement Brands",
+      "12.52%",
+      "Monthly - 3, 6, 12"
+    ],
+    [
+      "Food & Grocery Brands",
+      "6%",
+      "Monthly - 6"
+    ],
+    [
+      "Coffee Brands",
+      "10%",
+      "Bi-Weekly - 24, 48; Monthly - 6, 12; Bi- Monthly - 6,12"
+    ],
+    [
+      "Protein & Supplement Brands",
+      "20%",
+      "Monthly - 3,6,12"
+    ],
+    [
+      "Food & Grocery Brands",
+      "15 max, so 15, 12, 10",
+      "3, 6 & 12 monthly & bi-weekly 3, 6, 12"
+    ],
+    [
+      "Protein & Supplement Brands",
+      "15%",
+      "Monthly - 3,6"
+    ],
+    [
+      "Food & Grocery Brands",
+      "20%",
+      "Monthly - 12"
+    ],
+    [
+      "Bath & Body Products",
+      "36%",
+      "Weekly - 6, 12; Monthly - 6"
+    ],
+    [
+      "Protein & Supplement Brands",
+      "15%",
+      "2x, 3x, 4x, prepaid only"
+    ],
+    [
+      "Food & Grocery Brands",
+      "15%",
+      "Monthly - 3, 6, 12"
+    ],
+    [
+      "Water, Juices, Kombucha & Bottled Beverages",
+      "18%",
+      "Weekly- 6,12"
+    ],
+    [
+      "Protein & Supplement Brands",
+      "12%",
+      "Monthly - 3, 6, 12"
+    ],
+    [
+      "Bath & Body Products",
+      "15%",
+      "Monthly - 2, 4, 6"
+    ],
+    [
+      "Food & Grocery Brands",
+      "25%",
+      "Monthly- 3,6,12"
+    ],
+    [
+      "Protein & Supplement Brands",
+      "15%",
+      "Monthly - 3"
+    ],
+    [
+      "Coffee Brands",
+      "20%",
+      "Monthly- 3,6, BiWeekly- 3,6,12"
+    ],
+    [
+      "Food & Grocery Brands",
+      "20%",
+      "Monthly - 3, 6"
+    ],
+    [
+      "Specialty Food & Snacks",
+      "10%",
+      "Monthly 3,6,12"
+    ],
+    [
+      "Protein & Supplement Brands",
+      "15%",
+      "Monthly - 12"
+    ],
+    [
+      "Bath & Body Products",
+      "15%",
+      "Monthly - 3, 6"
+    ],
+    [
+      "Food & Grocery Brands",
+      "25%",
+      "Monthly- 2,3,4"
+    ],
+    [
+      "Water, Juices, Kombucha & Bottled Beverages",
+      "12.5%",
+      "Weekly - 3, 6, 9, 12; Bi-weekly - 3, 6, 9, 12; Monthly - 3, 6, 9, 12"
+    ],
+    [
+      "Protein & Supplement Brands",
+      "5%",
+      "Monthly - 3, 6"
+    ],
+    [
+      "Food & Grocery Brands",
+      "10%",
+      "Monthly - CC"
+    ],
+    [
+      "Bath & Body Products",
+      "15%",
+      "Monthly - 3,6"
+    ],
+    [
+      "Tea Brands",
+      "10%",
+      "Bi-Weekly- 3,6,12"
+    ]
   ],
   "categories": [
-    "Food & Grocery Brands", "Protein & Supplement Brands", "Bath & Body Products",
-    "Specialty Food & Snacks", "Coffee Brands", "Tea Brands",
-    "Water, Juices, Kombucha & Bottled Beverages", "Female Hygiene Products", "Pet Food & Supplies"
-  ]
+    "Food & Grocery Brands",
+    "Protein & Supplement Brands",
+    "Bath & Body Products",
+    "Specialty Food & Snacks",
+    "Coffee Brands",
+    "Tea Brands",
+    "Water, Juices, Kombucha & Bottled Beverages",
+    "Female Hygiene Products",
+    "Pet Food & Supplies"
+  ],
+  "alsoSeen": {
+    "note": "Shapes not in the live Pilots tab today but in the seed or in earlier captures. Same contract: they have to read.",
+    "rows": [
+      [
+        "3, 6 & 12 months & bi-weekly 3, 6, 12",
+        "30:3,6,12|14:3,6,12"
+      ],
+      [
+        "3 months - 2, 4",
+        "90:2,4"
+      ],
+      [
+        "every 15 days, 3 cycles",
+        "15:3"
+      ],
+      [
+        "30 days / 6 deliveries",
+        "30:6"
+      ],
+      [
+        "Monthly x 6",
+        "30:6"
+      ],
+      [
+        "fortnightly",
+        "14:"
+      ],
+      [
+        "2 weeks - 4, 8",
+        "14:4,8"
+      ],
+      [
+        "Quarterly - 2, 4",
+        "90:2,4"
+      ]
+    ]
+  }
 }

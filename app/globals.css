@@ -2038,10 +2038,32 @@
 /* The work filter, a popover beside the who filter. */
 .wb-kfwrap { position: relative; display: inline-flex; }
 .wb-kfmenu {
-  position: absolute; top: calc(100% + 4px); right: 0; z-index: 55; min-width: 160px;
-  display: flex; flex-direction: column; padding: 5px;
+  /* `left: auto` and the width are not decoration: this carries the `popover filter-pop`
+     classes so it matches the Who filter, and those are fixed-position at a left the JS
+     sets for the Who button. Without resetting them the Work menu opened 130px to the left
+     of its own button, 290px wide, over the first column. */
+  position: absolute; top: calc(100% + 6px); right: 0; left: auto; z-index: 55;
+  min-width: 190px; width: max-content; max-width: 260px;
+  display: flex; flex-direction: column; gap: 4px; padding: 10px;
   background: var(--card, #fff); border: 1px solid var(--line, rgba(0,0,0,.14));
   border-radius: 11px; box-shadow: 0 10px 28px rgba(0,0,0,.16);
+}
+/* The kind dot on each chip, which is the only thing telling the five apart at a glance. */
+.wb-kdot { width: 9px; height: 9px; border-radius: 3px; margin-right: 6px; display: inline-block; flex: none; }
+.wb-kdot.k-bug { background: #ffd79d; }
+.wb-kdot.k-feature { background: var(--ink-3, rgba(0,0,0,.22)); }
+.wb-kdot.k-module { background: #b9a8ff; }
+.wb-kdot.k-template { background: #93d9b4; }
+.wb-kdot.k-landing { background: #a8c7ff; }
+/* A hint badge, not a question mark: a hard-coded black wash is invisible on the dark theme,
+   so every hinted column read as "In review?" and "Design approved?". */
+.wb-colh b { display: inline-flex; align-items: center; }
+.wb-why {
+  font-style: normal; font-size: 9px; font-weight: 700; margin-left: 6px;
+  display: inline-grid; place-items: center; width: 13px; height: 13px; flex: 0 0 auto;
+  border-radius: 50%; border: 1px solid var(--border-2, rgba(0,0,0,.2));
+  background: var(--sunken, transparent); color: var(--ink-3, #888); cursor: help;
+  vertical-align: 1px;
 }
 .wb-kfmenu button {
   appearance: none; border: 0; background: none; cursor: pointer; font: inherit;

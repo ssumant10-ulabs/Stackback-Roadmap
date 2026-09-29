@@ -66,9 +66,13 @@ export function WorkBoard() {
 
   const byColumn = useMemo(() => columnsFor(cards, view), [cards, view]);
 
+  /* What this lens is not showing, and WHY, which are two different reasons. On a team board
+     the rest is other teams' work; on the Roadmap it is work nobody has taken. One sentence
+     for both said "sits in a stage this view does not carry", which is true of neither. */
   const elsewhere = useMemo(() => {
     const shown = new Set(Object.values(byColumn).flat().map((c) => c.id));
-    return cards.filter((c) => !shown.has(c.id)).length;
+    const rest = cards.filter((c) => !shown.has(c.id));
+    return { unowned: rest.filter((c) => !c.teams.length).length, owned: rest.filter((c) => c.teams.length).length };
   }, [byColumn, cards]);
 
   function drop(e: DragEvent, c: BoardColumn) {
@@ -79,25 +83,30 @@ export function WorkBoard() {
     if (!id) return;
     const card = all.find((x) => x.id === id);
     if (!card) return;
-    const r = stageForDrop(c, card.team);
-    if ("ask" in r) { setAsk({ id, kind: r.ask, col: c }); return; }
-    s.setStage(id, r.stage, {
-      ...("review" in r ? { review: r.review ?? null } : {}),
-      ...("team" in r ? { team: r.team ?? null } : {}),
-    });
+    moveTo(id, c);
   }
 
-  /** The move menu and a drop are the same action, so they run the same rule. */
+  /** The move menu and a drop are the same action, so they run the same rule.
+   *
+   *  A drop can re-file a card without moving it, which is what the backlog's four columns
+   *  do: they sort by what a card IS. That answer had nowhere to go — every drop wrote a
+   *  stage and nothing wrote a kind — so dragging anything in the backlog did nothing at
+   *  all, and adding a card to Bugs made a feature. */
   function moveTo(id: string, c: BoardColumn) {
     const card = all.find((x) => x.id === id);
     if (!card) return;
-    const r = stageForDrop(c, card.team);
+    const r = stageForDrop(c, card.team, kindOf(card));
     if ("ask" in r) { setAsk({ id, kind: r.ask, col: c }); return; }
-    s.setStage(id, r.stage, {
-      ...("review" in r ? { review: r.review ?? null } : {}),
-      ...("team" in r ? { team: r.team ?? null } : {}),
-    });
+    if (r.kind) s.setCardKind(id, r.kind);
+    if ("stage" in r) {
+      s.setStage(id, r.stage, {
+        ...("review" in r ? { review: r.review ?? null } : {}),
+        ...("team" in r ? { team: r.team ?? null } : {}),
+      });
+    }
   }
+
+  const asking = ask ? all.find((c) => c.id === ask.id) : null;
 
   function answer(value: string) {
     if (!ask) return;
@@ -110,14 +119,12 @@ export function WorkBoard() {
        resolve to the stage that team's card belongs in. Re-running the same rule with the
        answer in hand keeps one source for where a drop lands. */
     const team = value as BoardTeam;
-    const r = stageForDrop(ask.col, team);
-    const stage: Stage = "ask" in r ? "pm_handover" : r.stage;
-    const review = "ask" in r ? undefined : r.review;
+    const r = stageForDrop(ask.col, team, asking ? kindOf(asking) : "feature");
+    const stage: Stage = "ask" in r || !("stage" in r) ? "pm_handover" : r.stage;
+    const review = "ask" in r || !("stage" in r) ? undefined : r.review;
     s.setStage(ask.id, stage, { team, ...(review !== undefined ? { review } : {}) });
     setAsk(null);
   }
-
-  const asking = ask ? all.find((c) => c.id === ask.id) : null;
   const isTail = (i: number) => def.columns.length > 3 && i === def.columns.length - 1;
 
   return (
@@ -176,7 +183,8 @@ export function WorkBoard() {
 
         <p className="wb-blurb">
           {def.blurb}
-          {elsewhere > 0 && <> <span className="wb-else">{elsewhere} card{elsewhere === 1 ? " sits" : "s sit"} in a stage this view does not carry.</span></>}
+          {elsewhere.unowned > 0 && <> <span className="wb-else">{elsewhere.unowned} card{elsewhere.unowned === 1 ? "" : "s"} nobody has taken, in the backlog.</span></>}
+          {elsewhere.owned > 0 && <> <span className="wb-else">{elsewhere.owned} more on the other boards.</span></>}
           {filter && <> <span className="wb-else">Filtered to {filter.name}.</span></>}
         </p>
       </div>
@@ -294,18 +302,25 @@ function AddCard({ col, open, onOpen, onClose, onAsk }: {
   const add = () => {
     const title = v.trim();
     if (!title) return;
-    const kind: CardKind = col.key === "bug" ? "bug" : "feature";
+    /* `col.filesAs` is the column saying what it holds. The old test was `col.key === "bug"`
+       and no column has that key — the backlog's is "bugs" — so a card added to Bugs, to
+       Templates or to Modules was created as a feature and appeared in none of them. */
+    const kind: CardKind = col.filesAs ?? "feature";
     const id = s.addBoardCard(title, kind);
     if (!id) return;
+    // A kind column does not move a card, so being born in one is the whole of it.
+    if (col.filesAs) { setV(""); return; }
     /* Born outside the intake columns: it belongs where it was added, not back in the pile.
        And a card added straight into the handover column has to answer the same question a
        dragged one does. It did not, so it landed in PM's handover with no team on it, which
        is a card in nobody's column: PM could see it and Design never could. */
     const first = col.accepts[0];
     if (first.stage === "bug" || first.stage === "feature") { setV(""); return; }
-    const drop = stageForDrop(col, null);
+    const drop = stageForDrop(col, null, kind);
     if ("ask" in drop) { setV(""); onAsk(id, drop.ask, col); return; }
-    s.setStage(id, drop.stage, { team: first.team ?? null, review: drop.review ?? first.review ?? null });
+    if ("stage" in drop) {
+      s.setStage(id, drop.stage, { team: drop.team ?? first.team ?? null, review: drop.review ?? first.review ?? null });
+    }
     setV("");
   };
   if (!open) {

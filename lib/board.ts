@@ -47,6 +47,15 @@ export interface BoardColumn {
   key: string;
   title: string;
   accepts: StageSpec[];
+  /** This column sorts by what a card IS, not where it is, so dropping one here re-files it
+   *  as this kind and does not move it. The backlog holds every card at every stage, so
+   *  "which pile" is the only question it answers. */
+  filesAs?: CardKind;
+  /** What dropping a card here means, when the stages it accepts do not say it uniquely.
+   *  Written on the column rather than worked out from its key: keys repeat across lenses —
+   *  PM's "review" and the Roadmap's "review" are different questions with the same key —
+   *  and the rule that guessed from them dropped cards into columns they do not fit. */
+  drop?: (team: BoardTeam | null, kind: CardKind) => Drop;
   /** Where a card dropped here lands, when the answer depends on the card rather than the
    *  column. Shown under the heading, because "Approved" meaning two things is the part a
    *  reader cannot infer. */
@@ -90,25 +99,35 @@ export const BOARD_VIEWS: BoardViewDef[] = [
           { stage: "bug", team: "PM", kinds: ASKED_FOR },
           { stage: "feature", team: "PM", kinds: ASKED_FOR },
         ],
+        drop: (_t, k) => { const kind = refile(k, ASKED_FOR, "feature"); return { stage: defaultStage(kind), kind, team: "PM" }; },
         hint: "Asked for by a merchant or by us." },
       { key: "built", title: "Modules and templates",
         accepts: [
           { stage: "bug", team: "PM", kinds: BUILT },
           { stage: "feature", team: "PM", kinds: BUILT },
         ],
+        drop: (_t, k) => { const kind = refile(k, BUILT, "module"); return { stage: defaultStage(kind), kind, team: "PM" }; },
         hint: "Things we are building rather than things somebody reported." },
       /* The admin dashboard and the UX ideation are PM's own work in flight, not something
          waiting to be handed out, and until this column existed they had nowhere to be. */
-      { key: "pmwip", title: "In progress", accepts: [{ stage: "pm_progress" }] },
+      { key: "pmwip", title: "In progress", accepts: [{ stage: "pm_progress" }],
+        drop: () => ({ stage: "pm_progress", team: "PM" }) },
       { key: "handover", title: "Handed to design or dev", accepts: [{ stage: "pm_handover" }],
+        // Always asks. Re-handing a card is the moment the previous answer stops being right.
+        drop: () => ({ ask: "team" }),
         hint: "Dropping here asks which team takes it." },
       { key: "review", title: "Handed for review",
         // Any design review, but only a dev review that PM is the one reviewing. A dev card
         // sent to design QA belongs on Design's board, not back here.
         accepts: [{ stage: "design_review" }, { stage: "dev_review", review: "PM" }],
+        /* Dropped on PM's own review column, so PM is the reviewer: no second question.
+           Without a team there is nothing to resolve it by, so ask for one. */
+        drop: (t) => (!t ? { ask: "team" }
+          : t === "Engineering" ? { stage: "dev_review", review: "PM" } : { stage: "design_review", review: null }),
         hint: "A design review, or dev work sent to PM rather than to design QA." },
       { key: "approved", title: "Approved",
         accepts: [{ stage: "design_approved" }, { stage: "prod" }],
+        drop: (t) => (!t ? { ask: "team" } : { stage: t === "Engineering" ? "prod" : "design_approved" }),
         hint: "Design work is approved; dev work is approved once it is in production." },
     ],
   },
@@ -126,7 +145,10 @@ export const BOARD_VIEWS: BoardViewDef[] = [
           { stage: "pm_handover", team: "Design" },
           { stage: "feature", team: "Design" },
           { stage: "bug", team: "Design" },
-        ] },
+        ],
+        /* Three stages for reading, one meaning for writing: dropping a card here is handing
+           it to this team, and the handover has to name them or it lands in nobody's queue. */
+        drop: () => ({ stage: "pm_handover", team: "Design" }) },
       { key: "wip", title: "In progress", accepts: [{ stage: "design_progress" }] },
       { key: "review", title: "In review", accepts: [{ stage: "design_review" }],
         hint: "Also PM's Handed for review." },
@@ -156,7 +178,8 @@ export const BOARD_VIEWS: BoardViewDef[] = [
           { stage: "pm_handover", team: "Engineering" },
           { stage: "feature", team: "Engineering" },
           { stage: "bug", team: "Engineering" },
-        ] },
+        ],
+        drop: () => ({ stage: "pm_handover", team: "Engineering" }) },
       { key: "fromdesign", title: "Design handover",
         accepts: [{ stage: "design_to_dev" }, { stage: "design_progress", team: "Engineering" }],
         hint: "Also Design's Handed over to dev, and design work in flight that names dev." },
@@ -186,10 +209,10 @@ BOARD_VIEWS.push(
     label: "Backlog",
     blurb: "Every card there is, by what it is. This is the inventory; the team boards are who has what.",
     columns: [
-      { key: "bugs", title: "Bugs", accepts: intake(["bug"]) },
-      { key: "features", title: "Features", accepts: intake(["feature"]) },
-      { key: "templates", title: "Templates", accepts: intake(["template", "landing"]) },
-      { key: "modules", title: "Modules", accepts: intake(["module"]) },
+      { key: "bugs", title: "Bugs", filesAs: "bug", accepts: intake(["bug"]) },
+      { key: "features", title: "Features", filesAs: "feature", accepts: intake(["feature"]) },
+      { key: "templates", title: "Templates", filesAs: "template", accepts: intake(["template", "landing"]) },
+      { key: "modules", title: "Modules", filesAs: "module", accepts: intake(["module"]) },
     ],
   },
   {
@@ -198,14 +221,20 @@ BOARD_VIEWS.push(
     ownedOnly: true,
     blurb: "The overview: everything a team has, by where the work is. Anything nobody has taken is in the backlog.",
     columns: [
+      /* The Roadmap groups by where the work is, so none of its columns is a handover: a
+          card dropped here keeps whoever already had it, and no drop names a team. */
       { key: "todo", title: "Not started",
-        accepts: [{ stage: "bug" }, { stage: "feature" }, { stage: "pm_handover" }] },
+        accepts: [{ stage: "bug" }, { stage: "feature" }, { stage: "pm_handover" }],
+        drop: (_t, k) => ({ stage: defaultStage(k) }) },
       { key: "doing", title: "In progress",
-        accepts: [{ stage: "pm_progress" }, { stage: "design_progress" }, { stage: "design_to_dev" }, { stage: "dev_progress" }] },
+        accepts: [{ stage: "pm_progress" }, { stage: "design_progress" }, { stage: "design_to_dev" }, { stage: "dev_progress" }],
+        drop: (t) => ({ stage: t === "Design" ? "design_progress" : t === "Engineering" ? "dev_progress" : "pm_progress" }) },
       { key: "review", title: "In review",
-        accepts: [{ stage: "design_review" }, { stage: "dev_review" }] },
+        accepts: [{ stage: "design_review" }, { stage: "dev_review" }],
+        drop: (t) => (t === "Engineering" ? { ask: "review" } : { stage: "design_review" }) },
       { key: "approved", title: "Approved",
-        accepts: [{ stage: "design_approved" }, { stage: "dev_approved" }] },
+        accepts: [{ stage: "design_approved" }, { stage: "dev_approved" }],
+        drop: (t) => ({ stage: t === "Engineering" ? "dev_approved" : "design_approved" }) },
       { key: "prod", title: "Pushed to prod", accepts: [{ stage: "prod" }] },
     ],
   },
@@ -390,54 +419,29 @@ export function fits(
  *  it is not asked: dropping on Design's Dev QA handover means design QA, and dropping on
  *  PM's Handed for review means PM. */
 export type Drop =
-  | { stage: Stage; review?: ReviewWith | null; team?: BoardTeam | null }
+  /* `kind` alone re-files a card without moving it, which is what the backlog's columns do.
+     `team` is a HANDOVER: it collapses the card onto one board, so only a column whose
+     meaning is "this team now has it" sets one. Omitting it leaves the owner alone. */
+  | { stage: Stage; kind?: CardKind; review?: ReviewWith | null; team?: BoardTeam | null }
+  | { kind: CardKind }
   | { ask: "team" }
   | { ask: "review" };
 
-export function stageForDrop(c: BoardColumn, team: BoardTeam | null): Drop {
-  /* The backlog's four columns sort by KIND, not by stage: dropping a card there puts it
-     back in the pile, and which pile is the card's own kind. */
-  if (c.key === "bugs" || c.key === "features" || c.key === "templates" || c.key === "modules") {
-    return { stage: c.key === "bugs" ? "bug" : "feature", team: null };
-  }
-  /* PM's two intake columns and its own in-progress: PM is holding it. */
-  if (c.key === "asked" || c.key === "built") return { stage: "feature", team: "PM" };
-  if (c.key === "pmwip") return { stage: "pm_progress", team: "PM" };
-  // Always asks. Re-handing a card is the moment the previous answer stops being right.
-  if (c.key === "handover") return { ask: "team" };
-
-  /* A team's queue holds three stages for reading and means one thing for writing: dropping
-     a card there is handing it to that team. */
-  if (c.key === "in" && c.accepts[0]?.team) return { stage: "pm_handover" };
-  /* These two read wider than they write: they SHOW the other team's work in flight, and a
-     card dropped on them is the handover itself. */
-  if (c.key === "todev" || c.key === "fromdesign") return { stage: "design_to_dev" };
-
-  if (c.accepts.length > 1) {
-    /* The Roadmap lens groups by where the work is, so its columns hold several stages that
-       are not a junction at all: a card dropped on its "In progress" keeps whichever team
-       already had it. Only PM's two ask. */
-    if (c.key === "todo" || c.key === "doing" || (c.key === "review" && c.accepts.length > 2)) {
-      return { stage: c.accepts[0].stage };
-    }
-    if (c.key === "approved" && c.accepts.some((a) => a.stage === "dev_approved")) {
-      return { stage: team === "Engineering" ? "dev_approved" : "design_approved" };
-    }
-    // PM's junctions. Without a team there is nothing to resolve them by, so ask for one.
-    if (!team) return { ask: "team" };
-    if (c.key === "review") {
-      return team === "Engineering"
-        // Dropped on PM's own review column, so PM is the reviewer. No second question.
-        ? { stage: "dev_review", review: "PM" }
-        : { stage: "design_review", review: null };
-    }
-    if (c.key === "approved") return { stage: team === "Engineering" ? "prod" : "design_approved" };
-  }
-
+export function stageForDrop(c: BoardColumn, team: BoardTeam | null, kind: CardKind = "feature"): Drop {
+  if (c.filesAs) return { kind: c.filesAs };
+  if (c.drop) return c.drop(team, kind);
+  /* Everything else takes ONE stage, so the column is the answer. Dev's review column is the
+     one exception: it is the only place that does not know who is reviewing. */
   const only = c.accepts[0];
-  // Dev's own review column is the one that does not know who is reviewing.
-  if (only.stage === "dev_review") return only.review ? { stage: only.stage, review: only.review } : { ask: "review" };
-  return { stage: only.stage };
+  if (only.stage === "dev_review" && !only.review) return { ask: "review" };
+  return only.review ? { stage: only.stage, review: only.review } : { stage: only.stage };
+}
+
+/** A column that only takes certain kinds re-files what it is given: a feature dropped on
+ *  "Modules and templates" is being called a module. A card already of a kind the column
+ *  takes keeps its own. */
+function refile(kind: CardKind, allowed: CardKind[], fallback: CardKind): CardKind {
+  return allowed.includes(kind) ? kind : fallback;
 }
 
 /** The nudge copy. Asked at the moment of handover, because a card that reaches two teams'

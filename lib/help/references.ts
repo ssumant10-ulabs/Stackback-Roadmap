@@ -62,7 +62,11 @@ export function parseDiscounts(text: string | null | undefined): number[] {
 /** Every way the sheet writes a cadence, longest first so "Bi-Monthly" is never read as a
  *  plain "Monthly". The separator is loose on purpose: one column holds "Bi-Weekly",
  *  "Bi- Monthly" and "BiWeekly". */
-const CADENCE = String.raw`\bbi[-\s]*monthly\b|\bbi[-\s]*weekly\b|\bfortnight(?:ly)?\b|\bquarterly\b|\bmonthly\b|\bweekly\b|\b\d{1,3}\s*days?\b|\b\d{1,2}\s*months?\b`;
+/* The lookbehind is the whole of "12 months": a number at the END of a list is a run
+   length and the unit word is the cadence ("3, 6 & 12 months" is monthly, sold three,
+   six and twelve deliveries at a time), while a number on its own IS the cadence
+   ("3 months - 2, 4" is quarterly). Without it that store read as a yearly plan. */
+const CADENCE = String.raw`\bbi[-\s]*monthly\b|\bbi[-\s]*weekly\b|\bfortnight(?:ly)?\b|\bquarterly\b|\bmonthly\b|\bweekly\b|\b\d{1,3}\s*days?\b|(?<!\d\s*[,&]\s*)\b\d{1,2}\s*months?\b|(?<!\d\s*[,&]\s*)\b\d{1,2}\s*weeks?\b|\bmonths?\b|\bweeks?\b`;
 
 function cadenceDays(token: string): number {
   const t = token.toLowerCase();
@@ -72,8 +76,10 @@ function cadenceDays(token: string): number {
   if (/^quarterly/.test(t)) return 90;
   if (/^monthly/.test(t)) return 30;
   if (/^weekly/.test(t)) return 7;
-  const n = Number((t.match(/\d+/) || ["0"])[0]);
-  return /month/.test(t) ? n * 30 : n;
+  const n = Number((t.match(/\d+/) || ["1"])[0]);
+  if (/month/.test(t)) return n * 30;
+  if (/week/.test(t)) return n * 7;
+  return n;
 }
 
 /** Run lengths out of a fragment, however they are written: "3, 6, 12", "x 6", "6 cycles"
@@ -249,5 +255,8 @@ export function freqLabel(days: number): string {
   if (days === 30) return "Monthly";
   if (days === 60) return "Every two months";
   if (days === 90) return "Quarterly";
+  if (days === 365 || days === 360) return "Yearly";
+  // "Every 150 days" is a number nobody says out loud; the month it lands on is.
+  if (days > 90 && days % 30 === 0) return `Every ${days / 30} months`;
   return `Every ${days} days`;
 }
