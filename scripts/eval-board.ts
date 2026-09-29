@@ -171,10 +171,10 @@ ok(ALL_STAGES.every((st) => inLens("roadmap", st)), "every stage has a roadmap c
    handing a card to PM left it sitting here). Ownership is the rule; stage is not. */
 ok(ALL_STAGES.every((st) => VIEW_BY_ID.backlog.columns.some((c) => fits(c, st, [], null, "feature"))),
   "the backlog holds an unclaimed card at any stage");
-ok(ALL_STAGES.every((st) => !inLens("backlog", st)),
-  "and holds no card a team has taken: handing one over moves it out of the backlog");
-ok(ALL_STAGES.every((st) => inLens("roadmap", st) && !inLens("backlog", st)),
-  "backlog and roadmap are the two halves of the board, split on who has the card");
+ok(!VIEW_BY_ID.backlog.holds(["PM"], 1) && !VIEW_BY_ID.backlog.holds(["Design"], 2),
+  "and holds no card a team has taken and is working on: handing one over moves it out");
+ok(ALL_STAGES.every((st) => inLens("roadmap", st)),
+  "every stage has a Roadmap column, so a card in hand is never invisible");
 ok(ALL_KINDS.every((k) => VIEW_BY_ID.backlog.columns.some((c) => fits(c, "feature", [], null, k))),
   "every kind has a backlog column, so no card is invisible there");
 
@@ -249,10 +249,9 @@ function live() {
     return { count, row: r, ...p };
   });
 
-  const seen = (stage: Stage, teams: BoardTeam[], kind: CardKind) =>
+  const seen = (stage: Stage, teams: BoardTeam[], kind: CardKind, horizon: 1 | 2 | 3 = 2) =>
     BOARD_VIEWS.filter((v) =>
-      (!v.ownedOnly || teams.length > 0)
-      && v.columns.some((c) => fits(c, stage, teams, null, kind))).map((v) => v.id);
+      v.holds(teams, horizon) && v.columns.some((c) => fits(c, stage, teams, null, kind))).map((v) => v.id);
 
   const tally: Record<string, number> = {};
   let homeless = 0, ownedOffBoard = 0, unownedOnRoadmap = 0, missingFromBacklog = 0;
@@ -367,13 +366,13 @@ function roundTrip() {
             /* A card the lens does not show is a card nobody can drag on it. The Roadmap
                hides unclaimed work and the Backlog hides claimed work, so each lens can only
                be dropped on by the half it displays. */
-            const onLens = (!v.ownedOnly || card.teams.length > 0)
-              && v.columns.some((c) => fits(c, card.stage, card.teams, card.review, card.kind, cardHorizon));
+            const onLens = v.holds(card.teams, cardHorizon)
+              && v.columns.some((c) => fits(c, card.stage, card.teams, card.review, card.kind));
             if (!onLens) continue;
             for (const l of landings(col, card)) {
               checked++;
               const lands = fits(col, l.stage, l.teams, l.review, l.kind);
-              const onLens = !v.ownedOnly || l.teams.length > 0;
+              const onLens = v.holds(l.teams, cardHorizon);
               if (lands && onLens) continue;
               bad++; viewBad++;
               if (viewBad <= 3) {
@@ -413,26 +412,35 @@ function horizons() {
   ok(flight.every((st) => (["PM", "Design", "Engineering"] as BoardTeam[]).some((t) =>
     BOARD_VIEWS.some((v) => v.id !== "backlog" && v.columns.some((c) => fits(c, st, [t], null, "feature"))))),
     "a card in flight is on a team board whatever its horizon");
-  /* Unowned is the backlog and nowhere else, which is what Future does by clearing the team. */
-  const un = card("feature", []);
-  ok(!VIEW_BY_ID.roadmap.columns.some((c) => fits(c, un.stage, un.teams, null, "feature")) || !VIEW_BY_ID.roadmap.ownedOnly
-    ? VIEW_BY_ID.roadmap.ownedOnly === true : true, "the Roadmap lens shows owned work only");
-  ok(VIEW_BY_ID.backlog.columns.some((c) => fits(c, "feature", [], null, "feature")),
-    "a card with no team is still in the backlog");
+  /* The board splits in two on two questions, and the two halves have to be exactly
+     complementary or a card is in both places or in neither. */
+  const HALVES: [BoardTeam[], 1 | 2 | 3][] = [
+    [[], 1], [[], 2], [[], 3],
+    [["Design"], 1], [["Design"], 2], [["Design"], 3],
+    [["PM"], 1], [["Engineering"], 3],
+  ];
+  const working = BOARD_VIEWS.filter((v) => v.id !== "backlog");
+  ok(HALVES.every(([t, h]) => VIEW_BY_ID.backlog.holds(t, h) === !VIEW_BY_ID.roadmap.holds(t, h)),
+    "every card is on exactly one of the Backlog and the Roadmap, never both and never neither");
+  ok(HALVES.every(([t, h]) => working.every((v) => v.holds(t, h) === VIEW_BY_ID.roadmap.holds(t, h))),
+    "PM, Design and Dev are about the same half as the Roadmap");
+  ok(VIEW_BY_ID.backlog.holds([], 1) && VIEW_BY_ID.backlog.holds([], 2),
+    "a card nobody has taken is in the backlog whatever its horizon");
+  ok(VIEW_BY_ID.backlog.holds(["Design"], 3) && VIEW_BY_ID.backlog.holds(["Engineering"], 3),
+    "a card parked on Future is in the backlog even though a team has it");
+  ok(!working.some((v) => v.holds(["Design"], 3)),
+    "and is on none of PM, Design, Dev or the Roadmap: those are the work in hand");
+  for (const h of [1, 2] as (1 | 2)[]) {
+    ok(VIEW_BY_ID.design.holds(["Design"], h) && VIEW_BY_ID.dev.holds(["Engineering"], h),
+      `a ${h === 1 ? "Now" : "Next"} card that names a team is on that team's board`);
+  }
 
   /* "If the status has been changed to Now and the team is assigned then it should move to
-     the relevant tab." Two halves, and the second is the one that was wrong: Now used to
-     overwrite the owner with PM, which took the card off the very board it belonged on. */
-  const pmIntake = VIEW_BY_ID.pm.columns.filter((c) => c.key === "asked" || c.key === "built");
-  const onPmIntake = (teams: BoardTeam[], h: 1 | 2 | 3) =>
-    pmIntake.some((c) => fits(c, "feature", teams, null, "feature", h));
-  ok(onPmIntake([], 1), "a Now card nobody is named on is on PM's intake");
-  ok(!onPmIntake([], 2) && !onPmIntake([], 3), "a Next or Future card with no team is not");
-  ok(!onPmIntake(["Design"], 1) && !onPmIntake(["Engineering"], 1),
-    "a Now card that names a team is NOT dragged into PM's pile");
-  for (const [team, view] of [["Design", "design"], ["Engineering", "dev"]] as [BoardTeam, BoardView][]) {
-    ok(VIEW_BY_ID[view].columns.some((c) => fits(c, "feature", [team], null, "feature", 1)),
-      `a Now card naming ${team} is on that team's own board`);
+     the relevant tab." The routing does the first half — Now on an unclaimed card hands it
+     to PM — and the lens filter does the second. */
+  for (const [team, view] of [["Design", "design"], ["Engineering", "dev"], ["PM", "pm"]] as [BoardTeam, BoardView][]) {
+    ok(VIEW_BY_ID[view].columns.some((c) => fits(c, "feature", [team], null, "feature")),
+      `a card naming ${team} has a column on that team's own board`);
   }
 
   /* The order: Now, Next, Future, then position. Same comparator the columns sort by. */
@@ -462,13 +470,14 @@ function roadmap() {
   const teams: BoardTeam[] = ["Design"];
 
   const where = (st: Stage) =>
-    rm.columns.filter((c) => fits(c, st, teams, null, "feature", 2)).map((c) => c.key);
+    rm.columns.filter((c) => fits(c, st, teams, null, "feature")).map((c) => c.key);
 
   const twice = ALL_STAGES.filter((st) => where(st).length > 1);
   const nowhere = ALL_STAGES.filter((st) => where(st).length === 0);
   ok(twice.length === 0, `no stage lands in two Roadmap columns${twice.length ? ` (${twice.join(", ")})` : ""}`);
   ok(nowhere.length === 0, `every stage has a Roadmap column${nowhere.length ? ` (${nowhere.join(", ")})` : ""}`);
-  ok(rm.ownedOnly === true, "the Roadmap shows owned work only");
+  ok(rm.holds(["Design"], 2) && !rm.holds([], 2) && !rm.holds(["Design"], 3),
+    "the Roadmap shows work in hand: claimed, and not parked on Future");
 
   /* Every column count sums to the badge, which is only true while the columns partition. */
   ok(ALL_STAGES.every((st) => where(st).length === 1),

@@ -130,7 +130,6 @@ function planOf(p: PilotStore) {
         ? `${cadence} · ${[...pl.deliveries].sort((a, b) => a - b).join(", ")} deliveries`
         : cadence;
     }));
-  const num = (v: number | null | undefined) => (v == null ? null : String(v));
   const fields: [string, string | null][] = [
     ["their plans", plans.length ? "x" : null],
     ["their discount", d.length ? "x" : null],
@@ -147,14 +146,17 @@ function planOf(p: PilotStore) {
     bundles: clean(p.bundles),
     shipping: clean(p.shipping),
     theme: clean(p.themeNotes),
-    subs: num(p.activeSubs) ? `${p.activeSubs} of ${p.totalSubs ?? "?"} live` : null,
     missing: fields.filter(([, v]) => !v).map(([k]) => k),
   };
 }
 
 /** One store, as a card: the plans it sells, what each one saves, how it is paid for and
- *  what shipping costs. Its activation state, its open bugs and who runs it here are ours
- *  and not a merchant's business, so they are off this card.
+ *  what shipping costs. Its activation state, its open bugs, who runs it here and how many
+ *  subscribers it has are not a reference for anybody's plan shape, so they are off this card.
+ *
+ *  Subscriber counts came off: how many customers another store has is that store's number,
+ *  not a reference point for anybody else's plan shape, and it is the one figure on this card
+ *  that is nobody's business but theirs.
  *
  *  A field nobody has filled in is shown as a gap rather than omitted, because a reference
  *  that quietly drops what it does not know reads as a complete answer. */
@@ -179,7 +181,6 @@ function StoreCard({ p }: { p: PilotStore }) {
         <Fact k="Bundles" v={plan.bundles} />
         <Fact k="Shipping" v={plan.shipping} />
         <Fact k="Theme" v={plan.theme} />
-        <Fact k="Subscribers" v={plan.subs} />
       </dl>
 
       {plan.missing.length > 0 && (
