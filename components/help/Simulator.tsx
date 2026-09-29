@@ -40,8 +40,13 @@ export default function Simulator({ config, onConfig }: {
   const autopay = useMemo(() => ({ p: price({ ...c, mode: "autopay" }), rows: schedule(c, "autopay") }), [c]);
   /* Which payment type the drawn order is showing. The three are genuinely different orders,
      not the same order with a different badge: AutoPay's carries the real goods from the
-     start and never gets converted. */
-  const [drawn, setDrawn] = useState<Mode>("prepaid");
+     start and never gets converted.
+     It opens on whatever was chosen on the widget: picking pay as you go and then being
+     shown a prepaid order is the one thing this screen exists to stop. The tabs here still
+     move it, because comparing the three side by side is the other reason to be on it. */
+  const [drawnOverride, setDrawnOverride] = useState<Mode | null>(null);
+  const drawn = drawnOverride ?? c.mode;
+  const setDrawn = setDrawnOverride;
   /** Which of the two order shapes is being drawn. A delivery order looks nothing like the
       checkout order, and until now the only place it appeared was as a row in a list. */
   const [which, setWhich] = useState<"parent" | "child">("parent");
@@ -59,7 +64,7 @@ export default function Simulator({ config, onConfig }: {
           Set the plan the way you would sell it, then subscribe. The next step is exactly what
           that subscription creates in Shopify.
         </p>
-        <Widget c={c} set={set} p={p} onSubscribe={() => setStep(2)} />
+        <Widget c={c} set={set} p={p} onSubscribe={() => { setDrawnOverride(null); setStep(2); }} />
       </section>
     );
   }
