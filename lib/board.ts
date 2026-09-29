@@ -220,7 +220,7 @@ BOARD_VIEWS.push(
   {
     id: "backlog",
     label: "Backlog",
-    blurb: "Every card there is, by what it is. This is the inventory; the team boards are who has what.",
+    blurb: "What nobody has picked up yet, by what it is. Hand a card to a team and it leaves here for their board.",
     columns: [
       { key: "bugs", title: "Bugs", filesAs: "bug", accepts: intake(["bug"]) },
       { key: "features", title: "Features", filesAs: "feature", accepts: intake(["feature"]) },
@@ -253,14 +253,19 @@ BOARD_VIEWS.push(
   },
 );
 
-/** The backlog is EVERY card, split by what it is.
+/** The backlog is every UNCLAIMED card, split by what it is.
  *
- *  It took the two intake stages, so the moment anybody picked a card up it vanished from
- *  the one list that is supposed to hold everything, and with the live data almost nothing
- *  was left at intake: the backlog read empty while 71 cards existed. It is the inventory,
- *  not the queue. PM's board is what PM took; this is what there is. */
+ *  Two earlier readings of this were both wrong. It started as the two intake STAGES, so a
+ *  card vanished the moment anybody moved it and the tab read empty while 71 cards existed.
+ *  It then became every card at every stage, which made it a second copy of the board:
+ *  handing a card to PM left it sitting here, which is what Sumant is looking at when he
+ *  says "hand to PM should move this card from here".
+ *
+ *  The rule that holds is ownership, not stage. Backlog is what nobody has taken; the
+ *  Roadmap is what somebody has. Together they are every card, and no card is in both. It
+ *  is still every STAGE, because a card can be unclaimed at any of them. */
 function intake(kinds: CardKind[]): StageSpec[] {
-  return ALL_STAGES.map((stage) => ({ stage, kinds }));
+  return ALL_STAGES.map((stage) => ({ stage, kinds, unowned: true as const }));
 }
 
 

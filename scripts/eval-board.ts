@@ -165,10 +165,16 @@ for (const st of ALL_STAGES) {
   }
 }
 ok(ALL_STAGES.every((st) => inLens("roadmap", st)), "every stage has a roadmap column, so no card is invisible there");
-/* The backlog is the INVENTORY, not the queue. It took the two intake stages, so a card
-   vanished from the one list meant to hold everything the moment anybody picked it up, and
-   with the live data it read empty while 71 cards existed. */
-ok(ALL_STAGES.every((st) => inLens("backlog", st)), "the backlog holds every card at every stage");
+/* The backlog is UNCLAIMED work, at any stage. Two earlier readings were wrong: the two
+   intake stages only (a card vanished the moment anybody moved it, and the tab read empty
+   while 71 cards existed), then every card at every stage (a second copy of the board, where
+   handing a card to PM left it sitting here). Ownership is the rule; stage is not. */
+ok(ALL_STAGES.every((st) => VIEW_BY_ID.backlog.columns.some((c) => fits(c, st, [], null, "feature"))),
+  "the backlog holds an unclaimed card at any stage");
+ok(ALL_STAGES.every((st) => !inLens("backlog", st)),
+  "and holds no card a team has taken: handing one over moves it out of the backlog");
+ok(ALL_STAGES.every((st) => inLens("roadmap", st) && !inLens("backlog", st)),
+  "backlog and roadmap are the two halves of the board, split on who has the card");
 ok(ALL_KINDS.every((k) => VIEW_BY_ID.backlog.columns.some((c) => fits(c, "feature", [], null, k))),
   "every kind has a backlog column, so no card is invisible there");
 
@@ -261,7 +267,12 @@ function live() {
     if (!views.length) { homeless += p.count; console.log(`  homeless  ${JSON.stringify(p.row)} -> ${p.stage}`); }
     if (p.teams.length && !teamBoards.length) { ownedOffBoard += p.count; console.log(`  owned but on no team board  ${JSON.stringify(p.row)} -> ${p.stage} ${p.teams}`); }
     if (!p.teams.length && views.includes("roadmap")) unownedOnRoadmap += p.count;
-    if (!views.includes("backlog")) { missingFromBacklog += p.count; console.log(`  not in the backlog  ${JSON.stringify(p.row)} -> ${p.stage}`); }
+    /* Unclaimed belongs in the backlog and nowhere else; claimed belongs anywhere but. */
+    const wantBacklog = p.teams.length === 0;
+    if (views.includes("backlog") !== wantBacklog) {
+      missingFromBacklog += p.count;
+      console.log(`  ${wantBacklog ? "unclaimed and not in" : "claimed but still in"} the backlog  ${JSON.stringify(p.row)} -> ${p.stage}`);
+    }
   }
 
   console.log("\nLive cards, by board:");
@@ -271,10 +282,13 @@ function live() {
 
   console.log("\nThe rules, over the live data:");
   ok(homeless === 0, "every card lands in a column somewhere");
-  ok(missingFromBacklog === 0, "the backlog holds every card");
+  ok(missingFromBacklog === 0, "the backlog holds exactly the cards nobody has taken");
   ok(ownedOffBoard === 0, "every card with a team is on that team's board");
   ok(unownedOnRoadmap === 0, "a card nobody has taken is not on the Roadmap");
   ok((tally.roadmap || 0) === (tally.owned || 0), "the Roadmap is exactly the owned cards");
+  ok((tally.backlog || 0) === (tally.unowned || 0), "the Backlog is exactly the unowned cards");
+  ok((tally.backlog || 0) + (tally.roadmap || 0) === 77,
+    `the two of them are the whole board, with nothing in both (${tally.backlog || 0} + ${tally.roadmap || 0})`);
   /* The complaint, four times: everything sitting in Roadmap / Not started. The board can
      only be right if the cards whose own column names a stage are NOT at intake. */
   const intake = placed.filter((p) => p.stage === "bug" || p.stage === "feature");
@@ -335,15 +349,27 @@ function roundTrip() {
 
   let bad = 0, checked = 0;
   const STAGES: Stage[] = ["feature", "bug", "pm_handover", "design_progress", "dev_review", "prod"];
+  /* Every card in this sweep is on the Next horizon unless a column asks otherwise; the Now
+     routing has its own section. */
+  const cardHorizon = 2 as const;
   for (const v of BOARD_VIEWS) {
     let viewBad = 0;
     for (const col of v.columns) {
       for (const kind of ALL_KINDS) {
         for (const team of [null, "PM", "Design", "Engineering"] as (BoardTeam | null)[]) {
           for (const stage of STAGES) {
-            const card: Card = { stage, teams: team ? [team] : [], team, review: null, kind };
-            // A card the lens does not show is a card nobody can drag on it.
-            if (v.ownedOnly && !card.teams.length) continue;
+            /* Built through `placeCard`, so the sweep only tests states the board can
+               actually be in. Constructing `{stage: "design_progress", teams: []}` by hand
+               tested a card that cannot exist: an in-flight stage names its own team when
+               nobody else has, which is what keeps it off the backlog. */
+            const p0 = placeCard({ kind, stage, boardTeam: team, named: [] });
+            const card: Card = { ...p0, team: team ?? p0.teams[0] ?? null, review: null, kind };
+            /* A card the lens does not show is a card nobody can drag on it. The Roadmap
+               hides unclaimed work and the Backlog hides claimed work, so each lens can only
+               be dropped on by the half it displays. */
+            const onLens = (!v.ownedOnly || card.teams.length > 0)
+              && v.columns.some((c) => fits(c, card.stage, card.teams, card.review, card.kind, cardHorizon));
+            if (!onLens) continue;
             for (const l of landings(col, card)) {
               checked++;
               const lands = fits(col, l.stage, l.teams, l.review, l.kind);
@@ -427,7 +453,7 @@ function horizons() {
  *  1. Its columns PARTITION the stages: every stage lands in exactly one, so the column
  *     counts sum to the tab badge and a card cannot be in two places at once.
  *  2. It covers every stage, so no card in hand can be missing from the overview.
- *  3. It shows owned work only, and the backlog holds the rest.
+ *  3. It shows owned work only, and the backlog holds exactly the rest.
  *  4. Dropping a card on one of its columns keeps the owner, or the card falls off the lens
  *     it was dropped on. */
 function roadmap() {

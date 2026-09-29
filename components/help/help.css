@@ -1859,3 +1859,8 @@
 }
 .hc-jumpbtn:hover { border-color: var(--brand-deep); color: var(--ink); }
 .hc-jumpbtn svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2.2; }
+
+/* The public link sits at the right edge of the bar, not against the search box. It is the
+   link you hand a merchant, so it reads as its own action rather than as part of searching. */
+.hc-publink { margin-left: auto; flex: none; }
+@media (max-width: 1023px) { .hc-publink { margin-left: 0; } }
