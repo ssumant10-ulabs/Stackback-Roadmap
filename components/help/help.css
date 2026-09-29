@@ -1696,12 +1696,26 @@
    and 68 hard-coded in three places, and the bar is 53px on one breakpoint and two rows on
    another, so each of them was right on one screen and wrong on the rest. */
 .hc { --hc-bar: 53px; --hc-sub: 39px; }
+/* The sub row scrolls away with the page. Pinned under an already-pinned bar it was a
+   second band of chrome over the reading column, and on the Simulate tab it cut through the
+   card underneath it. Getting back to it is one button, bottom right, and only once you are
+   far enough down to have lost it. */
 @media (min-width: 768px) {
-  .hc-subrow { position: sticky; top: var(--hc-bar); z-index: 29; }
-  .hc-faqgrouph { top: calc(var(--hc-bar) + var(--hc-sub)); }
-  .hc-nav { top: calc(var(--hc-bar) + var(--hc-sub) + 14px); }
-  .hc-tlphase { scroll-margin-top: calc(var(--hc-bar) + var(--hc-sub) + 14px); }
+  .hc-faqgrouph { top: var(--hc-bar); }
+  .hc-nav { top: calc(var(--hc-bar) + 14px); }
+  .hc-tlphase { scroll-margin-top: calc(var(--hc-bar) + 14px); }
 }
+.hc-totop {
+  position: fixed; right: 18px; bottom: 18px; z-index: 40;
+  appearance: none; cursor: pointer; font: inherit; font-size: 12px; font-weight: 620;
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 13px;
+  border: 1px solid var(--border-2); border-radius: 999px;
+  background: var(--card); color: var(--ink-2); box-shadow: 0 8px 22px rgba(0,0,0,.14);
+}
+.hc-totop:hover { color: var(--ink); border-color: var(--brand-deep); }
+.hc-totop svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2.2; }
+/* The chat button owns the bottom right corner, so this sits above it when both are up. */
+.hc-totop.withfab { bottom: 74px; }
 /* No sub row on those parts, so the rail and the headings sit one layer higher. */
 .hc[data-hc-part="queries"] .hc-nav,
 .hc[data-hc-part="internal"] .hc-nav { top: calc(var(--hc-bar) + 14px); }
@@ -1734,7 +1748,26 @@
 }
 .hc-drawerh button:hover { color: var(--ink); }
 .hc-drawerbody { flex: 1 1 auto; overflow: auto; padding: 12px 18px 26px; }
-.hc-drawercat { border-bottom: 1px solid var(--border); }
+/* The category rail. It is the drawer's navigation, so it stays put while the stores under
+   it scroll: a merchant looking for their own category should never have to scroll back up
+   to change it. */
+.hc-drawerrail {
+  display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 18px;
+  border-bottom: 1px solid var(--border); background: var(--card);
+  position: sticky; top: 0; z-index: 2;
+}
+.hc-drawercat {
+  appearance: none; cursor: pointer; font: inherit; font-size: 12px; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px;
+  border: 1px solid var(--border); border-radius: 100px;
+  background: var(--sunken); color: var(--ink-2);
+}
+.hc-drawercat:hover { border-color: var(--border-2); color: var(--ink); }
+.hc-drawercat.on { background: var(--brand); color: var(--brand-ink); border-color: transparent; }
+.hc-drawercat em { font-style: normal; font-size: 10.5px; opacity: .72; font-variant-numeric: tabular-nums; }
+/* The category in one sentence, above its stores. */
+.hc-drawersum { margin: 0 0 4px; font-size: 13px; line-height: 1.55; color: var(--ink-2); }
+.hc-drawersum b { color: var(--ink); font-weight: 700; }
 .hc-drawercath {
   display: flex; align-items: baseline; gap: 9px; width: 100%;
   appearance: none; border: 0; background: none; cursor: pointer; font: inherit;
@@ -1809,3 +1842,16 @@
    page loads. This file is the Help Centre's and nine `.wb-` rules were written into it
    by mistake: they had no effect at all, and the Work filter opened unstyled and in the
    wrong place for as long as they sat here. */
+
+/* ---- into the module, out of the answer -------------------------------------------------
+   An answer that ends in "so set it up like this" needs a way to the place you set it up.
+   Quiet by default and only louder on hover: it is an exit, not the point of the answer. */
+.hc-jump { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.hc-jumpbtn {
+  appearance: none; cursor: pointer; font: inherit; font-size: 11.5px; font-weight: 620;
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px;
+  border: 1px solid var(--border); border-radius: 999px;
+  background: var(--sunken); color: var(--ink-2);
+}
+.hc-jumpbtn:hover { border-color: var(--brand-deep); color: var(--ink); }
+.hc-jumpbtn svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2.2; }

@@ -48,7 +48,14 @@ export function canonicalTokens(
    *  came from; everything else is what the theme is set to, said plainly. */
   const from = (key: string, fallback: string, how: TokenRow["how"] = "logic"): Pick<TokenRow, "note" | "how"> => {
     const r = read?.[key];
-    return r ? { note: r.source, how: HOW[r.confidence] } : { note: fallback, how };
+    if (r) return { note: r.source, how: HOW[r.confidence] };
+    /* A site WAS read and this token was not on it. Saying where it would have come from
+       implies we found it there; nothing here is a colour we chose, so the row says the
+       value is standing in for one the site does not publish. */
+    if (read && Object.keys(read).length) {
+      return { note: "Not on your site; standing in from a colour that is", how: "derived" };
+    }
+    return { note: fallback, how };
   };
 
   return [
@@ -65,7 +72,9 @@ export function canonicalTokens(
       rows: [
         { label: "Primary", value: t.colors.primary, swatch: true, ...from("Brand_Primary", "the subscribe button fill", "direct") },
         { label: "Subscription Accent", value: t.colors.subscriptionAccent, swatch: true, ...from("Brand_Accent", "the savings and offer highlight", "direct") },
-        { label: "Savings Color", value: t.colors.savings, swatch: true, note: "What a discount is printed in", how: "direct" },
+        { label: "Savings Color", value: t.colors.savings, swatch: true,
+          note: "What a discount is printed in: the greenest colour your site publishes, or the accent",
+          how: read && Object.keys(read).length ? "derived" : "logic" },
       ],
     },
     {

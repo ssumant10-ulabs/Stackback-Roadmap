@@ -4,7 +4,7 @@ import { DEFAULT_ROSTER, STATUS_CYCLE } from "./constants";
 import { SEED_VERSION, seed, stampIds } from "./seed";
 import { uid, newRoadmapId } from "./id";
 import { makeHelpers, pruneTasks, type Helpers } from "./teams";
-import { effStatus, normPriority, subtreeCounts, waveWord } from "./derive";
+import { cardPriority, effStatus, normPriority, subtreeCounts, waveWord } from "./derive";
 import { STAGE_LABEL, STAGE_STATUS, defaultNodeStage, defaultStage, placeCard, stageForStatus, stageOf, teamToBoard, type BoardTeam, type BoardView, type CardKind, type ReviewWith, type Stage } from "./board";
 import { reconcile } from "./dates";
 import { featureSeed } from "./featureSeed";
@@ -786,8 +786,21 @@ export class Store {
    *  is a workflow now, so it is a tag on the card and a new card was born without one. */
   setPriority(id: string, p: 1 | 2 | 3) {
     const n = this.findEntry(id)?.node;
-    if (!n || normPriority(n.priority) === p) return;
-    n.priority = p;
+    if (!n || cardPriority(n) === p) return;
+    /* A request's `priority` is the sheet's text column, so its horizon goes in its own
+       field. A roadmap task has one horizon and the roadmap tree shares it. */
+    if (this.features.some((f) => f.id === id)) (n as unknown as Feature).boardPriority = p;
+    else n.priority = p;
+    /* The horizon routes a card that nobody has started: Now means PM has picked it up,
+       Future means it goes back in the pile. A card already in flight only gets the tag —
+       marking live design work "Future" should not take it off the designer's board.
+       `pm_handover` counts as not started: it has been handed over, not begun.
+       Read from the board rather than from `n.stage`, which is only set once somebody has
+       moved the card: a shipped request derives `prod` and has no stored stage at all. */
+    const stage = this.boardCards().find((c) => c.id === id)?.stage || defaultStage(n.kind);
+    const inThePile = stage === "bug" || stage === "feature" || stage === "pm_handover";
+    if (inThePile && p === 1) this.setNodeStage(n, defaultStage(n.kind), { team: "PM", review: null });
+    else if (inThePile && p === 3) this.setNodeStage(n, defaultStage(n.kind), { team: null, review: null });
     this.log("move", n.title, `to ${waveWord(p)}`, n.id);
     this.commit();
   }

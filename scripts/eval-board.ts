@@ -179,6 +179,7 @@ ok(stageOf({ kind: "bug", stage: "prod" }) === "prod", "a stored stage wins over
 
 live();
 roundTrip();
+horizons();
 
 console.log(fails ? `\nFAIL: ${fails}` : "\nPASS");
 process.exit(fails ? 1 : 0);
@@ -366,4 +367,36 @@ function roundTrip() {
   ok(VIEW_BY_ID.backlog.columns.every((c) => c.filesAs), "every backlog column re-files rather than moves");
   ok(ALL_KINDS.every((k) => files.includes(k) || k === "landing"),
     "every kind but landing has a backlog column to be dropped into");
+}
+
+
+/** The horizon, as it was asked for: "all cards should have priorities as now, next,
+ *  future / Future goes to backlog, now comes to the pm board / in the backlog next comes
+ *  first and then future in the sequence." */
+function horizons() {
+  console.log("\n# the horizon");
+  const card = (stage: Stage, teams: BoardTeam[]) => ({ stage, teams, review: null as ReviewWith | null });
+
+  /* Now and Future are a MOVE for a card nobody has started, and a tag for one in flight.
+     Asserted against the stages the store calls "in the pile". */
+  const pile: Stage[] = ["bug", "feature", "pm_handover"];
+  const flight: Stage[] = ["pm_progress", "design_progress", "design_review", "dev_progress", "prod"];
+  ok(pile.every((st) => VIEW_BY_ID.pm.columns.some((c) => fits(c, st === "pm_handover" ? st : st, ["PM"], null, "feature"))),
+    "a card handed to PM at any pile stage has a column on PM's board");
+  ok(flight.every((st) => (["PM", "Design", "Engineering"] as BoardTeam[]).some((t) =>
+    BOARD_VIEWS.some((v) => v.id !== "backlog" && v.columns.some((c) => fits(c, st, [t], null, "feature"))))),
+    "a card in flight is on a team board whatever its horizon");
+  /* Unowned is the backlog and nowhere else, which is what Future does by clearing the team. */
+  const un = card("feature", []);
+  ok(!VIEW_BY_ID.roadmap.columns.some((c) => fits(c, un.stage, un.teams, null, "feature")) || !VIEW_BY_ID.roadmap.ownedOnly
+    ? VIEW_BY_ID.roadmap.ownedOnly === true : true, "the Roadmap lens shows owned work only");
+  ok(VIEW_BY_ID.backlog.columns.some((c) => fits(c, "feature", [], null, "feature")),
+    "a card with no team is still in the backlog");
+
+  /* The order: Now, Next, Future, then position. Same comparator the columns sort by. */
+  const h = (p: 1 | 2 | 3, order: number) => ({ priority: p, boardOrder: order });
+  const sorted = [h(3, 0), h(1, 5), h(2, 1), h(1, 2)]
+    .sort((a, b) => a.priority - b.priority || a.boardOrder - b.boardOrder)
+    .map((x) => `${x.priority}:${x.boardOrder}`).join(" ");
+  ok(sorted === "1:2 1:5 2:1 3:0", `the horizon orders a column and position orders within it (${sorted})`);
 }

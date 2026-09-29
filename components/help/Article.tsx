@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { CATEGORIES } from "@/lib/help/corpus";
 import { APP_NAME, STATUS_LABEL, type HelpArticle } from "@/lib/help/types";
+import Jump from "./Jump";
 
 const CAT_NAME = new Map(CATEGORIES.map((c) => [c.id, c.name]));
 
@@ -45,6 +46,9 @@ export default function Article({ art, open, onToggle, internal, showCat }: {
           {art.path && <Path path={art.path} />}
           {/* Authored HTML from the versioned deliverable in this repo, not user input. */}
           <div className="hc-prose" dangerouslySetInnerHTML={{ __html: art.a }} />
+
+          {/* Into the thing the answer is about, rather than out to a support message. */}
+          <Jump art={art} />
 
           <div className="hc-meta">
             <span>Raised by <b>{art.asked}</b> {art.asked === 1 ? "store" : "stores"}</span>

@@ -79,7 +79,7 @@ function parseHash(): View {
 
 export default function HelpApp({
   answered, openQueries, store, stores, sanityConnected, theme: initialTheme, embedded,
-  onExit, exitLabel, pilots,
+  onExit, exitLabel, pilots, publicView,
 }: {
   answered: LoggedQuery[];
   openQueries: LoggedQuery[];
@@ -99,18 +99,22 @@ export default function HelpApp({
   /** The pilot rows the host already holds, so the suggester can name stores on the same
    *  setup instead of only quoting a category average. Absent on the standalone route. */
   pilots?: PilotStore[];
+  /** The link we hand a merchant. Internal and Insights are not hidden behind a sign-in on
+   *  this one, they do not exist: a tab that appears and then refuses is worse than no tab,
+   *  and the point of the link is that there is nothing on it that is not for them. */
+  publicView?: boolean;
 }) {
   const auth = useOptionalAuth();
   /* Inside the pilots screen the host is already behind AuthGate, so anyone looking at this
      is signed in on a ULABS account and asking them to sign in again inside their own admin
      is how the internal checklist ended up invisible to the team it was written for. */
-  const internal = auth.internal || Boolean(embedded);
+  const internal = !publicView && (auth.internal || Boolean(embedded));
   /* Whose page this is. `/help` with no store in the path is ours, the link we hand somebody
      who is not a store record yet; `/help/<slug>` is a merchant's. The Internal tab shows on
      ours whether or not anybody has signed in, because a tab that only appears once you are
      signed in is indistinguishable from a tab that is gone, which is how it went missing.
      Its CONTENTS stay gated on `internal`, which is the line D2026-0925-05 drew. */
-  const ourSurface = Boolean(embedded) || !store;
+  const ourSurface = !publicView && (Boolean(embedded) || !store);
   const [view, setView] = useState<View>({ kind: "faq" });
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<string | null>(null);
@@ -307,7 +311,8 @@ export default function HelpApp({
                 : <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2" /><path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4L17 7M7 17l-1.6 1.6" /></svg>}
             </button>
             {internal && <button className="hc-btn hc-int" onClick={() => go({ kind: "insights" })}>Insights</button>}
-            {auth.available && (auth.internal
+            {internal && <MerchantLink />}
+            {!publicView && auth.available && (auth.internal
               ? <button className="hc-btn ghost" onClick={auth.signOut} title={auth.user?.email || ""}>Internal · sign out</button>
               : <button className="hc-btn ghost" onClick={auth.signIn}>ULABS sign in</button>)}
           </div>
@@ -457,9 +462,57 @@ export default function HelpApp({
           answer that tells them to talk to their account owner about commercials is reading a
           note we wrote for ourselves. */}
       <ChatDock seed={chatSeed} onSeedUsed={() => setChatSeed(null)} email={auth.user?.email} internal={false} />
+      <ToTop />
     </div>
   );
 }
+
+/** The link to send a merchant: this Help Centre with Internal, Insights and the sign-in
+ *  taken out. One button because the alternative is somebody pasting the internal URL. */
+function MerchantLink() {
+  const [done, setDone] = useState(false);
+  const copy = async () => {
+    const url = new URL("/help", window.location.origin);
+    url.searchParams.set("public", "1");
+    try { await navigator.clipboard.writeText(url.toString()); setDone(true); setTimeout(() => setDone(false), 1800); }
+    catch { window.prompt("Copy this link", url.toString()); }
+  };
+  return (
+    <button className="hc-btn ghost" onClick={copy} title="A link with Internal and Insights removed">
+      {done ? "Link copied" : "Merchant link"}
+    </button>
+  );
+}
+
+/** Back to the top, and to the tabs that scrolled away with the page.
+ *
+ *  The sub row used to be pinned under an already-pinned bar: two bands of chrome over the
+ *  reading column, and on Simulate it cut through the card beneath it. The row scrolls away
+ *  now, so this is how you get back to it.
+ *
+ *  Always rendered rather than shown past a scroll threshold. A threshold reads well and is
+ *  wrong on exactly the pages that need it: the FAQ list at this width scrolls 437px in
+ *  total, so a control that waits for 300 or 500 never appeared on the screen it was written
+ *  for. `hidden` when the page cannot scroll at all is the honest version of the same idea. */
+function ToTop() {
+  const [canScroll, setCanScroll] = useState(true);
+  useEffect(() => {
+    const on = () => setCanScroll(document.documentElement.scrollHeight > window.innerHeight + 120);
+    on();
+    window.addEventListener("resize", on);
+    const t = setInterval(on, 1200);
+    return () => { window.removeEventListener("resize", on); clearInterval(t); };
+  }, []);
+  if (!canScroll) return null;
+  return (
+    <button type="button" className="hc-totop withfab"
+      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6" /></svg>
+      Top
+    </button>
+  );
+}
+
 
 function Home({ go, internal, onAsk, answered }: {
   go: (v: View) => void; internal: boolean; onAsk: (q: string) => void; answered: number;

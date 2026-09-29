@@ -29,13 +29,18 @@ export interface ReadProduct {
  *  Brand_Secondary is a light tint in the flat model and the nested model has no field for
  *  it, so it lands on mutedSurface, which is what fills an unselected tab and a section. */
 function toTheme(tokens: Token[], corners: string, customPx: number | null, base: WidgetTheme, cardPx: number | null, buttonPx: number | null): WidgetTheme {
+  /* Nothing predefined. Every colour here comes off the merchant's own site, and a token the
+     reader could not find falls back to another token that WAS read — never to the app's
+     starting slate, violet and green, which is how a widget ended up wearing colours that
+     belong to nobody's brand. `base` is only reached when the site gave us nothing at all. */
   const get = (k: string) => tokens.find((t) => t.key === k)?.hex;
-  const primary = get("Brand_Primary") || base.colors.primary;
-  const accent = get("Brand_Accent") || base.colors.subscriptionAccent;
+  const any = tokens[0]?.hex;
+  const primary = get("Brand_Primary") || any || base.colors.primary;
+  const accent = get("Brand_Accent") || primary;
   const text = get("Product_Tile") || base.text.primary;
   const bg = get("Widget_Background") || base.surfaces.widgetBackground;
-  const tint = get("Brand_Secondary") || base.surfaces.mutedSurface;
-  const tile = get("Product_Tile_Background") || base.surfaces.inputBackground;
+  const tint = get("Brand_Secondary") || bg;
+  const tile = get("Product_Tile_Background") || bg;
 
   /* The CARD radius drives the container, never the button radius. thestack.club runs 40px
      pill buttons over 16px cards, and reading the button recommended a widget shaped like
@@ -56,13 +61,31 @@ function toTheme(tokens: Token[], corners: string, customPx: number | null, base
 
   return {
     ...base,
-    colors: { primary, subscriptionAccent: accent, savings: base.colors.savings },
+    /* The savings colour was a fixed green on every store. It is what a discount is printed
+       in, so it is the accent unless the site published something greener of its own. */
+    colors: { primary, subscriptionAccent: accent, savings: greenest(tokens) || accent },
     surfaces: { widgetBackground: bg, mutedSurface: tint, inputBackground: tile },
     // A border the theme does not publish is derived from the tint rather than left slate.
     borders: { default: mix(tint, text, 0.12), strong: primary },
     text: { primary: text, secondary: mix(text, bg, 0.45), muted: mix(text, bg, 0.62) },
     shape: { radius, buttonRadius: radiusBtn },
   };
+}
+
+/** The most green-leaning colour the site actually publishes, if it has one. A discount
+ *  reads as a saving in green, and where a brand has no green of its own the accent says it
+ *  better than a colour we picked. */
+function greenest(tokens: Token[]): string | null {
+  let best: { hex: string; score: number } | null = null;
+  for (const t of tokens) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(t.hex.replace("#", "").padStart(6, "0"));
+    if (!m) continue;
+    const n = parseInt(m[1], 16);
+    const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    const score = g - Math.max(r, b);
+    if (score > 30 && (!best || score > best.score)) best = { hex: t.hex, score };
+  }
+  return best?.hex ?? null;
 }
 
 function mix(a: string, b: string, t: number): string {

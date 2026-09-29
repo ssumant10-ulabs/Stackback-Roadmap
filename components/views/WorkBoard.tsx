@@ -6,7 +6,7 @@ import {
   fits, stageForDrop,
   type BoardColumn, type BoardTeam, type BoardView, type CardKind, type ReviewWith, type Stage,
 } from "@/lib/board";
-import { normPriority, subtreeCounts, waveWord } from "@/lib/derive";
+import { cardPriority, normPriority, subtreeCounts, waveWord } from "@/lib/derive";
 import type { Node } from "@/lib/types";
 import { Assignees } from "../Assignees";
 import { CommentChip, DateChip, StatusButton } from "../bits";
@@ -270,6 +270,13 @@ const rank = (c: BoardCard): number => {
   return v == null ? Number.MAX_SAFE_INTEGER : v;
 };
 
+/** Now, then Next, then Future; position within the horizon after that. Both are priority
+ *  and they answer different halves of it: the horizon is WHEN, the position is what comes
+ *  first once you are there. Sorting on position alone put next month's work above this
+ *  week's in the same column. */
+const horizon = (c: BoardCard): number => cardPriority(c.node ?? c.feature);
+const byPriority = (a: BoardCard, b: BoardCard) => horizon(a) - horizon(b) || rank(a) - rank(b);
+
 /** The tab badge, counted the same way the columns are filled: the union of what the columns
  *  would hold. It was its own `some()` pass, which drifted from the columns by six cards on
  *  the roadmap lens, and a badge that disagrees with the board under it is worse than no
@@ -286,7 +293,7 @@ function columnsFor(cards: BoardCard[], view: BoardView): Record<string, BoardCa
   for (const c of def.columns) {
     out[c.key] = pool
       .filter((x) => fits(c, x.stage, x.teams, x.review, kindOf(x)))
-      .sort((a, b) => rank(a) - rank(b));
+      .sort(byPriority);
   }
   return out;
 }
@@ -458,12 +465,15 @@ function Card({ card, view, rank: at, of, siblings, onMove, dragging, onDragStar
         {/* Position is the priority, so the number is the point: "second in this column" is
             a fact anybody can act on, where "Next" was a word three people read three ways.
             The horizon is still there and still clickable, in front of it. */}
-        {card.node && (
-          <button type="button" className={"wb-prio p-" + normPriority(node.priority)}
-            title="Now, Next or Future" onClick={() => s.setPriority(node.id, nextPriority(node.priority))}>
-            {waveWord(normPriority(node.priority))}
-          </button>
-        )}
+        {/* On every card. The write reaches a request perfectly well — `findEntry` returns
+            one as a Node — and this guard was the only thing making the horizon a roadmap-
+            task feature. Now hands it to PM and Future sends it back to the pile, for a card
+            nobody has started; one in flight only changes its tag. */}
+        <button type="button" className={"wb-prio p-" + cardPriority(card.node ?? card.feature)}
+          title="Now hands it to PM, Future sends it back to the backlog"
+          onClick={() => s.setPriority(card.id, nextPriority(cardPriority(card.node ?? card.feature)))}>
+          {waveWord(cardPriority(card.node ?? card.feature))}
+        </button>
         <span className="wb-rank" title={`${at} of ${of} in this column`}>{at}</span>
         {view === "pm" && <span className="wb-stage">{STAGE_LABEL[card.stage]}</span>}
         {task && <span className="wb-task" title={`Roadmap: ${task.title}`}>{task.title}</span>}

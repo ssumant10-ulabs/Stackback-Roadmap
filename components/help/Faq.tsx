@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { FAQ_SECTIONS, FAQ_COUNT, FAQ_JUMPS, FAQ_MEDIA, resolveFaq } from "@/lib/help/faq";
 import { ALL_CLIPS } from "@/lib/help/videos";
+import Jump from "./Jump";
 import { STATUS_LABEL, type HelpArticle } from "@/lib/help/types";
 
 /** The front door. The questions that actually come up, split by whether the store is live.
@@ -92,6 +93,10 @@ export default function Faq({ onOpen, onJump }: {
                             onClick={() => onOpen(a)}>Open the full answer</button>
                         )}
                       </div>
+                      {/* Every answer offers the module it is about, not only the two dozen
+                          somebody hand-mapped — and the mapped clip is pending on six of
+                          those, so without this they offered nothing you could click. */}
+                      <Jump art={a} />
                     </div>
                   )}
                 </li>

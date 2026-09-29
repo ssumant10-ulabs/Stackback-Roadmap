@@ -90,6 +90,15 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
 
   const [showLike, setShowLike] = useState(false);
   const [refsOpen, setRefsOpen] = useState(false);
+  /* `#/refs` is a route an answer can link to, and the Help Centre resolves it to this
+     screen. The drawer is this component's state, so it listens for the route itself rather
+     than having one threaded down through two parents. */
+  useEffect(() => {
+    const check = () => { if (location.hash.replace(/^#\/?/, "") === "refs") setRefsOpen(true); };
+    check();
+    window.addEventListener("hashchange", check);
+    return () => window.removeEventListener("hashchange", check);
+  }, []);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
 

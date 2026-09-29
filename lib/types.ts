@@ -137,6 +137,10 @@ export interface Feature {
   reviewWith?: import("./board").ReviewWith | null;
   /** Rank within its board column. See the Node field of the same name. */
   boardOrder?: number | null;
+  /** Now, Next or Future on the board. Its own field because a request's `priority` is a
+   *  sheet TEXT column — the live rows hold "PMFv1" — and writing 1, 2 or 3 into it would
+   *  destroy what the team typed. A roadmap task has one horizon and it is `priority`. */
+  boardPriority?: 1 | 2 | 3 | null;
   /* ---- the work fields, so a request behaves like every other card on the board.
      Shaped exactly like a Node's, and `findEntry` returns a request as one, so assigning,
      dating, checking off, adding a subtask and commenting are the same code for both. A

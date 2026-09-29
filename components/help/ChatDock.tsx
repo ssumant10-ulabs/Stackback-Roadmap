@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { OPENER, reply, transcript, you, type Turn } from "@/lib/help/chat";
+import Jump from "./Jump";
 import { STATUS_LABEL } from "@/lib/help/types";
 import { record } from "@/lib/help/log";
 import { ARTICLES, CATEGORIES } from "@/lib/help/corpus";
@@ -139,6 +140,9 @@ function Bubble({ t, onPick }: { t: Turn; onPick: (q: string) => void }) {
           </p>
           {t.art.path && <p className="hc-path"><span>Where to look</span>{t.art.path}</p>}
           <div className="hc-prose" dangerouslySetInnerHTML={{ __html: t.art.a }} />
+          {/* The chat lands on the same modules the FAQ does. Answering "what frequency" and
+              leaving the reader in a chat window is where the next message comes from. */}
+          <Jump art={t.art} />
           <a className="hc-chatlink" href={`#/cat/${t.art.cat}#a=${t.art.id}`}>
             Open in {CAT_NAME.get(t.art.cat)}
           </a>
