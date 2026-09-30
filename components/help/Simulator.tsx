@@ -75,11 +75,17 @@ export default function Simulator({ config, onConfig }: {
         <li><button type="button" onClick={() => setStep(1)}><b>1</b> What the customer sees</button></li>
         <li className="on"><b>2</b> What it creates in your admin</li>
       </ol>
-      <p className="hc-simchose">
-        <b>{c.deliveries} deliveries</b>, {FREQUENCIES.find((f) => f.days === c.everyDays)?.label.toLowerCase()
-          ?? `every ${c.everyDays} days`}, {c.discountPct}% off, on {MODE_LABEL[c.mode].toLowerCase()}.{" "}
-        <button type="button" className="hc-linkish" onClick={() => setStep(1)}>Change the plan</button>
-      </p>
+      {/* The widget stays on screen, on the left, with the orders beside it. A line of text
+          saying "6 deliveries, every 2 weeks" is a description of the thing you were just
+          looking at; the thing itself is what makes an order list legible, and changing a
+          plan here redraws the orders without leaving the page. */}
+      <details className="hc-simkeep" open>
+        <summary>
+          <b>{c.deliveries} deliveries</b>, {FREQUENCIES.find((f) => f.days === c.everyDays)?.label.toLowerCase()
+            ?? `every ${c.everyDays} days`}, {c.discountPct}% off, on {MODE_LABEL[c.mode].toLowerCase()}
+        </summary>
+        <Widget c={c} set={set} p={p} onSubscribe={() => setDrawnOverride(null)} ctaLabel="Apply to the orders below" />
+      </details>
       <p className="hc-blurb hc-flowlede">
         Checkout creates <b>one order</b>, whatever the run length. Delivery one&rsquo;s goods go onto
         that same order. Everything after it appears later, and only when it is paid for.
@@ -615,11 +621,14 @@ function ShopifyChildOrder({ c, mode }: { c: SimConfig; mode: Mode }) {
  *  Deliberately not the settings explorer from `WidgetPreview`. That one is for judging how
  *  the widget LOOKS; this is for following what it DOES, so it wears this page's own type
  *  and colours and carries no theme controls at all. */
-function Widget({ c, set, p, onSubscribe }: {
+function Widget({ c, set, p, onSubscribe, ctaLabel }: {
   c: SimConfig;
   set: <K extends keyof SimConfig>(k: K, v: SimConfig[K]) => void;
   p: ReturnType<typeof price>;
   onSubscribe: () => void;
+  /** Step two shows the same widget over its own orders, so the button says what it does
+   *  there. Same component either way: two copies of a widget is two widgets to keep level. */
+  ctaLabel?: string;
 }) {
   /* The run lengths a merchant actually sells, plus whatever is currently set, so a config
      arriving from step one of the form is never missing its own option. */
@@ -686,9 +695,9 @@ function Widget({ c, set, p, onSubscribe }: {
         </p>
 
         <button type="button" className="hc-wcta" onClick={onSubscribe}>
-          Subscribe &middot; {money(p.chargedNow)}
+          {ctaLabel ?? `Subscribe \u00b7 ${money(p.chargedNow)}`}
         </button>
-        <p className="hc-wfoot">Pressing this is step two: the orders it creates.</p>
+        {!ctaLabel && <p className="hc-wfoot">Pressing this is step two: the orders it creates.</p>}
       </div>
 
       {/* Beside the widget, not above it. Every knob a merchant sets is here and nothing a

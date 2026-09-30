@@ -62,9 +62,13 @@ export function canonicalTokens(
     {
       title: "Text colours",
       rows: [
-        { label: "Primary Text", value: t.text.primary, swatch: true, ...from("Product_Tile", "the widget's body and heading ink", "direct") },
-        { label: "Secondary Text", value: t.text.secondary, swatch: true, note: "Primary mixed toward the background", how: "derived" },
-        { label: "Muted Text", value: t.text.muted, swatch: true, note: "Primary mixed further toward the background", how: "derived" },
+        /* The skill's steps 5, 6 and 7: headings and price, then sub-labels and body copy,
+           then the lightest readable text. Two of these were one read and two derivations
+           off it, so Secondary Text was a colour off nobody's page. */
+        { label: "Primary Text", value: t.text.primary, swatch: true, ...from("Product_Tile", "your product title, heading or price", "direct") },
+        { label: "Secondary Text", value: t.text.secondary, swatch: true,
+          ...from("Text_Secondary", "Primary mixed toward the background, because your theme publishes one ink", "derived") },
+        { label: "Muted Text", value: t.text.muted, swatch: true, note: "Secondary stepped further toward the background", how: "derived" },
       ],
     },
     {
