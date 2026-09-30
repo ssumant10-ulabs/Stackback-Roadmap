@@ -9,9 +9,12 @@ import {
 import { cardPriority, normPriority, subtreeCounts, waveWord } from "@/lib/derive";
 import type { Node } from "@/lib/types";
 import { Assignees } from "../Assignees";
-import { CommentChip, DateChip, StatusButton } from "../bits";
+import { StatusButton } from "../bits";
 import { CommentsThread } from "../CommentsThread";
-import { IcChevron, IcFilter, IcPlus, IcTrash } from "../icons";
+import CardDetail from "./CardDetail";
+import SprintBoard from "./SprintBoard";
+import { PRIORITIES } from "@/lib/constants";
+import { IcFilter, IcPlus } from "../icons";
 import { useAppUi } from "../appui";
 import { SHOT_MAX_PER_REQUEST } from "@/lib/shots";
 
@@ -37,6 +40,13 @@ export function WorkBoard() {
   const ui = useAppUi();
   /** A handover waiting on its nudge. Nothing is written until it is answered. */
   const [ask, setAsk] = useState<{ id: string; kind: "team" | "review"; col: BoardColumn } | null>(null);
+  /** The card whose detail panel is open. Everything a card used to fold open now lives
+   *  there, so the board itself holds the id rather than each card holding a flag. */
+  const [detail, setDetail] = useState<string | null>(null);
+  /* The sprint is not a sixth column set, so it is not in BOARD_VIEWS: it reads the same
+     cards a different way, by commitment rather than by stage. Local state, and picking any
+     lens tab leaves it. */
+  const [sprint, setSprint] = useState(false);
 
   const all = s.boardCards();
   const filter = s.ui.filter;
@@ -107,6 +117,7 @@ export function WorkBoard() {
   }
 
   const asking = ask ? all.find((c) => c.id === ask.id) : null;
+  const detailCard = detail ? all.find((c) => c.id === detail) : null;
 
   function answer(value: string) {
     if (!ask) return;
@@ -132,13 +143,21 @@ export function WorkBoard() {
       <div className="wb-head">
         <nav className="wb-tabs" role="tablist" aria-label="Board views">
           {BOARD_VIEWS.map((v) => (
-            <button key={v.id} role="tab" aria-selected={view === v.id}
-              className={"wb-tab" + (view === v.id ? " on" : "")}
-              onClick={() => s.setBoardView(v.id as BoardView)}>
+            <button key={v.id} role="tab" aria-selected={!sprint && view === v.id}
+              className={"wb-tab" + (!sprint && view === v.id ? " on" : "")}
+              onClick={() => { setSprint(false); s.setBoardView(v.id as BoardView); }}>
               {v.label}
               <em>{countFor(cards, v.id as BoardView)}</em>
             </button>
           ))}
+          {/* The week, rather than a place. Last, because it is a read of the board rather
+              than another way of arranging it. */}
+          <button role="tab" aria-selected={sprint}
+            className={"wb-tab" + (sprint ? " on" : "")}
+            onClick={() => setSprint(true)}>
+            Sprint
+            <em>{cards.filter((c) => cardPriority(c.node ?? c.feature) === 1).length}</em>
+          </button>
         </nav>
         {/* Filter and Add task live here, on the tabs row, rather than in a strip of their
             own above it. Three stacked rows of chrome before the first column. */}
@@ -182,16 +201,18 @@ export function WorkBoard() {
         </span>
 
         <p className="wb-blurb">
-          {def.blurb}
-          {elsewhere.unowned > 0 && <> <span className="wb-else">{elsewhere.unowned} card{elsewhere.unowned === 1 ? "" : "s"} nobody has taken, in the backlog.</span></>}
-          {elsewhere.owned > 0 && <> <span className="wb-else">{elsewhere.owned} more on the other boards.</span></>}
+          {sprint ? "One week's commitment, by team and by how far along it is. The Now horizon is the sprint." : def.blurb}
+          {!sprint && elsewhere.unowned > 0 && <> <span className="wb-else">{elsewhere.unowned} card{elsewhere.unowned === 1 ? "" : "s"} nobody has taken, in the backlog.</span></>}
+          {!sprint && elsewhere.owned > 0 && <> <span className="wb-else">{elsewhere.owned} more on the other boards.</span></>}
           {filter && <> <span className="wb-else">Filtered to {filter.name}.</span></>}
         </p>
       </div>
 
+      {sprint && <SprintBoard cards={cards} />}
+
       {/* An empty column takes a sliver, not a share. Seven equal columns with five of them
           saying "Nothing here" pushed the two that hold the work off the screen. */}
-      <div className="wb-cols" style={{
+      {!sprint && <div className="wb-cols" style={{
         gridTemplateColumns: def.columns
           .map((c, i) => (isTail(i) && !tailOpen ? "58px"
             : (byColumn[c.key] || []).length ? "minmax(272px, 1fr)" : "minmax(154px, 0.55fr)"))
@@ -232,6 +253,10 @@ export function WorkBoard() {
                   <Card key={card.id} card={card} view={view}
                     rank={at + 1} of={list.length}
                     siblings={list.map((x) => x.id)}
+                    /* A module or a template IS its subtasks, so those two piles show the
+                       checklist without being opened. */
+                    expand={c.filesAs === "module" || c.filesAs === "template"}
+                    onOpen={() => setDetail(card.id)}
                     onMove={(id, col) => moveTo(id, col)}
                     dragging={dragId === card.id}
                     onDragStart={(e) => { setDragId(card.id); e.dataTransfer.setData("text/plain", card.id); e.dataTransfer.effectAllowed = "move"; }}
@@ -246,7 +271,9 @@ export function WorkBoard() {
             </section>
           );
         })}
-      </div>
+      </div>}
+
+      {detailCard && <CardDetail card={detailCard} onClose={() => setDetail(null)} />}
 
       {ask && (
         <Nudge spec={ask.kind === "team" ? ASK_TEAM : ASK_REVIEW}
@@ -259,7 +286,7 @@ export function WorkBoard() {
 
 /** One card on the board, either record. The store derives the stage, team and reviewer, so
  *  a component never has to know which of the two shapes it is holding to place it. */
-type BoardCard = ReturnType<ReturnType<typeof useStore>["boardCards"]>[number];
+export type BoardCard = ReturnType<ReturnType<typeof useStore>["boardCards"]>[number];
 
 /** What a card is, whichever record holds it. Roadmap work is a feature unless said so. */
 const kindOf = (c: BoardCard): CardKind => (c.node?.kind || c.feature?.kind || "feature") as CardKind;
@@ -354,32 +381,40 @@ function AddCard({ col, open, onOpen, onClose, onAsk }: {
 const nextPriority = (p: number | null | undefined): 1 | 2 | 3 =>
   (normPriority(p) === 3 ? 1 : normPriority(p) + 1) as 1 | 2 | 3;
 
-function Card({ card, view, rank: at, of, siblings, onMove, dragging, onDragStart, onDragEnd }: {
+/** One card on the board: the title, the horizon, and who has it.
+ *
+ *  It used to carry nine chips, a progress bar, a kind dropdown, a rank, a stage, its
+ *  roadmap parent, a file count and a fold holding subtasks, links and a comment thread. A
+ *  column of forty of those is not a list you scan; it is forty things to read. So the card
+ *  is the three facts you scan for and everything else is a click away in `CardDetail`,
+ *  where there is room to EDIT it rather than only look at it.
+ *
+ *  Two exceptions, both because the column's own meaning demands it. A module or template IS
+ *  its subtasks, so in those piles the checklist shows on the card. And the move menu stays,
+ *  because moving a card without opening it is the whole point of a board. */
+function Card({ card, view, rank: at, of, siblings, onMove, dragging, onDragStart, onDragEnd, expand, onOpen }: {
   card: BoardCard; view: BoardView;
-  /** Moving a card to a column runs the same rule a drop on it does, nudge and all. */
   onMove: (id: string, col: BoardColumn) => void;
-  /** 1-based position in its column, which IS its priority. */
   rank: number; of: number; siblings: string[];
   dragging: boolean;
+  /** Show the checklist on the card. True in the piles where a card IS its subtasks. */
+  expand?: boolean;
+  onOpen: () => void;
   onDragStart: (e: DragEvent) => void; onDragEnd: () => void;
 }) {
   const s = useStore();
-  const [open, setOpen] = useState(false);
-  const [moveOpen, setMoveOpen] = useState(false);
-  /* The comment chip writes `ui.commentsOpen`, which nothing on this card was reading, so
-     clicking it did nothing at all. Either way of opening the card opens the thread. */
-  const cmt = s.ui.commentsOpen[card.id] === true;
-  const body = open || cmt;
+  /* Where to draw the move menu, in viewport coordinates.
+     It cannot be positioned inside the card: `.wb-cols` sets `overflow-x: auto`, and CSS
+     computes `overflow-y` to `auto` alongside it, so the column is a clipping context and an
+     absolutely-positioned menu is cut off at its edge — which is what it was doing. Fixed to
+     the viewport, measured off the button, and flipped up when it would fall off. */
+  const [moveAt, setMoveAt] = useState<{ left: number; top: number; up: boolean } | null>(null);
+  const moveBtn = useRef<HTMLButtonElement>(null);
   const f = card.feature;
-  /* A request carries the same work fields as a task and `findEntry` returns it as a Node,
-     so the whole card body below is one piece of code: assignees, dates, checklist and
-     comments, on either record. A card with half the buttons is not the same card. */
   const node: Node = card.node ?? (f as unknown as Node);
-  const title = node.title;
   const kind: CardKind = (card.node?.kind || f?.kind || "feature") as CardKind;
   const counts = subtreeCounts(node);
-  const shots = (card.node?.shots || f?.shots || []) as { id: string; name: string; src: string; bytes: number }[];
-  const task = f ? s.featureTask(f) : null;
+  const horizon = cardPriority(card.node ?? card.feature);
 
   return (
     <article className={"wb-card" + (dragging ? " dragging" : "")} draggable
@@ -392,38 +427,41 @@ function Card({ card, view, rank: at, of, siblings, onMove, dragging, onDragStar
           <button type="button" aria-label="Move down" disabled={at === of}
             onClick={() => s.reorderCard(card.id, siblings, 1)}>&#9660;</button>
         </span>
-        {/* Five values, so a select rather than a click-through: cycling past four to reach
-            the fifth is a control that punishes you for wanting the last one. */}
-        <select className={"wb-kind k-" + kind} value={kind} aria-label="What this card is"
-          onChange={(e) => s.setCardKind(card.id, e.target.value as CardKind)}>
-          {ALL_KINDS.map((k) => <option key={k} value={k}>{KIND_LABEL[k]}</option>)}
+
+        {/* A SELECT, not a click-through. Cycling Now to Next to Future means one extra
+            click past the one you wanted parks the card in the backlog, and that is a
+            destination, not a wrap-around. */}
+        <select className={"wb-prio p-" + horizon} aria-label="Horizon"
+          title="Future parks the card in the backlog"
+          value={horizon} onChange={(e) => s.setPriority(card.id, Number(e.target.value) as 1 | 2 | 3)}>
+          {PRIORITIES.map((w) => <option key={w.p} value={w.p}>{w.word}</option>)}
         </select>
-        {/* The sheet id is how you find a row in the spreadsheet, which is a backlog job.
-            On a team board it is four characters of noise on every card. */}
-        {f?.ref && view === "backlog" && <span className="wb-ref">{f.ref}</span>}
-        {f?.urgency && <span className={"wb-urg u-" + f.urgency.toLowerCase()}>{f.urgency}</span>}
-        {/* Moving a card without dragging it. Dragging is fine within a column you can see;
-            it is not how you send something from the backlog to Dev on a board that scrolls
-            five columns wide. */}
-        {/* The columns of the board you are looking at, which is what "move it" means when
-            you are looking at one. A list of teams answered a different question and left you
-            to work out which column that put it in. */}
+
+        <span className="wb-cardgrow" />
+
         <span className="wb-moveto">
-          <button type="button" aria-label="Move to a column" title="Move to a column"
-            onClick={() => setMoveOpen((v) => !v)}>&#8594;</button>
-          {moveOpen && (
-            <span className="wb-movemenu">
+          <button ref={moveBtn} type="button" aria-label="Move to a column" title="Move to a column"
+            onClick={() => {
+              if (moveAt) { setMoveAt(null); return; }
+              const r = moveBtn.current?.getBoundingClientRect();
+              if (!r) return;
+              const room = window.innerHeight - r.bottom;
+              setMoveAt({ left: r.right, top: room < 300 ? r.top : r.bottom + 4, up: room < 300 });
+            }}>&#8594;</button>
+          {moveAt && (
+            <span className="wb-movemenu" style={{ left: moveAt.left, top: moveAt.top,
+              transform: `translateX(-100%)${moveAt.up ? " translateY(-100%)" : ""}` }}>
               {VIEW_BY_ID[view].columns.map((c) => (
                 <button key={c.key} type="button"
                   className={fits(c, card.stage, card.teams, card.review, kind) ? "on" : ""}
-                  onClick={() => { onMove(card.id, c); setMoveOpen(false); }}>
+                  onClick={() => { onMove(card.id, c); setMoveAt(null); }}>
                   {c.title}
                 </button>
               ))}
               <span className="wb-moverule" />
               {MOVE_TO.map((m) => (
                 <button key={m.label} type="button"
-                  onClick={() => { s.moveToTeam(card.id, m.value, m.stage); setMoveOpen(false); }}>
+                  onClick={() => { s.moveToTeam(card.id, m.value, m.stage); setMoveAt(null); }}>
                   {m.label === "Back to the backlog" ? m.label : `Hand to ${m.label}`}
                 </button>
               ))}
@@ -433,141 +471,30 @@ function Card({ card, view, rank: at, of, siblings, onMove, dragging, onDragStar
         <span className="wb-status"><StatusButton node={node} size={15} /></span>
       </div>
 
-      <h4 className="wb-title">{title}</h4>
-      {f?.storeName && <p className="wb-store">{f.storeName}</p>}
+      <button type="button" className="wb-title wb-titlebtn" onClick={onOpen}>{node.title}</button>
 
-      {/* The old card's meta row, unchanged: who has it, when it is due, what was said. */}
       <div className="wb-meta">
         <span className="assignees"><Assignees node={node} small /></span>
-        <DateChip node={node} variant="icon" />
-        <CommentChip node={node} />
+        {counts.total > 0 && (
+          <button type="button" className="wb-count" onClick={onOpen}
+            title="Open the card">{counts.done}/{counts.total}</button>
+        )}
       </div>
 
-      {counts.total > 0 && (
-        <div className="wb-prog">
-          <div className="wb-progtrack">
-            <div className="wb-progfill" style={{ width: Math.round((counts.done / counts.total) * 100) + "%" }} />
-          </div>
-          <span>{counts.done}/{counts.total}</span>
-        </div>
-      )}
-
-      <div className="wb-chips">
-        {/* Only once it has actually been handed over. At intake the team chip is the
-            sheet's owner, not a decision anybody made on this board, and a card reading
-            "Dev" while it sits in Feature requests looks like a handover that happened. */}
-        {view === "pm" && card.team && card.stage !== "bug" && card.stage !== "feature" && (
-          <span className={"wb-team t-" + (card.team === "Design" ? "dsg" : "eng")}>
-            {card.team === "Engineering" ? "Dev" : "Design"}
-          </span>
-        )}
-        {card.review && card.stage === "dev_review" && (
-          <span className="wb-team t-rev">{card.review === "Design" ? "Design QA" : "PM review"}</span>
-        )}
-        {/* Position is the priority, so the number is the point: "second in this column" is
-            a fact anybody can act on, where "Next" was a word three people read three ways.
-            The horizon is still there and still clickable, in front of it. */}
-        {/* On every card. The write reaches a request perfectly well — `findEntry` returns
-            one as a Node — and this guard was the only thing making the horizon a roadmap-
-            task feature. Now hands it to PM and Future sends it back to the pile, for a card
-            nobody has started; one in flight only changes its tag. */}
-        <button type="button" className={"wb-prio p-" + cardPriority(card.node ?? card.feature)}
-          title="Now hands it to PM, Future sends it back to the backlog"
-          onClick={() => s.setPriority(card.id, nextPriority(cardPriority(card.node ?? card.feature)))}>
-          {waveWord(cardPriority(card.node ?? card.feature))}
-        </button>
-        <span className="wb-rank" title={`${at} of ${of} in this column`}>{at}</span>
-        {view === "pm" && <span className="wb-stage">{STAGE_LABEL[card.stage]}</span>}
-        {task && <span className="wb-task" title={`Roadmap: ${task.title}`}>{task.title}</span>}
-        {shots.length > 0 && <span className="wb-shotn">{shots.length} file{shots.length === 1 ? "" : "s"}</span>}
-      </div>
-
-      <button type="button" className={"wb-more" + (body ? " on" : "")}
-        onClick={() => { setOpen(!body); if (cmt) s.toggleComments(card.id); }}>
-        <IcChevron />{body ? "Less" : counts.total ? `Checklist and files (${counts.total})` : "Files and notes"}
-      </button>
-
-      {body && (
-        <div className="wb-open">
-          {counts.total > 0 && (
-            <ul className="wb-subs">
-              {node.children.map((k) => (
-                <li key={k.id}>
-                  <StatusButton node={k} size={13} />
-                  <span className={k.status === "done" ? "done" : ""}>{k.title}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-          <AddSub parentId={node.id} />
-          <Files id={card.id} shots={shots} />
-          <CommentsThread node={node} />
-          <button type="button" className="wb-del"
-            onClick={() => {
-              const n = counts.total;
-              if (n && !confirm(`Delete "${title}" and its ${n} subtask${n === 1 ? "" : "s"}?`)) return;
-              if (!n && !confirm(`Delete "${title}"?`)) return;
-              s.delCard(card.id);
-            }}>
-            <IcTrash /> Delete this card
-          </button>
-        </div>
+      {expand && counts.total > 0 && (
+        <ul className="wb-subs">
+          {node.children.map((k) => (
+            <li key={k.id}>
+              <StatusButton node={k} size={13} />
+              <span className={k.status === "done" ? "done" : ""}>{k.title}</span>
+            </li>
+          ))}
+        </ul>
       )}
     </article>
   );
 }
 
-/** Handover links on a card: a Figma frame, a spec, a shared screenshot.
- *
- *  Links only. The file picker downscaled a JPEG into a data URL in this browser's storage,
- *  which is a copy nobody else on the team can open and a budget that runs out; a link is the
- *  thing itself and costs nothing. */
-function Files({ id, shots }: { id: string; shots: { id: string; name: string; src: string; bytes: number }[] }) {
-  const s = useStore();
-  const [err, setErr] = useState<string | null>(null);
-  const [adding, setAdding] = useState(false);
-  const [url, setUrl] = useState("");
-
-  const add = () => {
-    const v = url.trim();
-    if (!v) return;
-    const r = s.addShotLink(id, v);
-    if (!r.ok) { setErr(r.error || null); return; }
-    setErr(null); setUrl(""); setAdding(false);
-  };
-
-  return (
-    <div className="wb-files">
-      <div className="wb-filerow">
-        {shots.map((sh) => (
-          <span className="wb-shot" key={sh.id}>
-            <a href={sh.src} target="_blank" rel="noreferrer" title={sh.name}>
-              {isImage(sh.src) ? <img src={sh.src} alt={sh.name} /> : <span className="wb-shotdoc">{sh.name.slice(0, 18)}</span>}
-            </a>
-            <button type="button" aria-label={`Remove ${sh.name}`} onClick={() => s.delShot(id, sh.id)}><IcTrash /></button>
-          </span>
-        ))}
-        {!adding && shots.length < SHOT_MAX_PER_REQUEST && (
-          <button type="button" className="wb-shotadd" onClick={() => setAdding(true)}>+ Link</button>
-        )}
-      </div>
-      {adding && (
-        <div className="wb-linkrow">
-          <input autoFocus type="url" value={url} placeholder="https://..."
-            onChange={(e) => setUrl(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") { e.preventDefault(); add(); }
-              if (e.key === "Escape") { setAdding(false); setUrl(""); setErr(null); }
-            }} />
-          <button type="button" onClick={add}>Add</button>
-        </div>
-      )}
-      {err && <p className="wb-fileerr">{err}</p>}
-    </div>
-  );
-}
-
-const isImage = (src: string) => /\.(png|jpe?g|gif|webp|avif|svg)(\?|$)/i.test(src) || src.startsWith("data:image");
 
 /** The handover nudge. Asked rather than inferred, and nothing is written until it is
  *  answered, so cancelling leaves the card exactly where it was. */
@@ -591,22 +518,6 @@ function Nudge({ spec, title, onPick, onClose }: {
           <button type="button" className="btn ghost" onClick={onClose}>Cancel</button>
         </div>
       </div>
-    </div>
-  );
-}
-
-/** Add a subtask, the way the old board did. A card whose checklist can only be read is a
- *  card you have to leave the board to change. */
-function AddSub({ parentId }: { parentId: string }) {
-  const s = useStore();
-  const [v, setV] = useState("");
-  const add = () => { const t = v.trim(); if (!t) return; s.addChild(parentId, t); setV(""); };
-  return (
-    <div className="wb-addsub">
-      <input type="text" value={v} placeholder="Add a subtask"
-        onChange={(e) => setV(e.target.value)}
-        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
-      <button type="button" onClick={add}>Add</button>
     </div>
   );
 }

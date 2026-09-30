@@ -1994,7 +1994,10 @@
 }
 .wb-moveto > button:hover { color: var(--ink, #111); border-color: var(--ink-3, #999); }
 .wb-movemenu {
-  position: absolute; top: calc(100% + 3px); right: 0; z-index: 50; min-width: 148px;
+  /* Fixed to the viewport, not to the card: `.wb-cols` scrolls sideways, which makes it a
+     clipping context vertically as well, and the menu was being cut off at the column edge.
+     The button measures itself and passes left/top in. */
+  position: fixed; z-index: 90; min-width: 148px;
   display: flex; flex-direction: column; padding: 4px;
   background: var(--card, #fff); border: 1px solid var(--line, rgba(0,0,0,.14));
   border-radius: 9px; box-shadow: 0 8px 24px rgba(0,0,0,.16);
@@ -2034,7 +2037,7 @@
 .wb-kind:focus-visible { outline: 2px solid var(--brand, #4F7A00); outline-offset: 1px; }
 
 /* The move menu lists this board's own columns. */
-.wb-movemenu { min-width: 190px; max-height: 320px; overflow: auto; }
+.wb-movemenu { min-width: 190px; max-height: min(360px, 60vh); overflow: auto; }
 .wb-moverule { display: block; height: 1px; margin: 4px 2px; background: var(--line, rgba(0,0,0,.12)); }
 
 /* The work filter, a popover beside the who filter. */
@@ -2077,3 +2080,180 @@
 .wb-head { grid-template-columns: 1fr auto; }
 .wb-head .wb-tabs { grid-column: 1; }
 .wb-actions { grid-column: 2; }
+
+/* ---- the card, cut back to what you scan for --------------------------------------------
+   Title, horizon, who has it. Everything else is one click away in the detail panel, where
+   there is room to edit it rather than only look at it. */
+.wb-cardgrow { flex: 1 1 auto; }
+.wb-titlebtn {
+  appearance: none; border: 0; background: none; cursor: pointer; font: inherit;
+  text-align: left; padding: 0; width: 100%; color: inherit;
+}
+.wb-titlebtn:hover { text-decoration: underline; text-underline-offset: 2px; }
+.wb-count {
+  appearance: none; border: 1px solid var(--line, rgba(0,0,0,.12)); background: none; cursor: pointer;
+  font: inherit; font-size: 10.5px; font-variant-numeric: tabular-nums; color: var(--ink-3, #777);
+  border-radius: 999px; padding: 1px 7px; margin-left: auto;
+}
+.wb-count:hover { color: var(--ink, #111); border-color: var(--line-2, rgba(0,0,0,.24)); }
+/* The horizon is a select now, so one click past the one you wanted cannot park the card. */
+select.wb-prio {
+  appearance: none; font: inherit; font-size: 10px; font-weight: 800; letter-spacing: .03em;
+  text-transform: uppercase; border: 0; border-radius: 999px; padding: 2px 8px; cursor: pointer;
+}
+
+/* ---- the card detail panel -------------------------------------------------------------- */
+.wb-detwrap { position: fixed; inset: 0; z-index: 95; }
+.wb-detscrim { position: absolute; inset: 0; background: rgba(0,0,0,.34); }
+.wb-det {
+  position: absolute; top: 0; right: 0; bottom: 0; width: min(560px, 100%);
+  background: var(--page, #fff); border-left: 1px solid var(--line, rgba(0,0,0,.14));
+  display: flex; flex-direction: column; box-shadow: -18px 0 46px rgba(0,0,0,.22);
+}
+.wb-deth {
+  display: flex; align-items: center; gap: 10px; padding: 14px 18px;
+  border-bottom: 1px solid var(--line, rgba(0,0,0,.12));
+}
+.wb-detmeta { display: flex; align-items: center; gap: 10px; font-size: 11.5px; color: var(--ink-3, #777); }
+.wb-detmeta b { font-size: 11.5px; font-weight: 700; color: var(--ink-2, #444); font-variant-numeric: tabular-nums; }
+.wb-deth > button {
+  margin-left: auto; appearance: none; border: 0; background: none; cursor: pointer;
+  color: var(--ink-3, #777); display: grid; place-items: center; padding: 4px;
+}
+.wb-deth > button:hover { color: var(--ink, #111); }
+.wb-detbody { overflow-y: auto; padding: 16px 18px 28px; display: flex; flex-direction: column; gap: 16px; }
+.wb-dettitle {
+  font: inherit; font-size: 18px; font-weight: 680; line-height: 1.35; letter-spacing: -.01em;
+  border: 1px solid transparent; border-radius: 9px; padding: 7px 9px; margin: -7px -9px;
+  background: none; color: var(--ink, #111); resize: vertical; width: calc(100% + 18px);
+}
+.wb-dettitle:hover { border-color: var(--line, rgba(0,0,0,.12)); }
+.wb-dettitle:focus { border-color: var(--brand, #4F7A00); outline: none; background: var(--card, #fff); }
+.wb-detgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.wb-detfield { display: flex; flex-direction: column; gap: 4px; }
+.wb-detfield > span { font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--ink-3, #777); }
+.wb-detfield > em { font-style: normal; font-size: 11px; color: var(--ink-3, #777); line-height: 1.4; }
+.wb-detfield select, .wb-detfield input {
+  font: inherit; font-size: 13px; padding: 7px 9px; border-radius: 8px;
+  border: 1px solid var(--line-2, rgba(0,0,0,.18)); background: var(--card, #fff); color: var(--ink, #111);
+}
+.wb-detfmt {
+  appearance: none; cursor: pointer; font: inherit; font-size: 12px; text-align: left;
+  padding: 9px 11px; border-radius: 9px; border: 1px dashed var(--line-2, rgba(0,0,0,.2));
+  background: none; color: var(--ink-2, #444); line-height: 1.45;
+}
+.wb-detfmt:hover { border-color: var(--brand, #4F7A00); color: var(--ink, #111); }
+.wb-detfmt b { font-weight: 640; }
+.wb-detrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.wb-detlbl { font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--ink-3, #777); }
+.wb-dettask { margin: 0; font-size: 12.5px; color: var(--ink-3, #777); }
+.wb-detsec { display: flex; flex-direction: column; gap: 9px; border-top: 1px solid var(--line, rgba(0,0,0,.1)); padding-top: 14px; }
+.wb-detsec h4 { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--ink-3, #777); }
+.wb-detsec h4 em { font-style: normal; font-weight: 500; text-transform: none; letter-spacing: 0; margin-left: 8px; }
+.wb-detsubs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.wb-detsubs li { display: flex; align-items: center; gap: 8px; }
+.wb-detsubs input {
+  font: inherit; font-size: 13px; flex: 1 1 auto; min-width: 0;
+  border: 1px solid transparent; border-radius: 7px; padding: 5px 7px;
+  background: none; color: var(--ink, #111);
+}
+.wb-detsubs input:hover { border-color: var(--line, rgba(0,0,0,.12)); }
+.wb-detsubs input:focus { border-color: var(--brand, #4F7A00); outline: none; background: var(--card, #fff); }
+.wb-detsubs input.done { color: var(--ink-3, #777); text-decoration: line-through; }
+.wb-subdel, .wb-detlinks button {
+  appearance: none; border: 0; background: none; cursor: pointer; color: var(--ink-3, #999);
+  display: grid; place-items: center; padding: 4px; border-radius: 6px; flex: none;
+}
+.wb-subdel:hover, .wb-detlinks button:hover { color: #b42318; background: rgba(180,35,24,.08); }
+.wb-detadd { display: flex; gap: 6px; }
+.wb-detadd input {
+  font: inherit; font-size: 13px; flex: 1 1 auto; min-width: 0; padding: 7px 9px;
+  border-radius: 8px; border: 1px solid var(--line-2, rgba(0,0,0,.18));
+  background: var(--card, #fff); color: var(--ink, #111);
+}
+.wb-detadd button {
+  appearance: none; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 620;
+  display: inline-flex; align-items: center; gap: 5px; padding: 7px 12px; border-radius: 8px;
+  border: 1px solid var(--line-2, rgba(0,0,0,.18)); background: var(--card, #fff); color: var(--ink, #111);
+}
+.wb-detlinks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.wb-detlinks li { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+.wb-detlinks a { color: var(--brand-deep, #3c5c00); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wb-detlinks a:hover { text-decoration: underline; }
+.wb-deterr { margin: 0; font-size: 12px; color: #b42318; }
+
+/* ---- the sprint, a week's commitment --------------------------------------------------
+   Not a sixth column set. The board answers "where is this card"; this answers "what did we
+   commit to this week and how far through is it". The Now horizon IS the sprint, so planning
+   one is the same two clicks as everything else: pull a card in, push one out. */
+.sp { display: flex; flex-direction: column; gap: 16px; }
+.sp-head { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.sp-week { display: flex; align-items: center; gap: 8px; }
+.sp-week b { font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
+.sp-week button, .sp-today {
+  appearance: none; cursor: pointer; font: inherit; font-size: 12px;
+  border: 1px solid var(--line, rgba(0,0,0,.14)); background: var(--card, #fff);
+  color: var(--ink-2, #444); border-radius: 8px; padding: 3px 9px;
+}
+.sp-week button:hover { color: var(--ink, #111); border-color: var(--line-2, rgba(0,0,0,.24)); }
+.sp-prog { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.sp-progbar {
+  display: block; width: 190px; height: 6px; border-radius: 999px;
+  background: var(--sunken, rgba(0,0,0,.08)); overflow: hidden;
+}
+.sp-progbar i { display: block; height: 100%; background: var(--brand, #4F7A00); }
+.sp-progn { font-size: 12px; color: var(--ink-3, #777); font-variant-numeric: tabular-nums; }
+.sp-lede, .sp-qlede { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--ink-3, #777); }
+.sp-empty {
+  margin: 0; padding: 22px; border-radius: 12px; border: 1px dashed var(--line-2, rgba(0,0,0,.18));
+  font-size: 13px; color: var(--ink-3, #777); text-align: center;
+}
+.sp-lanes { display: flex; flex-direction: column; gap: 14px; }
+.sp-lane {
+  border: 1px solid var(--line, rgba(0,0,0,.1)); border-radius: 14px; padding: 13px;
+  background: var(--card, #fff);
+}
+.sp-lane h3 { margin: 0 0 11px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.sp-lane h3 em, .sp-queue h3 em, .sp-bucket h4 em {
+  font-style: normal; font-size: 11px; font-weight: 600; color: var(--ink-3, #777);
+  background: var(--sunken, rgba(0,0,0,.06)); border-radius: 999px; padding: 1px 7px;
+  font-variant-numeric: tabular-nums;
+}
+.sp-buckets { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 1023px) { .sp-buckets { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 639px) { .sp-buckets { grid-template-columns: 1fr; } }
+.sp-bucket { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.sp-bucket.empty { opacity: .45; }
+.sp-bucket h4 {
+  margin: 0; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--ink-3, #777); display: flex; align-items: center; gap: 6px;
+}
+.sp-card {
+  border: 1px solid var(--line, rgba(0,0,0,.12)); border-radius: 10px; padding: 9px 10px;
+  background: var(--page, #fff); display: flex; flex-direction: column; gap: 7px;
+}
+.sp-cardtop { display: flex; align-items: flex-start; gap: 7px; }
+.sp-cardtitle { font-size: 12.5px; font-weight: 600; line-height: 1.4; flex: 1 1 auto; min-width: 0; }
+.sp-push, .sp-pull {
+  appearance: none; cursor: pointer; border: 1px solid var(--line, rgba(0,0,0,.14));
+  background: var(--card, #fff); color: var(--ink-3, #777); flex: none;
+  width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center;
+  font: inherit; font-size: 13px; line-height: 1;
+}
+.sp-push:hover, .sp-pull:hover { color: var(--ink, #111); border-color: var(--brand, #4F7A00); }
+.sp-cardfoot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sp-cardn { font-size: 10.5px; color: var(--ink-3, #777); font-variant-numeric: tabular-nums; }
+.sp-cardstage { font-size: 10.5px; color: var(--ink-3, #777); margin-left: auto; }
+.sp-queue {
+  border-top: 1px solid var(--line, rgba(0,0,0,.1)); padding-top: 16px;
+  display: flex; flex-direction: column; gap: 9px;
+}
+.sp-queue h3 { margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.sp-qlist { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 7px; }
+.sp-qcard {
+  display: flex; align-items: center; gap: 9px; padding: 8px 10px; min-width: 0;
+  border: 1px solid var(--line, rgba(0,0,0,.1)); border-radius: 9px; background: var(--card, #fff);
+}
+.sp-qtitle { font-size: 12.5px; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-qteam { font-size: 10.5px; color: var(--ink-3, #777); flex: none; }
+.sp-qmore { margin: 4px 0 0; font-size: 12px; color: var(--ink-3, #777); }

@@ -1,0 +1,240 @@
+"use client";
+import { useEffect, useRef, useState } from "react";
+import { useStore } from "@/lib/store";
+import { ALL_KINDS, KIND_LABEL, STAGE_LABEL, type CardKind } from "@/lib/board";
+import type { BoardCard } from "./WorkBoard";
+import { ERROR_TYPES, LINEAR_STATES, LINEAR_STATE_NOTE, SURFACES, linearTitle } from "@/lib/linear";
+import { cardPriority, subtreeCounts, waveWord } from "@/lib/derive";
+import { PRIORITIES } from "@/lib/constants";
+import { Assignees } from "../Assignees";
+import { DateChip, StatusButton } from "../bits";
+import { CommentsThread } from "../CommentsThread";
+import { IcClose, IcPlus, IcTrash } from "../icons";
+import type { Node } from "@/lib/types";
+
+/** Everything about one card, in a panel of its own.
+ *
+ *  The card on the board is now the title, the horizon and who has it, because a column of
+ *  cards is a list you scan rather than a list you read: nine chips and a fold on every one
+ *  made forty cards unreadable and hid the three facts you actually scan for. Everything
+ *  else — what it is, which surface, its subtasks, links, dates and the thread — is here,
+ *  one click away, with room to edit rather than only to look. */
+export default function CardDetail({ card, onClose }: { card: BoardCard; onClose: () => void }) {
+  const s = useStore();
+  const f = card.feature;
+  const node: Node = card.node ?? (f as unknown as Node);
+  const rec = (card.node ?? f) as Record<string, unknown> | undefined;
+  const kind: CardKind = (card.node?.kind || f?.kind || "feature") as CardKind;
+  const counts = subtreeCounts(node);
+  const shots = (card.node?.shots || f?.shots || []) as { id: string; name: string; src: string; bytes: number }[];
+  const task = f ? s.featureTask(f) : null;
+
+  const [title, setTitle] = useState(node.title);
+  useEffect(() => setTitle(node.title), [node.title]);
+
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", esc);
+    return () => document.removeEventListener("keydown", esc);
+  }, [onClose]);
+
+  const str = (k: string) => (typeof rec?.[k] === "string" ? (rec[k] as string) : "") || "";
+  const commit = () => { if (title.trim() && title !== node.title) s.rename(card.id, title); };
+
+  return (
+    <div className="wb-detwrap" role="dialog" aria-modal="true" aria-label={node.title}>
+      <div className="wb-detscrim" onClick={onClose} role="presentation" />
+      <aside className="wb-det">
+        <header className="wb-deth">
+          <span className="wb-detmeta">
+            {f?.ref && <b>{f.ref}</b>}
+            <span>{STAGE_LABEL[card.stage as keyof typeof STAGE_LABEL]}</span>
+            {card.teams.length > 0 && <span>{card.teams.map((t: string) => (t === "Engineering" ? "Dev" : t)).join(" · ")}</span>}
+          </span>
+          <button type="button" onClick={onClose} aria-label="Close"><IcClose /></button>
+        </header>
+
+        <div className="wb-detbody">
+          {/* The title is editable in place. It was read-only on the board and on this panel,
+              so a typo in a card title could only be fixed by deleting the card. */}
+          <textarea className="wb-dettitle" value={title} rows={2}
+            aria-label="Card title"
+            onChange={(e) => setTitle(e.target.value)} onBlur={commit}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); (e.target as HTMLTextAreaElement).blur(); } }} />
+
+          <div className="wb-detgrid">
+            <Field label="Horizon" hint="Future parks the card in the backlog">
+              <select value={cardPriority(card.node ?? card.feature)}
+                onChange={(e) => s.setPriority(card.id, Number(e.target.value) as 1 | 2 | 3)}>
+                {PRIORITIES.map((w) => <option key={w.p} value={w.p}>{w.word}</option>)}
+              </select>
+            </Field>
+            <Field label="Type">
+              <select value={kind} onChange={(e) => s.setCardKind(card.id, e.target.value as CardKind)}>
+                {ALL_KINDS.map((k) => <option key={k} value={k}>{KIND_LABEL[k]}</option>)}
+              </select>
+            </Field>
+            <Field label="Surface" hint="The Linear label for where it lives">
+              <select value={str("surface")} onChange={(e) => s.setLinear(card.id, "surface", e.target.value)}>
+                <option value="">Not set</option>
+                {["Customer Zone", "Merchant Zone"].map((zone) => (
+                  <optgroup key={zone} label={zone}>
+                    {SURFACES.filter((x) => x.zone === zone).map((x) => (
+                      <option key={x.id} value={x.id}>{x.label}</option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </Field>
+            <Field label="Error type" hint="The second Linear label every ticket carries">
+              <select value={str("errorType")} onChange={(e) => s.setLinear(card.id, "errorType", e.target.value)}>
+                <option value="">Not set</option>
+                {ERROR_TYPES.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}
+              </select>
+            </Field>
+            <Field label="Linear state" hint={LINEAR_STATE_NOTE[(str("linearState") || "Triage") as keyof typeof LINEAR_STATE_NOTE]}>
+              <select value={str("linearState")} onChange={(e) => s.setLinear(card.id, "linearState", e.target.value)}>
+                <option value="">Not in Linear</option>
+                {LINEAR_STATES.map((x) => <option key={x} value={x}>{x}</option>)}
+              </select>
+            </Field>
+            <Field label="Linear ticket" hint="QA-12, INT-03">
+              <input type="text" value={str("linearRef")} placeholder="QA-00"
+                onChange={(e) => s.setLinear(card.id, "linearRef", e.target.value)} />
+            </Field>
+          </div>
+
+          {/* The locked title format, offered rather than enforced: a dev should know the
+              module and the store from the title alone. */}
+          {(str("surface") || str("errorType")) && (
+            <button type="button" className="wb-detfmt"
+              onClick={() => { const t = linearTitle(node.title, str("errorType"), str("surface"), f?.storeName); setTitle(t); s.rename(card.id, t); }}>
+              Rename to the Linear format: <b>{linearTitle(node.title, str("errorType"), str("surface"), f?.storeName)}</b>
+            </button>
+          )}
+
+          <div className="wb-detrow">
+            <span className="wb-detlbl">Who has it</span>
+            <span className="assignees"><Assignees node={node} small /></span>
+            <DateChip node={node} variant="icon" />
+          </div>
+
+          {task && <p className="wb-dettask">Roadmap: <b>{task.title}</b></p>}
+
+          <section className="wb-detsec">
+            <h4>Subtasks {counts.total > 0 && <em>{counts.done} of {counts.total} done</em>}</h4>
+            {counts.total > 0 && (
+              <ul className="wb-detsubs">
+                {node.children.map((k) => <Sub key={k.id} sub={k} />)}
+              </ul>
+            )}
+            <AddSub parentId={node.id} />
+          </section>
+
+          <section className="wb-detsec">
+            <h4>Links</h4>
+            <Links id={card.id} shots={shots} />
+          </section>
+
+          <section className="wb-detsec">
+            <h4>Comments</h4>
+            <CommentsThread node={node} />
+          </section>
+
+          <button type="button" className="wb-del"
+            onClick={() => {
+              const n = counts.total;
+              if (n && !confirm(`Delete "${node.title}" and its ${n} subtask${n === 1 ? "" : "s"}?`)) return;
+              if (!n && !confirm(`Delete "${node.title}"?`)) return;
+              s.delCard(card.id);
+              onClose();
+            }}>
+            <IcTrash /> Delete this card
+          </button>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <label className="wb-detfield">
+      <span>{label}</span>
+      {children}
+      {hint && <em>{hint}</em>}
+    </label>
+  );
+}
+
+/** One subtask, editable and removable in place.
+ *
+ *  It was a checkbox and a line of text, so a subtask with a typo in it was permanent and a
+ *  subtask added by mistake stayed on the card forever. */
+function Sub({ sub }: { sub: Node }) {
+  const s = useStore();
+  const [v, setV] = useState(sub.title);
+  useEffect(() => setV(sub.title), [sub.title]);
+  return (
+    <li>
+      <StatusButton node={sub} size={14} />
+      <input type="text" value={v} aria-label="Subtask"
+        className={sub.status === "done" ? "done" : ""}
+        onChange={(e) => setV(e.target.value)}
+        onBlur={() => { if (v.trim() && v !== sub.title) s.rename(sub.id, v); else setV(sub.title); }}
+        onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} />
+      <button type="button" aria-label={`Remove ${sub.title}`} className="wb-subdel"
+        onClick={() => { if (confirm(`Remove "${sub.title}"?`)) s.del(sub.id); }}><IcTrash /></button>
+    </li>
+  );
+}
+
+function AddSub({ parentId }: { parentId: string }) {
+  const s = useStore();
+  const [v, setV] = useState("");
+  const ref = useRef<HTMLInputElement>(null);
+  const add = () => { const t = v.trim(); if (!t) return; const id = s.addChild(parentId, t); if (id) { setV(""); ref.current?.focus(); } };
+  return (
+    <div className="wb-detadd">
+      <input ref={ref} type="text" value={v} placeholder="Add a subtask"
+        onChange={(e) => setV(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
+      <button type="button" onClick={add}><IcPlus /> Add</button>
+    </div>
+  );
+}
+
+/** Handover links. Links only, never uploads: a data URL in this browser's storage is a copy
+ *  nobody else on the team can open, on a budget that runs out. */
+function Links({ id, shots }: { id: string; shots: { id: string; name: string; src: string; bytes: number }[] }) {
+  const s = useStore();
+  const [url, setUrl] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  const add = () => {
+    const u = url.trim();
+    if (!u) return;
+    const r = s.addShotLink(id, u);
+    if (r.ok) { setUrl(""); setErr(null); } else setErr(r.error ?? "That link could not be added.");
+  };
+  return (
+    <>
+      {shots.length > 0 && (
+        <ul className="wb-detlinks">
+          {shots.map((sh) => (
+            <li key={sh.id}>
+              <a href={sh.src} target="_blank" rel="noreferrer">{sh.name}</a>
+              <button type="button" aria-label={`Remove ${sh.name}`} onClick={() => s.delShot(id, sh.id)}><IcTrash /></button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="wb-detadd">
+        <input type="text" value={url} placeholder="Paste a Figma, spec or screenshot link"
+          onChange={(e) => setUrl(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
+        <button type="button" onClick={add}><IcPlus /> Add</button>
+      </div>
+      {err && <p className="wb-deterr">{err}</p>}
+    </>
+  );
+}
