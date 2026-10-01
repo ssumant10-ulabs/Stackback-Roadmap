@@ -372,7 +372,10 @@
   .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
 
   /* assignee popover */
-  .popover{position:fixed;z-index:70;background:var(--card);border:1px solid var(--border-2);border-radius:12px;
+/* Above the card detail panel (95), not behind it. The assignee and date pickers open
+     from inside that panel, and at z-index 70 they rendered underneath it — which looks
+     exactly like a button that does nothing. */
+  .popover{position:fixed;z-index:120;background:var(--card);border:1px solid var(--border-2);border-radius:12px;
     box-shadow:var(--shadow);padding:12px;width:260px;display:none;}
   .popover.open{display:block;}
   .popover h4{margin:0 0 9px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-3);}
@@ -2257,3 +2260,20 @@ select.wb-prio {
 .sp-qtitle { font-size: 12.5px; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sp-qteam { font-size: 10.5px; color: var(--ink-3, #777); flex: none; }
 .sp-qmore { margin: 4px 0 0; font-size: 12px; color: var(--ink-3, #777); }
+.wb-subassign { display: inline-flex; align-items: center; gap: 3px; flex: none; }
+.wb-subassign .assign-add { opacity: .45; }
+.wb-detsubs li:hover .wb-subassign .assign-add { opacity: 1; }
+.sp-subs { list-style: none; margin: 6px 0 0; padding: 7px 0 0; border-top: 1px solid var(--line, rgba(0,0,0,.1)); display: flex; flex-direction: column; gap: 5px; }
+.sp-subs li { display: flex; align-items: center; gap: 7px; font-size: 11.5px; line-height: 1.35; }
+.sp-subs li > span:first-of-type { flex: 1 1 auto; min-width: 0; }
+.sp-subs .done { color: var(--ink-3, #777); text-decoration: line-through; }
+.sp-subs .assignees { flex: none; }
+button.sp-cardn { appearance: none; border: 1px solid var(--line, rgba(0,0,0,.12)); background: none; cursor: pointer; border-radius: 999px; padding: 0 6px; }
+button.sp-cardn:hover { color: var(--ink, #111); border-color: var(--line-2, rgba(0,0,0,.24)); }
+
+/* Three top-level tabs, with the team boards nested under the first. The sub row is quieter
+   than the top one so the hierarchy reads without a label saying so. */
+.wb-tabs-sub { margin-top: 6px; }
+.wb-tabs-sub .wb-tab { font-size: 12px; padding: 5px 11px; }
+.wb-tabs-sub .wb-tab.on { background: var(--card, #fff); color: var(--ink, #111); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+.wb-head { row-gap: 4px; }

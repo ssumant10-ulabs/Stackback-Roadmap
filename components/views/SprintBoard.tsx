@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
-import { STAGE_LABEL, type BoardTeam, type Stage } from "@/lib/board";
+import { STAGE_LABEL, teamForStage, type BoardTeam, type Stage } from "@/lib/board";
 import { cardPriority, subtreeCounts } from "@/lib/derive";
 import { Assignees } from "../Assignees";
 import { StatusButton } from "../bits";
@@ -47,6 +47,18 @@ function weekStart(offset: number): Date {
   return d;
 }
 const dayMonth = (d: Date) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+
+/** One lane per card, not one per team it names.
+ *
+ *  Listing a card under every team on it put work tagged Dev under PM as well, because PM is
+ *  on most cards through an assignee. The stage already says whose hands it is in — a card at
+ *  `dev_progress` is Dev's — so that answers first, and a card nobody has started falls to
+ *  the most specific team named on it. PM is last because PM triages everything. */
+function laneOf(c: BoardCard): BoardTeam | null {
+  const byStage = teamForStage(c.stage);
+  if (byStage && c.teams.includes(byStage)) return byStage;
+  return c.teams.find((t) => t !== "PM") ?? c.teams[0] ?? null;
+}
 
 export default function SprintBoard({ cards }: { cards: BoardCard[] }) {
   const s = useStore();
@@ -95,7 +107,7 @@ export default function SprintBoard({ cards }: { cards: BoardCard[] }) {
 
       <div className="sp-lanes">
         {LANES.map(({ team, label }) => {
-          const mine = inSprint.filter((c) => c.teams.includes(team));
+          const mine = inSprint.filter((c) => laneOf(c) === team);
           if (!mine.length) return null;
           return (
             <section className="sp-lane" key={team}>
@@ -138,6 +150,7 @@ export default function SprintBoard({ cards }: { cards: BoardCard[] }) {
 function SprintCard({ card, onPush }: { card: BoardCard; onPush: () => void }) {
   const node: Node = card.node ?? (card.feature as unknown as Node);
   const counts = subtreeCounts(node);
+  const [open, setOpen] = useState(false);
   return (
     <article className="sp-card">
       <div className="sp-cardtop">
@@ -147,9 +160,27 @@ function SprintCard({ card, onPush }: { card: BoardCard; onPush: () => void }) {
       </div>
       <div className="sp-cardfoot">
         <span className="assignees"><Assignees node={node} small /></span>
-        {counts.total > 0 && <span className="sp-cardn">{counts.done}/{counts.total}</span>}
+        {counts.total > 0 && (
+          <button type="button" className="sp-cardn" onClick={() => setOpen(!open)}
+            aria-expanded={open} title={open ? "Hide the subtasks" : "Show the subtasks"}>
+            {counts.done}/{counts.total}
+          </button>
+        )}
         <span className="sp-cardstage">{STAGE_LABEL[card.stage]}</span>
       </div>
+      {/* The sprint is where you check what is actually left, so the checklist opens here
+          too rather than only on the board. */}
+      {open && counts.total > 0 && (
+        <ul className="sp-subs">
+          {node.children.map((k) => (
+            <li key={k.id}>
+              <StatusButton node={k} size={13} />
+              <span className={k.status === "done" ? "done" : ""}>{k.title}</span>
+              <span className="assignees"><Assignees node={k} small /></span>
+            </li>
+          ))}
+        </ul>
+      )}
     </article>
   );
 }

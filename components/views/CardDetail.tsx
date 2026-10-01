@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import { ALL_KINDS, KIND_LABEL, STAGE_LABEL, type CardKind } from "@/lib/board";
 import type { BoardCard } from "./WorkBoard";
-import { ERROR_TYPES, LINEAR_STATES, LINEAR_STATE_NOTE, SURFACES, linearTitle } from "@/lib/linear";
+import { ERROR_TYPES, SURFACES, linearTitle, surfaceZone } from "@/lib/linear";
 import { cardPriority, subtreeCounts, waveWord } from "@/lib/derive";
 import { PRIORITIES } from "@/lib/constants";
 import { Assignees } from "../Assignees";
@@ -19,6 +19,22 @@ import type { Node } from "@/lib/types";
  *  made forty cards unreadable and hid the three facts you actually scan for. Everything
  *  else — what it is, which surface, its subtasks, links, dates and the thread — is here,
  *  one click away, with room to edit rather than only to look. */
+/** What each option means, for the tooltip on it and the line under the field. A dropdown of
+ *  five words nobody has defined is five guesses. */
+const HORIZON_NOTE: Record<1 | 2 | 3, string> = {
+  1: "This sprint. Unclaimed cards set to Now are handed to PM.",
+  2: "Queued behind the current sprint. The default for anything untagged.",
+  3: "Parked. A Future card sits in the backlog and off every team board.",
+};
+
+const KIND_NOTE: Record<CardKind, string> = {
+  bug: "Something broken that a merchant or we reported",
+  feature: "Something asked for that does not exist yet",
+  module: "A thing we are building, rather than a thing somebody reported",
+  template: "A reusable page or layout, including landing pages",
+  landing: "A landing page. Folded into Template; kept so old cards still read.",
+};
+
 export default function CardDetail({ card, onClose }: { card: BoardCard; onClose: () => void }) {
   const s = useStore();
   const f = card.feature;
@@ -57,50 +73,52 @@ export default function CardDetail({ card, onClose }: { card: BoardCard; onClose
         <div className="wb-detbody">
           {/* The title is editable in place. It was read-only on the board and on this panel,
               so a typo in a card title could only be fixed by deleting the card. */}
-          <textarea className="wb-dettitle" value={title} rows={2}
+          {/* Grows with its content. At a fixed two rows a long title scrolled inside the
+              box and read as cut off, which is what it looked like. */}
+          <textarea className="wb-dettitle" value={title}
+            rows={Math.max(2, Math.ceil(title.length / 42))}
             aria-label="Card title"
             onChange={(e) => setTitle(e.target.value)} onBlur={commit}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); (e.target as HTMLTextAreaElement).blur(); } }} />
 
           <div className="wb-detgrid">
-            <Field label="Horizon" hint="Future parks the card in the backlog">
+            <Field label="Horizon" hint={HORIZON_NOTE[cardPriority(card.node ?? card.feature)]}>
               <select value={cardPriority(card.node ?? card.feature)}
                 onChange={(e) => s.setPriority(card.id, Number(e.target.value) as 1 | 2 | 3)}>
-                {PRIORITIES.map((w) => <option key={w.p} value={w.p}>{w.word}</option>)}
+                {PRIORITIES.map((w) => (
+                  <option key={w.p} value={w.p} title={HORIZON_NOTE[w.p as 1 | 2 | 3]}>{w.word}</option>
+                ))}
               </select>
             </Field>
-            <Field label="Type">
+            <Field label="Type" hint={KIND_NOTE[kind]}>
+              {/* "Landing page" came off: it is a template with a narrower name, and two
+                  words for one thing is how a pile stops being searchable. */}
               <select value={kind} onChange={(e) => s.setCardKind(card.id, e.target.value as CardKind)}>
-                {ALL_KINDS.map((k) => <option key={k} value={k}>{KIND_LABEL[k]}</option>)}
+                {ALL_KINDS.filter((k) => k !== "landing").map((k) => (
+                  <option key={k} value={k} title={KIND_NOTE[k]}>{KIND_LABEL[k]}</option>
+                ))}
               </select>
             </Field>
-            <Field label="Surface" hint="The Linear label for where it lives">
+            <Field label="Surface" hint={SURFACES.find((x) => x.id === str("surface"))
+              ? `${surfaceZone(str("surface"))} \u00b7 the Linear label for where it lives`
+              : "Which module or surface the issue lives in. The first of the two Linear labels."}>
               <select value={str("surface")} onChange={(e) => s.setLinear(card.id, "surface", e.target.value)}>
                 <option value="">Not set</option>
                 {["Customer Zone", "Merchant Zone"].map((zone) => (
                   <optgroup key={zone} label={zone}>
                     {SURFACES.filter((x) => x.zone === zone).map((x) => (
-                      <option key={x.id} value={x.id}>{x.label}</option>
+                      <option key={x.id} value={x.id} title={`${x.zone} \u00b7 ${x.label}`}>{x.label}</option>
                     ))}
                   </optgroup>
                 ))}
               </select>
             </Field>
-            <Field label="Error type" hint="The second Linear label every ticket carries">
+            <Field label="Error type" hint={ERROR_TYPES.find((x) => x.id === str("errorType"))?.note
+              ?? "What kind of failure this is. The second of the two Linear labels."}>
               <select value={str("errorType")} onChange={(e) => s.setLinear(card.id, "errorType", e.target.value)}>
                 <option value="">Not set</option>
-                {ERROR_TYPES.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}
+                {ERROR_TYPES.map((x) => <option key={x.id} value={x.id} title={x.note}>{x.label}</option>)}
               </select>
-            </Field>
-            <Field label="Linear state" hint={LINEAR_STATE_NOTE[(str("linearState") || "Triage") as keyof typeof LINEAR_STATE_NOTE]}>
-              <select value={str("linearState")} onChange={(e) => s.setLinear(card.id, "linearState", e.target.value)}>
-                <option value="">Not in Linear</option>
-                {LINEAR_STATES.map((x) => <option key={x} value={x}>{x}</option>)}
-              </select>
-            </Field>
-            <Field label="Linear ticket" hint="QA-12, INT-03">
-              <input type="text" value={str("linearRef")} placeholder="QA-00"
-                onChange={(e) => s.setLinear(card.id, "linearRef", e.target.value)} />
             </Field>
           </div>
 
@@ -183,6 +201,10 @@ function Sub({ sub }: { sub: Node }) {
         onChange={(e) => setV(e.target.value)}
         onBlur={() => { if (v.trim() && v !== sub.title) s.rename(sub.id, v); else setV(sub.title); }}
         onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} />
+      {/* A subtask carries its own owners. When a card has two teams on it, the split is at
+          this level — "design the page" is Design's and "build it" is Dev's — and assigning
+          only the parent leaves both teams looking at the whole card. */}
+      <span className="assignees wb-subassign"><Assignees node={sub} small /></span>
       <button type="button" aria-label={`Remove ${sub.title}`} className="wb-subdel"
         onClick={() => { if (confirm(`Remove "${sub.title}"?`)) s.del(sub.id); }}><IcTrash /></button>
     </li>

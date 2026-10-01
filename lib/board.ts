@@ -513,7 +513,13 @@ export function statusDepth(status: string | null | undefined): number {
  *  A tie goes to the task because it is the fresher of the two: the sheet column is what
  *  somebody last typed, the task is what the board currently shows. */
 export function resolveStatus(own: string | null | undefined, linked: string | null | undefined): string {
-  return statusDepth(own) > statusDepth(linked) ? own! : (linked || own || "");
+  /* A milestone can tell you work is in design or in dev. It cannot tell you a feature under
+     it has SHIPPED: most features map to a milestone broader than themselves, so a single
+     done milestone was marking everything beneath it Approved — which is how the Approved
+     column filled with cards nobody had approved. The linked status is capped at "names a
+     stage"; only a card's own column can say it is done. */
+  const cap = statusDepth(linked) === 3 ? 0 : statusDepth(linked);
+  return statusDepth(own) >= cap ? (own || "") : (linked || own || "");
 }
 
 /** The team a stage belongs to by definition.

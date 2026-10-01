@@ -290,12 +290,23 @@ function live() {
     `the two of them are the whole board, with nothing in both (${tally.backlog || 0} + ${tally.roadmap || 0})`);
   /* The complaint, four times: everything sitting in Roadmap / Not started. The board can
      only be right if the cards whose own column names a stage are NOT at intake. */
-  const intake = placed.filter((p) => p.stage === "bug" || p.stage === "feature");
   const named = placed.filter((p) => /design|dev|review|planning/i.test(p.row[6]));
   ok(named.every((p) => p.stage !== "bug" && p.stage !== "feature"),
     "a card whose own status names a stage is not at intake");
-  ok(intake.reduce((n, p) => n + p.count, 0) < 40,
-    `fewer than 40 of the 77 cards are still at intake (${intake.reduce((n, p) => n + p.count, 0)})`);
+  /* The Approved columns filled with cards nobody had approved, because a feature inherited
+     Done from a milestone broader than itself. Only a card's OWN column can say it shipped;
+     a milestone can say the work is in design or in dev and no more. Asserted rather than
+     counted, because the count moves whenever the sheet does. */
+  const shipped = placed.filter((p) => p.stage === "prod");
+  /* A request's own status is its sheet column; a roadmap task has no sheet column and its
+     own status IS the rolled-up one. Reading row[6] for both flagged every done task. */
+  const ownStatus = (r: Row) => (r[1] === "T" ? r[8] : r[6]);
+  /* A stored stage is a human having dragged the card there, and that beats any derivation —
+     so it is not a claim the board made. */
+  const claimed = shipped.filter((p) => !p.row[5] && !/^(done|shipped|live|released|complete)/i.test(ownStatus(p.row)));
+  ok(claimed.length === 0,
+    `no card is in production unless its own status says so${claimed.length ? ` (${claimed.reduce((n, p) => n + p.count, 0)} claimed)` : ""}`);
+  console.log(`  note  ${shipped.reduce((n, p) => n + p.count, 0)} in production, all of them said so themselves`);
   ok((tally.design || 0) > 0, `Design's board is not empty (${tally.design || 0})`);
   ok((tally.dev || 0) > 0, `Dev's board is not empty (${tally.dev || 0})`);
   ok((tally.pm || 0) > 0, `PM's board is not empty (${tally.pm || 0})`);

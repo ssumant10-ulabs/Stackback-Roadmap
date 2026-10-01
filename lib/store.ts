@@ -1227,7 +1227,22 @@ export class Store {
   }
 
   /** Leaf status cycling: planned to in progress to done. */
+  /** Freeze where a card sits before its status changes.
+   *
+   *  A card with no stage of its own derives one from its status, so ticking the checkbox
+   *  teleported it: marking something done moved it out of its column into Approved, and
+   *  unticking brought it back — which reads as the board hiding and revealing cards at
+   *  random. The checkbox marks progress. Where a card SITS is the drag, the move menu and
+   *  the horizon, and this writes the current answer down so the status cannot change it. */
+  private pinStage(id: string) {
+    const n = this.findEntry(id)?.node;
+    if (!n || n.stage) return;
+    const at = this.boardCards().find((c) => c.id === id)?.stage;
+    if (at) n.stage = at;
+  }
+
   cycleStatus(id: string) {
+    this.pinStage(id);
     const e = this.findEntry(id);
     if (!e) return;
     const i = STATUS_CYCLE.indexOf(e.node.status);
@@ -1245,6 +1260,7 @@ export class Store {
     (n.children || []).forEach((c) => this.setDeep(c, status));
   }
   toggleDone(id: string) {
+    this.pinStage(id);
     const e = this.findEntry(id);
     if (!e) return;
     const wasDone = effStatus(e.node) === "done";

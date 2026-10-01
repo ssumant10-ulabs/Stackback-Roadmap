@@ -29,11 +29,6 @@ export default function Simulator({ config, onConfig }: {
   const set = <K extends keyof SimConfig>(k: K, v: SimConfig[K]) => write({ ...c, [k]: v });
 
   const [surface, setSurface] = useState<"shopify" | "contracts">("shopify");
-  /* Two steps, in the order a subscription actually happens: the customer picks a plan on
-     the widget, and THEN there are orders. Opening on the orders made the screen a diagram
-     of a thing nobody had done yet, and the plan the orders were drawn from was set in a bar
-     above them rather than chosen the way a customer chooses it. */
-  const [step, setStep] = useState<1 | 2>(1);
 
   const prepaid = useMemo(() => ({ p: price({ ...c, mode: "prepaid" }), rows: schedule(c, "prepaid") }), [c]);
   const payg = useMemo(() => ({ p: price({ ...c, mode: "payg" }), rows: schedule(c, "payg") }), [c]);
@@ -47,45 +42,54 @@ export default function Simulator({ config, onConfig }: {
   const [drawnOverride, setDrawnOverride] = useState<Mode | null>(null);
   const drawn = drawnOverride ?? c.mode;
   const setDrawn = setDrawnOverride;
+  /* The three payment types are the point of this screen, so picking one here picks it
+     everywhere: the bar above draws its prices from `c.mode`. */
+  const pickMode = (m: Mode) => { setDrawnOverride(m); set("mode", m); };
   /** Which of the two order shapes is being drawn. A delivery order looks nothing like the
       checkout order, and until now the only place it appeared was as a row in a list. */
   const [which, setWhich] = useState<"parent" | "child">("parent");
 
   const p = price(c);
 
-  if (step === 1) {
-    return (
-      <section>
-        <ol className="hc-simsteps" aria-label="Steps">
-          <li className="on"><b>1</b> What the customer sees</li>
-          <li><b>2</b> What it creates in your admin</li>
-        </ol>
-        <p className="hc-blurb hc-flowlede">
-          Set the plan the way you would sell it, then subscribe. The next step is exactly what
-          that subscription creates in Shopify.
-        </p>
-        <Widget c={c} set={set} p={p} onSubscribe={() => { setDrawnOverride(null); setStep(2); }} />
-      </section>
-    );
-  }
-
   return (
     <section>
-      <ol className="hc-simsteps" aria-label="Steps">
-        <li><button type="button" onClick={() => setStep(1)}><b>1</b> What the customer sees</button></li>
-        <li className="on"><b>2</b> What it creates in your admin</li>
-      </ol>
-      {/* The widget stays on screen, on the left, with the orders beside it. A line of text
-          saying "6 deliveries, every 2 weeks" is a description of the thing you were just
-          looking at; the thing itself is what makes an order list legible, and changing a
-          plan here redraws the orders without leaving the page. */}
-      <details className="hc-simkeep" open>
-        <summary>
-          <b>{c.deliveries} deliveries</b>, {FREQUENCIES.find((f) => f.days === c.everyDays)?.label.toLowerCase()
-            ?? `every ${c.everyDays} days`}, {c.discountPct}% off, on {MODE_LABEL[c.mode].toLowerCase()}
-        </summary>
-        <Widget c={c} set={set} p={p} onSubscribe={() => setDrawnOverride(null)} ctaLabel="Apply to the orders below" />
-      </details>
+      {/* The plan the orders are drawn from, as controls rather than as a widget. The widget
+          belongs to the widget module; this screen is about what a checkout BECOMES, and a
+          second copy of the storefront on top of it was the premise taking up half the page
+          above the thing being explained. */}
+      <div className="hc-simbar hc-simbar-order">
+        <label className="hc-field">
+          <span>Deliver</span>
+          <select value={c.everyDays} onChange={(e) => set("everyDays", +e.target.value)}>
+            {FREQUENCIES.map((f) => <option key={f.days} value={f.days}>{f.label.toLowerCase()}</option>)}
+          </select>
+        </label>
+        <label className="hc-field hc-simnum">
+          <span>Deliveries</span>
+          <input type="number" min={1} max={24} value={c.deliveries}
+            onChange={(e) => set("deliveries", Math.min(24, Math.max(1, +e.target.value || 1)))} />
+        </label>
+        <label className="hc-field hc-simnum">
+          <span>Price per delivery</span>
+          <input type="number" min={1} value={c.unitPrice}
+            onChange={(e) => set("unitPrice", Math.max(1, +e.target.value || 0))} />
+        </label>
+        <label className="hc-field hc-simnum">
+          <span>Discount, %</span>
+          <input type="number" min={0} max={60} value={c.discountPct}
+            onChange={(e) => set("discountPct", Math.min(60, Math.max(0, +e.target.value || 0)))} />
+        </label>
+        <label className="hc-field hc-simnum">
+          <span>Time to delivery, days</span>
+          <input type="number" min={0} max={30} value={c.leadDays}
+            onChange={(e) => set("leadDays", Math.min(30, Math.max(0, +e.target.value || 0)))} />
+        </label>
+        <label className="hc-field">
+          <span>First delivery</span>
+          <input type="date" value={c.startDate || startOf(c).toISOString().slice(0, 10)}
+            onChange={(e) => set("startDate", e.target.value)} />
+        </label>
+      </div>
       <p className="hc-blurb hc-flowlede">
         Checkout creates <b>one order</b>, whatever the run length. Delivery one&rsquo;s goods go onto
         that same order. Everything after it appears later, and only when it is paid for.
@@ -145,7 +149,7 @@ export default function Simulator({ config, onConfig }: {
             {(["prepaid", "payg", "autopay"] as Mode[]).map((m) => (
               <button key={m} role="tab" aria-selected={drawn === m}
                 className={"hc-modepillb" + (drawn === m ? " on" : "")}
-                onClick={() => setDrawn(m)}>{MODE_LABEL[m]}</button>
+                onClick={() => pickMode(m)}>{MODE_LABEL[m]}</button>
             ))}
           </div>
           {/* Two orders, two shapes, and the second one is the one nobody has seen. The
@@ -611,127 +615,3 @@ function ShopifyChildOrder({ c, mode }: { c: SimConfig; mode: Mode }) {
 }
 
 
-/** The storefront widget, as a customer meets it.
- *
- *  Step one, because that is the order it happens in: somebody picks a cadence, a run length
- *  and how they want to pay, and only then is there an order to look at. It reads the same
- *  `SimConfig` the orders are drawn from, so the second step is not an illustration of a
- *  plan — it is the plan that was just chosen.
- *
- *  Deliberately not the settings explorer from `WidgetPreview`. That one is for judging how
- *  the widget LOOKS; this is for following what it DOES, so it wears this page's own type
- *  and colours and carries no theme controls at all. */
-function Widget({ c, set, p, onSubscribe, ctaLabel }: {
-  c: SimConfig;
-  set: <K extends keyof SimConfig>(k: K, v: SimConfig[K]) => void;
-  p: ReturnType<typeof price>;
-  onSubscribe: () => void;
-  /** Step two shows the same widget over its own orders, so the button says what it does
-   *  there. Same component either way: two copies of a widget is two widgets to keep level. */
-  ctaLabel?: string;
-}) {
-  /* The run lengths a merchant actually sells, plus whatever is currently set, so a config
-     arriving from step one of the form is never missing its own option. */
-  const runs = [...new Set([3, 6, 12, c.deliveries])].sort((a, b) => a - b);
-  /* One rate across the ladder: the simulator's discount is flat, so a longer run buys more
-     deliveries at the same price rather than a better one. Tiered bands are the plan form's. */
-  const perDelivery = c.unitPrice * (1 - c.discountPct / 100);
-
-  return (
-    <div className="hc-simwrap">
-      <div className="hc-widget">
-        <div className="hc-wprod">
-          <b>{c.productName}</b>
-          <span>{money(c.unitPrice)} one time</span>
-        </div>
-
-        <div className="hc-wbuy">
-          <div className="hc-wopt">
-            <span className="hc-wradio" aria-hidden="true" />
-            <div><b>One-time purchase</b><em>{money(c.unitPrice)}</em></div>
-          </div>
-          <div className="hc-wopt on">
-            <span className="hc-wradio on" aria-hidden="true" />
-            <div>
-              <b>Subscribe and save {c.discountPct}%</b>
-              <em>{money(p.perDelivery)} per delivery</em>
-            </div>
-          </div>
-        </div>
-
-        <label className="hc-wfield">
-          <span>Deliver</span>
-          <select value={c.everyDays} onChange={(e) => set("everyDays", +e.target.value)}>
-            {FREQUENCIES.map((f) => <option key={f.days} value={f.days}>{f.label.toLowerCase()}</option>)}
-          </select>
-        </label>
-
-        <div className="hc-wplans" role="radiogroup" aria-label="Pick your plan">
-          <span className="hc-wlabel">Pick your plan</span>
-          {runs.map((n) => (
-            <button key={n} type="button" role="radio" aria-checked={c.deliveries === n}
-              className={"hc-wplan" + (c.deliveries === n ? " on" : "")}
-              onClick={() => set("deliveries", n)}>
-              <span className="hc-wradio" aria-hidden="true" />
-              <b>{n} deliveries</b>
-              <em>{money(perDelivery)}/delivery</em>
-              {c.discountPct > 0 && <i>{c.discountPct}% OFF</i>}
-            </button>
-          ))}
-        </div>
-
-        <div className="hc-wmodes" role="radiogroup" aria-label="How to pay">
-          {(["prepaid", "payg", "autopay"] as Mode[]).map((m) => (
-            <button key={m} type="button" role="radio" aria-checked={c.mode === m}
-              className={"hc-wmode" + (c.mode === m ? " on" : "")}
-              onClick={() => set("mode", m)}>{MODE_LABEL[m]}</button>
-          ))}
-        </div>
-
-        <p className="hc-wcharge">
-          {c.mode === "prepaid"
-            ? <>Charged now: <b>{money(p.subscriptionTotal)}</b> for the whole run.</>
-            : <>Charged now: <b>{money(p.perDelivery)}</b>, then {money(p.perDelivery)} per delivery.</>}
-        </p>
-
-        <button type="button" className="hc-wcta" onClick={onSubscribe}>
-          {ctaLabel ?? `Subscribe \u00b7 ${money(p.chargedNow)}`}
-        </button>
-        {!ctaLabel && <p className="hc-wfoot">Pressing this is step two: the orders it creates.</p>}
-      </div>
-
-      {/* Beside the widget, not above it. Every knob a merchant sets is here and nothing a
-          customer chooses is: the widget on the left is the customer's half of the screen. */}
-      <aside className="hc-simset">
-        <h3>Yours to set</h3>
-        <label className="hc-field hc-simnum">
-          <span>Price per delivery</span>
-          <input type="number" min={1} value={c.unitPrice}
-            onChange={(e) => set("unitPrice", Math.max(1, +e.target.value || 0))} />
-        </label>
-        <label className="hc-field hc-simnum">
-          <span>Discount, %</span>
-          <input type="number" min={0} max={60} value={c.discountPct}
-            onChange={(e) => set("discountPct", Math.min(60, Math.max(0, +e.target.value || 0)))} />
-        </label>
-        <label className="hc-field hc-simnum">
-          <span>Time to delivery, days</span>
-          <input type="number" min={0} max={30} value={c.leadDays}
-            onChange={(e) => set("leadDays", Math.min(30, Math.max(0, +e.target.value || 0)))} />
-        </label>
-        <p className="hc-simnote">
-          <code>time_to_delivery</code>: how far ahead of a delivery its order is created. On pay
-          as you go it is also when the invoice goes out.
-        </p>
-        <label className="hc-field">
-          <span>First delivery</span>
-          <input type="date" value={c.startDate || startOf(c).toISOString().slice(0, 10)}
-            onChange={(e) => set("startDate", e.target.value)} />
-        </label>
-        <p className="hc-simnote">
-          These are your settings, not the customer&rsquo;s. Everything on the left is what they see.
-        </p>
-      </aside>
-    </div>
-  );
-}
