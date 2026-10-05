@@ -1790,9 +1790,6 @@
 .wb-more svg { width: 12px; height: 12px; transition: transform .14s ease; }
 .wb-more.on svg { transform: rotate(180deg); }
 .wb-open { margin-top: 8px; padding-top: 9px; border-top: 1px solid var(--line, rgba(0,0,0,.10)); }
-.wb-subs { list-style: none; margin: 0 0 9px; padding: 0; display: flex; flex-direction: column; gap: 4px; }
-.wb-subs li { display: flex; align-items: flex-start; gap: 7px; font-size: 12px; line-height: 1.4; }
-.wb-subs li span.done { text-decoration: line-through; opacity: .55; }
 
 .wb-files { margin-bottom: 8px; }
 .wb-filerow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
@@ -2309,6 +2306,26 @@ select.wb-prio {
 /* A bar that stopped neatly at the window edge would say the work stops there. */
 .sp-bar.runs-in { border-top-left-radius: 0; border-bottom-left-radius: 0; }
 .sp-bar.runs-out { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+/* Teams down the side, sharing the one date axis above. */
+.sp-lane { display: flex; flex-direction: column; gap: 3px; }
+.sp-lane + .sp-lane { margin-top: 7px; padding-top: 7px; border-top: 1px solid var(--line, rgba(0,0,0,.09)); }
+.sp-lanehead {
+  display: flex; align-items: center; gap: 7px; padding: 2px 0 1px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--ink-3, #777);
+}
+.sp-lanehead em {
+  font-style: normal; font-size: 10px; font-weight: 600; letter-spacing: 0;
+  background: var(--sunken, rgba(0,0,0,.06)); border-radius: 999px; padding: 0 6px;
+  font-variant-numeric: tabular-nums;
+}
+.sp-caret {
+  appearance: none; cursor: pointer; font: inherit; font-size: 10px; font-weight: 600; flex: none;
+  border: 1px solid var(--line, rgba(0,0,0,.12)); background: none; color: var(--ink-3, #777);
+  border-radius: 999px; padding: 0 6px; font-variant-numeric: tabular-nums;
+}
+.sp-caret:hover, .sp-caret.on { color: var(--ink, #111); border-color: var(--brand, #4F7A00); }
+.sp-rowx { padding: 2px 0 8px 22px; }
 .sp-rowteam {
   font-size: 10.5px; color: var(--ink-3, #777); text-align: right;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -2357,6 +2374,43 @@ select.wb-prio {
 .sp-qtitle { font-size: 12.5px; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sp-qteam { font-size: 10.5px; color: var(--ink-3, #777); flex: none; }
 .sp-qmore { margin: 4px 0 0; font-size: 12px; color: var(--ink-3, #777); }
+/* The shared card expansion: the brief and the checklist, opened in place. One block of
+   rules because it is one component, on the board and on the sprint track. */
+.cx {
+  display: flex; flex-direction: column; gap: 6px; margin-top: 7px; padding-top: 7px;
+  border-top: 1px solid var(--line, rgba(0,0,0,.1));
+}
+.cx-desc { margin: 0; font-size: 11.5px; line-height: 1.55; color: var(--ink-2, #555); white-space: pre-wrap; }
+.cx-nodesc {
+  appearance: none; border: 0; background: none; cursor: pointer; padding: 0; text-align: left;
+  font: inherit; font-size: 11px; color: var(--ink-3, #999);
+}
+.cx-nodesc:hover { color: var(--ink-2, #555); text-decoration: underline; text-underline-offset: 2px; }
+.cx-subs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.cx-subs li { display: flex; align-items: center; gap: 7px; font-size: 11.5px; line-height: 1.35; }
+.cx-st { flex: 1 1 auto; min-width: 0; }
+.cx-st.done { color: var(--ink-3, #777); text-decoration: line-through; }
+.cx-who { flex: none; }
+.cx-del {
+  appearance: none; border: 0; background: none; cursor: pointer; color: var(--ink-3, #999);
+  display: grid; place-items: center; padding: 3px; border-radius: 6px; flex: none; opacity: .5;
+}
+.cx-subs li:hover .cx-del, .cx-del:focus-visible { opacity: 1; }
+.cx-del:hover { color: #b42318; background: rgba(180,35,24,.08); }
+.cx-add { display: flex; gap: 5px; }
+.cx-add input {
+  font: inherit; font-size: 11.5px; flex: 1 1 auto; min-width: 0; padding: 4px 7px;
+  border-radius: 7px; border: 1px solid var(--line, rgba(0,0,0,.14));
+  background: var(--card, #fff); color: var(--ink, #111);
+}
+.cx-add input:focus { border-color: var(--brand, #4F7A00); outline: none; }
+.cx-add button {
+  appearance: none; cursor: pointer; font: inherit; font-size: 11px; font-weight: 600; flex: none;
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 7px;
+  border: 1px solid var(--line, rgba(0,0,0,.14)); background: var(--card, #fff); color: var(--ink-2, #444);
+}
+.cx-add button:hover { color: var(--ink, #111); border-color: var(--brand, #4F7A00); }
+.wb-count.on { color: var(--ink, #111); border-color: var(--brand, #4F7A00); }
 .wb-subassign { display: inline-flex; align-items: center; gap: 3px; flex: none; }
 .wb-subassign .assign-add { opacity: .45; }
 .wb-detsubs li:hover .wb-subassign .assign-add { opacity: 1; }

@@ -13,6 +13,7 @@ import { Assignees } from "../Assignees";
 import { StatusButton } from "../bits";
 import { CommentsThread } from "../CommentsThread";
 import CardDetail from "./CardDetail";
+import { CardExpand } from "./CardExpand";
 import SprintBoard from "./SprintBoard";
 import { PRIORITIES } from "@/lib/constants";
 import { IcFilter, IcPlus } from "../icons";
@@ -468,6 +469,10 @@ function Card({ card, view, rank: at, of, siblings, onMove, dragging, onDragStar
   const kind: CardKind = (card.node?.kind || f?.kind || "feature") as CardKind;
   const counts = subtreeCounts(node);
   const horizon = cardPriority(card.node ?? card.feature);
+  const hasDesc = !!(node.desc || "").trim();
+  /* Opt-in and per card, so a column opens quiet however many checklists it holds. The
+     module and template piles still force it: a card there IS its subtasks. */
+  const [open, setOpen] = useState(false);
 
   return (
     <article className={"wb-card" + (dragging ? " dragging" : "")} draggable
@@ -528,22 +533,19 @@ function Card({ card, view, rank: at, of, siblings, onMove, dragging, onDragStar
 
       <div className="wb-meta">
         <span className="assignees"><Assignees node={node} small /></span>
-        {counts.total > 0 && (
-          <button type="button" className="wb-count" onClick={onOpen}
-            title="Open the card">{counts.done}/{counts.total}</button>
+        {/* The count opens the checklist in place rather than the whole card. Sending it to
+            the drawer was the wrong trade: ticking something off is the commonest thing
+            anyone does to a card, and it was the one thing that cost a panel. */}
+        {(counts.total > 0 || hasDesc) && (
+          <button type="button" className={"wb-count" + (open ? " on" : "")}
+            aria-expanded={open} onClick={() => setOpen(!open)}
+            title={open ? "Hide the brief and the checklist" : "Show the brief and the checklist"}>
+            {counts.total > 0 ? `${counts.done}/${counts.total}` : "Brief"}
+          </button>
         )}
       </div>
 
-      {expand && counts.total > 0 && (
-        <ul className="wb-subs">
-          {node.children.map((k) => (
-            <li key={k.id}>
-              <StatusButton node={k} size={13} />
-              <span className={k.status === "done" ? "done" : ""}>{k.title}</span>
-            </li>
-          ))}
-        </ul>
-      )}
+      {(open || (expand && counts.total > 0)) && <CardExpand node={node} onOpen={onOpen} />}
     </article>
   );
 }

@@ -886,7 +886,7 @@ export class Store {
   syncSprint(id: string) {
     const was = this.sprintFor(id);
     const next = syncSprint(was, id, this.boardCards().map((c) => ({
-      id: c.id, stage: c.stage, status: (c.node ?? c.feature)?.status ?? null,
+      id: c.id, stage: c.stage, status: effStatus(c.node ?? (c.feature as unknown as Node)),
       now: cardPriority(c.node ?? c.feature) === 1,
     })));
     if (!next) return;
@@ -908,7 +908,7 @@ export class Store {
     const sp = this.sprintFor(id);
     if (!sp || sp.closedAt) return;
     const live = new Map(this.boardCards().map((c) =>
-      [c.id, { stage: c.stage, status: (c.node ?? c.feature)?.status ?? null }]));
+      [c.id, { stage: c.stage, status: effStatus(c.node ?? (c.feature as unknown as Node)) }]));
     const members = this.sprintMembers(sp);
     const carry = members.filter((cid) => { const c = live.get(cid); return c ? !isFinished(c) : false; });
     sp.done = members.length - carry.length;

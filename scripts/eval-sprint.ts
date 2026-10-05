@@ -14,6 +14,8 @@ import {
   type Sprint,
 } from "../lib/sprint";
 import type { Stage } from "../lib/board";
+import { effStatus } from "../lib/derive";
+import type { Node } from "../lib/types";
 
 let fails = 0;
 const ok = (cond: boolean, what: string) => {
@@ -72,6 +74,23 @@ ok(overlapsWindow(wk("2026-10-12", "2026-10-16"), windowOf("2026-10-05", 3).from
 type Card = { id: string; stage: Stage; status?: string | null; now: boolean };
 
 console.log("\nWhat counts as finished");
+/* A card whose every subtask is ticked IS closed, and the ring on it already said so.
+   The sprint read the raw `status` field, which a parent never has written to it, so those
+   cards sat in the track as unfinished while the board drew them complete. */
+const allDone: Node = {
+  id: "p", title: "parent", status: "planned", assignees: [], children: [
+    { id: "k1", title: "a", status: "done", assignees: [], children: [] },
+    { id: "k2", title: "b", status: "done", assignees: [], children: [] },
+  ],
+};
+const someDone: Node = { ...allDone, children: [allDone.children[0], { ...allDone.children[1], status: "planned" }] };
+eq(effStatus(allDone), "done", "every subtask done rolls the parent up to done");
+ok(isFinished({ stage: "dev_progress", status: effStatus(allDone) }),
+  "so the sprint counts it finished, wherever its stage happens to be");
+ok(!isFinished({ stage: "dev_progress", status: effStatus(someDone) }),
+  "one subtask left and it is not");
+ok(!isFinished({ stage: "dev_progress", status: allDone.status }),
+  "and reading the raw field instead would have missed it \u2014 which was the bug");
 ok(isFinished({ stage: "prod", status: "planned" }), "shipped is finished whatever the checkbox says");
 ok(isFinished({ stage: "pm_progress", status: "done" }),
   "a ticked-off PM card is finished with no approval stage to reach");

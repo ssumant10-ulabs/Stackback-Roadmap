@@ -1,15 +1,16 @@
 "use client";
 import { useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
-import { STAGE_LABEL, type Stage } from "@/lib/board";
+import { STAGE_LABEL, teamForStage, type BoardTeam, type Stage } from "@/lib/board";
 import {
   DAY, SPRINT_WEEKS, addDays, dayMonth, dayOfSprint, isFinished, overlapsWindow, shiftSprintId,
   sprintId, velocity, weekStart, weeksOf, windowOf, type SprintWeeks,
 } from "@/lib/sprint";
 import { effRange } from "@/lib/dates";
-import { cardPriority } from "@/lib/derive";
+import { cardPriority, effStatus, subtreeCounts } from "@/lib/derive";
 import { Assignees } from "../Assignees";
 import { DateChip, StatusButton } from "../bits";
+import { CardExpand } from "./CardExpand";
 import type { BoardCard } from "./WorkBoard";
 import type { Node } from "@/lib/types";
 
@@ -46,13 +47,32 @@ const BUCKETS: { key: string; label: string; stages: Stage[] }[] = [
   { key: "review", label: "In review", stages: ["design_review", "dev_review"] },
   { key: "done", label: "Done", stages: [] },
 ];
-const finished = (c: BoardCard) =>
-  isFinished({ stage: c.stage, status: (c.node ?? c.feature)?.status ?? null });
+/** `effStatus`, not the raw field: a card with every subtask ticked off IS done, and the
+ *  ring on it already says so. Reading `node.status` left those cards counted as unfinished
+ *  here while the board drew them complete. */
+const finished = (c: BoardCard) => isFinished({ stage: c.stage, status: effStatus(nodeOf(c)) });
 /** Finished answers first, whichever way it finished, so the row colour and the Done meter
  *  can never disagree. */
 function bucketOf(c: BoardCard): string {
   if (finished(c)) return "done";
   return BUCKETS.find((b) => b.stages.includes(c.stage))?.key ?? "todo";
+}
+
+/** Teams down the side. One lane per card, never one per team it names: PM is on most
+ *  cards through an assignee, so listing a card under every team it touches put Dev work
+ *  under PM as well. The stage answers first — a card at `dev_progress` is Dev's — and a
+ *  card nobody has started falls to the most specific team on it. PM is last because PM
+ *  triages everything. */
+const LANES: { team: BoardTeam | null; label: string }[] = [
+  { team: "PM", label: "PM / CS" },
+  { team: "Design", label: "Design" },
+  { team: "Engineering", label: "Dev" },
+  { team: null, label: "Unassigned" },
+];
+function laneOf(c: BoardCard): BoardTeam | null {
+  const byStage = teamForStage(c.stage);
+  if (byStage && c.teams.includes(byStage)) return byStage;
+  return c.teams.find((t) => t !== "PM") ?? c.teams[0] ?? null;
 }
 
 const nodeOf = (c: BoardCard): Node => c.node ?? (c.feature as unknown as Node);
@@ -239,32 +259,19 @@ export default function SprintBoard({ cards, onOpen }: { cards: BoardCard[]; onO
               ))}
             </div>
           </div>
-          {scheduled.map((c) => {
-            const r = effRange(nodeOf(c))!;
-            const cs = new Date(r.start + "T00:00:00");
-            const ce = new Date(r.end + "T00:00:00");
-            /* Clipped to the window, with a nub on whichever edge it runs past: a bar that
-               stopped neatly at Sunday would say the work ends on Sunday. */
-            const left = Math.max(0, pct(cs));
-            const right = Math.min(100, pct(addDays(ce, 1)));
+          {/* Teams down, dates across. Still one view — one date axis, one ruler, every
+              lane measured against it — rather than the three separate mini-boards this
+              replaced. The lane says whose it is without a card having to repeat it. */}
+          {LANES.map(({ team, label }) => {
+            const mine = scheduled.filter((c) => laneOf(c) === team);
+            if (!mine.length) return null;
             return (
-              <div className="sp-row" key={c.id}>
-                {/* The status button is a button, so the title beside it is its own and the
-                    two are siblings. Wrapping one in the other is invalid HTML and React
-                    refuses to hydrate it. */}
-                <span className="sp-rowtitle">
-                  <StatusButton node={nodeOf(c)} size={13} />
-                  <button type="button" className="sp-rowname" onClick={() => onOpen(c.id)}>{titleOf(c)}</button>
-                </span>
-                <div className="sp-track">
-                  {todayPct !== null && <span className="sp-now" style={{ left: `${todayPct}%` }} aria-hidden />}
-                  <i className={`sp-bar b-${bucketOf(c)}` + (cs < from ? " runs-in" : "") + (ce > to ? " runs-out" : "")}
-                    style={{ left: `${left}%`, width: `${Math.max(2, right - left)}%` }}
-                    title={`${r.start} → ${r.end}${r.implied ? " (from its subtasks)" : ""} · ${STAGE_LABEL[c.stage]}`}>
-                    <span className="assignees"><Assignees node={nodeOf(c)} small /></span>
-                  </i>
-                </div>
-                <span className="sp-rowteam" title={STAGE_LABEL[c.stage]}>{teamsOf(c) || "Unassigned"}</span>
+              <div className="sp-lane" key={label}>
+                <div className="sp-lanehead"><span>{label}</span><em>{mine.length}</em></div>
+                {mine.map((c) => (
+                  <TrackRow key={c.id} card={c} from={from} to={to} pct={pct} todayPct={todayPct}
+                    onOpen={() => onOpen(c.id)} />
+                ))}
               </div>
             );
           })}
@@ -318,3 +325,53 @@ export default function SprintBoard({ cards, onOpen }: { cards: BoardCard[]; onO
   );
 }
 
+/** One card on the track, and the brief and checklist underneath when you open it.
+ *
+ *  A bar says when; it cannot say what is left inside it. Opening the row is how you check
+ *  that without leaving the week, and it is the same component the board card opens, so the
+ *  two cannot drift. */
+function TrackRow({ card, from, to, pct, todayPct, onOpen }: {
+  card: BoardCard; from: Date; to: Date;
+  pct: (d: Date) => number; todayPct: number | null; onOpen: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const node = nodeOf(card);
+  const counts = subtreeCounts(node);
+  const hasMore = counts.total > 0 || !!(node.desc || "").trim();
+  const r = effRange(node)!;
+  const cs = new Date(r.start + "T00:00:00");
+  const ce = new Date(r.end + "T00:00:00");
+  /* Clipped to the window, with a square end on whichever edge it runs past: a bar that
+     stopped neatly at Sunday would say the work ends on Sunday. */
+  const left = Math.max(0, pct(cs));
+  const right = Math.min(100, pct(addDays(ce, 1)));
+  return (
+    <>
+      <div className="sp-row">
+        {/* The status button is a button, so the title beside it is its own and the two are
+            siblings. Wrapping one in the other is invalid HTML and React will not hydrate it. */}
+        <span className="sp-rowtitle">
+          <StatusButton node={node} size={13} />
+          {hasMore && (
+            <button type="button" className={"sp-caret" + (open ? " on" : "")} aria-expanded={open}
+              title={open ? "Hide the brief and the checklist" : "Show the brief and the checklist"}
+              onClick={() => setOpen(!open)}>
+              {counts.total > 0 ? `${counts.done}/${counts.total}` : "\u2026"}
+            </button>
+          )}
+          <button type="button" className="sp-rowname" onClick={onOpen}>{titleOf(card)}</button>
+        </span>
+        <div className="sp-track">
+          {todayPct !== null && <span className="sp-now" style={{ left: `${todayPct}%` }} aria-hidden />}
+          <i className={`sp-bar b-${bucketOf(card)}` + (cs < from ? " runs-in" : "") + (ce > to ? " runs-out" : "")}
+            style={{ left: `${left}%`, width: `${Math.max(2, right - left)}%` }}
+            title={`${r.start} \u2192 ${r.end}${r.implied ? " (from its subtasks)" : ""} \u00b7 ${STAGE_LABEL[card.stage]}`}>
+            <span className="assignees"><Assignees node={node} small /></span>
+          </i>
+        </div>
+        <span className="sp-rowteam" title={STAGE_LABEL[card.stage]}>{teamsOf(card) || "Unassigned"}</span>
+      </div>
+      {open && <div className="sp-rowx"><CardExpand node={node} onOpen={onOpen} /></div>}
+    </>
+  );
+}
