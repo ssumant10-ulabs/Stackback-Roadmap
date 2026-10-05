@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
-import { STAGE_LABEL, teamForStage, type BoardTeam, type Stage } from "@/lib/board";
+import { STAGE_LABEL, type Stage } from "@/lib/board";
 import { dayMonth, dayOfSprint, isFinished, sprintId, velocity, weekStart } from "@/lib/sprint";
 import { cardPriority, subtreeCounts } from "@/lib/derive";
 import { Assignees } from "../Assignees";
@@ -13,8 +13,14 @@ import type { Node } from "@/lib/types";
  *
  *  The board answers "where is this card". A sprint answers a different question: what did
  *  we commit to this week, how far through is it, and what carries. So this is not a sixth
- *  column set — it is the Now horizon read as a commitment, laid out by team and by how far
- *  along each card is, with the Next queue underneath to pull from.
+ *  column set — it is the Now horizon read as a commitment, in ONE view, with the Next queue
+ *  underneath to pull from.
+ *
+ *  One view, deliberately. Splitting the week into PM, Design and Dev lanes made the sprint
+ *  three small boards stacked up, and the question a sprint answers is about the week as a
+ *  whole: a card sitting in review is the week's problem regardless of whose review it is.
+ *  The team is on the card, where it identifies the work rather than partitioning it, and
+ *  the team boards are one tab away for anyone who wants their own column back.
  *
  *  Four things make it a sprint rather than a filter, and they are the four that pay:
  *    1. The week is a record, opened the first time anyone looks. Nobody starts a sprint.
@@ -28,14 +34,8 @@ import type { Node } from "@/lib/types";
  *  not have them, and a sprint view that reads empty until somebody dates forty cards is a
  *  view nobody opens twice. */
 
-const LANES: { team: BoardTeam; label: string }[] = [
-  { team: "PM", label: "PM / CS" },
-  { team: "Design", label: "Design" },
-  { team: "Engineering", label: "Dev" },
-];
-
 /** Four buckets, which is how far along a card is rather than which team holds it. Every
- *  stage lands in exactly one, so the lane counts add up to the lane. */
+ *  stage lands in exactly one, so the four counts always add up to the sprint. */
 const BUCKETS: { key: string; label: string; stages: Stage[] }[] = [
   { key: "todo", label: "To start", stages: ["bug", "feature", "pm_handover"] },
   { key: "doing", label: "In progress", stages: ["pm_progress", "design_progress", "design_to_dev", "dev_progress"] },
@@ -44,7 +44,7 @@ const BUCKETS: { key: string; label: string; stages: Stage[] }[] = [
 ];
 
 /** Which bucket a card sits in. Finished answers first, whichever way it finished, so the
- *  four bucket counts always add up to the lane and always agree with the Done meter. A card
+ *  four bucket counts always add up to the sprint and always agree with the Done meter. A card
  *  ticked off but still sitting at `dev_review` was showing under In review while the meter
  *  counted it done, which reads as the view disagreeing with itself. */
 function bucketOf(c: BoardCard): string {
@@ -53,18 +53,6 @@ function bucketOf(c: BoardCard): string {
 }
 const finished = (c: BoardCard) =>
   isFinished({ stage: c.stage, status: (c.node ?? c.feature)?.status ?? null });
-
-/** One lane per card, not one per team it names.
- *
- *  Listing a card under every team on it put work tagged Dev under PM as well, because PM is
- *  on most cards through an assignee. The stage already says whose hands it is in — a card at
- *  `dev_progress` is Dev's — so that answers first, and a card nobody has started falls to
- *  the most specific team named on it. PM is last because PM triages everything. */
-function laneOf(c: BoardCard): BoardTeam | null {
-  const byStage = teamForStage(c.stage);
-  if (byStage && c.teams.includes(byStage)) return byStage;
-  return c.teams.find((t) => t !== "PM") ?? c.teams[0] ?? null;
-}
 
 const titleOf = (c: BoardCard) => (c.node ?? (c.feature as unknown as Node)).title;
 const teamsOf = (c: BoardCard) => c.teams.map((t) => (t === "Engineering" ? "Dev" : t)).join(" · ");
@@ -99,15 +87,16 @@ export default function SprintBoard({ cards, onOpen }: { cards: BoardCard[]; onO
       `*Sprint ${dayMonth(from)} – ${dayMonth(to)}*`,
       `${done.length} of ${members.length} done${added.length ? ` · ${added.length} added after we started` : ""}`,
     ];
-    for (const { team, label } of LANES) {
-      const mine = members.filter((c) => laneOf(c) === team);
-      if (!mine.length) continue;
-      lines.push("", `*${label}*`);
-      for (const c of mine) {
-        const b = bucketOf(c);
-        const mark = b === "done" ? "✅" : b === "todo" ? "⬜" : "🔄";
+    /* Grouped the way the view is, so the paste and the screen are the same week read the
+       same way. Names stay on every line, which is how anyone finds their own in a thread. */
+    const MARK: Record<string, string> = { done: "✅", todo: "⬜", doing: "🔄", review: "👀" };
+    for (const b of BUCKETS) {
+      const list = members.filter((c) => bucketOf(c) === b.key);
+      if (!list.length) continue;
+      lines.push("", `*${b.label}* (${list.length})`);
+      for (const c of list) {
         const who = (c.node ?? (c.feature as unknown as Node)).assignees?.map((a) => a.name).join(", ");
-        lines.push(`${mark} ${titleOf(c)}${who ? ` — ${who}` : ""}`);
+        lines.push(`${MARK[b.key]} ${titleOf(c)}${who ? ` — ${who}` : ""}`);
       }
     }
     const carry = members.length - done.length;
@@ -199,27 +188,18 @@ export default function SprintBoard({ cards, onOpen }: { cards: BoardCard[]; onO
         </p>
       )}
 
-      <div className="sp-lanes">
-        {LANES.map(({ team, label }) => {
-          const mine = members.filter((c) => laneOf(c) === team);
-          if (!mine.length) return null;
+      {/* One board for the week. Four columns, every card in exactly one of them, whoever
+          is holding it. */}
+      <div className="sp-board">
+        {BUCKETS.map((b) => {
+          const list = members.filter((c) => bucketOf(c) === b.key);
           return (
-            <section className="sp-lane" key={team}>
-              <h3>{label}<em>{mine.length}</em></h3>
-              <div className="sp-buckets">
-                {BUCKETS.map((b) => {
-                  const list = mine.filter((c) => bucketOf(c) === b.key);
-                  return (
-                    <div className={"sp-bucket" + (list.length ? "" : " empty")} key={b.key}>
-                      <h4>{b.label}<em>{list.length}</em></h4>
-                      {list.map((c) => (
-                        <SprintCard key={c.id} card={c} isAdded={!committed.has(c.id)}
-                          onOpen={() => onOpen(c.id)} onPush={() => s.setPriority(c.id, 2)} />
-                      ))}
-                    </div>
-                  );
-                })}
-              </div>
+            <section className={"sp-bucket" + (list.length ? "" : " empty")} key={b.key}>
+              <h4>{b.label}<em>{list.length}</em></h4>
+              {list.map((c) => (
+                <SprintCard key={c.id} card={c} isAdded={!committed.has(c.id)}
+                  onOpen={() => onOpen(c.id)} onPush={() => s.setPriority(c.id, 2)} />
+              ))}
             </section>
           );
         })}
@@ -271,7 +251,12 @@ function SprintCard({ card, isAdded, onOpen, onPush }:
             {counts.total > 0 ? `${counts.done}/${counts.total}` : "Brief"}
           </button>
         )}
-        <span className="sp-cardstage">{STAGE_LABEL[card.stage]}</span>
+        {/* Whose it is. The column already says how far along it is, so this slot carries
+            what the team lanes used to and the column cannot; the exact stage is on hover,
+            because "In progress" and "Design to dev" are not quite the same sentence. */}
+        <span className="sp-cardteam" title={STAGE_LABEL[card.stage]}>
+          {teamsOf(card) || "Unassigned"}
+        </span>
       </div>
       {/* The sprint is where you check what is actually left, so the brief and the checklist
           open here too rather than only on the board. */}

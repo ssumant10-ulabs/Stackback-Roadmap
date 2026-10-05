@@ -2258,20 +2258,20 @@ select.wb-prio {
   margin: 0; padding: 22px; border-radius: 12px; border: 1px dashed var(--line-2, rgba(0,0,0,.18));
   font-size: 13px; color: var(--ink-3, #777); text-align: center;
 }
-.sp-lanes { display: flex; flex-direction: column; gap: 14px; }
-.sp-lane {
+/* One board for the week, not one per team: a card in review is the week's problem
+   whoever's review it is, and three stacked mini-boards hid that. */
+.sp-board {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;
   border: 1px solid var(--line, rgba(0,0,0,.1)); border-radius: 14px; padding: 13px;
-  background: var(--card, #fff);
+  background: var(--card, #fff); align-items: start;
 }
-.sp-lane h3 { margin: 0 0 11px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-.sp-lane h3 em, .sp-queue h3 em, .sp-bucket h4 em {
+@media (max-width: 1023px) { .sp-board { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 639px) { .sp-board { grid-template-columns: 1fr; } }
+.sp-queue h3 em, .sp-bucket h4 em {
   font-style: normal; font-size: 11px; font-weight: 600; color: var(--ink-3, #777);
   background: var(--sunken, rgba(0,0,0,.06)); border-radius: 999px; padding: 1px 7px;
   font-variant-numeric: tabular-nums;
 }
-.sp-buckets { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-@media (max-width: 1023px) { .sp-buckets { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 639px) { .sp-buckets { grid-template-columns: 1fr; } }
 .sp-bucket { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
 .sp-bucket.empty { opacity: .45; }
 .sp-bucket h4 {
@@ -2307,7 +2307,10 @@ select.wb-prio {
 .sp-push:hover, .sp-pull:hover { color: var(--ink, #111); border-color: var(--brand, #4F7A00); }
 .sp-cardfoot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .sp-cardn { font-size: 10.5px; color: var(--ink-3, #777); font-variant-numeric: tabular-nums; }
-.sp-cardstage { font-size: 10.5px; color: var(--ink-3, #777); margin-left: auto; }
+.sp-cardteam {
+  font-size: 10.5px; color: var(--ink-3, #777); margin-left: auto; flex: none;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 48%;
+}
 .sp-queue {
   border-top: 1px solid var(--line, rgba(0,0,0,.1)); padding-top: 16px;
   display: flex; flex-direction: column; gap: 9px;
