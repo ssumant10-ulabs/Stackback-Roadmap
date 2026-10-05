@@ -1,4 +1,5 @@
 import type { Activity, CustomCol, Feature, PilotStore, Roadmap, Roster } from "./types";
+import type { Sprint } from "./sprint";
 import { fbDb, firebaseEnabled } from "./firebase";
 import {
   doc, getDoc, onSnapshot, runTransaction, type Unsubscribe,
@@ -20,6 +21,7 @@ export interface RemoteState {
   activity: Activity[];
   features: Feature[];
   pilots: PilotStore[];
+  sprints?: Sprint[];
   seeded?: { features?: boolean; pilots?: boolean; dates?: boolean };
   pilotCategories?: string[];
   colOptions?: Record<string, string[]>;
@@ -59,6 +61,7 @@ export function split(s: RemoteState): Record<string, Bag> {
     [DOCS.roadmap]: {
       roadmaps: s.roadmaps, activeId: s.activeId, roster: s.roster, activity: s.activity,
       adminUrl: s.adminUrl ?? null, uiuxUrl: s.uiuxUrl ?? null,
+      sprints: s.sprints ?? [],
     },
     [DOCS.features]: { features: s.features, seeded: s.seeded ?? {} },
     [DOCS.pilots]: {
@@ -78,6 +81,7 @@ function merge(r: Bag, f: Bag, p: Bag): RemoteState | null {
     activeId: (r.activeId as string) || roadmaps[0].id,
     roster: r.roster as Roster,
     activity: (r.activity as Activity[]) || [],
+    sprints: (r.sprints as Sprint[]) || [],
     adminUrl: (r.adminUrl as string) || undefined,
     uiuxUrl: (r.uiuxUrl as string) || undefined,
     features: (f.features as Feature[]) || [],
@@ -128,6 +132,10 @@ export function mergeDoc(name: string, server: Bag, base: Bag, mine: Bag): Bag {
       ),
       adminUrl: mergeField(server.adminUrl, base.adminUrl, mine.adminUrl) ?? null,
       uiuxUrl: mergeField(server.uiuxUrl, base.uiuxUrl, mine.uiuxUrl) ?? null,
+      /* Per sprint, not per field: two people planning the same week are editing one record
+         and the later write is the plan. Two people planning different weeks both keep
+         theirs, which is the case that matters. */
+      sprints: mergeList<Sprint>(...L<Sprint>("sprints")),
     };
   }
   if (name === DOCS.features) {

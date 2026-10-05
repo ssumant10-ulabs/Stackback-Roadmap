@@ -14,6 +14,7 @@ import { autoLink, boardStatusOf, isDrifted, matchTask } from "./featureLink";
 import { SHOT_MAX_PER_REQUEST, SHOT_TOTAL_BUDGET, fmtBytes } from "./shots";
 import { parseLoose } from "./pilotDates";
 import { CLIENT_ID, firebaseEnabled, loadRemote, saveRemote, subscribeRemote, type RemoteState } from "./remote";
+import { isFinished, sprintId, sprintMembers, syncSprint, weekStart, type Sprint } from "./sprint";
 
 const ROADMAPS_KEY = "stackback_roadmaps_v3";
 /** Set while a Firestore write is owed, cleared once it lands. Its presence on load means the
@@ -60,6 +61,9 @@ interface Data {
    *  store list, alongside the roadmap itself. */
   features: Feature[];
   pilots: PilotStore[];
+  /** One record per week, see lib/sprint.ts. Shared, because a sprint one browser can see
+   *  and the rest cannot is not a commitment. */
+  sprints?: Sprint[];
   seeded?: { features?: boolean; pilots?: boolean; dates?: boolean; featureRefs?: boolean };
   /** Categories added by the team on top of the ones the sheet arrived with. */
   pilotCategories?: string[];
@@ -121,7 +125,7 @@ const REF_PREFIX: Record<FeatureBand, string> = { upcoming: "INT", merchant: "MR
 function defaultData(): Data {
   return {
     roadmaps: [sheetRoadmap()], activeId: SHEET_ROADMAP_ID, roster: clone(DEFAULT_ROSTER),
-    activity: [], features: [], pilots: [], seeded: {}, pilotCategories: [],
+    activity: [], features: [], pilots: [], sprints: [], seeded: {}, pilotCategories: [],
     adminUrl: DEFAULT_ADMIN_URL, uiuxUrl: DEFAULT_UIUX_URL,
   };
 }
@@ -152,6 +156,11 @@ export class Store {
   private listeners = new Set<() => void>();
   private version = 0;
   hydrated = false;
+  /** True once hydrate() has finished, as opposed to `hydrated`, which is set the moment it
+   *  STARTS so two callers cannot both run it. Anything that writes a snapshot of the board
+   *  has to wait for this one: during the load the board still holds the seeded default, and
+   *  a sprint opened against that would freeze a commitment nobody made. */
+  ready = false;
   /** How this browser met the shared backend, for the banner that reports the switchover.
    *  "promoted" means it carried the local board up; "seeded" means it found nothing to
    *  carry and the defaults were written; "adopted" means the shared copy already existed. */
@@ -228,6 +237,7 @@ export class Store {
           this.data.uiuxUrl = r.uiuxUrl || DEFAULT_UIUX_URL;
           this.data.features = Array.isArray(r.features) ? r.features : [];
           this.data.pilots = Array.isArray(r.pilots) ? r.pilots : [];
+          this.data.sprints = Array.isArray(r.sprints) ? r.sprints : [];
           this.data.seeded = r.seeded || {};
           this.data.pilotCategories = r.pilotCategories || [];
           this.data.colOptions = r.colOptions || {};
@@ -293,6 +303,7 @@ export class Store {
     this.seedModulesOnce();
     this.rebuildHelpers();
     this.applyTheme();
+    this.ready = true;
     this.notify();
   }
   /** Apply a copy of the shared state to memory. One routine, because hydrate, the live
@@ -308,6 +319,7 @@ export class Store {
     this.data.uiuxUrl = r.uiuxUrl || DEFAULT_UIUX_URL;
     this.data.features = Array.isArray(r.features) ? r.features : [];
     this.data.pilots = Array.isArray(r.pilots) ? r.pilots : [];
+    this.data.sprints = Array.isArray(r.sprints) ? r.sprints : [];
     this.data.seeded = r.seeded || {};
     this.data.pilotCategories = r.pilotCategories || [];
     this.data.colOptions = r.colOptions || {};
@@ -339,6 +351,7 @@ export class Store {
           this.data.uiuxUrl = p.uiuxUrl || DEFAULT_UIUX_URL;
           this.data.features = Array.isArray(p.features) ? p.features : [];
           this.data.pilots = Array.isArray(p.pilots) ? p.pilots : [];
+          this.data.sprints = Array.isArray(p.sprints) ? p.sprints : [];
           this.data.seeded = p.seeded || {};
           this.data.pilotCategories = p.pilotCategories || [];
           this.data.colOptions = p.colOptions || {};
@@ -838,6 +851,79 @@ export class Store {
     this.commit();
   }
 
+  /** The brief under the title. Written on the card itself rather than in a comment, because
+   *  a description buried eight replies down is a description nobody finds. */
+  setDesc(id: string, text: string) {
+    const n = this.findEntry(id)?.node as (Node & Record<string, unknown>) | undefined;
+    if (!n) return;
+    const v = (text || "").trim();
+    if ((n.desc || "") === v) return;
+    n.desc = v || null;
+    if ("updatedAt" in n) (n as { updatedAt?: string }).updatedAt = new Date().toISOString();
+    this.commit();
+  }
+
+  /* ---- sprints. A week with a record attached; see lib/sprint.ts. ---------------------- */
+
+  get sprints(): Sprint[] { return (this.data.sprints = this.data.sprints || []); }
+  sprintFor(id: string): Sprint | undefined { return this.sprints.find((x) => x.id === id); }
+
+  /** Open this week's sprint if it is not open, and record anything newly put on Now.
+   *
+   *  Driven by the board rather than by a button: a sprint you have to remember to start is
+   *  a sprint that starts on Wednesday. Writing the commitment at the moment of opening, and
+   *  each addition at the moment it arrives, is the whole mechanism — the week cannot then
+   *  quietly agree with whatever it ended up being.
+   *
+   *  Safe to call on every render. The rule is in lib/sprint.ts and returns null when
+   *  nothing changed, so only a real change writes. */
+  syncSprint(id: string) {
+    const was = this.sprintFor(id);
+    const next = syncSprint(was, id, this.boardCards().map((c) => ({
+      id: c.id, stage: c.stage, status: (c.node ?? c.feature)?.status ?? null,
+      now: cardPriority(c.node ?? c.feature) === 1,
+    })));
+    if (!next) return;
+    if (was) Object.assign(was, next);
+    else {
+      this.sprints.push(next);
+      const n = next.committed.length;
+      this.log("stage", `Sprint ${id}`, `opened with ${n} card${n === 1 ? "" : "s"}`);
+    }
+    this.commit();
+  }
+
+  /** Close a sprint and carry its unfinished work into the next one.
+   *
+   *  Rollover is the point. Without it Now only ever grows, because nothing makes anyone
+   *  look at a card that has been sitting there for three weeks. Carrying is deliberate and
+   *  counted, so the fourth week it comes up it is visibly the fourth. */
+  closeSprint(id: string) {
+    const sp = this.sprintFor(id);
+    if (!sp || sp.closedAt) return;
+    const live = new Map(this.boardCards().map((c) =>
+      [c.id, { stage: c.stage, status: (c.node ?? c.feature)?.status ?? null }]));
+    const members = this.sprintMembers(sp);
+    const carry = members.filter((cid) => { const c = live.get(cid); return c ? !isFinished(c) : false; });
+    sp.done = members.length - carry.length;
+    sp.rolled = carry.length;
+    sp.closedAt = new Date().toISOString();
+
+    const next = sprintId(weekStart(1, new Date(id + "T00:00:00")));
+    const existing = this.sprintFor(next);
+    if (existing) existing.committed = Array.from(new Set([...existing.committed, ...carry]));
+    else this.sprints.push({ id: next, committed: carry });
+
+    this.log("stage", `Sprint ${id}`, `closed: ${sp.done} done, ${carry.length} carried into ${next}`);
+    this.commit();
+  }
+
+  /** Which cards this sprint is about. The rule is in lib/sprint.ts, where it can be
+   *  asserted without a browser; this only supplies the live board to it. */
+  sprintMembers(sp: Sprint): string[] {
+    return sprintMembers(sp, this.boardCards());
+  }
+
   /** Bugs carry which layer the fault is in; features do not. */
   setRequestIssueType(id: string, value: string) {
     const f = this.features.find((x) => x.id === id);
@@ -857,6 +943,7 @@ export class Store {
       uiuxUrl: this.data.uiuxUrl,
       features: this.data.features,
       pilots: this.data.pilots,
+      sprints: this.data.sprints,
       seeded: this.data.seeded,
       pilotCategories: this.data.pilotCategories,
       colOptions: this.data.colOptions,
@@ -917,7 +1004,7 @@ export class Store {
         activeId: this.data.activeId, roadmaps: this.data.roadmaps, activity: this.data.activity,
         adminUrl: this.data.adminUrl, uiuxUrl: this.data.uiuxUrl,
         features: this.data.features, pilots: this.data.pilots, seeded: this.data.seeded,
-        pilotCategories: this.data.pilotCategories,
+        sprints: this.data.sprints, pilotCategories: this.data.pilotCategories,
         colOptions: this.data.colOptions, colOrder: this.data.colOrder,
         colRemoved: this.data.colRemoved, colColors: this.data.colColors,
         customCols: this.data.customCols,

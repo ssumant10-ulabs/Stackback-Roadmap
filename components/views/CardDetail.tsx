@@ -47,6 +47,8 @@ export default function CardDetail({ card, onClose }: { card: BoardCard; onClose
 
   const [title, setTitle] = useState(node.title);
   useEffect(() => setTitle(node.title), [node.title]);
+  const [desc, setDesc] = useState(node.desc || "");
+  useEffect(() => setDesc(node.desc || ""), [node.desc]);
 
   useEffect(() => {
     const esc = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -80,6 +82,18 @@ export default function CardDetail({ card, onClose }: { card: BoardCard; onClose
             aria-label="Card title"
             onChange={(e) => setTitle(e.target.value)} onBlur={commit}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); (e.target as HTMLTextAreaElement).blur(); } }} />
+
+          {/* The brief, under the title. A title has to stay short enough to scan a column
+              by, which leaves nowhere to say what the card actually means — so it ended up
+              in a comment, or in WhatsApp, or nowhere. Saves on blur like the title does. */}
+          {/* Sized by the lines it will actually wrap to, counted per paragraph. Dividing the
+              whole string by a width ignores the newlines in it, which is how a brief with a
+              blank line in the middle rendered with its last sentence cut off. */}
+          <textarea className="wb-detdesc" value={desc} rows={descRows(desc)}
+            aria-label="Description"
+            placeholder="What is this, and what does done look like? Anyone picking the card up reads this first."
+            onChange={(e) => setDesc(e.target.value)}
+            onBlur={() => s.setDesc(card.id, desc)} />
 
           <div className="wb-detgrid">
             <Field label="Horizon" hint={HORIZON_NOTE[cardPriority(card.node ?? card.feature)]}>
@@ -174,6 +188,10 @@ export default function CardDetail({ card, onClose }: { card: BoardCard; onClose
     </div>
   );
 }
+
+const descRows = (text: string) =>
+  Math.max(3, Math.min(18,
+    text.split("\n").reduce((n, line) => n + Math.max(1, Math.ceil(line.length / 54)), 0) + 1));
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (

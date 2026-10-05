@@ -17,6 +17,10 @@ export interface Comment {
 export interface Node {
   id: string;
   title: string;
+  /** What the card is actually about, under the title. A title is a handle you scan a
+   *  column by; it cannot also be the brief. Plain text, because a card nobody can read in
+   *  a WhatsApp paste is a card nobody reads. */
+  desc?: string | null;
   status: Status;
   assignees: Assignee[];
   children: Node[];
@@ -108,6 +112,10 @@ export interface Feature {
   ref: string;
   band: FeatureBand;
   title: string;
+  /** What the card is actually about, under the title. A title is a handle you scan a
+   *  column by; it cannot also be the brief. Plain text, because a card nobody can read in
+   *  a WhatsApp paste is a card nobody reads. */
+  desc?: string | null;
   priority?: string | null;
   sheetStatus?: string | null;
   requestedBy?: string | null;

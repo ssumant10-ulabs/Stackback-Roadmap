@@ -7,6 +7,7 @@ import {
   type BoardColumn, type BoardTeam, type BoardView, type CardKind, type ReviewWith, type Stage,
 } from "@/lib/board";
 import { cardPriority, normPriority, subtreeCounts, waveWord } from "@/lib/derive";
+import { sprintId, weekStart } from "@/lib/sprint";
 import type { Node } from "@/lib/types";
 import { Assignees } from "../Assignees";
 import { StatusButton } from "../bits";
@@ -73,6 +74,17 @@ export function WorkBoard() {
     if (kindFilter) out = out.filter((c) => kindOf(c) === kindFilter);
     return out;
   }, [all, filter, kindFilter, s]);
+
+  /* The week opens itself, from the board rather than from the Sprint tab.
+     Whoever opens the board first that week is the person who would otherwise have had to
+     remember, and the commitment is pinned at a moment nobody chose. Hanging it off the
+     Sprint tab instead meant a week nobody opened until Thursday counted three days of
+     additions as things we had committed to on Monday, which is the one number the sprint
+     exists to keep honest. Not before `ready`: mid-load the board still holds the seeded
+     default, and a commitment snapshotted off that is a commitment nobody made. */
+  useEffect(() => {
+    if (s.ready) s.syncSprint(sprintId(weekStart(0)));
+  }, [s.ready, all, s]);
 
   const byColumn = useMemo(() => columnsFor(cards, view), [cards, view]);
 
@@ -228,7 +240,7 @@ export function WorkBoard() {
         </p>
       </div>
 
-      {sprint && <SprintBoard cards={cards} />}
+      {sprint && <SprintBoard cards={cards} onOpen={setDetail} />}
 
       {/* An empty column takes a sliver, not a share. Seven equal columns with five of them
           saying "Nothing here" pushed the two that hold the work off the screen. */}
