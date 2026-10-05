@@ -45,11 +45,9 @@ export interface Node {
    *  array order is shared with the roadmap tree and cannot be reordered per column. */
   boardOrder?: number | null;
 
-  /** The Linear vocabulary. See the Feature fields of the same names, and `lib/linear.ts`. */
+  /** The QA labels. See the Feature fields of the same names, and `lib/qa-labels.ts`. */
   surface?: string | null;
   errorType?: string | null;
-  linearState?: string | null;
-  linearRef?: string | null;
   /** Roadmap sheet: Deadline column. */
   deadline?: string | null;
   /** Scheduled window, ISO `yyyy-mm-dd`. Settable on a milestone or any subtask.
@@ -144,17 +142,14 @@ export interface Feature {
   /** Rank within its board column. See the Node field of the same name. */
   boardOrder?: number | null;
 
-  /* ---- the Linear vocabulary, as locked for the QA team ----
-     These say what a card IS CALLED, never where it sits: placement is the stage and the
-     team. Folding them into `kind` would move cards, because the backlog's four piles sort
-     on it. See `lib/linear.ts`. */
-  /** Surface label: which module or surface the issue lives in. */
+  /* ---- the QA labels ----
+     What a card is CALLED, never where it sits: placement is the stage and the team.
+     Folding them into `kind` would move cards, because the backlog's four piles sort on
+     it. See `lib/qa-labels.ts`. */
+  /** Which module or surface the issue lives in. */
   surface?: string | null;
-  /** Error type label: what kind of failure it is. */
+  /** What kind of failure it is. */
   errorType?: string | null;
-  /** The state the matching Linear ticket is in, and its identifier when it has one. */
-  linearState?: string | null;
-  linearRef?: string | null;
   /** Now, Next or Future on the board. Its own field because a request's `priority` is a
    *  sheet TEXT column — the live rows hold "PMFv1" — and writing 1, 2 or 3 into it would
    *  destroy what the team typed. A roadmap task has one horizon and it is `priority`. */

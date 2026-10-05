@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import { ALL_KINDS, KIND_LABEL, STAGE_LABEL, type CardKind } from "@/lib/board";
 import type { BoardCard } from "./WorkBoard";
-import { ERROR_TYPES, SURFACES, linearTitle, surfaceZone } from "@/lib/linear";
+import { ERROR_TYPES, SURFACES, qaTitle, surfaceZone } from "@/lib/qa-labels";
 import { cardPriority, subtreeCounts, waveWord } from "@/lib/derive";
 import { PRIORITIES } from "@/lib/constants";
 import { Assignees } from "../Assignees";
@@ -100,9 +100,9 @@ export default function CardDetail({ card, onClose }: { card: BoardCard; onClose
               </select>
             </Field>
             <Field label="Surface" hint={SURFACES.find((x) => x.id === str("surface"))
-              ? `${surfaceZone(str("surface"))} \u00b7 the Linear label for where it lives`
-              : "Which module or surface the issue lives in. The first of the two Linear labels."}>
-              <select value={str("surface")} onChange={(e) => s.setLinear(card.id, "surface", e.target.value)}>
+              ? `${surfaceZone(str("surface"))} \u00b7 where the issue lives`
+              : "Which module or surface the issue lives in. The first of the two QA labels."}>
+              <select value={str("surface")} onChange={(e) => s.setQaLabel(card.id, "surface", e.target.value)}>
                 <option value="">Not set</option>
                 {["Customer Zone", "Merchant Zone"].map((zone) => (
                   <optgroup key={zone} label={zone}>
@@ -114,20 +114,20 @@ export default function CardDetail({ card, onClose }: { card: BoardCard; onClose
               </select>
             </Field>
             <Field label="Error type" hint={ERROR_TYPES.find((x) => x.id === str("errorType"))?.note
-              ?? "What kind of failure this is. The second of the two Linear labels."}>
-              <select value={str("errorType")} onChange={(e) => s.setLinear(card.id, "errorType", e.target.value)}>
+              ?? "What kind of failure this is. The second of the two QA labels."}>
+              <select value={str("errorType")} onChange={(e) => s.setQaLabel(card.id, "errorType", e.target.value)}>
                 <option value="">Not set</option>
                 {ERROR_TYPES.map((x) => <option key={x.id} value={x.id} title={x.note}>{x.label}</option>)}
               </select>
             </Field>
           </div>
 
-          {/* The locked title format, offered rather than enforced: a dev should know the
-              module and the store from the title alone. */}
+          {/* The title format, offered rather than enforced: a dev should know the module
+              and the store from the title alone. */}
           {(str("surface") || str("errorType")) && (
             <button type="button" className="wb-detfmt"
-              onClick={() => { const t = linearTitle(node.title, str("errorType"), str("surface"), f?.storeName); setTitle(t); s.rename(card.id, t); }}>
-              Rename to the Linear format: <b>{linearTitle(node.title, str("errorType"), str("surface"), f?.storeName)}</b>
+              onClick={() => { const t = qaTitle(node.title, str("errorType"), str("surface"), f?.storeName); setTitle(t); s.rename(card.id, t); }}>
+              Rename to the QA format: <b>{qaTitle(node.title, str("errorType"), str("surface"), f?.storeName)}</b>
             </button>
           )}
 

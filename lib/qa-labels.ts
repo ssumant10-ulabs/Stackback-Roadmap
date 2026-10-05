@@ -1,30 +1,14 @@
-/** The card vocabulary, as locked for the QA team in Linear.
+/** The QA label vocabulary: which surface an issue lives in, and what kind of failure it is.
  *
- *  Source: `Project Deliverables/stackback/Operations/StackBack_Linear_Guide.html` and the
- *  project's own `CLAUDE.md`. Reproduced here rather than paraphrased, because the point of
- *  a locked vocabulary is that a card raised on this board and a ticket raised in Linear are
- *  the same words — a surface label that reads "Portal" here and "Portal Surface" there is
- *  two vocabularies again.
+ *  Source: the module map in `Project Deliverables/stackback/CLAUDE.md`. These are
+ *  StackBack's own surfaces and its own failure types; they were written down for a Linear
+ *  setup that is not running, and QA is handled from this dashboard instead, so the labels
+ *  live here and the Linear framing is gone.
  *
- *  These do NOT decide where a card sits. Placement is the stage and the team, unchanged;
- *  these are what the card is CALLED. Keeping them apart is deliberate: the board's four
- *  backlog piles sort by `kind`, and folding Linear's labels into that would move cards. */
+ *  They say what a card IS CALLED, never where it sits. Placement is the stage and the team.
+ *  Folding these into `kind` would move cards, because the backlog's four piles sort on it. */
 
-/** Linear's QA workflow, in order. The board's own stages are finer than these; this is the
- *  state a ticket is in over in Linear, and it is written on the card so the two can be
- *  reconciled without opening both. */
-export const LINEAR_STATES = ["Triage", "Backlog", "Confirmed", "In Review", "Done"] as const;
-export type LinearState = (typeof LINEAR_STATES)[number];
-
-export const LINEAR_STATE_NOTE: Record<LinearState, string> = {
-  Triage: "All new issues land here",
-  Backlog: "Small or low priority, parked",
-  Confirmed: "Dev has picked it up",
-  "In Review": "A PR is open — set by GitHub",
-  Done: "PR merged, live — set by GitHub",
-};
-
-/** Surface labels. Every ticket carries one, and they are grouped by zone in Linear. */
+/** Surface labels, grouped by zone. Every issue carries one. */
 export const SURFACES = [
   { id: "storefront", label: "Storefront Surface", zone: "Customer Zone" },
   { id: "portal", label: "Portal Surface", zone: "Customer Zone" },
@@ -41,7 +25,7 @@ export const SURFACES = [
 ] as const;
 export type SurfaceId = (typeof SURFACES)[number]["id"];
 
-/** Error types. The second label every ticket carries, and the bracket the title opens with. */
+/** Error types. The second label every issue carries, and the bracket its title opens with. */
 export const ERROR_TYPES = [
   { id: "purchase", label: "Purchase Error", note: "Checkout, cart, pricing, drawer flows" },
   { id: "timeline", label: "Timeline Error", note: "Order summary, edit state, calculation" },
@@ -58,12 +42,12 @@ export const errorTypeLabel = (id: string | null | undefined) =>
 export const surfaceZone = (id: string | null | undefined) =>
   SURFACES.find((s) => s.id === id)?.zone ?? null;
 
-/** The locked title format: `[Error Type] What broke — Surface — Store`.
+/** The title format: `[Error Type] What broke — Surface — Store`.
  *
  *  Offered rather than enforced. A dev should know which module to look at and which store
- *  is affected from the title alone, and the guide's own bad examples are all titles that
- *  read fine to whoever typed them. */
-export function linearTitle(
+ *  is affected from the title alone, and the bad examples in the QA guide are all titles
+ *  that read fine to whoever typed them. */
+export function qaTitle(
   title: string, errorType: string | null | undefined, surface: string | null | undefined, store?: string | null,
 ): string {
   const et = errorTypeLabel(errorType);

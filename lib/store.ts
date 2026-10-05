@@ -825,12 +825,12 @@ export class Store {
     this.commit();
   }
 
-  /** The Linear vocabulary on a card: surface, error type, ticket state and reference.
+  /** The QA labels on a card: which surface it lives in, and what kind of failure it is.
    *
-   *  One writer for four fields because they are one decision — what this card is CALLED —
-   *  and because none of them touches where it sits. Placement is the stage and the team;
-   *  see `lib/linear.ts` for why the two are kept apart. */
-  setLinear(id: string, field: "surface" | "errorType" | "linearState" | "linearRef", value: string | null) {
+   *  One writer for both because they are one decision — what this card is CALLED — and
+   *  because neither touches where it sits. Placement is the stage and the team; see
+   *  `lib/qa-labels.ts` for why the two are kept apart. */
+  setQaLabel(id: string, field: "surface" | "errorType", value: string | null) {
     const n = this.findEntry(id)?.node as (Node & Record<string, unknown>) | undefined;
     if (!n) return;
     n[field] = value || null;
