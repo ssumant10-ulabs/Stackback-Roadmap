@@ -13,6 +13,9 @@ export interface Sprint {
   /** `yyyy-mm-dd` of the Monday it starts. The id and the window are the same fact, so a
    *  sprint cannot drift off its dates. */
   id: string;
+  /** How many weeks it runs, 1 to 4. Stored on the sprint rather than set globally, because
+   *  changing the length must not silently redraw the windows of sprints already closed. */
+  weeks?: SprintWeeks;
   /** Card ids on Now the moment it opened. Everything measured about scope is measured
    *  against this, which is why it is a snapshot and never recomputed. */
   committed: string[];
@@ -32,6 +35,10 @@ export interface Sprint {
   done?: number;
   rolled?: number;
 }
+
+export type SprintWeeks = 1 | 2 | 3 | 4;
+export const SPRINT_WEEKS: SprintWeeks[] = [1, 2, 3, 4];
+export const weeksOf = (sp: Sprint | undefined): SprintWeeks => sp?.weeks ?? 1;
 
 /** Stages that count as finished: the board's own Done bucket. */
 export const DONE_STAGES: Stage[] = ["design_approved", "dev_approved", "prod"];
@@ -62,12 +69,41 @@ export const sprintId = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
 export const dayMonth = (d: Date) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+export const DAY = 86400000;
+export const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 
-/** Which day of the seven we are on, 1-indexed, clamped. Shown rather than a countdown: the
- *  useful question on a Thursday is how much week is left, not how much has gone. */
-export function dayOfSprint(start: Date, now = new Date()): number {
-  const ms = now.setHours(0, 0, 0, 0) - start.getTime();
-  return Math.min(7, Math.max(1, Math.floor(ms / 86400000) + 1));
+/** The window a sprint covers: its start Monday, and the Sunday `weeks` weeks later. */
+export function windowOf(id: string, weeks: SprintWeeks): { from: Date; to: Date; days: number } {
+  const from = new Date(id + "T00:00:00");
+  const days = weeks * 7;
+  return { from, to: addDays(from, days - 1), days };
+}
+
+/** The id of the sprint `dir` windows away, which depends on how long THIS one is: after a
+ *  three-week sprint the next one starts three weeks on, not next Monday. */
+export const shiftSprintId = (id: string, weeks: SprintWeeks, dir: number) =>
+  sprintId(addDays(new Date(id + "T00:00:00"), dir * weeks * 7));
+
+/** Which day of the sprint we are on, 1-indexed, clamped to its length. Shown rather than a
+ *  countdown: the useful question on a Thursday is how much is left, not how much has gone. */
+export function dayOfSprint(start: Date, weeks: SprintWeeks = 1, now = new Date()): number {
+  const ms = new Date(now).setHours(0, 0, 0, 0) - start.getTime();
+  return Math.min(weeks * 7, Math.max(1, Math.floor(ms / DAY) + 1));
+}
+
+/** Whether a card's own window touches the sprint's at all.
+ *
+ *  This is what "only the weeks specified should show up" means: a card scheduled 12–16 Oct
+ *  is not part of the 5–11 Oct sprint and should not be drawn in it, whatever horizon it
+ *  carries. A card with no dates is NOT excluded here — it is unscheduled, which is a
+ *  different thing from scheduled elsewhere, and hiding it would hide most of the board. */
+export function overlapsWindow(
+  range: { start: string; end: string } | null, from: Date, to: Date,
+): boolean {
+  if (!range) return true;
+  const s = new Date(range.start + "T00:00:00").getTime();
+  const e = new Date(range.end + "T00:00:00").getTime();
+  return e >= from.getTime() && s <= to.getTime();
 }
 
 /** What the last `n` closed sprints finished, newest first, and their mean.
@@ -112,7 +148,7 @@ export function syncSprint(
   cards: { id: string; stage: Stage; status?: string | null; now: boolean }[],
 ): Sprint | null {
   const joining = cards.filter((c) => c.now && !isFinished(c)).map((c) => c.id);
-  if (!sp) return { id, committed: joining };
+  if (!sp) return { id, committed: joining, weeks: 1 };
   if (sp.closedAt) return null;
   const seen = new Set([...sp.committed, ...(sp.added ?? [])]);
   const fresh = joining.filter((cid) => !seen.has(cid));

@@ -14,7 +14,10 @@ import { autoLink, boardStatusOf, isDrifted, matchTask } from "./featureLink";
 import { SHOT_MAX_PER_REQUEST, SHOT_TOTAL_BUDGET, fmtBytes } from "./shots";
 import { parseLoose } from "./pilotDates";
 import { CLIENT_ID, firebaseEnabled, loadRemote, saveRemote, subscribeRemote, type RemoteState } from "./remote";
-import { isFinished, sprintId, sprintMembers, syncSprint, weekStart, type Sprint } from "./sprint";
+import {
+  isFinished, shiftSprintId, sprintId, sprintMembers, syncSprint, weekStart, weeksOf,
+  type Sprint, type SprintWeeks,
+} from "./sprint";
 
 const ROADMAPS_KEY = "stackback_roadmaps_v3";
 /** Set while a Firestore write is owed, cleared once it lands. Its presence on load means the
@@ -912,10 +915,14 @@ export class Store {
     sp.rolled = carry.length;
     sp.closedAt = new Date().toISOString();
 
-    const next = sprintId(weekStart(1, new Date(id + "T00:00:00")));
+    /* Three weeks on after a three-week sprint. Stepping a single week would overlap the
+       sprint that just closed, and the cards it carried would land back inside it. */
+    const next = shiftSprintId(id, weeksOf(sp), 1);
     const existing = this.sprintFor(next);
     if (existing) existing.committed = Array.from(new Set([...existing.committed, ...carry]));
-    else this.sprints.push({ id: next, committed: carry });
+    /* The next sprint inherits the length, so a team that has settled on a fortnight does
+       not drop back to one week every time a sprint closes. */
+    else this.sprints.push({ id: next, committed: carry, weeks: weeksOf(sp) });
 
     this.log("stage", `Sprint ${id}`, `closed: ${sp.done} done, ${carry.length} carried into ${next}`);
     this.commit();
@@ -923,6 +930,16 @@ export class Store {
 
   /** Which cards this sprint is about. The rule is in lib/sprint.ts, where it can be
    *  asserted without a browser; this only supplies the live board to it. */
+  /** How long the open sprint runs. Only while it is open: redrawing a closed sprint's
+   *  window would change what it is on record as having committed to. */
+  setSprintWeeks(id: string, weeks: SprintWeeks) {
+    const sp = this.sprintFor(id);
+    if (!sp || sp.closedAt || weeksOf(sp) === weeks) return;
+    sp.weeks = weeks;
+    this.log("stage", `Sprint ${id}`, `set to ${weeks} week${weeks === 1 ? "" : "s"}`);
+    this.commit();
+  }
+
   sprintMembers(sp: Sprint): string[] {
     return sprintMembers(sp, this.boardCards());
   }

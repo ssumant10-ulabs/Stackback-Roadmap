@@ -153,17 +153,23 @@ export function WorkBoard() {
   return (
     <div className="wb">
       <div className="wb-head">
-        {/* Three places, not six. PM, Design, Dev and the Backlog are four readings of one
-            board, so they sit inside it; the Roadmap and the Sprint are different questions
-            about the same cards and stay at the top level. Six peers made the two that are
-            not team boards look like two more team boards. */}
+        {/* Four places. PM, Design and Dev are three readings of one board and sit inside
+            it; the Sprint, the Roadmap and the Backlog are each a different question about
+            the same cards. The Backlog is up here because it is not a team's board — it is
+            everything no team has — and one level down it read as a fourth team. */}
         <nav className="wb-tabs wb-tabs-top" role="tablist" aria-label="Views">
           <button role="tab" aria-selected={!sprint && TEAM_LENSES.includes(view)}
             className={"wb-tab" + (!sprint && TEAM_LENSES.includes(view) ? " on" : "")}
             onClick={() => { setSprint(false); if (!TEAM_LENSES.includes(view)) s.setBoardView("pm"); }}>
-            {/* No count: the four sub-tabs each carry their own, and a fifth number over
-                them only reads as a fifth board. */}
+            {/* No count: the three sub-tabs each carry their own, and a fourth number over
+                them only reads as a fourth board. */}
             Team board
+          </button>
+          <button role="tab" aria-selected={sprint}
+            className={"wb-tab" + (sprint ? " on" : "")}
+            onClick={() => setSprint(true)}>
+            Sprint
+            <em>{cards.filter((c) => cardPriority(c.node ?? c.feature) === 1).length}</em>
           </button>
           <button role="tab" aria-selected={!sprint && view === "roadmap"}
             className={"wb-tab" + (!sprint && view === "roadmap" ? " on" : "")}
@@ -171,11 +177,11 @@ export function WorkBoard() {
             Roadmap
             <em>{countFor(cards, "roadmap")}</em>
           </button>
-          <button role="tab" aria-selected={sprint}
-            className={"wb-tab" + (sprint ? " on" : "")}
-            onClick={() => setSprint(true)}>
-            Sprint
-            <em>{cards.filter((c) => cardPriority(c.node ?? c.feature) === 1).length}</em>
+          <button role="tab" aria-selected={!sprint && view === "backlog"}
+            className={"wb-tab" + (!sprint && view === "backlog" ? " on" : "")}
+            onClick={() => { setSprint(false); s.setBoardView("backlog"); }}>
+            Backlog
+            <em>{countFor(cards, "backlog")}</em>
           </button>
         </nav>
 
@@ -322,7 +328,10 @@ export type BoardCard = ReturnType<ReturnType<typeof useStore>["boardCards"]>[nu
 
 /** The four readings that live inside Team board. The Roadmap and the Sprint are their own
  *  top-level questions, so they are not in here. */
-const TEAM_LENSES: BoardView[] = ["pm", "design", "dev", "backlog"];
+/** The three team boards. The Backlog came out from under them: it is not a team's board,
+ *  it is where work with no team sits, and burying it as a fourth sub-tab made it read as
+ *  one more column set belonging to whoever was selected above it. */
+const TEAM_LENSES: BoardView[] = ["pm", "design", "dev"];
 
 /** What a card is, whichever record holds it. Roadmap work is a feature unless said so. */
 const kindOf = (c: BoardCard): CardKind => (c.node?.kind || c.feature?.kind || "feature") as CardKind;

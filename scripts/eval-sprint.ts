@@ -9,7 +9,8 @@
  *  Run: npx tsx scripts/eval-sprint.ts
  */
 import {
-  dayOfSprint, isFinished, sprintId, sprintMembers as members, syncSprint, velocity, weekStart,
+  dayOfSprint, isFinished, overlapsWindow, shiftSprintId, sprintId, sprintMembers as members,
+  syncSprint, velocity, weekStart, windowOf,
   type Sprint,
 } from "../lib/sprint";
 import type { Stage } from "../lib/board";
@@ -32,9 +33,38 @@ eq(sprintId(weekStart(-1, new Date("2026-10-05T00:00:00"))), "2026-09-28", "last
 /* A Monday is day 1, not day 0, and nothing is day 8: a sprint read on the following
    Tuesday still says 7, because "day 9 of 7" is not a thing anyone can act on. */
 const mon = weekStart(0, new Date("2026-10-05T00:00:00"));
-eq(dayOfSprint(mon, new Date("2026-10-05T23:00:00")), 1, "Monday is day 1");
-eq(dayOfSprint(mon, new Date("2026-10-09T09:00:00")), 5, "Friday is day 5");
-eq(dayOfSprint(mon, new Date("2026-10-20T09:00:00")), 7, "a week later still clamps to 7");
+eq(dayOfSprint(mon, 1, new Date("2026-10-05T23:00:00")), 1, "Monday is day 1");
+eq(dayOfSprint(mon, 1, new Date("2026-10-09T09:00:00")), 5, "Friday is day 5");
+eq(dayOfSprint(mon, 1, new Date("2026-10-20T09:00:00")), 7, "a week later still clamps to 7");
+
+console.log("\nLonger sprints");
+/* A three-week sprint is one window, not three. Day 12 of 21 has to be sayable, and the
+   next sprint starts three weeks on -- advancing by one week would overlap the one that
+   just closed and the carried cards would land inside their own sprint. */
+eq(windowOf("2026-10-05", 3).days, 21, "three weeks is 21 days");
+eq(sprintId(windowOf("2026-10-05", 3).to), "2026-10-25", "and ends on the Sunday of the third");
+eq(dayOfSprint(mon, 3, new Date("2026-10-16T09:00:00")), 12, "day 12 of 21");
+eq(dayOfSprint(mon, 3, new Date("2026-11-20T09:00:00")), 21, "and it clamps at 21, not 7");
+eq(shiftSprintId("2026-10-05", 3, 1), "2026-10-26", "the next sprint starts after all three weeks");
+eq(shiftSprintId("2026-10-05", 3, -1), "2026-09-14", "and the previous one is three weeks back");
+eq(shiftSprintId("2026-10-05", 1, 1), "2026-10-12", "a one-week sprint still steps a week");
+
+console.log("\nOnly what is scheduled in the window shows up");
+const win = windowOf("2026-10-05", 1);
+const wk = (a: string, b: string) => ({ start: a, end: b });
+ok(overlapsWindow(wk("2026-10-05", "2026-10-09"), win.from, win.to), "a card inside the week is in");
+ok(overlapsWindow(wk("2026-09-28", "2026-10-06"), win.from, win.to), "one that starts before and runs in is in");
+ok(overlapsWindow(wk("2026-10-09", "2026-10-20"), win.from, win.to), "one that starts in and runs past is in");
+ok(overlapsWindow(wk("2026-10-05", "2026-10-05"), win.from, win.to), "a single day on the first day is in");
+ok(overlapsWindow(wk("2026-10-11", "2026-10-11"), win.from, win.to), "and on the last day");
+/* The one from the screenshot: scheduled 12-16 Oct, showing in the 5-11 Oct sprint. */
+ok(!overlapsWindow(wk("2026-10-12", "2026-10-16"), win.from, win.to), "next week's work is NOT in this week");
+ok(!overlapsWindow(wk("2026-09-28", "2026-10-04"), win.from, win.to), "nor last week's");
+/* Undated is unscheduled, which is not the same as scheduled elsewhere: hiding it would
+   hide most of the board, since 5 of 192 cards carry dates. */
+ok(overlapsWindow(null, win.from, win.to), "a card with no dates is not excluded by date");
+ok(overlapsWindow(wk("2026-10-12", "2026-10-16"), windowOf("2026-10-05", 3).from, windowOf("2026-10-05", 3).to),
+  "and a three-week sprint does take in the week after next");
 
 /* ---- membership, scope and carry ------------------------------------------------------
    `syncSprint` and `sprintMembers` are the two the store calls, handed a fixture instead of

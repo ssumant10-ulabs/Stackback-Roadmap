@@ -2258,59 +2258,92 @@ select.wb-prio {
   margin: 0; padding: 22px; border-radius: 12px; border: 1px dashed var(--line-2, rgba(0,0,0,.18));
   font-size: 13px; color: var(--ink-3, #777); text-align: center;
 }
-/* One board for the week, not one per team: a card in review is the week's problem
-   whoever's review it is, and three stacked mini-boards hid that. */
-.sp-board {
-  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;
-  border: 1px solid var(--line, rgba(0,0,0,.1)); border-radius: 14px; padding: 13px;
-  background: var(--card, #fff); align-items: start;
+/* The track: time across, cards down. One view, not one per team — a card in review is
+   the sprint's problem whoever's review it is. */
+.sp-len { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-3, #777); }
+.sp-len select {
+  font: inherit; font-size: 11.5px; padding: 3px 6px; border-radius: 8px;
+  border: 1px solid var(--line, rgba(0,0,0,.14)); background: var(--card, #fff); color: var(--ink-2, #444);
 }
-@media (max-width: 1023px) { .sp-board { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 639px) { .sp-board { grid-template-columns: 1fr; } }
-.sp-queue h3 em, .sp-bucket h4 em {
+.sp-time {
+  border: 1px solid var(--line, rgba(0,0,0,.1)); border-radius: 14px; padding: 11px 13px 13px;
+  background: var(--card, #fff); display: flex; flex-direction: column; gap: 3px; overflow: hidden;
+}
+/* The name column is fixed so every bar is measured against the same origin; a track that
+   shifted with the longest title would make two rows incomparable. */
+.sp-ruler, .sp-row { display: grid; grid-template-columns: 230px minmax(0, 1fr) 76px; align-items: center; gap: 10px; }
+@media (max-width: 767px) { .sp-ruler, .sp-row { grid-template-columns: 130px minmax(0, 1fr) 0; } .sp-rowteam { display: none; } }
+.sp-ruler { padding-bottom: 7px; border-bottom: 1px solid var(--line, rgba(0,0,0,.1)); margin-bottom: 4px; }
+.sp-rulercols { display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); }
+.sp-rc {
+  display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 0;
+  font-size: 10px; font-weight: 700; color: var(--ink-3, #777); text-transform: uppercase;
+}
+.sp-rc em { font-style: normal; font-size: 9.5px; font-weight: 600; opacity: .7; letter-spacing: -.01em; }
+.sp-rc.off { opacity: .45; }
+.sp-row { min-height: 30px; }
+.sp-row:hover .sp-track { background-color: var(--sunken, rgba(0,0,0,.04)); }
+.sp-rowtitle { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.sp-rowname {
+  font: inherit; font-size: 12px; font-weight: 600; text-align: left; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  appearance: none; border: 0; background: none; padding: 0; color: var(--ink, #111); cursor: pointer;
+}
+.sp-rowname:hover { text-decoration: underline; text-underline-offset: 2px; }
+/* Column rules drawn on the track itself, so they line up with the ruler by construction
+   rather than by two numbers being kept equal. */
+.sp-track {
+  position: relative; height: 24px; border-radius: 6px; min-width: 0;
+  background-image: repeating-linear-gradient(to right,
+    var(--line, rgba(0,0,0,.09)) 0 1px, transparent 1px calc(100% / var(--cols)));
+}
+.sp-now { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--status-late, #F0705A); opacity: .7; }
+.sp-bar {
+  position: absolute; top: 3px; bottom: 3px; border-radius: 5px; display: flex; align-items: center;
+  padding: 0 5px; gap: 3px; overflow: hidden; background: var(--ink-3, #8a8a8a);
+}
+.sp-bar.b-todo { background: var(--track, rgba(0,0,0,.18)); border: 1px solid var(--line-2, rgba(0,0,0,.22)); }
+.sp-bar.b-doing { background: var(--status-progress, #A9760A); }
+.sp-bar.b-review { background: var(--team-dsg, #B23A82); }
+.sp-bar.b-done { background: var(--brand, #4F7A00); }
+/* A bar that stopped neatly at the window edge would say the work stops there. */
+.sp-bar.runs-in { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.sp-bar.runs-out { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.sp-rowteam {
+  font-size: 10.5px; color: var(--ink-3, #777); text-align: right;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sp-undated { display: flex; flex-direction: column; gap: 9px; }
+.sp-undated h3 { margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.sp-ulist { display: flex; flex-direction: column; gap: 6px; }
+.sp-ucard {
+  display: flex; align-items: center; gap: 9px; padding: 7px 10px; min-width: 0;
+  border: 1px dashed var(--line-2, rgba(0,0,0,.2)); border-radius: 9px; background: var(--card, #fff);
+}
+.sp-utitle {
+  font: inherit; font-size: 12.5px; flex: 1 1 auto; min-width: 0; text-align: left;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  appearance: none; border: 0; background: none; padding: 0; color: var(--ink, #111); cursor: pointer;
+}
+.sp-utitle:hover { text-decoration: underline; text-underline-offset: 2px; }
+.sp-fit {
+  appearance: none; cursor: pointer; font: inherit; font-size: 11px; font-weight: 600; flex: none;
+  border: 1px solid var(--line, rgba(0,0,0,.14)); background: var(--card, #fff);
+  color: var(--ink-2, #444); border-radius: 8px; padding: 3px 9px; white-space: nowrap;
+}
+.sp-fit:hover { color: var(--ink, #111); border-color: var(--brand, #4F7A00); }
+.sp-queue h3 em, .sp-undated h3 em {
   font-style: normal; font-size: 11px; font-weight: 600; color: var(--ink-3, #777);
   background: var(--sunken, rgba(0,0,0,.06)); border-radius: 999px; padding: 1px 7px;
   font-variant-numeric: tabular-nums;
 }
-.sp-bucket { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
-.sp-bucket.empty { opacity: .45; }
-.sp-bucket h4 {
-  margin: 0; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
-  color: var(--ink-3, #777); display: flex; align-items: center; gap: 6px;
-}
-.sp-card {
-  border: 1px solid var(--line, rgba(0,0,0,.12)); border-radius: 10px; padding: 9px 10px;
-  background: var(--page, #fff); display: flex; flex-direction: column; gap: 7px;
-}
-.sp-card.added { border-color: color-mix(in srgb, var(--status-progress, #A9760A) 45%, transparent); }
-.sp-added {
-  align-self: flex-start; font-size: 10px; font-weight: 600; color: var(--status-progress, #A9760A);
-  background: var(--status-progress-soft, #F7EDD6); border-radius: 999px; padding: 1px 7px;
-}
-.sp-desc {
-  margin: 6px 0 0; padding-top: 7px; border-top: 1px solid var(--line, rgba(0,0,0,.1));
-  font-size: 11.5px; line-height: 1.55; color: var(--ink-2, #555); white-space: pre-wrap;
-}
-.sp-cardtop { display: flex; align-items: flex-start; gap: 7px; }
-.sp-cardtitle {
-  font: inherit; font-size: 12.5px; font-weight: 600; line-height: 1.4; text-align: left;
-  flex: 1 1 auto; min-width: 0; appearance: none; border: 0; background: none; padding: 0;
-  color: var(--ink, #111); cursor: pointer;
-}
-.sp-cardtitle:hover { text-decoration: underline; text-underline-offset: 2px; }
-.sp-push, .sp-pull {
+.sp-pull {
   appearance: none; cursor: pointer; border: 1px solid var(--line, rgba(0,0,0,.14));
   background: var(--card, #fff); color: var(--ink-3, #777); flex: none;
   width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center;
   font: inherit; font-size: 13px; line-height: 1;
 }
-.sp-push:hover, .sp-pull:hover { color: var(--ink, #111); border-color: var(--brand, #4F7A00); }
-.sp-cardfoot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.sp-cardn { font-size: 10.5px; color: var(--ink-3, #777); font-variant-numeric: tabular-nums; }
-.sp-cardteam {
-  font-size: 10.5px; color: var(--ink-3, #777); margin-left: auto; flex: none;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 48%;
-}
+.sp-pull:hover { color: var(--ink, #111); border-color: var(--brand, #4F7A00); }
 .sp-queue {
   border-top: 1px solid var(--line, rgba(0,0,0,.1)); padding-top: 16px;
   display: flex; flex-direction: column; gap: 9px;
@@ -2327,13 +2360,6 @@ select.wb-prio {
 .wb-subassign { display: inline-flex; align-items: center; gap: 3px; flex: none; }
 .wb-subassign .assign-add { opacity: .45; }
 .wb-detsubs li:hover .wb-subassign .assign-add { opacity: 1; }
-.sp-subs { list-style: none; margin: 6px 0 0; padding: 7px 0 0; border-top: 1px solid var(--line, rgba(0,0,0,.1)); display: flex; flex-direction: column; gap: 5px; }
-.sp-subs li { display: flex; align-items: center; gap: 7px; font-size: 11.5px; line-height: 1.35; }
-.sp-subs li > span:first-of-type { flex: 1 1 auto; min-width: 0; }
-.sp-subs .done { color: var(--ink-3, #777); text-decoration: line-through; }
-.sp-subs .assignees { flex: none; }
-button.sp-cardn { appearance: none; border: 1px solid var(--line, rgba(0,0,0,.12)); background: none; cursor: pointer; border-radius: 999px; padding: 0 6px; }
-button.sp-cardn:hover { color: var(--ink, #111); border-color: var(--line-2, rgba(0,0,0,.24)); }
 
 /* Three top-level tabs, with the team boards nested under the first. The sub row is quieter
    than the top one so the hierarchy reads without a label saying so. */
