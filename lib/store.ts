@@ -736,13 +736,32 @@ export class Store {
   /** A new card on the board. A roadmap task, because that is what the board's cards are
    *  and what everything else in the app already understands: Features links to it, the
    *  activity log names it, the metrics count it. */
+  /** A rank that sorts above everything currently on the board.
+   *
+   *  An unranked card sorts LAST (see `rank` in WorkBoard), so a new one landed at the
+   *  bottom of a column of seventy — which is where you do not look. One below the current
+   *  minimum rather than a fixed -1, so the second card added still comes out above the
+   *  first. */
+  private topOfBoard(): number {
+    let lo = 0;
+    const seen = (v: number | null | undefined) => { if (typeof v === "number" && v < lo) lo = v; };
+    const walk = (n: Node) => { seen(n.boardOrder); (n.children || []).forEach(walk); };
+    this.data.roadmaps.forEach((r) => (r.tasks || []).forEach(walk));
+    this.features.forEach((f) => seen(f.boardOrder));
+    return lo - 1;
+  }
+
   addBoardCard(title: string, kind: CardKind): string | null {
     title = (title || "").trim();
     if (!title) return null;
     const r = this.activeRoadmap();
+    /* Next, not Now. A new card is something somebody has just thought of, not something
+       the team has committed to this sprint, and defaulting it to Now put every passing
+       idea straight into the week's scope. Next with no team is the backlog, which is
+       where an unsorted card belongs until PM hands it on. */
     const node: Node = stampIds({
       id: "", title, status: "planned" as Status, assignees: [], children: [],
-      priority: 1, kind,
+      priority: 2, kind, boardOrder: this.topOfBoard(),
     });
     r.tasks.push(node);
     this.log("add", title, `new ${kind} on the board`, node.id);
@@ -1834,6 +1853,7 @@ export class Store {
       priority,
     });
     if (eta) { task.end = eta; task.eta = eta; }
+    task.boardOrder = this.topOfBoard();
     if (labels) {
       if (labels.desc) task.desc = labels.desc;
       if (labels.kind) task.kind = labels.kind;

@@ -4,7 +4,7 @@ import { useStore } from "@/lib/store";
 import { STAGE_LABEL, teamForStage, type BoardTeam, type Stage } from "@/lib/board";
 import {
   DAY, SPRINT_WEEKS, addDays, dayMonth, dayOfSprint, isFinished, overlapsWindow, shiftSprintId,
-  sprintId, velocity, weekStart, weeksOf, windowOf, type SprintWeeks,
+  sprintId, subtaskSlices, velocity, weekStart, weeksOf, windowOf, type SprintWeeks,
 } from "@/lib/sprint";
 import { effRange } from "@/lib/dates";
 import { cardPriority, effStatus, subtreeCounts } from "@/lib/derive";
@@ -73,6 +73,17 @@ function laneOf(c: BoardCard): BoardTeam | null {
   const byStage = teamForStage(c.stage);
   if (byStage && c.teams.includes(byStage)) return byStage;
   return c.teams.find((t) => t !== "PM") ?? c.teams[0] ?? null;
+}
+
+const TEAM_LABEL: Record<BoardTeam, string> = { PM: "PM / CS", Design: "Design", Engineering: "Dev" };
+
+/** Which team a subtask belongs to: its own Team column if the sheet gave it one, else
+ *  whoever is assigned to it. The split between two teams on a card lives at this level —
+ *  "design the page" is Design's and "build it" is Dev's — so this is what colours a
+ *  segment. */
+function teamOfNode(n: Node, s: ReturnType<typeof useStore>): BoardTeam | null {
+  const named = [n.team, ...(n.assignees || []).map((a) => s.helpers.assigneeTeam(a))];
+  return (named.find(Boolean) as BoardTeam) ?? null;
 }
 
 const nodeOf = (c: BoardCard): Node => c.node ?? (c.feature as unknown as Node);
@@ -334,9 +345,12 @@ function TrackRow({ card, from, to, pct, todayPct, onOpen }: {
   card: BoardCard; from: Date; to: Date;
   pct: (d: Date) => number; todayPct: number | null; onOpen: () => void;
 }) {
+  const s = useStore();
   const [open, setOpen] = useState(false);
   const node = nodeOf(card);
   const counts = subtreeCounts(node);
+  const kids = node.children || [];
+  const kidById = useMemo(() => new Map(kids.map((k) => [k.id, k])), [kids]);
   const hasMore = counts.total > 0 || !!(node.desc || "").trim();
   const r = effRange(node)!;
   const cs = new Date(r.start + "T00:00:00");
@@ -345,6 +359,7 @@ function TrackRow({ card, from, to, pct, todayPct, onOpen }: {
      stopped neatly at Sunday would say the work ends on Sunday. */
   const left = Math.max(0, pct(cs));
   const right = Math.min(100, pct(addDays(ce, 1)));
+  const slices = subtaskSlices(r, kids.map((k) => ({ id: k.id, title: k.title, range: effRange(k) })));
   return (
     <>
       <div className="sp-row">
@@ -363,11 +378,35 @@ function TrackRow({ card, from, to, pct, todayPct, onOpen }: {
         </span>
         <div className="sp-track">
           {todayPct !== null && <span className="sp-now" style={{ left: `${todayPct}%` }} aria-hidden />}
-          <i className={`sp-bar b-${bucketOf(card)}` + (cs < from ? " runs-in" : "") + (ce > to ? " runs-out" : "")}
-            style={{ left: `${left}%`, width: `${Math.max(2, right - left)}%` }}
-            title={`${r.start} \u2192 ${r.end}${r.implied ? " (from its subtasks)" : ""} \u00b7 ${STAGE_LABEL[card.stage]}`}>
-            <span className="assignees"><Assignees node={node} small /></span>
-          </i>
+          {/* More than one subtask and the bar is a breakdown: one segment each, in the
+              order they are listed, coloured by the team that holds it. A single bar across
+              a card two teams share says neither when design ends nor when dev can start. */}
+          {slices.length > 1
+            ? slices.map((sl) => {
+              const ss = new Date(sl.start + "T00:00:00");
+              const se = new Date(sl.end + "T00:00:00");
+              const l = Math.max(0, pct(ss));
+              const w = Math.min(100, pct(addDays(se, 1))) - l;
+              if (w <= 0) return null;
+              const kid = kidById.get(sl.id);
+              const team = kid ? teamOfNode(kid, s) : null;
+              return (
+                <i key={sl.id} className={`sp-seg t-${team ?? "none"}` + (kid && effStatus(kid) === "done" ? " done" : "")
+                  + (sl.dated ? " exact" : "")}
+                  style={{ left: `${l}%`, width: `${Math.max(1.5, w)}%` }}
+                  title={`${sl.title} \u2014 ${team ? TEAM_LABEL[team] : "unassigned"} \u00b7 ${sl.start} \u2192 ${sl.end}`
+                    + (sl.dated ? "" : " (its share of the card's window; give it dates to pin it)")}>
+                  <span>{sl.title}</span>
+                </i>
+              );
+            })
+            : (
+              <i className={`sp-bar b-${bucketOf(card)}` + (cs < from ? " runs-in" : "") + (ce > to ? " runs-out" : "")}
+                style={{ left: `${left}%`, width: `${Math.max(2, right - left)}%` }}
+                title={`${r.start} \u2192 ${r.end}${r.implied ? " (from its subtasks)" : ""} \u00b7 ${STAGE_LABEL[card.stage]}`}>
+                <span className="assignees"><Assignees node={node} small /></span>
+              </i>
+            )}
         </div>
         <span className="sp-rowteam" title={STAGE_LABEL[card.stage]}>{teamsOf(card) || "Unassigned"}</span>
       </div>

@@ -236,6 +236,7 @@ function Sub({ sub }: { sub: Node }) {
           this level — "design the page" is Design's and "build it" is Dev's — and assigning
           only the parent leaves both teams looking at the whole card. */}
       <span className="assignees wb-subassign"><Assignees node={sub} small /></span>
+      <DateChip node={sub} variant="icon" />
       <button type="button" aria-label={`Remove ${sub.title}`} className="wb-subdel"
         onClick={() => { if (confirm(`Remove "${sub.title}"?`)) s.del(sub.id); }}><IcTrash /></button>
     </li>

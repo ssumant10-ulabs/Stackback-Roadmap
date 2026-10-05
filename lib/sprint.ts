@@ -1,4 +1,5 @@
 import type { Stage } from "./board";
+import { parseDay, toIso } from "./dates";
 
 /** A week's sprint, as a record rather than a filter.
  *
@@ -153,4 +154,52 @@ export function syncSprint(
   const seen = new Set([...sp.committed, ...(sp.added ?? [])]);
   const fresh = joining.filter((cid) => !seen.has(cid));
   return fresh.length ? { ...sp, added: [...(sp.added ?? []), ...fresh] } : null;
+}
+
+/** One subtask's slice of its parent's window, as dates.
+ *
+ *  A card with two teams under it is really two pieces of work in sequence — "design the
+ *  page" then "build it" — and one bar across the whole window says neither when design
+ *  ends nor when dev can start. So the parent's window is cut into one slice per subtask,
+ *  in the order they are listed, which is the order they are meant to happen in.
+ *
+ *  A subtask that carries its own dates uses them and is marked `dated`; the rest take
+ *  their slot by position. That keeps the breakdown readable before anybody has dated
+ *  anything, and exact the moment they do, rather than being useless until then. */
+export interface Slice {
+  id: string;
+  title: string;
+  start: string;
+  end: string;
+  /** True when these are the subtask's own dates rather than its share of the parent's. */
+  dated: boolean;
+}
+
+/* `parseDay`/`toIso` from lib/dates, not local-midnight arithmetic. Dividing a local
+   timestamp by a day and flooring it yields the UTC day, which east of Greenwich is the day
+   before: every slice came out starting on the Sunday. These anchor at UTC noon, which is
+   why nothing in this app drifts across a timezone. */
+/* floor, not round: `parseDay` anchors at UTC NOON, so the quotient is the day index plus
+   a half and rounding it lands on tomorrow. */
+const dayNum = (isoDay: string) => Math.floor((parseDay(isoDay) as number) / DAY);
+const fromDay = (n: number) => toIso(n * DAY);
+
+export function subtaskSlices(
+  parent: { start: string; end: string },
+  kids: { id: string; title: string; range: { start: string; end: string } | null }[],
+): Slice[] {
+  if (!kids.length) return [];
+  const a = dayNum(parent.start);
+  const b = dayNum(parent.end);
+  /* Inclusive of both ends, so a Monday-to-Friday parent is five days and not four. */
+  const span = Math.max(1, b - a + 1);
+  const n = kids.length;
+  return kids.map((k, i) => {
+    if (k.range) return { id: k.id, title: k.title, start: k.range.start, end: k.range.end, dated: true };
+    /* Boundaries from the same rounding on both sides, so slices meet exactly and the last
+       one always lands on the parent's final day however the division falls. */
+    const s = a + Math.floor((i * span) / n);
+    const e = a + Math.floor(((i + 1) * span) / n) - 1;
+    return { id: k.id, title: k.title, start: fromDay(s), end: fromDay(Math.max(s, e)), dated: false };
+  });
 }

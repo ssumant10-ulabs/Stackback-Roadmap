@@ -10,7 +10,7 @@
  */
 import {
   dayOfSprint, isFinished, overlapsWindow, shiftSprintId, sprintId, sprintMembers as members,
-  syncSprint, velocity, weekStart, windowOf,
+  subtaskSlices, syncSprint, velocity, weekStart, windowOf,
   type Sprint,
 } from "../lib/sprint";
 import type { Stage } from "../lib/board";
@@ -156,6 +156,38 @@ const shut: Sprint = { ...sp, closedAt: "2026-10-12T04:00:00.000Z", done: 3, rol
 ok(syncSprint(shut, "2026-10-05", [...live, { id: "g", stage: "bug", now: true }]) === null,
   "a closed sprint takes on nothing further");
 eq(members(shut, live), ["a", "b", "c", "z", "d"], "and keeps exactly what it held");
+
+console.log("\nSubtasks laid out across the card's window");
+/* A card two teams share is two pieces of work in sequence. One bar across the whole
+   window says neither when design ends nor when dev can start. */
+const kid = (id: string, range: { start: string; end: string } | null) => ({ id, title: id, range });
+const even = subtaskSlices({ start: "2026-10-05", end: "2026-10-11" },
+  [kid("a", null), kid("b", null)]);
+eq(even.map((x) => `${x.start}..${x.end}`), ["2026-10-05..2026-10-07", "2026-10-08..2026-10-11"],
+  "two undated subtasks split the week in order");
+ok(even.every((x) => !x.dated), "and are marked as positional, not as dates anyone gave");
+/* Slices must meet exactly and cover the window: a gap reads as idle time nobody planned,
+   and the last one has to land on the parent's final day however the division falls. */
+const three = subtaskSlices({ start: "2026-10-05", end: "2026-10-11" },
+  [kid("a", null), kid("b", null), kid("c", null)]);
+eq(three[0].start, "2026-10-05", "the first slice starts when the card does");
+eq(three[2].end, "2026-10-11", "and the last ends when the card does, with 7 days over 3");
+for (let i = 1; i < three.length; i++) {
+  const prevEnd = new Date(three[i - 1].end + "T00:00:00").getTime();
+  const thisStart = new Date(three[i].start + "T00:00:00").getTime();
+  eq((thisStart - prevEnd) / 86400000, 1, `slice ${i + 1} starts the day after slice ${i} ends`);
+}
+/* A subtask that has been given its own dates uses them, so the breakdown gets exact the
+   moment anyone schedules one rather than staying a guess forever. */
+const mixed = subtaskSlices({ start: "2026-10-05", end: "2026-10-11" },
+  [kid("a", { start: "2026-10-06", end: "2026-10-06" }), kid("b", null)]);
+eq(mixed[0].start, "2026-10-06", "a dated subtask keeps its own window");
+ok(mixed[0].dated && !mixed[1].dated, "and only it is marked exact");
+eq(subtaskSlices({ start: "2026-10-05", end: "2026-10-11" }, []), [], "no subtasks, no breakdown");
+/* More subtasks than days: every one still gets a drawable slice rather than a negative. */
+const many = subtaskSlices({ start: "2026-10-05", end: "2026-10-06" },
+  [kid("a", null), kid("b", null), kid("c", null), kid("d", null)]);
+ok(many.every((x) => x.end >= x.start), "four subtasks over two days still each get a day");
 
 console.log("\nCapacity, once there is enough of it");
 eq(velocity([]).mean, null, "no history, no number");

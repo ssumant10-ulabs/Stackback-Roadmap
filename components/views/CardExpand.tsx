@@ -2,7 +2,7 @@
 import { useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import { Assignees } from "../Assignees";
-import { StatusButton } from "../bits";
+import { DateChip, StatusButton } from "../bits";
 import { IcPlus, IcTrash } from "../icons";
 import type { Node } from "@/lib/types";
 
@@ -37,6 +37,10 @@ export function CardExpand({ node, onOpen }: { node: Node; onOpen?: () => void }
               <StatusButton node={k} size={13} />
               <span className={k.status === "done" ? "cx-st done" : "cx-st"}>{k.title}</span>
               <span className="assignees cx-who"><Assignees node={k} small /></span>
+              {/* Its own window. A subtask is where a card shared between two teams
+                  actually splits, so it is where the time belongs; without this the only
+                  way to say when the dev half starts was to date the whole card. */}
+              <DateChip node={k} variant="icon" />
               <button type="button" className="cx-del" aria-label={`Remove ${k.title}`}
                 title="Remove this subtask"
                 onClick={() => { if (confirm(`Remove "${k.title}"?`)) s.del(k.id); }}><IcTrash /></button>

@@ -2326,6 +2326,23 @@ select.wb-prio {
 }
 .sp-caret:hover, .sp-caret.on { color: var(--ink, #111); border-color: var(--brand, #4F7A00); }
 .sp-rowx { padding: 2px 0 8px 22px; }
+/* One segment per subtask, in sequence, coloured by the team holding it. Dashed when the
+   slice is positional rather than its own dates, so a guess never looks like a commitment. */
+.sp-seg {
+  position: absolute; top: 4px; bottom: 4px; border-radius: 4px; overflow: hidden;
+  display: flex; align-items: center; padding: 0 4px;
+  background: var(--team-neutral-soft, #E9E8DF); border: 1px solid var(--team-neutral, #6B7266);
+}
+.sp-seg span {
+  font-size: 9.5px; font-weight: 600; letter-spacing: -.01em; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; color: var(--ink-2, #444);
+}
+.sp-seg.t-Engineering { background: var(--team-eng-soft, #E6ECFA); border-color: var(--team-eng, #2560C4); }
+.sp-seg.t-Design { background: var(--team-dsg-soft, #F7E7F1); border-color: var(--team-dsg, #B23A82); }
+.sp-seg.t-PM { background: var(--team-pm-soft, #FBEBDD); border-color: var(--team-pm, #C4551A); }
+.sp-seg:not(.exact) { border-style: dashed; }
+.sp-seg.done { opacity: .5; }
+.sp-seg.done span { text-decoration: line-through; }
 .sp-rowteam {
   font-size: 10.5px; color: var(--ink-3, #777); text-align: right;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
