@@ -2205,6 +2205,13 @@ select.wb-prio {
    commit to this week and how far through is it". The Now horizon IS the sprint, so planning
    one is the same two clicks as everything else: pull a card in, push one out. */
 .sp { display: flex; flex-direction: column; gap: 16px; }
+/* Full screen. A three-week track with four lanes under it does not fit beside the rest of
+   the page, and a sprint is something a team stands in front of rather than glances at. */
+.sp.full {
+  position: fixed; inset: 0; z-index: 200; overflow: auto;
+  background: var(--page, #fff); padding: 22px 26px 40px;
+}
+.sp.full .sp-time { border-radius: 16px; }
 .sp-head { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
 .sp-week { display: flex; align-items: center; gap: 8px; }
 .sp-week b { font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
@@ -2295,29 +2302,72 @@ select.wb-prio {
     var(--line, rgba(0,0,0,.09)) 0 1px, transparent 1px calc(100% / var(--cols)));
 }
 .sp-now { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--status-late, #F0705A); opacity: .7; }
+/* ONE HUE PER TEAM, STATUS AS FILL DENSITY.
+   The track had two colour systems fighting: bars took a status colour and segments took a
+   team colour, so a Design card in progress was a mustard block with pink boxes on it and
+   nothing on screen could be read by hue. Now colour means exactly one thing -- whose work
+   it is -- and how far along it is comes from how solid the fill is, which is a difference
+   you can see without being told and without a second palette. Tints are mixed from the
+   team token, so the whole track is one family and it follows the theme. */
+.sp-bar, .sp-seg { --tc: var(--team-neutral, #6B7266); }
+.sp-bar.t-Engineering, .sp-seg.t-Engineering { --tc: var(--team-eng, #2560C4); }
+.sp-bar.t-Design, .sp-seg.t-Design { --tc: var(--team-dsg, #B23A82); }
+.sp-bar.t-PM, .sp-seg.t-PM { --tc: var(--team-pm, #C4551A); }
 .sp-bar {
   position: absolute; top: 3px; bottom: 3px; border-radius: 5px; display: flex; align-items: center;
-  padding: 0 5px; gap: 3px; overflow: hidden; background: var(--ink-3, #8a8a8a);
+  padding: 0 7px; gap: 5px; overflow: hidden;
+  background: color-mix(in srgb, var(--tc) 13%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tc) 30%, transparent);
+  /* A solid cap at the start, so the hue is still legible on a two-day bar that is mostly
+     tint, and so the eye has a hard left edge to measure dates against. */
+  box-shadow: inset 3px 0 0 var(--tc);
 }
-.sp-bar.b-todo { background: var(--track, rgba(0,0,0,.18)); border: 1px solid var(--line-2, rgba(0,0,0,.22)); }
-.sp-bar.b-doing { background: var(--status-progress, #A9760A); }
-.sp-bar.b-review { background: var(--team-dsg, #B23A82); }
-.sp-bar.b-done { background: var(--brand, #4F7A00); }
+.sp-bar.b-todo { background: transparent; border-style: dashed; box-shadow: inset 3px 0 0 color-mix(in srgb, var(--tc) 45%, transparent); }
+.sp-bar.b-doing { background: color-mix(in srgb, var(--tc) 18%, transparent); }
+.sp-bar.b-review { background: color-mix(in srgb, var(--tc) 26%, transparent); }
+.sp-bar.b-done {
+  background: color-mix(in srgb, var(--brand, #4F7A00) 20%, transparent);
+  border-color: color-mix(in srgb, var(--brand, #4F7A00) 40%, transparent);
+  box-shadow: inset 3px 0 0 var(--brand, #4F7A00);
+}
+.sp-barstage {
+  font-size: 9.5px; font-weight: 650; letter-spacing: .01em; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; color: var(--ink-2, #444);
+}
+.sp-bar.b-done .sp-barstage { color: var(--ink-3, #777); }
 /* A bar that stopped neatly at the window edge would say the work stops there. */
 .sp-bar.runs-in { border-top-left-radius: 0; border-bottom-left-radius: 0; }
 .sp-bar.runs-out { border-top-right-radius: 0; border-bottom-right-radius: 0; }
 /* Teams down the side, sharing the one date axis above. */
 .sp-lane { display: flex; flex-direction: column; gap: 3px; }
 .sp-lane + .sp-lane { margin-top: 7px; padding-top: 7px; border-top: 1px solid var(--line, rgba(0,0,0,.09)); }
+/* The lane header carries the team's own week: a count alone said who had work and never
+   how that team was doing. Laid out on the same grid as the rows, so the meter sits over
+   the track and the eye reads straight down from it. */
 .sp-lanehead {
-  display: flex; align-items: center; gap: 7px; padding: 2px 0 1px;
-  font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
-  color: var(--ink-3, #777);
+  display: grid; grid-template-columns: 230px minmax(0, 1fr) 76px; align-items: center; gap: 10px;
+  padding: 6px 0 3px;
 }
+@media (max-width: 767px) { .sp-lanehead { grid-template-columns: 130px minmax(0, 1fr) 0; } }
+.sp-lanehead .sp-lanename {
+  font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--ink-2, #555);
+}
+.sp-lanedot { width: 8px; height: 8px; border-radius: 3px; flex: none; background: var(--team-neutral, #6B7266); }
+.sp-lanedot.t-Engineering { background: var(--team-eng, #2560C4); }
+.sp-lanedot.t-Design { background: var(--team-dsg, #B23A82); }
+.sp-lanedot.t-PM { background: var(--team-pm, #C4551A); }
+/* Both on row 1, or the grid gives each its own row and the dot floats above the name. */
+.sp-lanehead > .sp-lanedot { grid-area: 1 / 1; justify-self: start; align-self: center; }
+.sp-lanehead > .sp-lanename { grid-area: 1 / 1; margin-left: 16px; }
+.sp-lanebar {
+  grid-area: 1 / 2; display: block; height: 5px; border-radius: 999px;
+  background: var(--sunken, rgba(0,0,0,.09)); overflow: hidden;
+}
+.sp-lanebar i { display: block; height: 100%; background: var(--brand, #4F7A00); border-radius: 999px; }
 .sp-lanehead em {
-  font-style: normal; font-size: 10px; font-weight: 600; letter-spacing: 0;
-  background: var(--sunken, rgba(0,0,0,.06)); border-radius: 999px; padding: 0 6px;
-  font-variant-numeric: tabular-nums;
+  grid-area: 1 / 3; justify-self: end; font-style: normal; font-size: 10.5px; font-weight: 650;
+  letter-spacing: 0; color: var(--ink-3, #777); font-variant-numeric: tabular-nums;
 }
 .sp-caret {
   appearance: none; cursor: pointer; font: inherit; font-size: 10px; font-weight: 600; flex: none;
@@ -2328,21 +2378,31 @@ select.wb-prio {
 .sp-rowx { padding: 2px 0 8px 22px; }
 /* One segment per subtask, in sequence, coloured by the team holding it. Dashed when the
    slice is positional rather than its own dates, so a guess never looks like a commitment. */
+/* One segment per subtask. Same hue rule as the bar, one step lighter so a breakdown reads
+   as parts of a whole rather than as a row of separate things. */
 .sp-seg {
   position: absolute; top: 4px; bottom: 4px; border-radius: 4px; overflow: hidden;
-  display: flex; align-items: center; padding: 0 4px;
-  background: var(--team-neutral-soft, #E9E8DF); border: 1px solid var(--team-neutral, #6B7266);
+  display: flex; align-items: center; padding: 0 5px;
+  background: color-mix(in srgb, var(--tc) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tc) 28%, transparent);
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--tc) 70%, transparent);
 }
 .sp-seg span {
   font-size: 9.5px; font-weight: 600; letter-spacing: -.01em; white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis; color: var(--ink-2, #444);
 }
-.sp-seg.t-Engineering { background: var(--team-eng-soft, #E6ECFA); border-color: var(--team-eng, #2560C4); }
-.sp-seg.t-Design { background: var(--team-dsg-soft, #F7E7F1); border-color: var(--team-dsg, #B23A82); }
-.sp-seg.t-PM { background: var(--team-pm-soft, #FBEBDD); border-color: var(--team-pm, #C4551A); }
-.sp-seg:not(.exact) { border-style: dashed; }
-.sp-seg.done { opacity: .5; }
-.sp-seg.done span { text-decoration: line-through; }
+/* A positional slice is a guess, and it says so with a dotted underline rather than a
+   dashed box: four dashed outlines in a row read as four broken things. */
+.sp-seg:not(.exact) {
+  border-bottom-style: dotted;
+  border-bottom-color: color-mix(in srgb, var(--tc) 55%, transparent);
+}
+.sp-seg.done {
+  background: color-mix(in srgb, var(--brand, #4F7A00) 16%, transparent);
+  border-color: color-mix(in srgb, var(--brand, #4F7A00) 32%, transparent);
+  box-shadow: inset 2px 0 0 var(--brand, #4F7A00);
+}
+.sp-seg.done span { color: var(--ink-3, #777); text-decoration: line-through; }
 .sp-rowteam {
   font-size: 10.5px; color: var(--ink-3, #777); text-align: right;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;

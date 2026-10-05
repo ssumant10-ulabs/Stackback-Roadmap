@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import { STAGE_LABEL, teamForStage, type BoardTeam, type Stage } from "@/lib/board";
 import {
@@ -95,6 +95,15 @@ const iso = (d: Date) =>
 export default function SprintBoard({ cards, onOpen }: { cards: BoardCard[]; onOpen: (id: string) => void }) {
   const s = useStore();
   const [offset, setOffset] = useState(0);
+  /* Full screen, because a three-week track with four lanes under it does not fit beside
+     the rest of the page and a sprint is a thing you stand in front of, not glance at. */
+  const [full, setFull] = useState(false);
+  useEffect(() => {
+    if (!full) return;
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setFull(false); };
+    document.addEventListener("keydown", esc);
+    return () => document.removeEventListener("keydown", esc);
+  }, [full]);
 
   /* Stepping is by whole sprints, so with a fortnightly cadence the arrows move a
      fortnight. Walked from this week rather than multiplied, because the length can differ
@@ -174,7 +183,7 @@ export default function SprintBoard({ cards, onOpen }: { cards: BoardCard[]; onO
   };
 
   return (
-    <div className="sp">
+    <div className={"sp" + (full ? " full" : "")}>
       <header className="sp-head">
         <div className="sp-week">
           <button type="button" onClick={() => setOffset(offset - 1)} aria-label="Previous sprint">&#8592;</button>
@@ -186,6 +195,10 @@ export default function SprintBoard({ cards, onOpen }: { cards: BoardCard[]; onO
           {!thisWeek && <button type="button" className="sp-today" onClick={() => setOffset(0)}>This sprint</button>}
         </div>
         <div className="sp-acts">
+          <button type="button" className="sp-today" onClick={() => setFull(!full)}
+            title={full ? "Back to the page (Esc)" : "Fill the screen"}>
+            {full ? "Exit full screen" : "Full screen"}
+          </button>
           {/* Length lives on the sprint, not in settings: a team trying a fortnight should
               not have to change a global to see what it looks like. Locked once closed,
               because redrawing a finished window changes what it is on record as. */}
@@ -276,9 +289,19 @@ export default function SprintBoard({ cards, onOpen }: { cards: BoardCard[]; onO
           {LANES.map(({ team, label }) => {
             const mine = scheduled.filter((c) => laneOf(c) === team);
             if (!mine.length) return null;
+            const laneDone = mine.filter(finished).length;
             return (
               <div className="sp-lane" key={label}>
-                <div className="sp-lanehead"><span>{label}</span><em>{mine.length}</em></div>
+                <div className="sp-lanehead">
+                  <span className={"sp-lanedot t-" + (team ?? "none")} aria-hidden />
+                  <span className="sp-lanename">{label}</span>
+                  {/* The lane's own numbers. Four lanes with nothing but a count told you
+                      who had work, never how that team's week was actually going. */}
+                  <span className="sp-lanebar" title={`${laneDone} of ${mine.length} done`}>
+                    <i style={{ width: `${mine.length ? (laneDone / mine.length) * 100 : 0}%` }} />
+                  </span>
+                  <em>{laneDone} of {mine.length}</em>
+                </div>
                 {mine.map((c) => (
                   <TrackRow key={c.id} card={c} from={from} to={to} pct={pct} todayPct={todayPct}
                     onOpen={() => onOpen(c.id)} />
@@ -401,9 +424,13 @@ function TrackRow({ card, from, to, pct, todayPct, onOpen }: {
               );
             })
             : (
-              <i className={`sp-bar b-${bucketOf(card)}` + (cs < from ? " runs-in" : "") + (ce > to ? " runs-out" : "")}
+              <i className={`sp-bar t-${laneOf(card) ?? "none"} b-${bucketOf(card)}`
+                + (cs < from ? " runs-in" : "") + (ce > to ? " runs-out" : "")}
                 style={{ left: `${left}%`, width: `${Math.max(2, right - left)}%` }}
                 title={`${r.start} \u2192 ${r.end}${r.implied ? " (from its subtasks)" : ""} \u00b7 ${STAGE_LABEL[card.stage]}`}>
+                {/* The stage in words. Colour says whose it is; it cannot also say what is
+                    happening to it without becoming two colour systems fighting. */}
+                <span className="sp-barstage">{STAGE_LABEL[card.stage]}</span>
                 <span className="assignees"><Assignees node={node} small /></span>
               </i>
             )}
