@@ -843,10 +843,13 @@ export class Store {
    *  One writer for both because they are one decision — what this card is CALLED — and
    *  because neither touches where it sits. Placement is the stage and the team; see
    *  `lib/qa-labels.ts` for why the two are kept apart. */
-  setQaLabel(id: string, field: "surface" | "errorType", value: string | null) {
+  setQaLabel(id: string, field: "surface" | "subModule" | "errorType", value: string | null) {
     const n = this.findEntry(id)?.node as (Node & Record<string, unknown>) | undefined;
     if (!n) return;
     n[field] = value || null;
+    /* A sub-module only means anything inside its own surface. Leaving it behind when the
+       surface changes is how a card ends up labelled Order Module / Edit Drawer. */
+    if (field === "surface") n.subModule = null;
     if ("updatedAt" in n) (n as { updatedAt?: string }).updatedAt = new Date().toISOString();
     this.commit();
   }
@@ -1801,16 +1804,31 @@ export class Store {
     this.commit();
     return true;
   }
-  addTask(title: string, priority: number | null, eta: string | null, subs: string[], assignees: Assignee[]) {
+  /** `labels` carries everything the card drawer can hold, so a card created from the Add
+   *  form arrives complete instead of needing to be opened and filled in afterwards. All
+   *  optional: the form supplies what was set and omits the rest. */
+  addTask(
+    title: string, priority: number | null, eta: string | null, subs: string[], assignees: Assignee[],
+    labels?: { desc?: string | null; kind?: CardKind; surface?: string | null; subModule?: string | null; errorType?: string | null },
+  ) {
     const task: Node = stampIds({
       id: "", title, status: "planned", assignees: assignees.slice(),
       children: subs.map((s) => stampIds({ id: "", title: s, status: "planned", assignees: [], children: [] })),
       priority,
     });
     if (eta) { task.end = eta; task.eta = eta; }
+    if (labels) {
+      if (labels.desc) task.desc = labels.desc;
+      if (labels.kind) task.kind = labels.kind;
+      if (labels.surface) task.surface = labels.surface;
+      /* Only with a surface to belong to: a sub-module on its own names nothing. */
+      if (labels.surface && labels.subModule) task.subModule = labels.subModule;
+      if (labels.errorType) task.errorType = labels.errorType;
+    }
     this.tasks.push(task);
     this.log("add", title, waveWord(priority), task.id);
     this.commit();
+    return task.id;
   }
 
   /* ---- ui ---- */

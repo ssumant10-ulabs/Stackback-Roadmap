@@ -297,7 +297,7 @@ export function WorkBoard() {
                 {!list.length && <p className="wb-empty">Nothing here.</p>}
               </div>
               {/* A column you cannot add to is a column you have to leave to add to. */}
-              <AddCard col={c} open={adding === c.key}
+              <AddCard col={c} onAdded={setDetail} open={adding === c.key}
                 onOpen={() => setAdding(c.key)} onClose={() => setAdding(null)}
                 onAsk={(id, kind, column) => setAsk({ id, kind, col: column })} />
             </section>
@@ -365,9 +365,10 @@ function columnsFor(cards: BoardCard[], view: BoardView): Record<string, BoardCa
 
 /** Add a card straight into the column you are looking at. A card born in Bugs is a bug;
  *  anywhere else it is a feature, and the tag is one click away on the card itself. */
-function AddCard({ col, open, onOpen, onClose, onAsk }: {
+function AddCard({ col, open, onOpen, onClose, onAsk, onAdded }: {
   col: BoardColumn; open: boolean; onOpen: () => void; onClose: () => void;
   onAsk: (id: string, kind: "team" | "review", col: BoardColumn) => void;
+  onAdded: (id: string) => void;
 }) {
   const s = useStore();
   const [v, setV] = useState("");
@@ -380,20 +381,27 @@ function AddCard({ col, open, onOpen, onClose, onAsk }: {
     const kind: CardKind = col.filesAs ?? "feature";
     const id = s.addBoardCard(title, kind);
     if (!id) return;
+    /* The composer takes a title and nothing else, because a column of inline forms with
+       six fields each is not a board. So the card opens on its drawer straight after, where
+       the brief, the surface and the rest are set in the same breath rather than needing
+       the card to be found again later. */
     // A kind column does not move a card, so being born in one is the whole of it.
-    if (col.filesAs) { setV(""); return; }
+    if (col.filesAs) { setV(""); onAdded(id); return; }
     /* Born outside the intake columns: it belongs where it was added, not back in the pile.
        And a card added straight into the handover column has to answer the same question a
        dragged one does. It did not, so it landed in PM's handover with no team on it, which
        is a card in nobody's column: PM could see it and Design never could. */
     const first = col.accepts[0];
-    if (first.stage === "bug" || first.stage === "feature") { setV(""); return; }
+    if (first.stage === "bug" || first.stage === "feature") { setV(""); onAdded(id); return; }
     const drop = stageForDrop(col, null, kind);
+    /* A pending nudge owns the screen: opening the drawer behind it would stack two dialogs
+       and the answer to the nudge is what decides where the card even sits. */
     if ("ask" in drop) { setV(""); onAsk(id, drop.ask, col); return; }
     if ("stage" in drop) {
       s.setStage(id, drop.stage, { team: drop.team ?? first.team ?? null, review: drop.review ?? first.review ?? null });
     }
     setV("");
+    onAdded(id);
   };
   if (!open) {
     return <button type="button" className="wb-add" onClick={onOpen}><IcPlus /> Add a card</button>;

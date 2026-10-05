@@ -25,6 +25,64 @@ export const SURFACES = [
 ] as const;
 export type SurfaceId = (typeof SURFACES)[number]["id"];
 
+/** The second level of the module map: the sub-modules inside each surface.
+ *
+ *  The map has always had two levels and the app only ever carried the first, so there was
+ *  no way to say "Subscription Management" — only "Portal Surface", which is most of the
+ *  product. Straight from the table in `Project Deliverables/stackback/CLAUDE.md`, wording
+ *  and all, so the dropdown and the QA guide cannot drift apart.
+ *
+ *  Optional on a card. A surface alone is a usable label; being forced to pick a sub-module
+ *  before you can file anything is how a label set stops being filled in at all. */
+export const SUB_MODULES: Record<SurfaceId, readonly { id: string; label: string }[]> = {
+  storefront: [
+    { id: "widget", label: "Widget" },
+    { id: "section", label: "Section" },
+    { id: "blocks", label: "Extension blocks" },
+  ],
+  portal: [
+    { id: "listing", label: "Listing Cards" },
+    { id: "promo", label: "Promo Sections" },
+    { id: "subscriptions", label: "Subscription Management" },
+    { id: "newpurchase", label: "New Purchase Drawer" },
+    { id: "editdrawer", label: "Edit Drawer" },
+    { id: "cart", label: "Cart" },
+    { id: "pricing", label: "Pricing Summary" },
+  ],
+  landing: [{ id: "pages", label: "Landing Pages" }],
+  onboarding: [{ id: "apphome", label: "App Home" }],
+  selling: [
+    { id: "inventory", label: "Inventory" },
+    { id: "cxsupport", label: "Customer Support (Edit / Reschedule)" },
+  ],
+  order: [
+    { id: "contract", label: "Purchase Contract" },
+    { id: "ordermgmt", label: "Order Management" },
+    { id: "individual", label: "Individual Order Handling" },
+  ],
+  customer: [{ id: "records", label: "Customer records and management" }],
+  custnotif: [
+    { id: "templates", label: "Templates" },
+    { id: "events", label: "Events" },
+  ],
+  adminnotif: [
+    { id: "route", label: "Admin Route" },
+    { id: "email", label: "Email Integration" },
+  ],
+  cx: [
+    { id: "cxlanding", label: "Landing Pages" },
+    { id: "cxportal", label: "Customer Portal" },
+    { id: "cxwidget", label: "Widget" },
+  ],
+  settings: [{ id: "appwide", label: "App-wide settings" }],
+  integrations: [{ id: "thirdparty", label: "Third-party integrations (WhatsApp, Email, etc.)" }],
+};
+
+export const subModulesFor = (surface: string | null | undefined) =>
+  SUB_MODULES[surface as SurfaceId] ?? [];
+export const subModuleLabel = (surface: string | null | undefined, id: string | null | undefined) =>
+  subModulesFor(surface).find((m) => m.id === id)?.label ?? null;
+
 /** Error types. The second label every issue carries, and the bracket its title opens with. */
 export const ERROR_TYPES = [
   { id: "purchase", label: "Purchase Error", note: "Checkout, cart, pricing, drawer flows" },

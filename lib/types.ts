@@ -51,6 +51,7 @@ export interface Node {
 
   /** The QA labels. See the Feature fields of the same names, and `lib/qa-labels.ts`. */
   surface?: string | null;
+  subModule?: string | null;
   errorType?: string | null;
   /** Roadmap sheet: Deadline column. */
   deadline?: string | null;
@@ -156,6 +157,9 @@ export interface Feature {
      it. See `lib/qa-labels.ts`. */
   /** Which module or surface the issue lives in. */
   surface?: string | null;
+  /** Which sub-module inside that surface, where the surface has more than one. Optional:
+   *  the surface alone is a usable label, and a required second level is one nobody fills. */
+  subModule?: string | null;
   /** What kind of failure it is. */
   errorType?: string | null;
   /** Now, Next or Future on the board. Its own field because a request's `priority` is a

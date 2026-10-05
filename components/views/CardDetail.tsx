@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import { ALL_KINDS, KIND_LABEL, STAGE_LABEL, type CardKind } from "@/lib/board";
 import type { BoardCard } from "./WorkBoard";
-import { ERROR_TYPES, SURFACES, qaTitle, surfaceZone } from "@/lib/qa-labels";
+import { ERROR_TYPES, SURFACES, qaTitle, subModulesFor, surfaceZone } from "@/lib/qa-labels";
 import { cardPriority, subtreeCounts, waveWord } from "@/lib/derive";
 import { PRIORITIES } from "@/lib/constants";
 import { Assignees } from "../Assignees";
@@ -127,6 +127,19 @@ export default function CardDetail({ card, onClose }: { card: BoardCard; onClose
                 ))}
               </select>
             </Field>
+            {/* The second level of the module map, which the app never carried: a card could
+                only say "Portal Surface", which is most of the product. Shown once a surface
+                is picked, and only where that surface has a real choice to make. */}
+            {subModulesFor(str("surface")).length > 1 && (
+              <Field label="Sub-module" hint="Which part of that surface. Optional.">
+                <select value={str("subModule")} onChange={(e) => s.setQaLabel(card.id, "subModule", e.target.value)}>
+                  <option value="">Not set</option>
+                  {subModulesFor(str("surface")).map((m) => (
+                    <option key={m.id} value={m.id}>{m.label}</option>
+                  ))}
+                </select>
+              </Field>
+            )}
             <Field label="Error type" hint={ERROR_TYPES.find((x) => x.id === str("errorType"))?.note
               ?? "What kind of failure this is. The second of the two QA labels."}>
               <select value={str("errorType")} onChange={(e) => s.setQaLabel(card.id, "errorType", e.target.value)}>
