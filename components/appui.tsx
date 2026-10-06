@@ -6,7 +6,7 @@ export interface AppUi {
   openDates: (nodeId: string, anchor: HTMLElement) => void;
   openMove: (nodeId: string, anchor: HTMLElement) => void;
   openFilter: (anchor: HTMLElement) => void;
-  openAddTask: () => void;
+  openAddTask: (horizon?: 1 | 2 | 3) => void;
   openSettings: () => void;
   jumpToCard: (id: string) => void;
 }

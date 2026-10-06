@@ -23,7 +23,8 @@ export default function RoadmapApp() {
   const [datesPop, setDatesPop] = useState<{ nodeId: string; left: number; top: number } | null>(null);
   const [movePop, setMovePop] = useState<{ nodeId: string; left: number; top: number } | null>(null);
   const [filterPop, setFilterPop] = useState<{ left: number; top: number } | null>(null);
-  const [addOpen, setAddOpen] = useState(false);
+  /* null when closed; otherwise the horizon the opener wants the card to start on. */
+  const [addOpen, setAddOpen] = useState<1 | 2 | 3 | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const urlApplied = useRef(false);
 
@@ -89,7 +90,7 @@ export default function RoadmapApp() {
       setFilterPop({ left, top: r.bottom + 8 });
       setAssignPop(null); setDatesPop(null); setMovePop(null);
     },
-    openAddTask() { setAddOpen(true); },
+    openAddTask(horizon: 1 | 2 | 3 = 2) { setAddOpen(horizon); },
     openSettings() { setSettingsOpen(true); },
     jumpToCard(id) {
       s.setView("board");
@@ -126,7 +127,7 @@ export default function RoadmapApp() {
       {assignPop && <AssigneePopover pos={{ left: assignPop.left, top: assignPop.top }} nodeId={assignPop.nodeId} onClose={() => setAssignPop(null)} />}
       {datesPop && <DatesPopover pos={{ left: datesPop.left, top: datesPop.top }} nodeId={datesPop.nodeId} onClose={() => setDatesPop(null)} />}
       {movePop && <MovePopover pos={{ left: movePop.left, top: movePop.top }} nodeId={movePop.nodeId} onClose={() => setMovePop(null)} />}
-      {addOpen && <AddTaskModal onClose={() => setAddOpen(false)} />}
+      {addOpen !== null && <AddTaskModal defaultHorizon={addOpen} onClose={() => setAddOpen(null)} />}
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
       {s.ui.activityOpen && <ActivityDrawer onClose={() => s.setActivityOpen(false)} />}
     </AppUiContext.Provider>

@@ -5,7 +5,7 @@ import { SEED_VERSION, seed, stampIds } from "./seed";
 import { uid, newRoadmapId } from "./id";
 import { makeHelpers, pruneTasks, type Helpers } from "./teams";
 import { cardPriority, effStatus, normPriority, subtreeCounts, waveWord } from "./derive";
-import { STAGE_LABEL, STAGE_STATUS, defaultNodeStage, defaultStage, placeCard, stageForStatus, stageOf, teamToBoard, type BoardTeam, type BoardView, type CardKind, type ReviewWith, type Stage } from "./board";
+import { MOVE_TO, STAGE_LABEL, STAGE_STATUS, defaultNodeStage, defaultStage, placeCard, stageForStatus, stageOf, teamToBoard, type BoardTeam, type BoardView, type CardKind, type ReviewWith, type Stage } from "./board";
 import { reconcile } from "./dates";
 import { featureSeed } from "./featureSeed";
 import { pilotSeed } from "./pilotSeed";
@@ -908,6 +908,7 @@ export class Store {
       id: c.id, stage: c.stage, status: effStatus(c.node ?? (c.feature as unknown as Node)),
       now: cardPriority(c.node ?? c.feature) === 1,
     })));
+    /* Nothing changed is the common case on a render, so it must not write. */
     if (!next) return;
     if (was) Object.assign(was, next);
     else {
@@ -961,6 +962,21 @@ export class Store {
 
   sprintMembers(sp: Sprint): string[] {
     return sprintMembers(sp, this.boardCards());
+  }
+
+  /** Take a card out of a sprint by hand.
+   *
+   *  Recorded rather than just filtered, because scope is recomputed from the board on
+   *  every render: a card simply removed from the lists walks straight back in on the next
+   *  tick. It stays out of this sprint only — the next one starts clean. */
+  dropFromSprint(id: string, cardId: string) {
+    const sp = this.sprintFor(id);
+    if (!sp || sp.closedAt) return;
+    sp.dropped = Array.from(new Set([...(sp.dropped ?? []), cardId]));
+    const title = this.findEntry(cardId)?.node.title
+      ?? this.features.find((x) => x.id === cardId)?.title ?? "Card";
+    this.log("stage", title, `taken out of sprint ${id}`, cardId);
+    this.commit();
   }
 
   /** Bugs carry which layer the fault is in; features do not. */
@@ -1865,6 +1881,20 @@ export class Store {
     }
     this.tasks.push(task);
     this.log("add", title, waveWord(priority), task.id);
+
+    /* A card added with a team on it is handed to that team, not left in PM's intake.
+       Otherwise "assign it to Design" produced a card sitting in Features and bugs, which
+       is the one board Design does not look at — the assignment said one thing and the
+       board showed another. Routed through the same rule the move menu uses, so there is
+       one answer to "where does a card go when a team takes it". PM is the exception: PM
+       triages from intake, which is where it already is. */
+    const team = [...assignees].map((a) => (a.isTeam
+      ? (a.name === "Dev" ? "Engineering" : a.name)
+      : this.helpers.assigneeTeam(a))).find((t) => t && t !== "PM") as BoardTeam | undefined;
+    if (team) {
+      const route = MOVE_TO.find((m) => m.value === team);
+      if (route) this.setStage(task.id, route.stage, { team, review: null });
+    }
     this.commit();
     return task.id;
   }

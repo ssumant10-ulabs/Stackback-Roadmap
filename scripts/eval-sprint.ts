@@ -10,7 +10,7 @@
  */
 import {
   dayOfSprint, isFinished, overlapsWindow, shiftSprintId, sprintId, sprintMembers as members,
-  subtaskSlices, syncSprint, velocity, weekStart, windowOf,
+  inSprintScope, subtaskSlices, syncSprint, velocity, weekStart, windowOf,
   type Sprint,
 } from "../lib/sprint";
 import type { Stage } from "../lib/board";
@@ -96,6 +96,21 @@ ok(isFinished({ stage: "pm_progress", status: "done" }),
   "a ticked-off PM card is finished with no approval stage to reach");
 ok(!isFinished({ stage: "dev_review", status: "progress" }), "in review is not finished");
 
+console.log("\nWhat the sprint is about");
+/* Two ways in. Now is a deliberate commitment; anything past the intake piles is in flight
+   whatever its horizon says, because a card sitting in Dev in progress IS this week's work
+   and a sprint that left it out described a smaller week than the one happening. */
+ok(inSprintScope({ stage: "dev_progress", now: false }), "work in flight is in the sprint without being tagged Now");
+ok(inSprintScope({ stage: "design_review", now: false }), "so is anything out for review");
+ok(inSprintScope({ stage: "dev_approved", now: false }), "and anything approved");
+ok(!inSprintScope({ stage: "bug", now: false }), "a bug nobody has picked up is not");
+ok(!inSprintScope({ stage: "feature", now: false }), "nor an unfiled request");
+ok(!inSprintScope({ stage: "pm_handover", now: false }),
+  "nor one still sitting in a team's To pick up column");
+ok(inSprintScope({ stage: "pm_handover", now: true }),
+  "unless it was put on Now, which is how adding from the sprint lands it in the week");
+ok(inSprintScope({ stage: "bug", now: true }), "unless somebody put it on Now, which is the other way in");
+
 console.log("\nOpening the week");
 const cards: Card[] = [
   { id: "a", stage: "dev_progress", now: true },               // still going
@@ -130,6 +145,21 @@ eq(members(sp, shipped), ["a", "b", "c", "z", "d"],
 ok(syncSprint(sp, "2026-10-05", shipped) === null, "and is not re-added once it is finished");
 eq(members(sp, shipped.filter((c) => c.id !== "z")), ["a", "b", "c", "d"],
   "a card deleted mid-sprint drops out instead of counting as never-done");
+
+console.log("\nTaking a card out by hand");
+/* Scope is recomputed from the board every render, so a removal has to be WRITTEN DOWN or
+   the card walks straight back in on the next tick. */
+const onBoard: Card[] = [
+  { id: "a", stage: "dev_progress", now: true },
+  { id: "b", stage: "dev_progress", now: true },
+  { id: "c", stage: "design_review", now: true },
+  { id: "d", stage: "bug", now: true },
+];
+const withDrop: Sprint = { ...sp, dropped: ["a"] };
+ok(!members(withDrop, onBoard).includes("a"), "a dropped card leaves the sprint");
+ok(members(withDrop, onBoard).length === members(sp, onBoard).length - 1, "and only that one leaves");
+ok(syncSprint(withDrop, "2026-10-05", [{ id: "a", stage: "dev_progress", now: true }]) === null,
+  "and the next render does not add it back");
 
 console.log("\nThe two lines, and what carries");
 const live: Card[] = [
@@ -183,6 +213,28 @@ const mixed = subtaskSlices({ start: "2026-10-05", end: "2026-10-11" },
   [kid("a", { start: "2026-10-06", end: "2026-10-06" }), kid("b", null)]);
 eq(mixed[0].start, "2026-10-06", "a dated subtask keeps its own window");
 ok(mixed[0].dated && !mixed[1].dated, "and only it is marked exact");
+
+/* The pile-up, which is what was actually on screen: four subtasks all dated the same week
+   are four absolutely-positioned boxes on the same pixels, and their labels interleave
+   character by character. Honest data, unreadable drawing. They are pushed into sequence,
+   each keeping its own LENGTH and giving up only its overlap. */
+const sameWeek = subtaskSlices({ start: "2026-10-05", end: "2026-10-11" }, [
+  kid("a", { start: "2026-10-05", end: "2026-10-06" }),
+  kid("b", { start: "2026-10-05", end: "2026-10-06" }),
+  kid("c", { start: "2026-10-05", end: "2026-10-06" }),
+]);
+eq(sameWeek.map((x) => `${x.start}..${x.end}`),
+  ["2026-10-05..2026-10-06", "2026-10-07..2026-10-08", "2026-10-09..2026-10-10"],
+  "subtasks dated on top of each other are laid end to end, keeping their lengths");
+ok(sameWeek.every((x, i) => i === 0 || x.start > sameWeek[i - 1].end),
+  "and none of them overlaps the one before it");
+ok(sameWeek.every((x) => x.dated), "they are still their own dates, not positional guesses");
+/* Pushed far enough and there is no room left, which is a fallback rather than a squeeze. */
+eq(subtaskSlices({ start: "2026-10-05", end: "2026-10-08" }, [
+  kid("a", { start: "2026-10-05", end: "2026-10-07" }),
+  kid("b", { start: "2026-10-05", end: "2026-10-07" }),
+  kid("c", { start: "2026-10-05", end: "2026-10-07" }),
+]), [], "and when sequencing runs past the card, there is no breakdown rather than a pile");
 eq(subtaskSlices({ start: "2026-10-05", end: "2026-10-11" }, []), [], "no subtasks, no breakdown");
 /* More subtasks than days cannot be drawn, and saying so is the only honest answer. Each
    slice would clamp to a one-day minimum, the starts would stop advancing, and they would

@@ -20,6 +20,9 @@ export interface Sprint {
   /** Card ids on Now the moment it opened. Everything measured about scope is measured
    *  against this, which is why it is a snapshot and never recomputed. */
   committed: string[];
+  /** Cards taken out by hand. Recorded, because scope is derived from the board every
+   *  render: without this, removing a card put it back on the next tick. */
+  dropped?: string[];
   /** Cards put on Now after it opened, recorded as they arrive.
    *
    *  Recorded rather than derived, for the same reason `committed` is. Deriving it as "on
@@ -57,6 +60,26 @@ export const DONE_STAGES: Stage[] = ["design_approved", "dev_approved", "prod"];
 export function isFinished(c: { stage: Stage; status?: string | null }): boolean {
   return DONE_STAGES.includes(c.stage) || (c.status || "") === "done";
 }
+
+/** Not yet work: PM's two filing piles, and the "To pick up" column a card waits in after
+ *  it has been handed to a team. Everything past these is in somebody's hands.
+ *
+ *  A card waiting to be picked up is not this week's work by default — but a card added
+ *  FROM the sprint is put on Now, which is the other way into scope, so assigning something
+ *  there still lands it in the week you assigned it for. */
+export const INTAKE_STAGES: Stage[] = ["bug", "feature", "pm_handover"];
+
+/** Whether a card belongs to the sprint at all.
+ *
+ *  Two ways in. The Now horizon is a deliberate commitment — somebody said this week. And
+ *  anything that has left intake is in flight whatever its horizon says: a card sitting in
+ *  Dev in progress IS this week's work, and a sprint that left it out because nobody had
+ *  remembered to tag it Now was a sprint describing a smaller week than the one happening.
+ *
+ *  The intake piles stay out. A bug nobody has picked up is a thing to triage, not work in
+ *  progress, and sweeping thirty of them in would make the week unreadable. */
+export const inSprintScope = (c: { stage: Stage; now: boolean }) =>
+  c.now || !INTAKE_STAGES.includes(c.stage);
 
 /** Monday of the week `offset` weeks from the one containing `from`. Weeks start Monday
  *  because the team's does; nothing in the data says otherwise. */
@@ -132,7 +155,8 @@ export function velocity(sprints: Sprint[], n = 3): { recent: number[]; mean: nu
 export function sprintMembers(sp: Sprint, cards: { id: string }[]): string[] {
   /* Cards deleted since the sprint opened drop out rather than counting as never-done. */
   const alive = new Set(cards.map((c) => c.id));
-  return [...sp.committed, ...(sp.added ?? [])].filter((id) => alive.has(id));
+  const out = new Set(sp.dropped ?? []);
+  return [...sp.committed, ...(sp.added ?? [])].filter((id) => alive.has(id) && !out.has(id));
 }
 
 /** Bring a sprint record up to date with the board: open the week if it is not open, and
@@ -148,10 +172,10 @@ export function syncSprint(
   id: string,
   cards: { id: string; stage: Stage; status?: string | null; now: boolean }[],
 ): Sprint | null {
-  const joining = cards.filter((c) => c.now && !isFinished(c)).map((c) => c.id);
+  const joining = cards.filter((c) => inSprintScope(c) && !isFinished(c)).map((c) => c.id);
   if (!sp) return { id, committed: joining, weeks: 1 };
   if (sp.closedAt) return null;
-  const seen = new Set([...sp.committed, ...(sp.added ?? [])]);
+  const seen = new Set([...sp.committed, ...(sp.added ?? []), ...(sp.dropped ?? [])]);
   const fresh = joining.filter((cid) => !seen.has(cid));
   return fresh.length ? { ...sp, added: [...(sp.added ?? []), ...fresh] } : null;
 }
@@ -202,12 +226,30 @@ export function subtaskSlices(
      over one another. The caller falls back to a single bar, and the checklist underneath
      is where fifteen subtasks are legible anyway. */
   if (n > span) return [];
-  return kids.map((k, i) => {
-    if (k.range) return { id: k.id, title: k.title, start: k.range.start, end: k.range.end, dated: true };
+  const raw = kids.map((k, i) => {
+    if (k.range) return { id: k.id, title: k.title, s: dayNum(k.range.start), e: dayNum(k.range.end), dated: true };
     /* Boundaries from the same rounding on both sides, so slices meet exactly and the last
        one always lands on the parent's final day however the division falls. */
     const s = a + Math.floor((i * span) / n);
     const e = a + Math.floor(((i + 1) * span) / n) - 1;
-    return { id: k.id, title: k.title, start: fromDay(s), end: fromDay(Math.max(s, e)), dated: false };
+    return { id: k.id, title: k.title, s, e: Math.max(s, e), dated: false };
   });
+
+  /* A SEQUENCE, enforced. Two subtasks dated the same week are honest data — people do work
+     in parallel — but drawn on one line they are two absolutely-positioned boxes on the same
+     pixels, and their labels interleave character by character into something unreadable.
+     That is what was on screen. So each one starts no earlier than the day after the one
+     before it, which is what "in sequence" meant all along; a dated subtask keeps its own
+     length and gives up only its overlap. If pushing them apart runs past the parent, there
+     is no room for a breakdown and the caller falls back to a single bar. */
+  let cursor = a - 1;
+  const out: Slice[] = [];
+  for (const r of raw) {
+    const s = Math.max(r.s, cursor + 1);
+    const e = Math.max(s, s + (r.e - r.s));
+    if (s > b) return [];
+    cursor = e;
+    out.push({ id: r.id, title: r.title, start: fromDay(s), end: fromDay(Math.min(e, b)), dated: r.dated });
+  }
+  return out;
 }

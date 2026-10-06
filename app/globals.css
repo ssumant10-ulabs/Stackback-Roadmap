@@ -2229,17 +2229,17 @@ select.wb-prio {
    the meters above it are in the scrolling container and stick correctly. */
 .sp-head { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
 .sp-week { display: flex; align-items: center; gap: 8px; }
-.sp-week b { font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
+.sp-week b { font-size: 19px; font-weight: 750; letter-spacing: -.015em; color: var(--ink, #111); }
+.sp-day {
+  font-size: 11.5px; font-weight: 650; color: var(--ink-2, #555);
+  background: var(--sunken, rgba(0,0,0,.07)); border-radius: 999px; padding: 3px 10px;
+}
 .sp-week button, .sp-today {
   appearance: none; cursor: pointer; font: inherit; font-size: 12px;
   border: 1px solid var(--line, rgba(0,0,0,.14)); background: var(--card, #fff);
   color: var(--ink-2, #444); border-radius: 8px; padding: 3px 9px;
 }
 .sp-week button:hover { color: var(--ink, #111); border-color: var(--line-2, rgba(0,0,0,.24)); }
-.sp-day {
-  font-size: 11px; font-weight: 600; color: var(--ink-3, #777);
-  background: var(--sunken, rgba(0,0,0,.06)); border-radius: 999px; padding: 2px 9px;
-}
 .sp-acts { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 .sp-close {
   appearance: none; cursor: pointer; font: inherit; font-size: 12px; font-weight: 600;
@@ -2295,11 +2295,23 @@ select.wb-prio {
 .sp-ruler { padding-bottom: 7px; border-bottom: 1px solid var(--line, rgba(0,0,0,.1)); margin-bottom: 4px; }
 .sp-rulercols { display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); }
 .sp-rc {
-  display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 0;
-  font-size: 10px; font-weight: 700; color: var(--ink-3, #777); text-transform: uppercase;
+  display: flex; flex-direction: column; align-items: center; gap: 0; min-width: 0;
+  padding: 2px 0 4px; border-radius: 7px;
 }
-.sp-rc em { font-style: normal; font-size: 9.5px; font-weight: 600; opacity: .7; letter-spacing: -.01em; }
-.sp-rc.off { opacity: .45; }
+.sp-rc b {
+  font-size: 11px; font-weight: 750; letter-spacing: .03em; text-transform: uppercase;
+  color: var(--ink-2, #555);
+}
+.sp-rc em {
+  font-style: normal; font-size: 12px; font-weight: 700; letter-spacing: -.01em;
+  color: var(--ink, #111); font-variant-numeric: tabular-nums;
+}
+.sp-rc.off b, .sp-rc.off em { color: var(--ink-3, #999); font-weight: 600; }
+/* Today is the one column anyone looks for first. */
+.sp-rc.today { background: var(--sunken, rgba(0,0,0,.06)); }
+.sp-rc.today b { color: var(--status-late, #C0392B); }
+.sp-rc.today em { color: var(--ink, #111); }
+.sp-ruler { padding-bottom: 9px; }
 .sp-row { min-height: 40px; }
 .sp-row:hover .sp-track { background-color: var(--sunken, rgba(0,0,0,.04)); }
 .sp-rowtitle { display: flex; align-items: center; gap: 7px; min-width: 0; }
@@ -2346,7 +2358,7 @@ select.wb-prio {
   box-shadow: inset 3px 0 0 var(--brand, #4F7A00);
 }
 .sp-barstage {
-  font-size: 11px; font-weight: 650; letter-spacing: .01em; white-space: nowrap;
+  min-width: 0; font-size: 11px; font-weight: 650; letter-spacing: .01em; white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis; color: var(--ink-2, #444);
 }
 .sp-bar.b-done .sp-barstage { color: var(--ink-3, #777); }
@@ -2395,7 +2407,7 @@ select.wb-prio {
   box-shadow: inset 2px 0 0 color-mix(in srgb, var(--tc) 70%, transparent);
 }
 .sp-seg span {
-  font-size: 11px; font-weight: 600; letter-spacing: -.005em; white-space: nowrap;
+  min-width: 0; font-size: 11px; font-weight: 600; letter-spacing: -.005em; white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis; color: var(--ink-2, #444);
 }
 /* A positional slice is a guess, and it says so with a dotted underline rather than a
@@ -2410,10 +2422,18 @@ select.wb-prio {
   box-shadow: inset 2px 0 0 var(--brand, #4F7A00);
 }
 .sp-seg.done span { color: var(--ink-3, #777); text-decoration: line-through; }
+.sp-rowend { display: flex; align-items: center; justify-content: flex-end; gap: 5px; min-width: 0; }
 .sp-rowteam {
   font-size: 10.5px; color: var(--ink-3, #777); text-align: right;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.sp-drop {
+  appearance: none; cursor: pointer; font: inherit; font-size: 14px; line-height: 1; flex: none;
+  border: 1px solid transparent; background: none; color: var(--ink-3, #999);
+  width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center; opacity: .45;
+}
+.sp-row:hover .sp-drop, .sp-ucard:hover .sp-drop, .sp-drop:focus-visible { opacity: 1; }
+.sp-drop:hover { color: #b42318; border-color: rgba(180,35,24,.3); background: rgba(180,35,24,.08); }
 .sp-undated { display: flex; flex-direction: column; gap: 9px; }
 .sp-undated h3 { margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
 .sp-ulist { display: flex; flex-direction: column; gap: 6px; }

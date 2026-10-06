@@ -290,15 +290,22 @@ export default function SprintBoard({ cards, onOpen }: { cards: BoardCard[]; onO
       {/* The track. One row per card, drawn where it falls in the window. */}
       {scheduled.length > 0 && (
         <div className="sp-time" style={{ ["--cols" as string]: cols.length }}>
+          {/* The axis is what this view IS, so it is drawn like a heading rather than like
+              another row of grey metadata. Today's column is marked on the ruler too, not
+              only by the line down the track. */}
           <div className="sp-ruler">
             <span className="sp-rulerpad" />
             <div className="sp-rulercols">
-              {cols.map((d, i) => (
-                <span key={i} className={"sp-rc" + (byDay && (d.getDay() === 0 || d.getDay() === 6) ? " off" : "")}>
-                  {byDay ? d.toLocaleDateString("en-IN", { weekday: "narrow" }) : `W${i + 1}`}
-                  <em>{dayMonth(d)}</em>
-                </span>
-              ))}
+              {cols.map((d, i) => {
+                const isToday = byDay && d.getTime() === today.getTime();
+                const weekend = byDay && (d.getDay() === 0 || d.getDay() === 6);
+                return (
+                  <span key={i} className={"sp-rc" + (weekend ? " off" : "") + (isToday ? " today" : "")}>
+                    <b>{byDay ? d.toLocaleDateString("en-IN", { weekday: "short" }) : `Week ${i + 1}`}</b>
+                    <em>{dayMonth(d)}</em>
+                  </span>
+                );
+              })}
             </div>
           </div>
           {/* Teams down, dates across. Still one view — one date axis, one ruler, every
@@ -314,7 +321,8 @@ export default function SprintBoard({ cards, onOpen }: { cards: BoardCard[]; onO
                     the vertical space going to something the colour already said. */}
                 {mine.map((c) => (
                   <TrackRow key={c.id} card={c} from={from} to={to} pct={pct} todayPct={todayPct}
-                    onOpen={() => onOpen(c.id)} />
+                    onOpen={() => onOpen(c.id)}
+                    onDrop={closed ? undefined : () => s.dropFromSprint(id, c.id)} />
                 ))}
               </div>
             );
@@ -339,6 +347,11 @@ export default function SprintBoard({ cards, onOpen }: { cards: BoardCard[]; onO
                 <span className="assignees"><Assignees node={nodeOf(c)} small /></span>
                 <span className="sp-rowteam">{teamsOf(c) || "Unassigned"}</span>
                 <DateChip node={nodeOf(c)} variant="icon" />
+                {!closed && (
+                  <button type="button" className="sp-drop" aria-label={`Take ${titleOf(c)} out of this sprint`}
+                    title="Take it out of this sprint (it stays on the board)"
+                    onClick={() => s.dropFromSprint(id, c.id)}>&times;</button>
+                )}
                 <button type="button" className="sp-fit"
                   title={`Schedule it across this sprint, ${dayMonth(from)} to ${dayMonth(to)}`}
                   onClick={() => s.setDates(c.id, { start: iso(from), end: iso(to) }, "end")}>
@@ -374,9 +387,10 @@ export default function SprintBoard({ cards, onOpen }: { cards: BoardCard[]; onO
  *  A bar says when; it cannot say what is left inside it. Opening the row is how you check
  *  that without leaving the week, and it is the same component the board card opens, so the
  *  two cannot drift. */
-function TrackRow({ card, from, to, pct, todayPct, onOpen }: {
+function TrackRow({ card, from, to, pct, todayPct, onOpen, onDrop }: {
   card: BoardCard; from: Date; to: Date;
   pct: (d: Date) => number; todayPct: number | null; onOpen: () => void;
+  onDrop?: () => void;
 }) {
   const s = useStore();
   const [open, setOpen] = useState(false);
@@ -450,7 +464,16 @@ function TrackRow({ card, from, to, pct, todayPct, onOpen }: {
               </i>
             )}
         </div>
-        <span className="sp-rowteam" title={STAGE_LABEL[card.stage]}>{teamsOf(card) || "Unassigned"}</span>
+        <span className="sp-rowend">
+          <span className="sp-rowteam" title={STAGE_LABEL[card.stage]}>{teamsOf(card) || "Unassigned"}</span>
+          {/* Out of this sprint, not off the board. The card keeps its stage, its team and
+              its dates; it simply stops being part of this week's commitment. */}
+          {onDrop && (
+            <button type="button" className="sp-drop" aria-label={`Take ${titleOf(card)} out of this sprint`}
+              title="Take it out of this sprint (it stays on the board)"
+              onClick={onDrop}>&times;</button>
+          )}
+        </span>
       </div>
       {open && <div className="sp-rowx"><CardExpand node={node} onOpen={onOpen} /></div>}
     </>

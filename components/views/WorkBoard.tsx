@@ -245,7 +245,11 @@ export function WorkBoard() {
               {SORTS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
             </select>
           </label>
-          <button type="button" className="btn primary" onClick={ui.openAddTask}><IcPlus /> Add task</button>
+          {/* From the sprint, a new card starts on Now: adding it here IS committing it to
+              this week, and the team you assign it to still gets it on their own tab. */}
+          <button type="button" className="btn primary" onClick={() => ui.openAddTask(sprint ? 1 : 2)}>
+            <IcPlus /> {sprint ? "Add to sprint" : "Add task"}
+          </button>
         </span>
 
         <p className="wb-blurb">

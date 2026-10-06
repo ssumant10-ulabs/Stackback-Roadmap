@@ -55,7 +55,8 @@ export function LegacyViewRow() {
               onClick={() => s.setAllBoardOpen(!anyOpen)}>
               {anyOpen ? <IcCollapseAll /> : <IcExpandAll />}<span>{anyOpen ? "Collapse all" : "Expand all"}</span>
             </button>
-            <button className="btn primary" onClick={ui.openAddTask}><IcPlus /> Add task</button>
+            {/* Wrapped: the click event would otherwise arrive as the horizon argument. */}
+            <button className="btn primary" onClick={() => ui.openAddTask()}><IcPlus /> Add task</button>
           </>
         )}
       </div>

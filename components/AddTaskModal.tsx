@@ -31,11 +31,14 @@ const KIND_NOTE: Record<CardKind, string> = {
   landing: "A landing page. Folded into Template; kept so old cards still read.",
 };
 
-export function AddTaskModal({ onClose }: { onClose: () => void }) {
+export function AddTaskModal({ onClose, defaultHorizon = 2 }:
+  { onClose: () => void; defaultHorizon?: 1 | 2 | 3 }) {
   const s = useStore();
   const [title, setTitle] = useState("");
   const [desc, setDesc] = useState("");
-  const [priority, setPriority] = useState<1 | 2 | 3>(2);
+  /* Next everywhere except the sprint, where adding a card means adding it to THIS week:
+     the view you are looking at is the commitment you are making. */
+  const [priority, setPriority] = useState<1 | 2 | 3>(defaultHorizon);
   const [kind, setKind] = useState<CardKind>("feature");
   const [surface, setSurface] = useState("");
   const [subModule, setSubModule] = useState("");
