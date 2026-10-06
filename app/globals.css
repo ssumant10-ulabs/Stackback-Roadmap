@@ -2209,9 +2209,24 @@ select.wb-prio {
    the page, and a sprint is something a team stands in front of rather than glances at. */
 .sp.full {
   position: fixed; inset: 0; z-index: 200; overflow: auto;
-  background: var(--page, #fff); padding: 22px 26px 40px;
+  background: var(--page, #fff); padding: 20px 26px 32px; gap: 13px;
+}
+/* Full screen is for the SPRINT. The Next queue is 36 cards of work we have not started,
+   and given the whole screen it took it: the track ended up a strip at the top with the
+   queue below it, which is the opposite of what filling the screen was for. It comes back
+   on exit, where pulling from it is a normal part of planning. */
+.sp.full .sp-queue { display: none; }
+.sp.full .sp-lede, .sp.full .sp-vel { display: none; }
+/* The week, the meters and the ruler stay put while the track scrolls under them. With
+   twenty rows the dates scrolled away and every bar became unreadable. */
+.sp.full .sp-head, .sp.full .sp-meters {
+  position: sticky; top: -20px; z-index: 3; background: var(--page, #fff);
+  padding-top: 4px; padding-bottom: 4px;
 }
 .sp.full .sp-time { border-radius: 16px; }
+/* The ruler is NOT sticky. `.sp-time` clips its own overflow, which a sticky child cannot
+   stick inside, so it detached and came to rest in the middle of the rows. The header and
+   the meters above it are in the scrolling container and stick correctly. */
 .sp-head { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
 .sp-week { display: flex; align-items: center; gap: 8px; }
 .sp-week b { font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
@@ -2275,8 +2290,8 @@ select.wb-prio {
 }
 /* The name column is fixed so every bar is measured against the same origin; a track that
    shifted with the longest title would make two rows incomparable. */
-.sp-ruler, .sp-row { display: grid; grid-template-columns: 230px minmax(0, 1fr) 76px; align-items: center; gap: 10px; }
-@media (max-width: 767px) { .sp-ruler, .sp-row { grid-template-columns: 130px minmax(0, 1fr) 0; } .sp-rowteam { display: none; } }
+.sp-ruler, .sp-row { display: grid; grid-template-columns: 290px minmax(0, 1fr) 84px; align-items: center; gap: 12px; }
+@media (max-width: 767px) { .sp-ruler, .sp-row { grid-template-columns: 150px minmax(0, 1fr) 0; } .sp-rowteam { display: none; } }
 .sp-ruler { padding-bottom: 7px; border-bottom: 1px solid var(--line, rgba(0,0,0,.1)); margin-bottom: 4px; }
 .sp-rulercols { display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); }
 .sp-rc {
@@ -2285,11 +2300,11 @@ select.wb-prio {
 }
 .sp-rc em { font-style: normal; font-size: 9.5px; font-weight: 600; opacity: .7; letter-spacing: -.01em; }
 .sp-rc.off { opacity: .45; }
-.sp-row { min-height: 30px; }
+.sp-row { min-height: 40px; }
 .sp-row:hover .sp-track { background-color: var(--sunken, rgba(0,0,0,.04)); }
 .sp-rowtitle { display: flex; align-items: center; gap: 7px; min-width: 0; }
 .sp-rowname {
-  font: inherit; font-size: 12px; font-weight: 600; text-align: left; min-width: 0;
+  font: inherit; font-size: 13px; font-weight: 600; text-align: left; min-width: 0;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   appearance: none; border: 0; background: none; padding: 0; color: var(--ink, #111); cursor: pointer;
 }
@@ -2297,7 +2312,7 @@ select.wb-prio {
 /* Column rules drawn on the track itself, so they line up with the ruler by construction
    rather than by two numbers being kept equal. */
 .sp-track {
-  position: relative; height: 24px; border-radius: 6px; min-width: 0;
+  position: relative; height: 32px; border-radius: 6px; min-width: 0;
   background-image: repeating-linear-gradient(to right,
     var(--line, rgba(0,0,0,.09)) 0 1px, transparent 1px calc(100% / var(--cols)));
 }
@@ -2331,7 +2346,7 @@ select.wb-prio {
   box-shadow: inset 3px 0 0 var(--brand, #4F7A00);
 }
 .sp-barstage {
-  font-size: 9.5px; font-weight: 650; letter-spacing: .01em; white-space: nowrap;
+  font-size: 11px; font-weight: 650; letter-spacing: .01em; white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis; color: var(--ink-2, #444);
 }
 .sp-bar.b-done .sp-barstage { color: var(--ink-3, #777); }
@@ -2341,34 +2356,26 @@ select.wb-prio {
 /* Teams down the side, sharing the one date axis above. */
 .sp-lane { display: flex; flex-direction: column; gap: 3px; }
 .sp-lane + .sp-lane { margin-top: 7px; padding-top: 7px; border-top: 1px solid var(--line, rgba(0,0,0,.09)); }
-/* The lane header carries the team's own week: a count alone said who had work and never
-   how that team was doing. Laid out on the same grid as the rows, so the meter sits over
-   the track and the eye reads straight down from it. */
-.sp-lanehead {
-  display: grid; grid-template-columns: 230px minmax(0, 1fr) 76px; align-items: center; gap: 10px;
-  padding: 6px 0 3px;
+/* The legend replaces the labels that used to run down the side: one line for the whole
+   track instead of a band of uppercase per team, carrying the same two facts — which
+   colour is whose, and how that team's sprint is going. */
+.sp-legend { display: flex; flex-wrap: wrap; gap: 7px 14px; padding: 0 2px; }
+.sp-key {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600;
+  color: var(--ink-2, #555); cursor: default;
 }
-@media (max-width: 767px) { .sp-lanehead { grid-template-columns: 130px minmax(0, 1fr) 0; } }
-.sp-lanehead .sp-lanename {
-  font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
-  color: var(--ink-2, #555);
+.sp-key i { width: 10px; height: 10px; border-radius: 3px; background: var(--team-neutral, #6B7266); }
+.sp-key.t-Engineering i { background: var(--team-eng, #2560C4); }
+.sp-key.t-Design i { background: var(--team-dsg, #B23A82); }
+.sp-key.t-PM i { background: var(--team-pm, #C4551A); }
+.sp-key b {
+  font-weight: 650; color: var(--ink-3, #777); font-variant-numeric: tabular-nums;
+  background: var(--sunken, rgba(0,0,0,.06)); border-radius: 999px; padding: 0 6px;
 }
-.sp-lanedot { width: 8px; height: 8px; border-radius: 3px; flex: none; background: var(--team-neutral, #6B7266); }
-.sp-lanedot.t-Engineering { background: var(--team-eng, #2560C4); }
-.sp-lanedot.t-Design { background: var(--team-dsg, #B23A82); }
-.sp-lanedot.t-PM { background: var(--team-pm, #C4551A); }
-/* Both on row 1, or the grid gives each its own row and the dot floats above the name. */
-.sp-lanehead > .sp-lanedot { grid-area: 1 / 1; justify-self: start; align-self: center; }
-.sp-lanehead > .sp-lanename { grid-area: 1 / 1; margin-left: 16px; }
-.sp-lanebar {
-  grid-area: 1 / 2; display: block; height: 5px; border-radius: 999px;
-  background: var(--sunken, rgba(0,0,0,.09)); overflow: hidden;
-}
-.sp-lanebar i { display: block; height: 100%; background: var(--brand, #4F7A00); border-radius: 999px; }
-.sp-lanehead em {
-  grid-area: 1 / 3; justify-self: end; font-style: normal; font-size: 10.5px; font-weight: 650;
-  letter-spacing: 0; color: var(--ink-3, #777); font-variant-numeric: tabular-nums;
-}
+/* Lanes keep the grouping and lose the heading. A hairline is enough to say "different
+   team" once the colour has already said which. */
+.sp-lane { display: flex; flex-direction: column; gap: 3px; }
+.sp-lane + .sp-lane { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line, rgba(0,0,0,.09)); }
 .sp-caret {
   appearance: none; cursor: pointer; font: inherit; font-size: 10px; font-weight: 600; flex: none;
   border: 1px solid var(--line, rgba(0,0,0,.12)); background: none; color: var(--ink-3, #777);
@@ -2388,7 +2395,7 @@ select.wb-prio {
   box-shadow: inset 2px 0 0 color-mix(in srgb, var(--tc) 70%, transparent);
 }
 .sp-seg span {
-  font-size: 9.5px; font-weight: 600; letter-spacing: -.01em; white-space: nowrap;
+  font-size: 11px; font-weight: 600; letter-spacing: -.005em; white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis; color: var(--ink-2, #444);
 }
 /* A positional slice is a guess, and it says so with a dotted underline rather than a
@@ -2488,6 +2495,12 @@ select.wb-prio {
 }
 .cx-add button:hover { color: var(--ink, #111); border-color: var(--brand, #4F7A00); }
 .wb-count.on { color: var(--ink, #111); border-color: var(--brand, #4F7A00); }
+.wb-sort { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-3, #777); }
+.wb-sort select {
+  font: inherit; font-size: 12px; padding: 5px 8px; border-radius: 9px;
+  border: 1px solid var(--line, rgba(0,0,0,.14)); background: var(--card, #fff); color: var(--ink-2, #444);
+}
+.wb-sort select:hover { color: var(--ink, #111); border-color: var(--line-2, rgba(0,0,0,.24)); }
 .wb-subassign { display: inline-flex; align-items: center; gap: 3px; flex: none; }
 .wb-subassign .assign-add { opacity: .45; }
 .wb-detsubs li:hover .wb-subassign .assign-add { opacity: 1; }

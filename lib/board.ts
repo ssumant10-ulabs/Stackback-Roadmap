@@ -232,8 +232,13 @@ BOARD_VIEWS.push(
   {
     id: "roadmap",
     label: "Roadmap",
-    holds: ACTIVE,
-    blurb: "The overview: the work in hand, by where it is. Anything nobody has taken, or parked on Future, is in the backlog.",
+    /* Everything. The Roadmap is the one place that answers "what is there", so it is the
+       only lens that filters nothing: it used to drop Future work and anything unclaimed,
+       which meant the view people opened to see the whole picture was the one view that
+       could not show it. The backlog is still its own tab for the unclaimed half; this is
+       the superset, not its complement. */
+    holds: () => true,
+    blurb: "Everything on the board, by where it is \u2014 including Future work and anything nobody has taken yet.",
     columns: [
       /* The Roadmap groups by where the work is, so none of its columns is a handover: a
           card dropped here keeps whoever already had it, and no drop names a team. */

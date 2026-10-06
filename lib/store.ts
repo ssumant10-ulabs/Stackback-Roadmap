@@ -761,7 +761,7 @@ export class Store {
        where an unsorted card belongs until PM hands it on. */
     const node: Node = stampIds({
       id: "", title, status: "planned" as Status, assignees: [], children: [],
-      priority: 2, kind, boardOrder: this.topOfBoard(),
+      priority: 2, kind, boardOrder: this.topOfBoard(), createdAt: new Date().toISOString(),
     });
     r.tasks.push(node);
     this.log("add", title, `new ${kind} on the board`, node.id);
@@ -1854,6 +1854,7 @@ export class Store {
     });
     if (eta) { task.end = eta; task.eta = eta; }
     task.boardOrder = this.topOfBoard();
+    task.createdAt = new Date().toISOString();
     if (labels) {
       if (labels.desc) task.desc = labels.desc;
       if (labels.kind) task.kind = labels.kind;

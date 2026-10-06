@@ -269,6 +269,24 @@ export default function SprintBoard({ cards, onOpen }: { cards: BoardCard[]; onO
         </p>
       )}
 
+      {/* The legend carries what the lane labels used to, in one line instead of one band
+          per team: which colour is whose, and how that team's sprint is going. */}
+      {scheduled.length > 0 && (
+        <div className="sp-legend">
+          {LANES.map(({ team, label }) => {
+            const mine = scheduled.filter((c) => laneOf(c) === team);
+            if (!mine.length) return null;
+            const laneDone = mine.filter(finished).length;
+            return (
+              <span className={"sp-key t-" + (team ?? "none")} key={label}
+                title={`${label}: ${laneDone} of ${mine.length} done in this sprint`}>
+                <i aria-hidden />{label}<b>{laneDone}/{mine.length}</b>
+              </span>
+            );
+          })}
+        </div>
+      )}
+
       {/* The track. One row per card, drawn where it falls in the window. */}
       {scheduled.length > 0 && (
         <div className="sp-time" style={{ ["--cols" as string]: cols.length }}>
@@ -289,19 +307,11 @@ export default function SprintBoard({ cards, onOpen }: { cards: BoardCard[]; onO
           {LANES.map(({ team, label }) => {
             const mine = scheduled.filter((c) => laneOf(c) === team);
             if (!mine.length) return null;
-            const laneDone = mine.filter(finished).length;
             return (
-              <div className="sp-lane" key={label}>
-                <div className="sp-lanehead">
-                  <span className={"sp-lanedot t-" + (team ?? "none")} aria-hidden />
-                  <span className="sp-lanename">{label}</span>
-                  {/* The lane's own numbers. Four lanes with nothing but a count told you
-                      who had work, never how that team's week was actually going. */}
-                  <span className="sp-lanebar" title={`${laneDone} of ${mine.length} done`}>
-                    <i style={{ width: `${mine.length ? (laneDone / mine.length) * 100 : 0}%` }} />
-                  </span>
-                  <em>{laneDone} of {mine.length}</em>
-                </div>
+              <div className={"sp-lane t-" + (team ?? "none")} key={label}>
+                {/* No label down the side. The team is the colour, named on hover and in
+                    the legend above, and three words of uppercase per group was a third of
+                    the vertical space going to something the colour already said. */}
                 {mine.map((c) => (
                   <TrackRow key={c.id} card={c} from={from} to={to} pct={pct} todayPct={todayPct}
                     onOpen={() => onOpen(c.id)} />
@@ -419,7 +429,11 @@ function TrackRow({ card, from, to, pct, todayPct, onOpen }: {
                   style={{ left: `${l}%`, width: `${Math.max(1.5, w)}%` }}
                   title={`${sl.title} \u2014 ${team ? TEAM_LABEL[team] : "unassigned"} \u00b7 ${sl.start} \u2192 ${sl.end}`
                     + (sl.dated ? "" : " (its share of the card's window; give it dates to pin it)")}>
-                  <span>{sl.title}</span>
+                  {/* Only where there is room to read it. A card with fifteen subtasks over
+                      one week gives each about half a centimetre, and a label in that space
+                      is not shortened text, it is two overlapping words. The colour still
+                      says whose it is and the tooltip still says what it is. */}
+                  {w >= 9 && <span>{sl.title}</span>}
                 </i>
               );
             })
@@ -427,10 +441,11 @@ function TrackRow({ card, from, to, pct, todayPct, onOpen }: {
               <i className={`sp-bar t-${laneOf(card) ?? "none"} b-${bucketOf(card)}`
                 + (cs < from ? " runs-in" : "") + (ce > to ? " runs-out" : "")}
                 style={{ left: `${left}%`, width: `${Math.max(2, right - left)}%` }}
-                title={`${r.start} \u2192 ${r.end}${r.implied ? " (from its subtasks)" : ""} \u00b7 ${STAGE_LABEL[card.stage]}`}>
+                title={`${teamsOf(card) || "Unassigned"} \u00b7 ${STAGE_LABEL[card.stage]}`
+                  + ` \u00b7 ${r.start} \u2192 ${r.end}${r.implied ? " (from its subtasks)" : ""}`}>
                 {/* The stage in words. Colour says whose it is; it cannot also say what is
                     happening to it without becoming two colour systems fighting. */}
-                <span className="sp-barstage">{STAGE_LABEL[card.stage]}</span>
+                {right - left >= 16 && <span className="sp-barstage">{STAGE_LABEL[card.stage]}</span>}
                 <span className="assignees"><Assignees node={node} small /></span>
               </i>
             )}

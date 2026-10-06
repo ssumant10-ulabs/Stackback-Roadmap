@@ -283,11 +283,14 @@ function live() {
   ok(homeless === 0, "every card lands in a column somewhere");
   ok(missingFromBacklog === 0, "the backlog holds exactly the cards nobody has taken");
   ok(ownedOffBoard === 0, "every card with a team is on that team's board");
-  ok(unownedOnRoadmap === 0, "a card nobody has taken is not on the Roadmap");
-  ok((tally.roadmap || 0) === (tally.owned || 0), "the Roadmap is exactly the owned cards");
+  /* The Roadmap is the whole board now, not the owned half of it: it is the view people
+     open to see what there is, and it used to be the one view that could not show Future
+     work or anything unclaimed. Counted over the live rows, it has to hold every card. */
+  ok(unownedOnRoadmap > 0, "a card nobody has taken IS on the Roadmap");
+  ok((tally.roadmap || 0) === 77, `the Roadmap is every card (${tally.roadmap || 0} of 77)`);
   ok((tally.backlog || 0) === (tally.unowned || 0), "the Backlog is exactly the unowned cards");
-  ok((tally.backlog || 0) + (tally.roadmap || 0) === 77,
-    `the two of them are the whole board, with nothing in both (${tally.backlog || 0} + ${tally.roadmap || 0})`);
+  ok((tally.backlog || 0) + (tally.owned || 0) === 77,
+    `the Backlog and the team boards are the whole board, with nothing in both (${tally.backlog || 0} + ${tally.owned || 0})`);
   /* The complaint, four times: everything sitting in Roadmap / Not started. The board can
      only be right if the cards whose own column names a stage are NOT at intake. */
   const named = placed.filter((p) => /design|dev|review|planning/i.test(p.row[6]));
@@ -423,24 +426,31 @@ function horizons() {
   ok(flight.every((st) => (["PM", "Design", "Engineering"] as BoardTeam[]).some((t) =>
     BOARD_VIEWS.some((v) => v.id !== "backlog" && v.columns.some((c) => fits(c, st, [t], null, "feature"))))),
     "a card in flight is on a team board whatever its horizon");
-  /* The board splits in two on two questions, and the two halves have to be exactly
-     complementary or a card is in both places or in neither. */
+  /* The three TEAM boards and the Backlog split the board in two, and the two halves have
+     to be exactly complementary or a card is in both places or in neither.
+
+     The Roadmap is deliberately NOT part of that split any more. It is the one view that
+     answers "what is there", so it holds everything — including Future work and anything
+     nobody has taken. It used to be the Backlog's complement, which meant the view people
+     opened to see the whole picture was the only one that could not show it. */
   const HALVES: [BoardTeam[], 1 | 2 | 3][] = [
     [[], 1], [[], 2], [[], 3],
     [["Design"], 1], [["Design"], 2], [["Design"], 3],
     [["PM"], 1], [["Engineering"], 3],
   ];
-  const working = BOARD_VIEWS.filter((v) => v.id !== "backlog");
-  ok(HALVES.every(([t, h]) => VIEW_BY_ID.backlog.holds(t, h) === !VIEW_BY_ID.roadmap.holds(t, h)),
-    "every card is on exactly one of the Backlog and the Roadmap, never both and never neither");
-  ok(HALVES.every(([t, h]) => working.every((v) => v.holds(t, h) === VIEW_BY_ID.roadmap.holds(t, h))),
-    "PM, Design and Dev are about the same half as the Roadmap");
+  const working = BOARD_VIEWS.filter((v) => v.id !== "backlog" && v.id !== "roadmap");
+  ok(HALVES.every(([t, h]) => VIEW_BY_ID.roadmap.holds(t, h)),
+    "the Roadmap holds every card there is, parked or unclaimed or in flight");
+  ok(HALVES.every(([t, h]) => VIEW_BY_ID.backlog.holds(t, h) === !working.some((v) => v.holds(t, h))),
+    "every card is on exactly one of the Backlog and a team board, never both and never neither");
   ok(VIEW_BY_ID.backlog.holds([], 1) && VIEW_BY_ID.backlog.holds([], 2),
     "a card nobody has taken is in the backlog whatever its horizon");
   ok(VIEW_BY_ID.backlog.holds(["Design"], 3) && VIEW_BY_ID.backlog.holds(["Engineering"], 3),
     "a card parked on Future is in the backlog even though a team has it");
   ok(!working.some((v) => v.holds(["Design"], 3)),
-    "and is on none of PM, Design, Dev or the Roadmap: those are the work in hand");
+    "and is on none of PM, Design or Dev: those are the work in hand");
+  ok(VIEW_BY_ID.roadmap.holds(["Design"], 3) && VIEW_BY_ID.roadmap.holds([], 3),
+    "while the Roadmap shows it anyway, which is the whole point of the Roadmap");
   for (const h of [1, 2] as (1 | 2)[]) {
     ok(VIEW_BY_ID.design.holds(["Design"], h) && VIEW_BY_ID.dev.holds(["Engineering"], h),
       `a ${h === 1 ? "Now" : "Next"} card that names a team is on that team's board`);
@@ -487,8 +497,8 @@ function roadmap() {
   const nowhere = ALL_STAGES.filter((st) => where(st).length === 0);
   ok(twice.length === 0, `no stage lands in two Roadmap columns${twice.length ? ` (${twice.join(", ")})` : ""}`);
   ok(nowhere.length === 0, `every stage has a Roadmap column${nowhere.length ? ` (${nowhere.join(", ")})` : ""}`);
-  ok(rm.holds(["Design"], 2) && !rm.holds([], 2) && !rm.holds(["Design"], 3),
-    "the Roadmap shows work in hand: claimed, and not parked on Future");
+  ok(rm.holds(["Design"], 2) && rm.holds([], 2) && rm.holds(["Design"], 3),
+    "the Roadmap shows everything: in hand, unclaimed, and parked on Future alike");
 
   /* Every column count sums to the badge, which is only true while the columns partition. */
   ok(ALL_STAGES.every((st) => where(st).length === 1),

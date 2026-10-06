@@ -184,6 +184,9 @@ export interface Slice {
 const dayNum = (isoDay: string) => Math.floor((parseDay(isoDay) as number) / DAY);
 const fromDay = (n: number) => toIso(n * DAY);
 
+/** Days a window covers, inclusive of both ends: Monday to Friday is five, not four. */
+export const spanDays = (r: { start: string; end: string }) => Math.max(1, dayNum(r.end) - dayNum(r.start) + 1);
+
 export function subtaskSlices(
   parent: { start: string; end: string },
   kids: { id: string; title: string; range: { start: string; end: string } | null }[],
@@ -191,9 +194,14 @@ export function subtaskSlices(
   if (!kids.length) return [];
   const a = dayNum(parent.start);
   const b = dayNum(parent.end);
-  /* Inclusive of both ends, so a Monday-to-Friday parent is five days and not four. */
-  const span = Math.max(1, b - a + 1);
+  const span = spanDays(parent);
   const n = kids.length;
+  /* More subtasks than days is not a breakdown anyone can draw. Fifteen of them across one
+     week is half a day each: every slice clamps to a minimum of one day, the starts stop
+     advancing, and they pile up on the same square centimetre with their labels printed
+     over one another. The caller falls back to a single bar, and the checklist underneath
+     is where fifteen subtasks are legible anyway. */
+  if (n > span) return [];
   return kids.map((k, i) => {
     if (k.range) return { id: k.id, title: k.title, start: k.range.start, end: k.range.end, dated: true };
     /* Boundaries from the same rounding on both sides, so slices meet exactly and the last

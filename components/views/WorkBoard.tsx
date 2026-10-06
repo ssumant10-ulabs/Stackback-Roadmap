@@ -58,6 +58,9 @@ export function WorkBoard() {
   /** Two filters, because "Design's cards" and "every template" are different questions and
    *  one control cannot answer both. The team one is the popover; this one is the row. */
   const [kindFilter, setKindFilter] = useState<CardKind | null>(null);
+  /* Per view, not per card: a sort is a question you ask of a list, and the hand-arranged
+     board order is still the default because somebody put it in that order on purpose. */
+  const [sort, setSort] = useState<SortId>("board");
   const [kindOpen, setKindOpen] = useState(false);
   const kindWrap = useRef<HTMLSpanElement>(null);
   useEffect(() => {
@@ -87,7 +90,7 @@ export function WorkBoard() {
     if (s.ready) s.syncSprint(sprintId(weekStart(0)));
   }, [s.ready, all, s]);
 
-  const byColumn = useMemo(() => columnsFor(cards, view), [cards, view]);
+  const byColumn = useMemo(() => columnsFor(cards, view, sort), [cards, view, sort]);
 
   /* What this lens is not showing, and WHY, which are two different reasons. On a team board
      the rest is other teams' work; on the Roadmap it is work nobody has taken. One sentence
@@ -236,6 +239,12 @@ export function WorkBoard() {
             onClick={() => filterBtn.current && ui.openFilter(filterBtn.current)}>
             <IcFilter /><span>{filter ? filter.name : "Who"}</span>
           </button>
+          <label className="wb-sort" title="How to order the cards inside each column">
+            <span>Sort</span>
+            <select value={sort} onChange={(e) => setSort(e.target.value as SortId)}>
+              {SORTS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+            </select>
+          </label>
           <button type="button" className="btn primary" onClick={ui.openAddTask}><IcPlus /> Add task</button>
         </span>
 
@@ -350,6 +359,31 @@ const rank = (c: BoardCard): number => {
 const horizon = (c: BoardCard): number => cardPriority(c.node ?? c.feature);
 const byPriority = (a: BoardCard, b: BoardCard) => horizon(a) - horizon(b) || rank(a) - rank(b);
 
+/** How a column is ordered. Board order is the one the team arranged by hand and stays the
+ *  default; the rest are questions you ask of a long list once and then stop asking. */
+export const SORTS = [
+  { id: "board", label: "Board order" },
+  { id: "new", label: "Newest first" },
+  { id: "old", label: "Oldest first" },
+  { id: "horizon", label: "Horizon" },
+  { id: "az", label: "Title A\u2013Z" },
+] as const;
+export type SortId = (typeof SORTS)[number]["id"];
+
+/* No birthday means one of the originals, so it sorts as oldest rather than as unknown.
+   Features carry `updatedAt` from the sheet import and fall back to it. */
+const born = (c: BoardCard): string =>
+  (c.node?.createdAt ?? c.feature?.createdAt ?? c.feature?.updatedAt ?? "") || "";
+const titleOfCard = (c: BoardCard) => (c.node ?? (c.feature as unknown as Node)).title || "";
+
+function comparator(sort: SortId): (a: BoardCard, b: BoardCard) => number {
+  if (sort === "new") return (a, b) => born(b).localeCompare(born(a)) || byPriority(a, b);
+  if (sort === "old") return (a, b) => born(a).localeCompare(born(b)) || byPriority(a, b);
+  if (sort === "horizon") return (a, b) => horizon(a) - horizon(b) || titleOfCard(a).localeCompare(titleOfCard(b));
+  if (sort === "az") return (a, b) => titleOfCard(a).localeCompare(titleOfCard(b));
+  return byPriority;
+}
+
 /** The tab badge, counted the same way the columns are filled: the union of what the columns
  *  would hold. It was its own `some()` pass, which drifted from the columns by six cards on
  *  the roadmap lens, and a badge that disagrees with the board under it is worse than no
@@ -359,7 +393,7 @@ function countFor(cards: BoardCard[], view: BoardView): number {
 }
 
 /** Which cards land in which column of a view. */
-function columnsFor(cards: BoardCard[], view: BoardView): Record<string, BoardCard[]> {
+function columnsFor(cards: BoardCard[], view: BoardView, sort: SortId = "board"): Record<string, BoardCard[]> {
   const def = VIEW_BY_ID[view];
   /* The lens decides which cards it is about before any column sees them: work in hand on
      the four working lenses, everything unclaimed or parked on the backlog. */
@@ -368,7 +402,7 @@ function columnsFor(cards: BoardCard[], view: BoardView): Record<string, BoardCa
   for (const c of def.columns) {
     out[c.key] = pool
       .filter((x) => fits(c, x.stage, x.teams, x.review, kindOf(x)))
-      .sort(byPriority);
+      .sort(comparator(sort));
   }
   return out;
 }

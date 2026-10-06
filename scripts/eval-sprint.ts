@@ -184,10 +184,22 @@ const mixed = subtaskSlices({ start: "2026-10-05", end: "2026-10-11" },
 eq(mixed[0].start, "2026-10-06", "a dated subtask keeps its own window");
 ok(mixed[0].dated && !mixed[1].dated, "and only it is marked exact");
 eq(subtaskSlices({ start: "2026-10-05", end: "2026-10-11" }, []), [], "no subtasks, no breakdown");
-/* More subtasks than days: every one still gets a drawable slice rather than a negative. */
-const many = subtaskSlices({ start: "2026-10-05", end: "2026-10-06" },
+/* More subtasks than days cannot be drawn, and saying so is the only honest answer. Each
+   slice would clamp to a one-day minimum, the starts would stop advancing, and they would
+   pile up on the same spot with their labels printed over one another -- which is exactly
+   what a fifteen-subtask card did across one week. */
+eq(subtaskSlices({ start: "2026-10-05", end: "2026-10-06" },
+  [kid("a", null), kid("b", null), kid("c", null), kid("d", null)]), [],
+  "four subtasks over two days is no breakdown at all, not four overlapping ones");
+eq(subtaskSlices({ start: "2026-10-05", end: "2026-10-11" }, Array.from({ length: 15 },
+  (_, i) => kid("k" + i, null))), [], "nor fifteen across one week");
+ok(subtaskSlices({ start: "2026-10-05", end: "2026-10-11" },
+  [kid("a", null), kid("b", null), kid("c", null)]).length === 3,
+  "three across a week still splits, because three days each is drawable");
+/* No two slices may overlap, which is the property the pile-up violated. */
+const seq = subtaskSlices({ start: "2026-10-05", end: "2026-10-11" },
   [kid("a", null), kid("b", null), kid("c", null), kid("d", null)]);
-ok(many.every((x) => x.end >= x.start), "four subtasks over two days still each get a day");
+ok(seq.every((x, i) => i === 0 || x.start > seq[i - 1].end), "slices never overlap");
 
 console.log("\nCapacity, once there is enough of it");
 eq(velocity([]).mean, null, "no history, no number");

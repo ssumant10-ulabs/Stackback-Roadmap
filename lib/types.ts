@@ -17,6 +17,10 @@ export interface Comment {
 export interface Node {
   id: string;
   title: string;
+  /** When the card was made, ISO. Absent on everything that predates this field, which
+   *  sorts as oldest rather than as unknown — a card with no birthday is one of the
+   *  original ones. */
+  createdAt?: string | null;
   /** What the card is actually about, under the title. A title is a handle you scan a
    *  column by; it cannot also be the brief. Plain text, because a card nobody can read in
    *  a WhatsApp paste is a card nobody reads. */
@@ -109,6 +113,10 @@ export interface Shot {
 
 export interface Feature {
   id: string;
+  /** When the card was made, ISO. Absent on everything that predates this field, which
+   *  sorts as oldest rather than as unknown — a card with no birthday is one of the
+   *  original ones. */
+  createdAt?: string | null;
   /** Sheet id, INT-01 / MR-04 / PT-02. Blank for the unnumbered rows and for new ones. */
   ref: string;
   band: FeatureBand;
