@@ -11,6 +11,7 @@ import { cardPriority, effStatus, subtreeCounts } from "@/lib/derive";
 import { Assignees } from "../Assignees";
 import { DateChip, StatusButton } from "../bits";
 import { CardExpand } from "./CardExpand";
+import { IcExitFull, IcFull } from "../icons";
 import type { BoardCard } from "./WorkBoard";
 import type { Node } from "@/lib/types";
 
@@ -92,7 +93,12 @@ const teamsOf = (c: BoardCard) => c.teams.map((t) => (t === "Engineering" ? "Dev
 const iso = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-export default function SprintBoard({ cards, onOpen }: { cards: BoardCard[]; onOpen: (id: string) => void }) {
+export default function SprintBoard({ cards, onOpen, order, sorted }: {
+  cards: BoardCard[]; onOpen: (id: string) => void;
+  order: (a: BoardCard, b: BoardCard) => number;
+  /** True when the board's Sort is set to something other than its hand-arranged default. */
+  sorted: boolean;
+}) {
   const s = useStore();
   const [offset, setOffset] = useState(0);
   /* Full screen, because a three-week track with four lanes under it does not fit beside
@@ -152,8 +158,14 @@ export default function SprintBoard({ cards, onOpen }: { cards: BoardCard[]; onO
       .filter((c) => overlapsWindow(effRange(nodeOf(c as BoardCard)), from, to)) as BoardCard[];
   }, [sprint, preview, cards, byId, s, from, to]);
 
-  const scheduled = members.filter((c) => effRange(nodeOf(c)));
-  const undated = members.filter((c) => !effRange(nodeOf(c)));
+  /* The Sort control is in the board chrome above this view, so it has to apply here too:
+     a control that visibly does nothing on the tab you are looking at reads as broken. The
+     track keeps its own default — earliest start first, which is the only order a dated row
+     can sensibly have — and every other sort is honoured as chosen. */
+  const byStart = (a: BoardCard, b: BoardCard) =>
+    (effRange(nodeOf(a))?.start || "").localeCompare(effRange(nodeOf(b))?.start || "") || order(a, b);
+  const scheduled = members.filter((c) => effRange(nodeOf(c))).sort(sorted ? order : byStart);
+  const undated = members.filter((c) => !effRange(nodeOf(c))).sort(order);
   const committed = new Set(sprint?.committed ?? []);
   /* Counted over what is on screen, not over the whole commitment. Cards committed to but
      scheduled outside this window are not in this window, and reading the raw list gave
@@ -161,7 +173,7 @@ export default function SprintBoard({ cards, onOpen }: { cards: BoardCard[]; onO
   const inScope = members.filter((c) => committed.has(c.id)).length;
   const added = members.filter((c) => !committed.has(c.id));
   const done = members.filter(finished);
-  const queued = cards.filter((c) => cardPriority(c.node ?? c.feature) === 2);
+  const queued = cards.filter((c) => cardPriority(c.node ?? c.feature) === 2).slice().sort(order);
 
   const vel = velocity(s.sprints);
   const day = dayOfSprint(from, weeks);
@@ -213,10 +225,6 @@ export default function SprintBoard({ cards, onOpen }: { cards: BoardCard[]; onO
           {!thisWeek && <button type="button" className="btn ghost sp-sm" onClick={() => setOffset(0)}>This sprint</button>}
         </div>
         <div className="sp-acts">
-          <button type="button" className="btn ghost sp-sm" onClick={() => setFull(!full)}
-            title={full ? "Back to the page (Esc)" : "Fill the screen"}>
-            {full ? "Exit full screen" : "Full screen"}
-          </button>
           {/* Length lives on the sprint, not in settings: a team trying a fortnight should
               not have to change a global to see what it looks like. Locked once closed,
               because redrawing a finished window changes what it is on record as. */}
@@ -322,6 +330,13 @@ export default function SprintBoard({ cards, onOpen }: { cards: BoardCard[]; onO
       {/* The track. One row per card, drawn where it falls in the window. */}
       {scheduled.length > 0 && (
         <div className="sp-time" style={{ ["--cols" as string]: cols.length }}>
+          {/* On the thing it expands, not in a row of unrelated controls — the corner of
+              the frame is where every viewer puts this. */}
+          <button type="button" className="sp-fullbtn" onClick={() => setFull(!full)}
+            aria-label={full ? "Leave full screen" : "Show the track full screen"}
+            title={full ? "Leave full screen (Esc)" : "Full screen"}>
+            {full ? <IcExitFull /> : <IcFull />}
+          </button>
           {/* The axis is what this view IS, so it is drawn like a heading rather than like
               another row of grey metadata. Today's column is marked on the ruler too, not
               only by the line down the track. */}

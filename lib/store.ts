@@ -33,6 +33,7 @@ const THEME_KEY = "stackback_theme";
 const ME_KEY = "stackback_me_v1";
 /** Colour ramp, per browser like the theme. */
 const PALETTE_KEY = "stackback_palette_v1";
+const TEXT_KEY = "stackback_textscale_v1";
 /** The id of the roadmap that mirrors the roadmap sheet. Any other roadmap is hand-made
  *  by the team and is never touched by a re-seed. */
 const SHEET_ROADMAP_ID = "stackback";
@@ -109,6 +110,10 @@ export interface UiState {
   sort: { key: string; dir: "asc" | "desc" } | null;
   theme: Theme;
   palette: string;
+  /** Text size multiplier, 0.9 to 1.3. Per browser like the theme is, not shared: how big
+   *  type needs to be is a fact about the person reading it and the screen they are on,
+   *  not about the board. */
+  textScale: number;
   activityOpen: boolean;
 }
 
@@ -151,7 +156,7 @@ export class Store {
     // The board is the only view left; a stored "timeline" from before still lands there.
     view: "board", tlMode: "swim", simpleMode: "stage", teamGran: "team",
     filter: null, boardOpen: {}, boardView: "pm", simpleOpen: {}, commentsOpen: {}, sort: null,
-    theme: "auto", palette: "lime", activityOpen: false,
+    theme: "auto", palette: "lime", textScale: 1, activityOpen: false,
   };
   /** Display name used for authorship on comments and activity. Local to this browser. */
   me = "";
@@ -224,6 +229,7 @@ export class Store {
     try { this.ui.theme = (localStorage.getItem(THEME_KEY) as Theme) || "auto"; } catch {}
     try { this.me = localStorage.getItem(ME_KEY) || ""; } catch {}
     try { this.ui.palette = localStorage.getItem(PALETTE_KEY) || "lime"; } catch {}
+    try { this.ui.textScale = Number(localStorage.getItem(TEXT_KEY)) || 1; } catch {}
 
     if (firebaseEnabled) {
       // Shared backend. Falls back to the seeded default on any error.
@@ -1965,10 +1971,18 @@ export class Store {
     else el.setAttribute("data-theme", this.ui.theme);
     if (this.ui.palette && this.ui.palette !== "lime") el.setAttribute("data-palette", this.ui.palette);
     else el.removeAttribute("data-palette");
+    /* One multiplier on the root, which every size in the app is expressed against. */
+    el.style.setProperty("--text-scale", String(this.ui.textScale || 1));
     try {
       localStorage.setItem(THEME_KEY, this.ui.theme);
       localStorage.setItem(PALETTE_KEY, this.ui.palette);
+      localStorage.setItem(TEXT_KEY, String(this.ui.textScale || 1));
     } catch {}
+  }
+  setTextScale(v: number) {
+    this.ui.textScale = Math.min(1.3, Math.max(0.9, Number(v) || 1));
+    this.applyTheme();
+    this.notify();
   }
   setPalette(id: string) {
     this.ui.palette = id || "lime";

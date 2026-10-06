@@ -110,6 +110,22 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
           </div>
         </div>
         <div className="settings-section">
+          <div className="ss-head">Text size</div>
+          <div className="ss-desc">
+            Scales every label on the board without changing its layout &mdash; the columns
+            keep their proportions and the type grows inside them. Saved in this browser, so
+            it follows the screen you are on rather than the team.
+          </div>
+          <div className="ss-text">
+            <input type="range" min={0.9} max={1.3} step={0.05} value={s.ui.textScale}
+              aria-label="Text size" onChange={(e) => s.setTextScale(Number(e.target.value))} />
+            <b>{Math.round(s.ui.textScale * 100)}%</b>
+            {s.ui.textScale !== 1 && (
+              <button type="button" className="btn ghost" onClick={() => s.setTextScale(1)}>Reset</button>
+            )}
+          </div>
+        </div>
+        <div className="settings-section">
           <div className="ss-head">Admin UI</div>
           <div className="ss-desc">Where the <b>Admin UI</b> button in the header points, currently the merchant admin module tracker. Shared with the team, so hosting the build somewhere real is a one-time change here.</div>
           <input type="text" className="me-input admin-url-input" spellCheck={false}

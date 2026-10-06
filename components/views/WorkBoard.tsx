@@ -90,7 +90,13 @@ export function WorkBoard() {
     if (s.ready) s.syncSprint(sprintId(weekStart(0)));
   }, [s.ready, all, s]);
 
-  const byColumn = useMemo(() => columnsFor(cards, view, sort), [cards, view, sort]);
+  /* Earliest `add` row per card: the log is newest-first, so the last one seen wins. */
+  const addedAt = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const e of s.activity) if (e.kind === "add" && e.nodeId) m.set(e.nodeId, e.at);
+    return m;
+  }, [s.activity]);
+  const byColumn = useMemo(() => columnsFor(cards, view, sort, addedAt), [cards, view, sort, addedAt]);
 
   /* What this lens is not showing, and WHY, which are two different reasons. On a team board
      the rest is other teams' work; on the Roadmap it is work nobody has taken. One sentence
@@ -260,7 +266,8 @@ export function WorkBoard() {
         </p>
       </div>
 
-      {sprint && <SprintBoard cards={cards} onOpen={setDetail} />}
+      {sprint && <SprintBoard cards={cards} onOpen={setDetail}
+        order={comparator(sort, addedAt)} sorted={sort !== "board"} />}
 
       {/* An empty column takes a sliver, not a share. Seven equal columns with five of them
           saying "Nothing here" pushed the two that hold the work off the screen. */}
@@ -374,15 +381,24 @@ export const SORTS = [
 ] as const;
 export type SortId = (typeof SORTS)[number]["id"];
 
-/* No birthday means one of the originals, so it sorts as oldest rather than as unknown.
-   Features carry `updatedAt` from the sheet import and fall back to it. */
-const born = (c: BoardCard): string =>
-  (c.node?.createdAt ?? c.feature?.createdAt ?? c.feature?.updatedAt ?? "") || "";
+/** When a card came into existence.
+ *
+ *  `createdAt` is only on cards made since the field shipped, which is the wrong half: the
+ *  cards people most want to find by age are the ones added last week, and those predate
+ *  it. So the activity log answers second — it has an `add` row, with a timestamp, for
+ *  every card created through the UI since the shared board started. Without that, the
+ *  newest cards on the board sorted as the oldest, which is exactly backwards.
+ *
+ *  `updatedAt` is last and only for sheet-imported requests, because it is a MODIFIED time
+ *  pretending to be a born time. Nothing left is one of the originals, which genuinely is
+ *  the oldest thing there. */
+const born = (c: BoardCard, addedAt: Map<string, string>): string =>
+  (c.node?.createdAt ?? c.feature?.createdAt ?? addedAt.get(c.id) ?? c.feature?.updatedAt ?? "") || "";
 const titleOfCard = (c: BoardCard) => (c.node ?? (c.feature as unknown as Node)).title || "";
 
-function comparator(sort: SortId): (a: BoardCard, b: BoardCard) => number {
-  if (sort === "new") return (a, b) => born(b).localeCompare(born(a)) || byPriority(a, b);
-  if (sort === "old") return (a, b) => born(a).localeCompare(born(b)) || byPriority(a, b);
+function comparator(sort: SortId, addedAt: Map<string, string>): (a: BoardCard, b: BoardCard) => number {
+  if (sort === "new") return (a, b) => born(b, addedAt).localeCompare(born(a, addedAt)) || byPriority(a, b);
+  if (sort === "old") return (a, b) => born(a, addedAt).localeCompare(born(b, addedAt)) || byPriority(a, b);
   if (sort === "horizon") return (a, b) => horizon(a) - horizon(b) || titleOfCard(a).localeCompare(titleOfCard(b));
   if (sort === "az") return (a, b) => titleOfCard(a).localeCompare(titleOfCard(b));
   return byPriority;
@@ -397,7 +413,9 @@ function countFor(cards: BoardCard[], view: BoardView): number {
 }
 
 /** Which cards land in which column of a view. */
-function columnsFor(cards: BoardCard[], view: BoardView, sort: SortId = "board"): Record<string, BoardCard[]> {
+function columnsFor(
+  cards: BoardCard[], view: BoardView, sort: SortId = "board", addedAt: Map<string, string> = new Map(),
+): Record<string, BoardCard[]> {
   const def = VIEW_BY_ID[view];
   /* The lens decides which cards it is about before any column sees them: work in hand on
      the four working lenses, everything unclaimed or parked on the backlog. */
@@ -406,7 +424,7 @@ function columnsFor(cards: BoardCard[], view: BoardView, sort: SortId = "board")
   for (const c of def.columns) {
     out[c.key] = pool
       .filter((x) => fits(c, x.stage, x.teams, x.review, kindOf(x)))
-      .sort(comparator(sort));
+      .sort(comparator(sort, addedAt));
   }
   return out;
 }
