@@ -232,8 +232,13 @@ BOARD_VIEWS.push(
   {
     id: "roadmap",
     label: "Roadmap",
-    holds: ACTIVE,
-    blurb: "The overview: the work in hand, by where it is. Anything nobody has taken, or parked on Future, is in the backlog.",
+    /* Everything. The Roadmap is the one place that answers "what is there", so it is the
+       only lens that filters nothing: it used to drop Future work and anything unclaimed,
+       which meant the view people opened to see the whole picture was the one view that
+       could not show it. The backlog is still its own tab for the unclaimed half; this is
+       the superset, not its complement. */
+    holds: () => true,
+    blurb: "Everything on the board, by where it is \u2014 including Future work and anything nobody has taken yet.",
     columns: [
       /* The Roadmap groups by where the work is, so none of its columns is a handover: a
           card dropped here keeps whoever already had it, and no drop names a team. */
@@ -513,7 +518,13 @@ export function statusDepth(status: string | null | undefined): number {
  *  A tie goes to the task because it is the fresher of the two: the sheet column is what
  *  somebody last typed, the task is what the board currently shows. */
 export function resolveStatus(own: string | null | undefined, linked: string | null | undefined): string {
-  return statusDepth(own) > statusDepth(linked) ? own! : (linked || own || "");
+  /* A milestone can tell you work is in design or in dev. It cannot tell you a feature under
+     it has SHIPPED: most features map to a milestone broader than themselves, so a single
+     done milestone was marking everything beneath it Approved — which is how the Approved
+     column filled with cards nobody had approved. The linked status is capped at "names a
+     stage"; only a card's own column can say it is done. */
+  const cap = statusDepth(linked) === 3 ? 0 : statusDepth(linked);
+  return statusDepth(own) >= cap ? (own || "") : (linked || own || "");
 }
 
 /** The team a stage belongs to by definition.

@@ -340,10 +340,15 @@
   .modal-backdrop{position:fixed;inset:0;background:rgba(7,17,2,0.55);display:none;align-items:flex-start;
     justify-content:center;padding:48px 16px;z-index:60;overflow-y:auto;}
   .modal-backdrop.open{display:flex;}
-  .modal{background:var(--card);border-radius:15px;max-width:480px;width:100%;padding:22px;box-shadow:var(--shadow);
+  .modal{background:var(--card);border-radius:15px;max-width:560px;width:100%;padding:22px;box-shadow:var(--shadow);
     border:1px solid var(--border);}
   .modal h3{margin:0 0 3px;font-size:17px;font-weight:800;}
   .modal .modal-sub{font-size:12.5px;color:var(--ink-3);margin-bottom:16px;}
+  /* The Add form now carries the drawer's whole field set, so the short selects pair up
+     rather than running down the page as nine full-width rows. */
+  .modal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:0 12px;}
+  .modal-grid .field{min-width:0;}
+  .field .opt{text-transform:none;font-weight:600;color:var(--ink-3);letter-spacing:0;}
   .field{margin-bottom:14px;}
   .field label{display:block;font-size:11.5px;font-weight:800;color:var(--ink-2);margin-bottom:6px;
     text-transform:uppercase;letter-spacing:.03em;}
@@ -372,7 +377,10 @@
   .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
 
   /* assignee popover */
-  .popover{position:fixed;z-index:70;background:var(--card);border:1px solid var(--border-2);border-radius:12px;
+/* Above the card detail panel (95), not behind it. The assignee and date pickers open
+     from inside that panel, and at z-index 70 they rendered underneath it — which looks
+     exactly like a button that does nothing. */
+  .popover{position:fixed;z-index:120;background:var(--card);border:1px solid var(--border-2);border-radius:12px;
     box-shadow:var(--shadow);padding:12px;width:260px;display:none;}
   .popover.open{display:block;}
   .popover h4{margin:0 0 9px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-3);}
@@ -1782,9 +1790,6 @@
 .wb-more svg { width: 12px; height: 12px; transition: transform .14s ease; }
 .wb-more.on svg { transform: rotate(180deg); }
 .wb-open { margin-top: 8px; padding-top: 9px; border-top: 1px solid var(--line, rgba(0,0,0,.10)); }
-.wb-subs { list-style: none; margin: 0 0 9px; padding: 0; display: flex; flex-direction: column; gap: 4px; }
-.wb-subs li { display: flex; align-items: flex-start; gap: 7px; font-size: 12px; line-height: 1.4; }
-.wb-subs li span.done { text-decoration: line-through; opacity: .55; }
 
 .wb-files { margin-bottom: 8px; }
 .wb-filerow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
@@ -1994,7 +1999,10 @@
 }
 .wb-moveto > button:hover { color: var(--ink, #111); border-color: var(--ink-3, #999); }
 .wb-movemenu {
-  position: absolute; top: calc(100% + 3px); right: 0; z-index: 50; min-width: 148px;
+  /* Fixed to the viewport, not to the card: `.wb-cols` scrolls sideways, which makes it a
+     clipping context vertically as well, and the menu was being cut off at the column edge.
+     The button measures itself and passes left/top in. */
+  position: fixed; z-index: 90; min-width: 148px;
   display: flex; flex-direction: column; padding: 4px;
   background: var(--card, #fff); border: 1px solid var(--line, rgba(0,0,0,.14));
   border-radius: 9px; box-shadow: 0 8px 24px rgba(0,0,0,.16);
@@ -2034,7 +2042,7 @@
 .wb-kind:focus-visible { outline: 2px solid var(--brand, #4F7A00); outline-offset: 1px; }
 
 /* The move menu lists this board's own columns. */
-.wb-movemenu { min-width: 190px; max-height: 320px; overflow: auto; }
+.wb-movemenu { min-width: 190px; max-height: min(360px, 60vh); overflow: auto; }
 .wb-moverule { display: block; height: 1px; margin: 4px 2px; background: var(--line, rgba(0,0,0,.12)); }
 
 /* The work filter, a popover beside the who filter. */
@@ -2077,3 +2085,448 @@
 .wb-head { grid-template-columns: 1fr auto; }
 .wb-head .wb-tabs { grid-column: 1; }
 .wb-actions { grid-column: 2; }
+
+/* ---- the card, cut back to what you scan for --------------------------------------------
+   Title, horizon, who has it. Everything else is one click away in the detail panel, where
+   there is room to edit it rather than only look at it. */
+.wb-cardgrow { flex: 1 1 auto; }
+.wb-titlebtn {
+  appearance: none; border: 0; background: none; cursor: pointer; font: inherit;
+  text-align: left; padding: 0; width: 100%; color: inherit;
+}
+.wb-titlebtn:hover { text-decoration: underline; text-underline-offset: 2px; }
+.wb-count {
+  appearance: none; border: 1px solid var(--line, rgba(0,0,0,.12)); background: none; cursor: pointer;
+  font: inherit; font-size: 10.5px; font-variant-numeric: tabular-nums; color: var(--ink-3, #777);
+  border-radius: 999px; padding: 1px 7px; margin-left: auto;
+}
+.wb-count:hover { color: var(--ink, #111); border-color: var(--line-2, rgba(0,0,0,.24)); }
+/* The horizon is a select now, so one click past the one you wanted cannot park the card. */
+select.wb-prio {
+  appearance: none; font: inherit; font-size: 10px; font-weight: 800; letter-spacing: .03em;
+  text-transform: uppercase; border: 0; border-radius: 999px; padding: 2px 8px; cursor: pointer;
+}
+
+/* ---- the card detail panel -------------------------------------------------------------- */
+.wb-detwrap { position: fixed; inset: 0; z-index: 95; }
+.wb-detscrim { position: absolute; inset: 0; background: rgba(0,0,0,.34); }
+.wb-det {
+  position: absolute; top: 0; right: 0; bottom: 0; width: min(560px, 100%);
+  background: var(--page, #fff); border-left: 1px solid var(--line, rgba(0,0,0,.14));
+  display: flex; flex-direction: column; box-shadow: -18px 0 46px rgba(0,0,0,.22);
+}
+.wb-deth {
+  display: flex; align-items: center; gap: 10px; padding: 14px 18px;
+  border-bottom: 1px solid var(--line, rgba(0,0,0,.12));
+}
+.wb-detmeta { display: flex; align-items: center; gap: 10px; font-size: 11.5px; color: var(--ink-3, #777); }
+.wb-detmeta b { font-size: 11.5px; font-weight: 700; color: var(--ink-2, #444); font-variant-numeric: tabular-nums; }
+.wb-deth > button {
+  margin-left: auto; appearance: none; border: 0; background: none; cursor: pointer;
+  color: var(--ink-3, #777); display: grid; place-items: center; padding: 4px;
+}
+.wb-deth > button:hover { color: var(--ink, #111); }
+.wb-detbody { overflow-y: auto; padding: 16px 18px 28px; display: flex; flex-direction: column; gap: 16px; }
+.wb-dettitle {
+  font: inherit; font-size: 18px; font-weight: 680; line-height: 1.35; letter-spacing: -.01em;
+  border: 1px solid transparent; border-radius: 9px; padding: 7px 9px; margin: -7px -9px;
+  background: none; color: var(--ink, #111); resize: vertical; width: calc(100% + 18px);
+  /* The panel is a flex column, so without this the box is shrunk below the height its
+     `rows` asks for and the last line of a long one reads as cut off. */
+  flex: none;
+}
+.wb-dettitle:hover { border-color: var(--line, rgba(0,0,0,.12)); }
+.wb-dettitle:focus { border-color: var(--brand, #4F7A00); outline: none; background: var(--card, #fff); }
+/* The brief. Reads as text until you click it, like the title above: a panel of boxes
+   invites filling boxes in, and a description nobody writes is worse than no field. */
+.wb-detdesc {
+  font: inherit; font-size: 13.5px; line-height: 1.6; color: var(--ink-2, #444);
+  border: 1px solid transparent; border-radius: 9px; padding: 8px 9px; margin: -8px -9px;
+  background: none; resize: vertical; width: calc(100% + 18px); min-height: 66px; flex: none;
+}
+.wb-detdesc::placeholder { color: var(--ink-3, #999); }
+.wb-detdesc:hover { border-color: var(--line, rgba(0,0,0,.12)); }
+.wb-detdesc:focus { border-color: var(--brand, #4F7A00); outline: none; background: var(--card, #fff); color: var(--ink, #111); }
+.wb-detgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.wb-detfield { display: flex; flex-direction: column; gap: 4px; }
+.wb-detfield > span { font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--ink-3, #777); }
+.wb-detfield > em { font-style: normal; font-size: 11px; color: var(--ink-3, #777); line-height: 1.4; }
+.wb-detfield select, .wb-detfield input {
+  font: inherit; font-size: 13px; padding: 7px 9px; border-radius: 8px;
+  border: 1px solid var(--line-2, rgba(0,0,0,.18)); background: var(--card, #fff); color: var(--ink, #111);
+}
+.wb-detfmt {
+  appearance: none; cursor: pointer; font: inherit; font-size: 12px; text-align: left;
+  padding: 9px 11px; border-radius: 9px; border: 1px dashed var(--line-2, rgba(0,0,0,.2));
+  background: none; color: var(--ink-2, #444); line-height: 1.45;
+}
+.wb-detfmt:hover { border-color: var(--brand, #4F7A00); color: var(--ink, #111); }
+.wb-detfmt b { font-weight: 640; }
+.wb-detrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.wb-detlbl { font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--ink-3, #777); }
+.wb-dettask { margin: 0; font-size: 12.5px; color: var(--ink-3, #777); }
+.wb-detsec { display: flex; flex-direction: column; gap: 9px; border-top: 1px solid var(--line, rgba(0,0,0,.1)); padding-top: 14px; }
+.wb-detsec h4 { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--ink-3, #777); }
+.wb-detsec h4 em { font-style: normal; font-weight: 500; text-transform: none; letter-spacing: 0; margin-left: 8px; }
+.wb-detsubs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.wb-detsubs li { display: flex; align-items: center; gap: 8px; }
+.wb-detsubs input {
+  font: inherit; font-size: 13px; flex: 1 1 auto; min-width: 0;
+  border: 1px solid transparent; border-radius: 7px; padding: 5px 7px;
+  background: none; color: var(--ink, #111);
+}
+.wb-detsubs input:hover { border-color: var(--line, rgba(0,0,0,.12)); }
+.wb-detsubs input:focus { border-color: var(--brand, #4F7A00); outline: none; background: var(--card, #fff); }
+.wb-detsubs input.done { color: var(--ink-3, #777); text-decoration: line-through; }
+.wb-subdel, .wb-detlinks button {
+  appearance: none; border: 0; background: none; cursor: pointer; color: var(--ink-3, #999);
+  display: grid; place-items: center; padding: 4px; border-radius: 6px; flex: none;
+}
+.wb-subdel:hover, .wb-detlinks button:hover { color: #b42318; background: rgba(180,35,24,.08); }
+.wb-detadd { display: flex; gap: 6px; }
+.wb-detadd input {
+  font: inherit; font-size: 13px; flex: 1 1 auto; min-width: 0; padding: 7px 9px;
+  border-radius: 8px; border: 1px solid var(--line-2, rgba(0,0,0,.18));
+  background: var(--card, #fff); color: var(--ink, #111);
+}
+.wb-detadd button {
+  appearance: none; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 620;
+  display: inline-flex; align-items: center; gap: 5px; padding: 7px 12px; border-radius: 8px;
+  border: 1px solid var(--line-2, rgba(0,0,0,.18)); background: var(--card, #fff); color: var(--ink, #111);
+}
+.wb-detlinks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.wb-detlinks li { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+.wb-detlinks a { color: var(--brand-deep, #3c5c00); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wb-detlinks a:hover { text-decoration: underline; }
+.wb-deterr { margin: 0; font-size: 12px; color: #b42318; }
+
+/* ---- the sprint, a week's commitment --------------------------------------------------
+   Not a sixth column set. The board answers "where is this card"; this answers "what did we
+   commit to this week and how far through is it". The Now horizon IS the sprint, so planning
+   one is the same two clicks as everything else: pull a card in, push one out. */
+.sp { display: flex; flex-direction: column; gap: 16px; }
+/* Full screen. A three-week track with four lanes under it does not fit beside the rest of
+   the page, and a sprint is something a team stands in front of rather than glances at. */
+.sp.full {
+  position: fixed; inset: 0; z-index: 200; overflow: auto;
+  background: var(--page, #fff); padding: 20px 26px 32px; gap: 13px;
+}
+/* Full screen is for the SPRINT. The Next queue is 36 cards of work we have not started,
+   and given the whole screen it took it: the track ended up a strip at the top with the
+   queue below it, which is the opposite of what filling the screen was for. It comes back
+   on exit, where pulling from it is a normal part of planning. */
+.sp.full .sp-queue { display: none; }
+.sp.full .sp-lede, .sp.full .sp-vel { display: none; }
+/* The week, the meters and the ruler stay put while the track scrolls under them. With
+   twenty rows the dates scrolled away and every bar became unreadable. */
+.sp.full .sp-head, .sp.full .sp-meters {
+  position: sticky; top: -20px; z-index: 3; background: var(--page, #fff);
+  padding-top: 4px; padding-bottom: 4px;
+}
+.sp.full .sp-time { border-radius: 16px; }
+/* `.sp` is a flex column, and full screen is the only place it has a FIXED height — so its
+   children start shrinking to fit, and the track, whose rows are absolutely positioned
+   inside relative tracks, collapsed to a sliver with half its ruler showing and no rows at
+   all. Nothing in this column may shrink; the container scrolls instead. */
+.sp.full > * { flex: none; }
+/* The ruler is NOT sticky. `.sp-time` clips its own overflow, which a sticky child cannot
+   stick inside, so it detached and came to rest in the middle of the rows. The header and
+   the meters above it are in the scrolling container and stick correctly. */
+.sp-head { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.sp-week { display: flex; align-items: center; gap: 8px; }
+.sp-week b { font-size: 19px; font-weight: 750; letter-spacing: -.015em; color: var(--ink, #111); }
+.sp-day {
+  font-size: 11.5px; font-weight: 650; color: var(--ink-2, #555);
+  background: var(--sunken, rgba(0,0,0,.07)); border-radius: 999px; padding: 3px 10px;
+}
+/* The sprint's controls are the app's buttons at a smaller size, not a second set of
+   look-alikes. Five bespoke rules had drifted into five slightly different capsules sitting
+   next to the real ones, which is what made the row look assembled rather than designed. */
+.sp-sm { padding: 5px 11px; font-size: 12px; font-weight: 650; border-radius: 9px; }
+.sp-ic { padding: 0; width: 24px; height: 24px; justify-content: center; font-size: 14px; border-radius: 8px; }
+.sp-week button.sp-nav {
+  appearance: none; cursor: pointer; font: inherit; font-size: 13px; line-height: 1;
+  width: 28px; height: 28px; display: grid; place-items: center;
+  border: 1px solid var(--border-2); background: var(--card); color: var(--ink-2, #444); border-radius: 9px;
+}
+.sp-week button.sp-nav:hover { background: var(--card-2); color: var(--ink, #111); }
+.sp-acts { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+
+
+/* Two lines, because one bar cannot show scope creep. The top track is the week's size and
+   the hatched tail is what was added to it after it started; the bottom is what is done,
+   measured against the same total so the two read against each other. */
+.sp-meters { display: flex; flex-direction: column; gap: 7px; }
+.sp-meter { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: center; gap: 11px; }
+.sp-mlbl { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3, #777); }
+.sp-mbar {
+  display: flex; height: 8px; border-radius: 999px; overflow: hidden;
+  background: var(--sunken, rgba(0,0,0,.08));
+}
+.sp-mbar i { display: block; flex: none; height: 100%; background: var(--brand, #4F7A00); }
+.sp-scope i { background: var(--ink-2, #555); }
+.sp-mbar u {
+  display: block; flex: none; height: 100%; text-decoration: none;
+  background: repeating-linear-gradient(135deg, var(--status-progress, #A9760A) 0 4px, transparent 4px 8px),
+    var(--status-progress-soft, #F7EDD6);
+}
+.sp-mn { font-size: 12px; color: var(--ink-3, #777); font-variant-numeric: tabular-nums; }
+.sp-mn b { color: var(--status-progress, #A9760A); font-weight: 600; }
+.sp-vel { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--ink-3, #777); }
+.sp-vel b { color: var(--ink-2, #444); font-weight: 650; }
+.sp-vel em { font-style: normal; color: var(--status-progress, #A9760A); }
+.sp-lede, .sp-qlede { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--ink-3, #777); }
+.sp-preview {
+  margin: 0; padding: 10px 14px; border-radius: 11px; font-size: 12.5px; line-height: 1.55;
+  color: var(--ink-2, #555); background: var(--sunken, rgba(0,0,0,.05));
+  border: 1px dashed var(--line-2, rgba(0,0,0,.18));
+}
+.sp-preview b { color: var(--ink, #111); font-weight: 700; }
+.sp-empty {
+  margin: 0; padding: 22px; border-radius: 12px; border: 1px dashed var(--line-2, rgba(0,0,0,.18));
+  font-size: 13px; color: var(--ink-3, #777); text-align: center;
+}
+/* The track: time across, cards down. One view, not one per team — a card in review is
+   the sprint's problem whoever's review it is. */
+.sp-len { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-3, #777); }
+/* Same shell as the Sort control on the row above, so the two read as one family. */
+.sp-len select, .wb-sort select {
+  font: inherit; font-size: 12px; font-weight: 650; padding: 5px 9px; border-radius: 9px;
+  border: 1px solid var(--border-2); background: var(--card); color: var(--ink, #111); cursor: pointer;
+}
+.sp-len select:hover, .wb-sort select:hover { background: var(--card-2); }
+.sp-time {
+  border: 1px solid var(--line, rgba(0,0,0,.1)); border-radius: 14px; padding: 11px 13px 13px;
+  background: var(--card, #fff); display: flex; flex-direction: column; gap: 3px; overflow: hidden;
+}
+/* The name column is fixed so every bar is measured against the same origin; a track that
+   shifted with the longest title would make two rows incomparable. */
+.sp-ruler, .sp-row { display: grid; grid-template-columns: 290px minmax(0, 1fr) 84px; align-items: center; gap: 12px; }
+@media (max-width: 767px) { .sp-ruler, .sp-row { grid-template-columns: 150px minmax(0, 1fr) 0; } .sp-rowteam { display: none; } }
+.sp-ruler { padding-bottom: 7px; border-bottom: 1px solid var(--line, rgba(0,0,0,.1)); margin-bottom: 4px; }
+.sp-rulercols { display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); }
+.sp-rc {
+  display: flex; flex-direction: column; align-items: center; gap: 0; min-width: 0;
+  padding: 2px 0 4px; border-radius: 7px;
+}
+.sp-rc b {
+  font-size: 11px; font-weight: 750; letter-spacing: .03em; text-transform: uppercase;
+  color: var(--ink-2, #555);
+}
+.sp-rc em {
+  font-style: normal; font-size: 12px; font-weight: 700; letter-spacing: -.01em;
+  color: var(--ink, #111); font-variant-numeric: tabular-nums;
+}
+.sp-rc.off b, .sp-rc.off em { color: var(--ink-3, #999); font-weight: 600; }
+/* Today is the one column anyone looks for first. */
+.sp-rc.today { background: var(--sunken, rgba(0,0,0,.06)); }
+.sp-rc.today b { color: var(--status-late, #C0392B); }
+.sp-rc.today em { color: var(--ink, #111); }
+.sp-ruler { padding-bottom: 9px; }
+.sp-row { min-height: 40px; }
+.sp-row:hover .sp-track { background-color: var(--sunken, rgba(0,0,0,.04)); }
+.sp-rowtitle { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.sp-rowname {
+  font: inherit; font-size: 13px; font-weight: 600; text-align: left; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  appearance: none; border: 0; background: none; padding: 0; color: var(--ink, #111); cursor: pointer;
+}
+.sp-rowname:hover { text-decoration: underline; text-underline-offset: 2px; }
+/* Column rules drawn on the track itself, so they line up with the ruler by construction
+   rather than by two numbers being kept equal. */
+.sp-track {
+  position: relative; height: 32px; border-radius: 6px; min-width: 0;
+  background-image: repeating-linear-gradient(to right,
+    var(--line, rgba(0,0,0,.09)) 0 1px, transparent 1px calc(100% / var(--cols)));
+}
+.sp-now { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--status-late, #F0705A); opacity: .7; }
+/* ONE HUE PER TEAM, STATUS AS FILL DENSITY.
+   The track had two colour systems fighting: bars took a status colour and segments took a
+   team colour, so a Design card in progress was a mustard block with pink boxes on it and
+   nothing on screen could be read by hue. Now colour means exactly one thing -- whose work
+   it is -- and how far along it is comes from how solid the fill is, which is a difference
+   you can see without being told and without a second palette. Tints are mixed from the
+   team token, so the whole track is one family and it follows the theme. */
+.sp-bar, .sp-seg { --tc: var(--team-neutral, #6B7266); }
+.sp-bar.t-Engineering, .sp-seg.t-Engineering { --tc: var(--team-eng, #2560C4); }
+.sp-bar.t-Design, .sp-seg.t-Design { --tc: var(--team-dsg, #B23A82); }
+.sp-bar.t-PM, .sp-seg.t-PM { --tc: var(--team-pm, #C4551A); }
+/* `<i>` is used here as a positioned box, not as emphasis, so the browser's italic has to
+   come back off: it was the only italic text anywhere in the app and the track read as a
+   different typeface from the board next to it. */
+.sp-bar, .sp-seg, .sp-bar span, .sp-seg span { font-style: normal; }
+.sp-bar {
+  position: absolute; top: 3px; bottom: 3px; border-radius: 5px; display: flex; align-items: center;
+  padding: 0 7px; gap: 5px; overflow: hidden;
+  background: color-mix(in srgb, var(--tc) 13%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tc) 30%, transparent);
+  /* A solid cap at the start, so the hue is still legible on a two-day bar that is mostly
+     tint, and so the eye has a hard left edge to measure dates against. */
+  box-shadow: inset 3px 0 0 var(--tc);
+}
+.sp-bar.b-todo { background: transparent; border-style: dashed; box-shadow: inset 3px 0 0 color-mix(in srgb, var(--tc) 45%, transparent); }
+.sp-bar.b-doing { background: color-mix(in srgb, var(--tc) 18%, transparent); }
+.sp-bar.b-review { background: color-mix(in srgb, var(--tc) 26%, transparent); }
+.sp-bar.b-done {
+  background: color-mix(in srgb, var(--brand, #4F7A00) 20%, transparent);
+  border-color: color-mix(in srgb, var(--brand, #4F7A00) 40%, transparent);
+  box-shadow: inset 3px 0 0 var(--brand, #4F7A00);
+}
+.sp-barstage {
+  min-width: 0; font-size: 11px; font-weight: 650; letter-spacing: .01em; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; color: var(--ink-2, #444);
+}
+.sp-bar.b-done .sp-barstage { color: var(--ink-3, #777); }
+/* A bar that stopped neatly at the window edge would say the work stops there. */
+.sp-bar.runs-in { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.sp-bar.runs-out { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+/* Teams down the side, sharing the one date axis above. */
+.sp-lane { display: flex; flex-direction: column; gap: 3px; }
+.sp-lane + .sp-lane { margin-top: 7px; padding-top: 7px; border-top: 1px solid var(--line, rgba(0,0,0,.09)); }
+/* The legend replaces the labels that used to run down the side: one line for the whole
+   track instead of a band of uppercase per team, carrying the same two facts — which
+   colour is whose, and how that team's sprint is going. */
+.sp-legend { display: flex; flex-wrap: wrap; gap: 7px 14px; padding: 0 2px; }
+.sp-key {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600;
+  color: var(--ink-2, #555); cursor: default;
+}
+.sp-key i { width: 10px; height: 10px; border-radius: 3px; background: var(--team-neutral, #6B7266); }
+.sp-key.t-Engineering i { background: var(--team-eng, #2560C4); }
+.sp-key.t-Design i { background: var(--team-dsg, #B23A82); }
+.sp-key.t-PM i { background: var(--team-pm, #C4551A); }
+.sp-key b {
+  font-weight: 650; color: var(--ink-3, #777); font-variant-numeric: tabular-nums;
+  background: var(--sunken, rgba(0,0,0,.06)); border-radius: 999px; padding: 0 6px;
+}
+/* Lanes keep the grouping and lose the heading. A hairline is enough to say "different
+   team" once the colour has already said which. */
+.sp-lane { display: flex; flex-direction: column; gap: 3px; }
+.sp-lane + .sp-lane { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line, rgba(0,0,0,.09)); }
+.sp-caret {
+  appearance: none; cursor: pointer; font: inherit; font-size: 10px; font-weight: 600; flex: none;
+  border: 1px solid var(--line, rgba(0,0,0,.12)); background: none; color: var(--ink-3, #777);
+  border-radius: 999px; padding: 0 6px; font-variant-numeric: tabular-nums;
+}
+.sp-caret:hover, .sp-caret.on { color: var(--ink, #111); border-color: var(--brand, #4F7A00); }
+.sp-rowx { padding: 2px 0 8px 22px; }
+/* One segment per subtask, in sequence, coloured by the team holding it. Dashed when the
+   slice is positional rather than its own dates, so a guess never looks like a commitment. */
+/* One segment per subtask. Same hue rule as the bar, one step lighter so a breakdown reads
+   as parts of a whole rather than as a row of separate things. */
+.sp-seg {
+  position: absolute; top: 4px; bottom: 4px; border-radius: 4px; overflow: hidden;
+  display: flex; align-items: center; padding: 0 5px;
+  background: color-mix(in srgb, var(--tc) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tc) 28%, transparent);
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--tc) 70%, transparent);
+}
+.sp-seg span {
+  min-width: 0; font-size: 11px; font-weight: 600; letter-spacing: -.005em; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; color: var(--ink-2, #444);
+}
+/* A positional slice is a guess, and it says so with a dotted underline rather than a
+   dashed box: four dashed outlines in a row read as four broken things. */
+.sp-seg:not(.exact) {
+  border-bottom-style: dotted;
+  border-bottom-color: color-mix(in srgb, var(--tc) 55%, transparent);
+}
+.sp-seg.done {
+  background: color-mix(in srgb, var(--brand, #4F7A00) 16%, transparent);
+  border-color: color-mix(in srgb, var(--brand, #4F7A00) 32%, transparent);
+  box-shadow: inset 2px 0 0 var(--brand, #4F7A00);
+}
+.sp-seg.done span { color: var(--ink-3, #777); text-decoration: line-through; }
+.sp-rowend { display: flex; align-items: center; justify-content: flex-end; gap: 5px; min-width: 0; }
+.sp-rowteam {
+  font-size: 10.5px; color: var(--ink-3, #777); text-align: right;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sp-drop {
+  appearance: none; cursor: pointer; font: inherit; font-size: 14px; line-height: 1; flex: none;
+  border: 1px solid transparent; background: none; color: var(--ink-3, #999);
+  width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center; opacity: .45;
+}
+.sp-row:hover .sp-drop, .sp-ucard:hover .sp-drop, .sp-drop:focus-visible { opacity: 1; }
+.sp-drop:hover { color: #b42318; border-color: rgba(180,35,24,.3); background: rgba(180,35,24,.08); }
+.sp-undated { display: flex; flex-direction: column; gap: 9px; }
+.sp-undated h3 { margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.sp-ulist { display: flex; flex-direction: column; gap: 6px; }
+.sp-ucard {
+  display: flex; align-items: center; gap: 9px; padding: 7px 10px; min-width: 0;
+  border: 1px dashed var(--line-2, rgba(0,0,0,.2)); border-radius: 9px; background: var(--card, #fff);
+}
+.sp-utitle {
+  font: inherit; font-size: 12.5px; flex: 1 1 auto; min-width: 0; text-align: left;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  appearance: none; border: 0; background: none; padding: 0; color: var(--ink, #111); cursor: pointer;
+}
+.sp-utitle:hover { text-decoration: underline; text-underline-offset: 2px; }
+.sp-fit { flex: none; white-space: nowrap; }
+.sp-queue h3 em, .sp-undated h3 em {
+  font-style: normal; font-size: 11px; font-weight: 600; color: var(--ink-3, #777);
+  background: var(--sunken, rgba(0,0,0,.06)); border-radius: 999px; padding: 1px 7px;
+  font-variant-numeric: tabular-nums;
+}
+
+.sp-queue {
+  border-top: 1px solid var(--line, rgba(0,0,0,.1)); padding-top: 16px;
+  display: flex; flex-direction: column; gap: 9px;
+}
+.sp-queue h3 { margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.sp-qlist { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 7px; }
+.sp-qcard {
+  display: flex; align-items: center; gap: 9px; padding: 8px 10px; min-width: 0;
+  border: 1px solid var(--line, rgba(0,0,0,.1)); border-radius: 9px; background: var(--card, #fff);
+}
+.sp-qtitle { font-size: 12.5px; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-qteam { font-size: 10.5px; color: var(--ink-3, #777); flex: none; }
+.sp-qmore { margin: 4px 0 0; font-size: 12px; color: var(--ink-3, #777); }
+/* The shared card expansion: the brief and the checklist, opened in place. One block of
+   rules because it is one component, on the board and on the sprint track. */
+.cx {
+  display: flex; flex-direction: column; gap: 6px; margin-top: 7px; padding-top: 7px;
+  border-top: 1px solid var(--line, rgba(0,0,0,.1));
+}
+.cx-desc { margin: 0; font-size: 11.5px; line-height: 1.55; color: var(--ink-2, #555); white-space: pre-wrap; }
+.cx-nodesc {
+  appearance: none; border: 0; background: none; cursor: pointer; padding: 0; text-align: left;
+  font: inherit; font-size: 11px; color: var(--ink-3, #999);
+}
+.cx-nodesc:hover { color: var(--ink-2, #555); text-decoration: underline; text-underline-offset: 2px; }
+.cx-subs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.cx-subs li { display: flex; align-items: center; gap: 7px; font-size: 11.5px; line-height: 1.35; }
+.cx-st { flex: 1 1 auto; min-width: 0; }
+.cx-st.done { color: var(--ink-3, #777); text-decoration: line-through; }
+.cx-who { flex: none; }
+.cx-del {
+  appearance: none; border: 0; background: none; cursor: pointer; color: var(--ink-3, #999);
+  display: grid; place-items: center; padding: 3px; border-radius: 6px; flex: none; opacity: .5;
+}
+.cx-subs li:hover .cx-del, .cx-del:focus-visible { opacity: 1; }
+.cx-del:hover { color: #b42318; background: rgba(180,35,24,.08); }
+.cx-add { display: flex; gap: 5px; }
+.cx-add input {
+  font: inherit; font-size: 11.5px; flex: 1 1 auto; min-width: 0; padding: 4px 7px;
+  border-radius: 7px; border: 1px solid var(--line, rgba(0,0,0,.14));
+  background: var(--card, #fff); color: var(--ink, #111);
+}
+.cx-add input:focus { border-color: var(--brand, #4F7A00); outline: none; }
+.cx-add button {
+  appearance: none; cursor: pointer; font: inherit; font-size: 11px; font-weight: 600; flex: none;
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 7px;
+  border: 1px solid var(--line, rgba(0,0,0,.14)); background: var(--card, #fff); color: var(--ink-2, #444);
+}
+.cx-add button:hover { color: var(--ink, #111); border-color: var(--brand, #4F7A00); }
+.wb-count.on { color: var(--ink, #111); border-color: var(--brand, #4F7A00); }
+.wb-sort { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-3, #777); }
+.wb-subassign { display: inline-flex; align-items: center; gap: 3px; flex: none; }
+.wb-subassign .assign-add { opacity: .45; }
+.wb-detsubs li:hover .wb-subassign .assign-add { opacity: 1; }
+
+/* Three top-level tabs, with the team boards nested under the first. The sub row is quieter
+   than the top one so the hierarchy reads without a label saying so. */
+.wb-tabs-sub { margin-top: 6px; }
+.wb-tabs-sub .wb-tab { font-size: 12px; padding: 5px 11px; }
+.wb-tabs-sub .wb-tab.on { background: var(--card, #fff); color: var(--ink, #111); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+.wb-head { row-gap: 4px; }

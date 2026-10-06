@@ -20,7 +20,11 @@ export interface BrandToken {
   /** The StackBack field this fills, exactly as widget-templates.ts spells it. */
   key:
     | "Brand_Primary" | "Brand_Secondary" | "Brand_Accent"
-    | "Product_Tile" | "Widget_Background" | "Product_Tile_Background";
+    | "Product_Tile" | "Widget_Background" | "Product_Tile_Background"
+    /* The skill's Secondary Text: sub-labels, variant text, delivery counts, body copy in
+       description sections. It was never read — the panel mixed Primary Text toward the
+       background and called the result secondary, which is a colour off nobody's page. */
+    | "Text_Secondary";
   hex: string;
   /** What it was read from, in the merchant's words, for the "sampled from" chip. */
   source: string;
@@ -421,7 +425,24 @@ export function mapTokens(css: string, url: string, html?: string): BrandResult 
       ? canvasOwn
       : (anySurface.find((t) => t.hex.toUpperCase() !== bg.toUpperCase() && !isFrameworkDefault(t.hex))?.hex
         || mixToward(primary, "#FFFFFF", 0.9));
-    const text = heading || bodyText || top.find((x) => luminance(x.hex) < 0.2)?.hex || "#121212";
+    /* Step 5: product name headings, section headings and price text. When none of those can
+       be read the skill's own fallback is the button colour ("usually matches Primary Brand
+       Color"), NOT the body copy: body copy is Secondary Text, and using it here made the two
+       tokens the same value off the same element. */
+    const text = heading || (ctaBg && !isFrameworkDefault(ctaBg) ? ctaBg : null)
+      || bodyText || top.find((x) => luminance(x.hex) < 0.2)?.hex || "#121212";
+    /* Step 6: read, not mixed. Only when it is genuinely a different colour from the heading;
+       a theme that sets one ink for everything has one ink, and saying so is the honest read. */
+    /* The skill's own invariant decides whether a read is usable: Secondary Text "should sit
+       between Primary Text and Muted Text in lightness". A sample DARKER than the primary is
+       not mid-hierarchy text, it is the `body` reset winning by inheritance — which is
+       exactly how satturmittaikadai.com offered #000000 for its labels while its heading is
+       #371F22. Rejected, and the panel derives instead and says so. */
+    const secondary = el?.bodyCopy?.hex ?? null;
+    const textSecondary = secondary
+      && secondary.toUpperCase() !== text.toUpperCase()
+      && luminance(secondary) > luminance(text)
+      ? secondary : null;
     /* The theme's own named sale colour first: a setting beats a sample, and a sample of the
        most saturated hex in a Bootstrap-carrying stylesheet is Bootstrap's #007BFF. */
     const accVar = themeAccent(css);
@@ -481,6 +502,8 @@ export function mapTokens(css: string, url: string, html?: string): BrandResult 
             : accVar && acc === accVar.hex ? "theme"
             : acc === el?.accent?.hex ? el.accent.confidence
             : conf(accent, acc)),
+        ...(textSecondary && el?.bodyCopy
+          ? [t("Text_Secondary", textSecondary, el.bodyCopy.source, el.bodyCopy.confidence)] : []),
         t("Product_Tile", text,
           text === el?.heading?.hex ? el.heading.source
             : heading ? "your heading colour"
@@ -563,7 +586,10 @@ export function mapTokens(css: string, url: string, html?: string): BrandResult 
       tk("Brand_Primary", primary, "your Add to cart button", "theme"),
       tk("Brand_Secondary", secondary, tinted[0] ? "your tinted section background" : "lightened from your button colour", tinted[0] ? "theme" : "derived"),
       tk("Brand_Accent", accent, saturated[0] ? "your second brand colour" : "same as your button colour", saturated[0] ? "theme" : "derived"),
-      tk("Product_Tile", text, "your body text colour", "theme"),
+      /* Dawn publishes ONE ink per scheme (`--color-foreground`), so there is no second text
+         colour to read here and none is emitted: the panel derives Secondary Text and says
+         so, rather than inventing a token and tagging it DIRECT. */
+      tk("Product_Tile", text, "your theme's text colour", "theme"),
       /* Transparent, for the same reason as on a non-Dawn theme: the page already has a
          colour and the widget sits on it. "Your page background" was the honest reading and
          the wrong default, because painting it on produces a patch of exactly that colour a
@@ -918,6 +944,17 @@ export function elementTokens(html: string, css: string) {
   const cardEl = findByClass(html, /div|li|article/, /\bproduct-card\b|\bcard__inner\b|\bproduct-item\b|\bproduct-grid-item\b/, "your product card");
   const ctaEl = findCta(html);
   const bodyEl = findTag(html, "body", "your body text");
+  /* Step 6 of the skill: the mid-hierarchy text. A description block first, because `body`
+     carries the theme's reset and a sub-label is what the token is actually for. */
+  const bodyCopy = on(findByClass(html, /div|p|span/, /\bproduct__description\b|\bproduct-description\b|\brte\b|\bproduct__text\b|\bproduct__info\b/, "your description text"), "color")
+    /* Sub-labels and variant text are the same tier and are what most themes actually
+       publish: "Size", "Quantity", a caption under a price. */
+    ?? on(findByClass(html, /label|span|div|p/, /\bform__label\b|\bproduct-form__label\b|\bcaption\b|\bsubtitle\b/, "your field labels"), "color");
+  /* Deliberately NO fallback to `body`. `body { color: ... }` is a reset far more often than
+     it is the theme's ink — it is how a Bootstrap-carrying theme reported #212529 as a
+     merchant's body text — and satturmittaikadai.com returns #000000 from it while its
+     description copy is #371F22. No description element means no read, and the panel derives
+     Secondary Text and says it derived it. */
   const inputEl = findByClass(html, /input|div|select/, /\bquantity\b|\bqty\b|\bfield__input\b|\bform__input\b/, "your quantity field");
 
   const raw = (el: CtaElement | null, which: string) => (el ? rawOn(el, rs, vars, which) : null);
@@ -945,7 +982,7 @@ export function elementTokens(html: string, css: string) {
   const fontRaw = raw(bodyEl, "font-family") || vars["--font-body-family"] || null;
 
   return {
-    canvas, card, accent, heading,
+    canvas, card, accent, heading, bodyCopy,
     cardRadiusPx: firstPx(raw(cardEl, "border-radius")),
     buttonRadiusPx: firstPx(raw(ctaEl, "border-radius")),
     shadow,

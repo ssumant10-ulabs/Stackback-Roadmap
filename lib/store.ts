@@ -5,7 +5,7 @@ import { SEED_VERSION, seed, stampIds } from "./seed";
 import { uid, newRoadmapId } from "./id";
 import { makeHelpers, pruneTasks, type Helpers } from "./teams";
 import { cardPriority, effStatus, normPriority, subtreeCounts, waveWord } from "./derive";
-import { STAGE_LABEL, STAGE_STATUS, defaultNodeStage, defaultStage, placeCard, stageForStatus, stageOf, teamToBoard, type BoardTeam, type BoardView, type CardKind, type ReviewWith, type Stage } from "./board";
+import { MOVE_TO, STAGE_LABEL, STAGE_STATUS, defaultNodeStage, defaultStage, placeCard, stageForStatus, stageOf, teamToBoard, type BoardTeam, type BoardView, type CardKind, type ReviewWith, type Stage } from "./board";
 import { reconcile } from "./dates";
 import { featureSeed } from "./featureSeed";
 import { pilotSeed } from "./pilotSeed";
@@ -14,6 +14,10 @@ import { autoLink, boardStatusOf, isDrifted, matchTask } from "./featureLink";
 import { SHOT_MAX_PER_REQUEST, SHOT_TOTAL_BUDGET, fmtBytes } from "./shots";
 import { parseLoose } from "./pilotDates";
 import { CLIENT_ID, firebaseEnabled, loadRemote, saveRemote, subscribeRemote, type RemoteState } from "./remote";
+import {
+  isFinished, shiftSprintId, sprintId, sprintMembers, syncSprint, weekStart, weeksOf,
+  type Sprint, type SprintWeeks,
+} from "./sprint";
 
 const ROADMAPS_KEY = "stackback_roadmaps_v3";
 /** Set while a Firestore write is owed, cleared once it lands. Its presence on load means the
@@ -60,6 +64,9 @@ interface Data {
    *  store list, alongside the roadmap itself. */
   features: Feature[];
   pilots: PilotStore[];
+  /** One record per week, see lib/sprint.ts. Shared, because a sprint one browser can see
+   *  and the rest cannot is not a commitment. */
+  sprints?: Sprint[];
   seeded?: { features?: boolean; pilots?: boolean; dates?: boolean; featureRefs?: boolean };
   /** Categories added by the team on top of the ones the sheet arrived with. */
   pilotCategories?: string[];
@@ -121,7 +128,7 @@ const REF_PREFIX: Record<FeatureBand, string> = { upcoming: "INT", merchant: "MR
 function defaultData(): Data {
   return {
     roadmaps: [sheetRoadmap()], activeId: SHEET_ROADMAP_ID, roster: clone(DEFAULT_ROSTER),
-    activity: [], features: [], pilots: [], seeded: {}, pilotCategories: [],
+    activity: [], features: [], pilots: [], sprints: [], seeded: {}, pilotCategories: [],
     adminUrl: DEFAULT_ADMIN_URL, uiuxUrl: DEFAULT_UIUX_URL,
   };
 }
@@ -152,6 +159,11 @@ export class Store {
   private listeners = new Set<() => void>();
   private version = 0;
   hydrated = false;
+  /** True once hydrate() has finished, as opposed to `hydrated`, which is set the moment it
+   *  STARTS so two callers cannot both run it. Anything that writes a snapshot of the board
+   *  has to wait for this one: during the load the board still holds the seeded default, and
+   *  a sprint opened against that would freeze a commitment nobody made. */
+  ready = false;
   /** How this browser met the shared backend, for the banner that reports the switchover.
    *  "promoted" means it carried the local board up; "seeded" means it found nothing to
    *  carry and the defaults were written; "adopted" means the shared copy already existed. */
@@ -228,6 +240,7 @@ export class Store {
           this.data.uiuxUrl = r.uiuxUrl || DEFAULT_UIUX_URL;
           this.data.features = Array.isArray(r.features) ? r.features : [];
           this.data.pilots = Array.isArray(r.pilots) ? r.pilots : [];
+          this.data.sprints = Array.isArray(r.sprints) ? r.sprints : [];
           this.data.seeded = r.seeded || {};
           this.data.pilotCategories = r.pilotCategories || [];
           this.data.colOptions = r.colOptions || {};
@@ -293,6 +306,7 @@ export class Store {
     this.seedModulesOnce();
     this.rebuildHelpers();
     this.applyTheme();
+    this.ready = true;
     this.notify();
   }
   /** Apply a copy of the shared state to memory. One routine, because hydrate, the live
@@ -308,6 +322,7 @@ export class Store {
     this.data.uiuxUrl = r.uiuxUrl || DEFAULT_UIUX_URL;
     this.data.features = Array.isArray(r.features) ? r.features : [];
     this.data.pilots = Array.isArray(r.pilots) ? r.pilots : [];
+    this.data.sprints = Array.isArray(r.sprints) ? r.sprints : [];
     this.data.seeded = r.seeded || {};
     this.data.pilotCategories = r.pilotCategories || [];
     this.data.colOptions = r.colOptions || {};
@@ -339,6 +354,7 @@ export class Store {
           this.data.uiuxUrl = p.uiuxUrl || DEFAULT_UIUX_URL;
           this.data.features = Array.isArray(p.features) ? p.features : [];
           this.data.pilots = Array.isArray(p.pilots) ? p.pilots : [];
+          this.data.sprints = Array.isArray(p.sprints) ? p.sprints : [];
           this.data.seeded = p.seeded || {};
           this.data.pilotCategories = p.pilotCategories || [];
           this.data.colOptions = p.colOptions || {};
@@ -720,13 +736,32 @@ export class Store {
   /** A new card on the board. A roadmap task, because that is what the board's cards are
    *  and what everything else in the app already understands: Features links to it, the
    *  activity log names it, the metrics count it. */
+  /** A rank that sorts above everything currently on the board.
+   *
+   *  An unranked card sorts LAST (see `rank` in WorkBoard), so a new one landed at the
+   *  bottom of a column of seventy — which is where you do not look. One below the current
+   *  minimum rather than a fixed -1, so the second card added still comes out above the
+   *  first. */
+  private topOfBoard(): number {
+    let lo = 0;
+    const seen = (v: number | null | undefined) => { if (typeof v === "number" && v < lo) lo = v; };
+    const walk = (n: Node) => { seen(n.boardOrder); (n.children || []).forEach(walk); };
+    this.data.roadmaps.forEach((r) => (r.tasks || []).forEach(walk));
+    this.features.forEach((f) => seen(f.boardOrder));
+    return lo - 1;
+  }
+
   addBoardCard(title: string, kind: CardKind): string | null {
     title = (title || "").trim();
     if (!title) return null;
     const r = this.activeRoadmap();
+    /* Next, not Now. A new card is something somebody has just thought of, not something
+       the team has committed to this sprint, and defaulting it to Now put every passing
+       idea straight into the week's scope. Next with no team is the backlog, which is
+       where an unsorted card belongs until PM hands it on. */
     const node: Node = stampIds({
       id: "", title, status: "planned" as Status, assignees: [], children: [],
-      priority: 1, kind,
+      priority: 2, kind, boardOrder: this.topOfBoard(), createdAt: new Date().toISOString(),
     });
     r.tasks.push(node);
     this.log("add", title, `new ${kind} on the board`, node.id);
@@ -825,6 +860,130 @@ export class Store {
     this.commit();
   }
 
+  /** The QA labels on a card: which surface it lives in, and what kind of failure it is.
+   *
+   *  One writer for both because they are one decision — what this card is CALLED — and
+   *  because neither touches where it sits. Placement is the stage and the team; see
+   *  `lib/qa-labels.ts` for why the two are kept apart. */
+  setQaLabel(id: string, field: "surface" | "subModule" | "errorType", value: string | null) {
+    const n = this.findEntry(id)?.node as (Node & Record<string, unknown>) | undefined;
+    if (!n) return;
+    n[field] = value || null;
+    /* A sub-module only means anything inside its own surface. Leaving it behind when the
+       surface changes is how a card ends up labelled Order Module / Edit Drawer. */
+    if (field === "surface") n.subModule = null;
+    if ("updatedAt" in n) (n as { updatedAt?: string }).updatedAt = new Date().toISOString();
+    this.commit();
+  }
+
+  /** The brief under the title. Written on the card itself rather than in a comment, because
+   *  a description buried eight replies down is a description nobody finds. */
+  setDesc(id: string, text: string) {
+    const n = this.findEntry(id)?.node as (Node & Record<string, unknown>) | undefined;
+    if (!n) return;
+    const v = (text || "").trim();
+    if ((n.desc || "") === v) return;
+    n.desc = v || null;
+    if ("updatedAt" in n) (n as { updatedAt?: string }).updatedAt = new Date().toISOString();
+    this.commit();
+  }
+
+  /* ---- sprints. A week with a record attached; see lib/sprint.ts. ---------------------- */
+
+  get sprints(): Sprint[] { return (this.data.sprints = this.data.sprints || []); }
+  sprintFor(id: string): Sprint | undefined { return this.sprints.find((x) => x.id === id); }
+
+  /** Open this week's sprint if it is not open, and record anything newly put on Now.
+   *
+   *  Driven by the board rather than by a button: a sprint you have to remember to start is
+   *  a sprint that starts on Wednesday. Writing the commitment at the moment of opening, and
+   *  each addition at the moment it arrives, is the whole mechanism — the week cannot then
+   *  quietly agree with whatever it ended up being.
+   *
+   *  Safe to call on every render. The rule is in lib/sprint.ts and returns null when
+   *  nothing changed, so only a real change writes. */
+  syncSprint(id: string) {
+    const was = this.sprintFor(id);
+    /* `teams`, not `boardTeam`: that is the same notion of "a team has this" the team
+       boards filter on, so the sprint and the boards cannot disagree about who holds what. */
+    const next = syncSprint(was, id, this.boardCards().map((c) => {
+      const h = cardPriority(c.node ?? c.feature);
+      return {
+        id: c.id, stage: c.stage, status: effStatus(c.node ?? (c.feature as unknown as Node)),
+        owned: c.teams.length > 0, now: h === 1, parked: h === 3,
+      };
+    }));
+    /* Nothing changed is the common case on a render, so it must not write. */
+    if (!next) return;
+    if (was) Object.assign(was, next);
+    else {
+      this.sprints.push(next);
+      const n = next.committed.length;
+      this.log("stage", `Sprint ${id}`, `opened with ${n} card${n === 1 ? "" : "s"}`);
+    }
+    this.commit();
+  }
+
+  /** Close a sprint and carry its unfinished work into the next one.
+   *
+   *  Rollover is the point. Without it Now only ever grows, because nothing makes anyone
+   *  look at a card that has been sitting there for three weeks. Carrying is deliberate and
+   *  counted, so the fourth week it comes up it is visibly the fourth. */
+  closeSprint(id: string) {
+    const sp = this.sprintFor(id);
+    if (!sp || sp.closedAt) return;
+    const live = new Map(this.boardCards().map((c) =>
+      [c.id, { stage: c.stage, status: effStatus(c.node ?? (c.feature as unknown as Node)) }]));
+    const members = this.sprintMembers(sp);
+    const carry = members.filter((cid) => { const c = live.get(cid); return c ? !isFinished(c) : false; });
+    sp.done = members.length - carry.length;
+    sp.rolled = carry.length;
+    sp.closedAt = new Date().toISOString();
+
+    /* Three weeks on after a three-week sprint. Stepping a single week would overlap the
+       sprint that just closed, and the cards it carried would land back inside it. */
+    const next = shiftSprintId(id, weeksOf(sp), 1);
+    const existing = this.sprintFor(next);
+    if (existing) existing.committed = Array.from(new Set([...existing.committed, ...carry]));
+    /* The next sprint inherits the length, so a team that has settled on a fortnight does
+       not drop back to one week every time a sprint closes. */
+    else this.sprints.push({ id: next, committed: carry, weeks: weeksOf(sp) });
+
+    this.log("stage", `Sprint ${id}`, `closed: ${sp.done} done, ${carry.length} carried into ${next}`);
+    this.commit();
+  }
+
+  /** Which cards this sprint is about. The rule is in lib/sprint.ts, where it can be
+   *  asserted without a browser; this only supplies the live board to it. */
+  /** How long the open sprint runs. Only while it is open: redrawing a closed sprint's
+   *  window would change what it is on record as having committed to. */
+  setSprintWeeks(id: string, weeks: SprintWeeks) {
+    const sp = this.sprintFor(id);
+    if (!sp || sp.closedAt || weeksOf(sp) === weeks) return;
+    sp.weeks = weeks;
+    this.log("stage", `Sprint ${id}`, `set to ${weeks} week${weeks === 1 ? "" : "s"}`);
+    this.commit();
+  }
+
+  sprintMembers(sp: Sprint): string[] {
+    return sprintMembers(sp, this.boardCards());
+  }
+
+  /** Take a card out of a sprint by hand.
+   *
+   *  Recorded rather than just filtered, because scope is recomputed from the board on
+   *  every render: a card simply removed from the lists walks straight back in on the next
+   *  tick. It stays out of this sprint only — the next one starts clean. */
+  dropFromSprint(id: string, cardId: string) {
+    const sp = this.sprintFor(id);
+    if (!sp || sp.closedAt) return;
+    sp.dropped = Array.from(new Set([...(sp.dropped ?? []), cardId]));
+    const title = this.findEntry(cardId)?.node.title
+      ?? this.features.find((x) => x.id === cardId)?.title ?? "Card";
+    this.log("stage", title, `taken out of sprint ${id}`, cardId);
+    this.commit();
+  }
+
   /** Bugs carry which layer the fault is in; features do not. */
   setRequestIssueType(id: string, value: string) {
     const f = this.features.find((x) => x.id === id);
@@ -844,6 +1003,7 @@ export class Store {
       uiuxUrl: this.data.uiuxUrl,
       features: this.data.features,
       pilots: this.data.pilots,
+      sprints: this.data.sprints,
       seeded: this.data.seeded,
       pilotCategories: this.data.pilotCategories,
       colOptions: this.data.colOptions,
@@ -904,7 +1064,7 @@ export class Store {
         activeId: this.data.activeId, roadmaps: this.data.roadmaps, activity: this.data.activity,
         adminUrl: this.data.adminUrl, uiuxUrl: this.data.uiuxUrl,
         features: this.data.features, pilots: this.data.pilots, seeded: this.data.seeded,
-        pilotCategories: this.data.pilotCategories,
+        sprints: this.data.sprints, pilotCategories: this.data.pilotCategories,
         colOptions: this.data.colOptions, colOrder: this.data.colOrder,
         colRemoved: this.data.colRemoved, colColors: this.data.colColors,
         customCols: this.data.customCols,
@@ -1214,7 +1374,22 @@ export class Store {
   }
 
   /** Leaf status cycling: planned to in progress to done. */
+  /** Freeze where a card sits before its status changes.
+   *
+   *  A card with no stage of its own derives one from its status, so ticking the checkbox
+   *  teleported it: marking something done moved it out of its column into Approved, and
+   *  unticking brought it back — which reads as the board hiding and revealing cards at
+   *  random. The checkbox marks progress. Where a card SITS is the drag, the move menu and
+   *  the horizon, and this writes the current answer down so the status cannot change it. */
+  private pinStage(id: string) {
+    const n = this.findEntry(id)?.node;
+    if (!n || n.stage) return;
+    const at = this.boardCards().find((c) => c.id === id)?.stage;
+    if (at) n.stage = at;
+  }
+
   cycleStatus(id: string) {
+    this.pinStage(id);
     const e = this.findEntry(id);
     if (!e) return;
     const i = STATUS_CYCLE.indexOf(e.node.status);
@@ -1232,6 +1407,7 @@ export class Store {
     (n.children || []).forEach((c) => this.setDeep(c, status));
   }
   toggleDone(id: string) {
+    this.pinStage(id);
     const e = this.findEntry(id);
     if (!e) return;
     const wasDone = effStatus(e.node) === "done";
@@ -1685,16 +1861,47 @@ export class Store {
     this.commit();
     return true;
   }
-  addTask(title: string, priority: number | null, eta: string | null, subs: string[], assignees: Assignee[]) {
+  /** `labels` carries everything the card drawer can hold, so a card created from the Add
+   *  form arrives complete instead of needing to be opened and filled in afterwards. All
+   *  optional: the form supplies what was set and omits the rest. */
+  addTask(
+    title: string, priority: number | null, eta: string | null, subs: string[], assignees: Assignee[],
+    labels?: { desc?: string | null; kind?: CardKind; surface?: string | null; subModule?: string | null; errorType?: string | null },
+  ) {
     const task: Node = stampIds({
       id: "", title, status: "planned", assignees: assignees.slice(),
       children: subs.map((s) => stampIds({ id: "", title: s, status: "planned", assignees: [], children: [] })),
       priority,
     });
     if (eta) { task.end = eta; task.eta = eta; }
+    task.boardOrder = this.topOfBoard();
+    task.createdAt = new Date().toISOString();
+    if (labels) {
+      if (labels.desc) task.desc = labels.desc;
+      if (labels.kind) task.kind = labels.kind;
+      if (labels.surface) task.surface = labels.surface;
+      /* Only with a surface to belong to: a sub-module on its own names nothing. */
+      if (labels.surface && labels.subModule) task.subModule = labels.subModule;
+      if (labels.errorType) task.errorType = labels.errorType;
+    }
     this.tasks.push(task);
     this.log("add", title, waveWord(priority), task.id);
+
+    /* A card added with a team on it is handed to that team, not left in PM's intake.
+       Otherwise "assign it to Design" produced a card sitting in Features and bugs, which
+       is the one board Design does not look at — the assignment said one thing and the
+       board showed another. Routed through the same rule the move menu uses, so there is
+       one answer to "where does a card go when a team takes it". PM is the exception: PM
+       triages from intake, which is where it already is. */
+    const team = [...assignees].map((a) => (a.isTeam
+      ? (a.name === "Dev" ? "Engineering" : a.name)
+      : this.helpers.assigneeTeam(a))).find((t) => t && t !== "PM") as BoardTeam | undefined;
+    if (team) {
+      const route = MOVE_TO.find((m) => m.value === team);
+      if (route) this.setStage(task.id, route.stage, { team, review: null });
+    }
     this.commit();
+    return task.id;
   }
 
   /* ---- ui ---- */

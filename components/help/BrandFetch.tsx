@@ -38,6 +38,10 @@ function toTheme(tokens: Token[], corners: string, customPx: number | null, base
   const primary = get("Brand_Primary") || any || base.colors.primary;
   const accent = get("Brand_Accent") || primary;
   const text = get("Product_Tile") || base.text.primary;
+  /* Read where the site publishes a second ink, derived where it does not. It used to be a
+     mix of the primary toward the background on every store, which is a colour off nobody's
+     page presented beside colours that are. */
+  const textSecondary = get("Text_Secondary");
   const bg = get("Widget_Background") || base.surfaces.widgetBackground;
   const tint = get("Brand_Secondary") || bg;
   const tile = get("Product_Tile_Background") || bg;
@@ -67,7 +71,13 @@ function toTheme(tokens: Token[], corners: string, customPx: number | null, base
     surfaces: { widgetBackground: bg, mutedSurface: tint, inputBackground: tile },
     // A border the theme does not publish is derived from the tint rather than left slate.
     borders: { default: mix(tint, text, 0.12), strong: primary },
-    text: { primary: text, secondary: mix(text, bg, 0.45), muted: mix(text, bg, 0.62) },
+    text: {
+      primary: text,
+      secondary: textSecondary || mix(text, bg, 0.45),
+      /* Muted stays a derivation, from whichever secondary we ended up with: the skill's own
+         rule is that it sits lighter than Secondary and darker than the muted surface. */
+      muted: mix(textSecondary || text, bg, textSecondary ? 0.4 : 0.62),
+    },
     shape: { radius, buttonRadius: radiusBtn },
   };
 }

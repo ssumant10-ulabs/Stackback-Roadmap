@@ -22,6 +22,19 @@ const EXPECT: Record<string, Partial<Record<string, string>>> = {
   "thestack.club": { Brand_Primary: "#272727", Widget_Background: "transparent" },
 };
 
+/** Relative luminance, the same measure the skill's contrast rule uses. */
+function lum(hex: string): number {
+  const h = hex.replace("#", "");
+  const f = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  const n = parseInt(f, 16);
+  if (!Number.isFinite(n) || f.length !== 6) return 0;
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
+    const x = v / 255;
+    return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
 async function main() {
   let bad = 0;
   for (const store of Object.keys(EXPECT)) {
@@ -38,6 +51,23 @@ async function main() {
       console.log(`   ${mark} ${t.key.padEnd(24)} ${t.hex}  ${t.confidence.padEnd(8)} ${t.source}${want && mark === "WRONG" ? `   (verified: ${want})` : ""}`);
     }
     for (const n of d.notes || []) console.log(`   note: ${n}`);
+
+    /* The text tokens carry an invariant of their own, straight from the skill: Secondary
+       Text "should sit between Primary Text and Muted Text in lightness". Asserted rather
+       than trusted, because the way this one goes wrong is a `body` reset winning by
+       inheritance and reading DARKER than the heading, which looks like a good sample:
+       satturmittaikadai.com offered #000000 for its field labels beside a #371F22 heading. */
+    const hex = (k: string) => (d.tokens as { key: string; hex: string }[]).find((t) => t.key === k)?.hex;
+    const primaryText = hex("Product_Tile");
+    const secondaryText = hex("Text_Secondary");
+    if (!secondaryText) {
+      console.log("   text:  no second ink published, so Secondary Text is derived and says so");
+    } else if (primaryText && lum(secondaryText) <= lum(primaryText)) {
+      bad++;
+      console.log(`   WRONG Secondary Text ${secondaryText} is not lighter than Primary ${primaryText}`);
+    } else {
+      console.log(`   text:  ${primaryText} then ${secondaryText}, lighter as the hierarchy requires`);
+    }
   }
   console.log(bad ? `\nFAIL: ${bad} token(s) differ from what the browser shows` : "\nPASS");
   process.exit(bad ? 1 : 0);

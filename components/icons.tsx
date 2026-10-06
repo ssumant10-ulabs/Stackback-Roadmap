@@ -1,11 +1,22 @@
 import React from "react";
 
+/** Every icon carries a default size.
+ *
+ *  An inline `<svg>` with a viewBox and no width has no intrinsic size, so it renders at
+ *  0x0 unless some CSS rule happens to size it. Thirteen rules in globals.css did exactly
+ *  that, one per class, which meant any new button holding an icon was invisible until
+ *  somebody remembered to add a fourteenth — and the Remove-subtask button was the one
+ *  nobody did, so it shipped as an 8px blank gap next to every subtask.
+ *
+ *  These are ATTRIBUTES, so every existing `.btn svg { width: 15px }` still wins: a CSS
+ *  rule of any specificity beats a presentation attribute. This only sets a floor. */
 const S = (
   props: React.SVGProps<SVGSVGElement>,
   d: React.ReactNode,
   stroke = true,
 ) => (
-  <svg viewBox="0 0 24 24" fill={stroke ? "none" : "currentColor"} stroke={stroke ? "currentColor" : undefined}
+  <svg viewBox="0 0 24 24" width={14} height={14}
+    fill={stroke ? "none" : "currentColor"} stroke={stroke ? "currentColor" : undefined}
     strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
     {d}
   </svg>

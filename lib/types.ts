@@ -17,6 +17,14 @@ export interface Comment {
 export interface Node {
   id: string;
   title: string;
+  /** When the card was made, ISO. Absent on everything that predates this field, which
+   *  sorts as oldest rather than as unknown — a card with no birthday is one of the
+   *  original ones. */
+  createdAt?: string | null;
+  /** What the card is actually about, under the title. A title is a handle you scan a
+   *  column by; it cannot also be the brief. Plain text, because a card nobody can read in
+   *  a WhatsApp paste is a card nobody reads. */
+  desc?: string | null;
   status: Status;
   assignees: Assignee[];
   children: Node[];
@@ -44,6 +52,11 @@ export interface Node {
   /** Rank within its board column. The position IS the priority, so it has to be stored:
    *  array order is shared with the roadmap tree and cannot be reordered per column. */
   boardOrder?: number | null;
+
+  /** The QA labels. See the Feature fields of the same names, and `lib/qa-labels.ts`. */
+  surface?: string | null;
+  subModule?: string | null;
+  errorType?: string | null;
   /** Roadmap sheet: Deadline column. */
   deadline?: string | null;
   /** Scheduled window, ISO `yyyy-mm-dd`. Settable on a milestone or any subtask.
@@ -100,10 +113,18 @@ export interface Shot {
 
 export interface Feature {
   id: string;
+  /** When the card was made, ISO. Absent on everything that predates this field, which
+   *  sorts as oldest rather than as unknown — a card with no birthday is one of the
+   *  original ones. */
+  createdAt?: string | null;
   /** Sheet id, INT-01 / MR-04 / PT-02. Blank for the unnumbered rows and for new ones. */
   ref: string;
   band: FeatureBand;
   title: string;
+  /** What the card is actually about, under the title. A title is a handle you scan a
+   *  column by; it cannot also be the brief. Plain text, because a card nobody can read in
+   *  a WhatsApp paste is a card nobody reads. */
+  desc?: string | null;
   priority?: string | null;
   sheetStatus?: string | null;
   requestedBy?: string | null;
@@ -137,6 +158,18 @@ export interface Feature {
   reviewWith?: import("./board").ReviewWith | null;
   /** Rank within its board column. See the Node field of the same name. */
   boardOrder?: number | null;
+
+  /* ---- the QA labels ----
+     What a card is CALLED, never where it sits: placement is the stage and the team.
+     Folding them into `kind` would move cards, because the backlog's four piles sort on
+     it. See `lib/qa-labels.ts`. */
+  /** Which module or surface the issue lives in. */
+  surface?: string | null;
+  /** Which sub-module inside that surface, where the surface has more than one. Optional:
+   *  the surface alone is a usable label, and a required second level is one nobody fills. */
+  subModule?: string | null;
+  /** What kind of failure it is. */
+  errorType?: string | null;
   /** Now, Next or Future on the board. Its own field because a request's `priority` is a
    *  sheet TEXT column — the live rows hold "PMFv1" — and writing 1, 2 or 3 into it would
    *  destroy what the team typed. A roadmap task has one horizon and it is `priority`. */
