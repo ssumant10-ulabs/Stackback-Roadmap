@@ -904,10 +904,15 @@ export class Store {
    *  nothing changed, so only a real change writes. */
   syncSprint(id: string) {
     const was = this.sprintFor(id);
-    const next = syncSprint(was, id, this.boardCards().map((c) => ({
-      id: c.id, stage: c.stage, status: effStatus(c.node ?? (c.feature as unknown as Node)),
-      now: cardPriority(c.node ?? c.feature) === 1,
-    })));
+    /* `teams`, not `boardTeam`: that is the same notion of "a team has this" the team
+       boards filter on, so the sprint and the boards cannot disagree about who holds what. */
+    const next = syncSprint(was, id, this.boardCards().map((c) => {
+      const h = cardPriority(c.node ?? c.feature);
+      return {
+        id: c.id, stage: c.stage, status: effStatus(c.node ?? (c.feature as unknown as Node)),
+        owned: c.teams.length > 0, now: h === 1, parked: h === 3,
+      };
+    }));
     /* Nothing changed is the common case on a render, so it must not write. */
     if (!next) return;
     if (was) Object.assign(was, next);

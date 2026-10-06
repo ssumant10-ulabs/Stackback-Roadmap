@@ -253,7 +253,7 @@ export function WorkBoard() {
         </span>
 
         <p className="wb-blurb">
-          {sprint ? "One week's commitment in a single view, by how far along each card is. The Now horizon is the sprint." : def.blurb}
+          {sprint ? "One week in a single view, drawn on the dates. Everything a team is holding is in it, plus anything on Now." : def.blurb}
           {!sprint && elsewhere.unowned > 0 && <> <span className="wb-else">{elsewhere.unowned} card{elsewhere.unowned === 1 ? "" : "s"} nobody has taken, in the backlog.</span></>}
           {!sprint && elsewhere.owned > 0 && <> <span className="wb-else">{elsewhere.owned} more on the other boards.</span></>}
           {filter && <> <span className="wb-else">Filtered to {filter.name}.</span></>}

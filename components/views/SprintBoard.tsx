@@ -140,8 +140,11 @@ export default function SprintBoard({ cards, onOpen }: { cards: BoardCard[]; onO
            window test by definition — they are unscheduled, not scheduled-for-now — which
            meant every future window previewed the same thirty-one cards and no two windows
            ever looked different. A card with no dates is not forecast into any week. */
-        ? cards.filter((c) => inSprintScope({ stage: c.stage, now: cardPriority(c.node ?? c.feature) === 1 })
-            && !finished(c) && effRange(nodeOf(c))).map((c) => c.id)
+        ? cards.filter((c) => {
+          const h = cardPriority(c.node ?? c.feature);
+          return inSprintScope({ owned: c.teams.length > 0, now: h === 1, parked: h === 3 })
+            && !finished(c) && effRange(nodeOf(c));
+        }).map((c) => c.id)
         : [];
     return ids
       .map((cid) => byId.get(cid))
@@ -233,7 +236,13 @@ export default function SprintBoard({ cards, onOpen }: { cards: BoardCard[]; onO
             <button type="button" className="btn primary sp-sm"
               onClick={() => {
                 const carry = members.length - done.length;
-                if (!confirm(`Close this sprint?\n\n${done.length} done, ${carry} unfinished.\nThe ${carry} carry into the next one and stay on Now.`)) return;
+                /* Closing does not transport anything: unfinished work is still held by a
+                   team, so it is in next week by the same rule it was in this one. What
+                   closing does is shut the window and write down the slip, which is the
+                   number velocity is built from. */
+                if (!confirm(`Close this sprint?\n\n${done.length} done, ${carry} unfinished.\n\n`
+                  + `The ${carry} stay on the board and carry into the next sprint. This week's `
+                  + `numbers are recorded and cannot be edited afterwards.`)) return;
                 s.closeSprint(id);
                 setOffset(offset + 1);
               }}>Close &amp; roll over</button>

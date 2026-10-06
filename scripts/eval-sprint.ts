@@ -10,7 +10,7 @@
  */
 import {
   dayOfSprint, isFinished, overlapsWindow, shiftSprintId, sprintId, sprintMembers as members,
-  inSprintScope, subtaskSlices, syncSprint, velocity, weekStart, windowOf,
+  SCOPE_RULE, inSprintScope, subtaskSlices, syncSprint, velocity, weekStart, windowOf,
   type Sprint,
 } from "../lib/sprint";
 import type { Stage } from "../lib/board";
@@ -71,7 +71,11 @@ ok(overlapsWindow(wk("2026-10-12", "2026-10-16"), windowOf("2026-10-05", 3).from
 /* ---- membership, scope and carry ------------------------------------------------------
    `syncSprint` and `sprintMembers` are the two the store calls, handed a fixture instead of
    the live board, so what is asserted here is the code that ships rather than a copy of it. */
-type Card = { id: string; stage: Stage; status?: string | null; now: boolean };
+type Card = { id: string; stage: Stage; status?: string | null; owned: boolean; now: boolean; parked: boolean };
+/* Most fixtures below are about membership bookkeeping rather than the scope test, so they
+   are all owned-and-now: in scope by either route. */
+const C = (id: string, stage: Stage, extra: Partial<Card> = {}): Card =>
+  ({ id, stage, owned: true, now: true, parked: false, ...extra });
 
 console.log("\nWhat counts as finished");
 /* A card whose every subtask is ticked IS closed, and the ring on it already said so.
@@ -97,49 +101,70 @@ ok(isFinished({ stage: "pm_progress", status: "done" }),
 ok(!isFinished({ stage: "dev_review", status: "progress" }), "in review is not finished");
 
 console.log("\nWhat the sprint is about");
-/* Two ways in. Now is a deliberate commitment; anything past the intake piles is in flight
-   whatever its horizon says, because a card sitting in Dev in progress IS this week's work
-   and a sprint that left it out described a smaller week than the one happening. */
-ok(inSprintScope({ stage: "dev_progress", now: false }), "work in flight is in the sprint without being tagged Now");
-ok(inSprintScope({ stage: "design_review", now: false }), "so is anything out for review");
-ok(inSprintScope({ stage: "dev_approved", now: false }), "and anything approved");
-ok(!inSprintScope({ stage: "bug", now: false }), "a bug nobody has picked up is not");
-ok(!inSprintScope({ stage: "feature", now: false }), "nor an unfiled request");
-ok(!inSprintScope({ stage: "pm_handover", now: false }),
-  "nor one still sitting in a team's To pick up column");
-ok(inSprintScope({ stage: "pm_handover", now: true }),
-  "unless it was put on Now, which is how adding from the sprint lands it in the week");
-ok(inSprintScope({ stage: "bug", now: true }), "unless somebody put it on Now, which is the other way in");
+/* OWNERSHIP, NOT COLUMN. A team holding a card happens once; a card moving between working
+   columns happens all day. Deciding membership on the column meant a card going from "To
+   pick up" to "Design in progress" ENTERED the sprint and was counted as scope added,
+   though it had been Design's since before the week began. */
+const sc = (owned: boolean, now: boolean, parked = false) => inSprintScope({ owned, now, parked });
+ok(sc(true, false), "a card a team holds is in the week, whatever column it is in");
+ok(sc(false, true), "and so is anything put on Now, even with no team on it");
+ok(!sc(false, false), "a card nobody has taken is not");
+ok(!sc(true, false, true), "nor one parked on Future, however many teams are on it");
+ok(sc(true, true, true) === true, "unless somebody also said Now, which wins");
+/* The property that was broken: scope must not move when a card changes column. The test
+   no longer takes a stage at all, which is the point — there is nothing a column move can
+   change. */
+ok(sc(true, false) === sc(true, false), "moving between working columns cannot change membership");
+
+console.log("\nRe-baselining when the rule changes");
+/* A commitment snapshotted under an older rule measures nothing: changing the rule turned
+   most of an open week into "added after we started". It is re-taken once, and a CLOSED
+   sprint is history and is never touched. */
+const stale: Sprint = { id: "2026-10-05", committed: ["a"], added: ["b"], rule: 1 };
+const board = [
+  C("a", "dev_progress", { now: false }),
+  C("b", "dev_progress", { now: false }),
+  C("c", "design_progress", { now: false }),
+];
+const fixed = syncSprint(stale, "2026-10-05", board)!;
+eq(fixed.committed, ["a", "b", "c"], "an open sprint's baseline is re-taken under the new rule");
+eq(fixed.added, [], "and nothing is left marked as added after the fact");
+eq(fixed.rule, SCOPE_RULE, "and it is stamped so it only happens once");
+ok(syncSprint(fixed, "2026-10-05", board) === null, "the very next render writes nothing");
+ok(syncSprint({ ...stale, closedAt: "x" }, "2026-10-05", board) === null,
+  "a closed sprint is history and is never re-baselined");
 
 console.log("\nOpening the week");
 const cards: Card[] = [
-  { id: "a", stage: "dev_progress", now: true },               // still going
-  { id: "b", stage: "dev_progress", now: true },               // will ship this week
-  { id: "c", stage: "design_review", now: true },              // in review
-  { id: "z", stage: "feature", now: true },                    // will be deleted mid-week
-  { id: "e", stage: "dev_approved", now: true },               // already shipped before Monday
-  { id: "p", stage: "pm_progress", status: "done", now: true },// already ticked off before Monday
-  { id: "f", stage: "feature", now: false },                   // on Next, not this sprint
+  C("a", "dev_progress", { now: true }),               // still going
+  C("b", "dev_progress", { now: true }),               // will ship this week
+  C("c", "design_review", { now: true }),              // in review
+  C("z", "feature", { now: true }),                    // will be deleted mid-week
+  C("e", "dev_approved", { now: true }),               // already shipped before Monday
+  C("p", "pm_progress", { status: "done", now: true }),// already ticked off before Monday
+  /* The Next queue: nobody has taken it and nobody said this week. Under the ownership rule
+     it is the LACK OF AN OWNER that keeps it out, not its horizon. */
+  C("f", "feature", { owned: false, now: false }),
 ];
 const opened = syncSprint(undefined, "2026-10-05", cards)!;
-eq(opened.committed, ["a", "b", "c", "z"], "the commitment is what was open on Now on Monday");
+eq(opened.committed, ["a", "b", "c", "z"], "the commitment is everyone's open work on Monday");
 ok(!opened.committed.includes("e"), "work already shipped when the week opened is not in it");
 ok(!opened.committed.includes("p"), "nor work already ticked off");
-ok(!opened.committed.includes("f"), "nor the Next queue");
+ok(!opened.committed.includes("f"), "nor anything in the Next queue that no team has taken");
 
 console.log("\nScope added after it started");
 /* Recorded as it arrives, not derived later. Deriving "on Now and not committed" looks
    equivalent until a card pulled in on Tuesday ships on Thursday: it then stops matching
    and disappears out of the week it was actually done in. */
-let sp = syncSprint(opened, "2026-10-05", [...cards, { id: "d", stage: "bug", now: true }])!;
+let sp = syncSprint(opened, "2026-10-05", [...cards, C("d", "bug", { now: true })])!;
 eq(sp.added, ["d"], "a card pulled in mid-week is written down");
-ok(syncSprint(sp, "2026-10-05", [...cards, { id: "d", stage: "bug", now: true }]) === null,
+ok(syncSprint(sp, "2026-10-05", [...cards, C("d", "bug", { now: true })]) === null,
   "and not written down twice, so an idle render does not write");
-const withD: Card[] = [...cards, { id: "d", stage: "bug", now: true }];
+const withD: Card[] = [...cards, C("d", "bug", { now: true })];
 eq(members(sp, withD), ["a", "b", "c", "z", "d"],
   "the week is its commitment plus what it took on");
 /* The case that was wrong before: d ships on Thursday. */
-const shipped: Card[] = [...cards, { id: "d", stage: "prod", now: true }];
+const shipped: Card[] = [...cards, C("d", "prod", { now: true })];
 eq(members(sp, shipped), ["a", "b", "c", "z", "d"],
   "a card added mid-week and then shipped stays in the week it was done in");
 ok(syncSprint(sp, "2026-10-05", shipped) === null, "and is not re-added once it is finished");
@@ -150,24 +175,24 @@ console.log("\nTaking a card out by hand");
 /* Scope is recomputed from the board every render, so a removal has to be WRITTEN DOWN or
    the card walks straight back in on the next tick. */
 const onBoard: Card[] = [
-  { id: "a", stage: "dev_progress", now: true },
-  { id: "b", stage: "dev_progress", now: true },
-  { id: "c", stage: "design_review", now: true },
-  { id: "d", stage: "bug", now: true },
+  C("a", "dev_progress", { now: true }),
+  C("b", "dev_progress", { now: true }),
+  C("c", "design_review", { now: true }),
+  C("d", "bug", { now: true }),
 ];
 const withDrop: Sprint = { ...sp, dropped: ["a"] };
 ok(!members(withDrop, onBoard).includes("a"), "a dropped card leaves the sprint");
 ok(members(withDrop, onBoard).length === members(sp, onBoard).length - 1, "and only that one leaves");
-ok(syncSprint(withDrop, "2026-10-05", [{ id: "a", stage: "dev_progress", now: true }]) === null,
+ok(syncSprint(withDrop, "2026-10-05", [C("a", "dev_progress", { now: true })]) === null,
   "and the next render does not add it back");
 
 console.log("\nThe two lines, and what carries");
 const live: Card[] = [
-  { id: "a", stage: "dev_progress", now: true },
-  { id: "b", stage: "prod", now: true },
-  { id: "c", stage: "design_review", now: true },
-  { id: "z", stage: "feature", status: "done", now: true },
-  { id: "d", stage: "prod", now: true },
+  C("a", "dev_progress", { now: true }),
+  C("b", "prod", { now: true }),
+  C("c", "design_review", { now: true }),
+  C("z", "feature", { status: "done", now: true }),
+  C("d", "prod", { now: true }),
 ];
 const m = members(sp, live);
 const done = m.filter((id) => isFinished(live.find((c) => c.id === id)!));
@@ -183,7 +208,7 @@ eq(Array.from(new Set([...carry, ...carry])), ["a", "c"], "closing twice does no
 /* A closed sprint is frozen. Its cards keep moving on the board afterwards, and a
    membership still being derived would rewrite last month every time one was ticked. */
 const shut: Sprint = { ...sp, closedAt: "2026-10-12T04:00:00.000Z", done: 3, rolled: 2 };
-ok(syncSprint(shut, "2026-10-05", [...live, { id: "g", stage: "bug", now: true }]) === null,
+ok(syncSprint(shut, "2026-10-05", [...live, C("g", "bug", { now: true })]) === null,
   "a closed sprint takes on nothing further");
 eq(members(shut, live), ["a", "b", "c", "z", "d"], "and keeps exactly what it held");
 

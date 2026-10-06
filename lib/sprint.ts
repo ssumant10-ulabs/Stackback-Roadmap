@@ -14,6 +14,8 @@ export interface Sprint {
   /** `yyyy-mm-dd` of the Monday it starts. The id and the window are the same fact, so a
    *  sprint cannot drift off its dates. */
   id: string;
+  /** Which scope rule its commitment was taken under; see SCOPE_RULE. */
+  rule?: number;
   /** How many weeks it runs, 1 to 4. Stored on the sprint rather than set globally, because
    *  changing the length must not silently redraw the windows of sprints already closed. */
   weeks?: SprintWeeks;
@@ -61,25 +63,30 @@ export function isFinished(c: { stage: Stage; status?: string | null }): boolean
   return DONE_STAGES.includes(c.stage) || (c.status || "") === "done";
 }
 
-/** Not yet work: PM's two filing piles, and the "To pick up" column a card waits in after
- *  it has been handed to a team. Everything past these is in somebody's hands.
- *
- *  A card waiting to be picked up is not this week's work by default — but a card added
- *  FROM the sprint is put on Now, which is the other way into scope, so assigning something
- *  there still lands it in the week you assigned it for. */
-export const INTAKE_STAGES: Stage[] = ["bug", "feature", "pm_handover"];
-
 /** Whether a card belongs to the sprint at all.
  *
- *  Two ways in. The Now horizon is a deliberate commitment — somebody said this week. And
- *  anything that has left intake is in flight whatever its horizon says: a card sitting in
- *  Dev in progress IS this week's work, and a sprint that left it out because nobody had
- *  remembered to tag it Now was a sprint describing a smaller week than the one happening.
+ *  OWNERSHIP, NOT COLUMN. A team holding a card is a deliberate act that happens once; a
+ *  card moving between working columns happens all day. Deciding membership on the column
+ *  meant a card going from "To pick up" to "Design in progress" ENTERED the sprint and was
+ *  counted as scope added — though it had been Design's since before the week began and
+ *  nothing new had been taken on. That is how "added" went noisy and "committed" went
+ *  hollow, and both are the same mistake.
  *
- *  The intake piles stay out. A bug nobody has picked up is a thing to triage, not work in
- *  progress, and sweeping thirty of them in would make the week unreadable. */
-export const inSprintScope = (c: { stage: Stage; now: boolean }) =>
-  c.now || !INTAKE_STAGES.includes(c.stage);
+ *  So: a card is in the week if a team holds it, or if somebody put it on Now. Parked on
+ *  Future takes it out again however many teams are on it — Future is the word for "not
+ *  this week". It is the same test the team boards use to decide what they show, which is
+ *  the point: one source, so the sprint and the boards cannot disagree.
+ *
+ *  Now with no team is still in, because that is the deliberate commitment, and it is what
+ *  makes "Add to sprint" land a card in the week you added it to. */
+export const inSprintScope = (c: { owned: boolean; now: boolean; parked: boolean }) =>
+  (c.owned && !c.parked) || c.now;
+
+/** Bumped when the rule above changes. A sprint's commitment was snapshotted under whatever
+ *  rule was current when it opened, so a sprint carrying an older one has a baseline that
+ *  measures nothing and is re-taken once. Without this, changing the rule retroactively
+ *  turned most of an open week into "added after we started". */
+export const SCOPE_RULE = 2;
 
 /** Monday of the week `offset` weeks from the one containing `from`. Weeks start Monday
  *  because the team's does; nothing in the data says otherwise. */
@@ -170,11 +177,16 @@ export function sprintMembers(sp: Sprint, cards: { id: string }[]): string[] {
 export function syncSprint(
   sp: Sprint | undefined,
   id: string,
-  cards: { id: string; stage: Stage; status?: string | null; now: boolean }[],
+  cards: { id: string; stage: Stage; status?: string | null; owned: boolean; now: boolean; parked: boolean }[],
 ): Sprint | null {
   const joining = cards.filter((c) => inSprintScope(c) && !isFinished(c)).map((c) => c.id);
-  if (!sp) return { id, committed: joining, weeks: 1 };
+  if (!sp) return { id, committed: joining, weeks: 1, rule: SCOPE_RULE };
   if (sp.closedAt) return null;
+  /* Re-baseline an open sprint whose commitment was taken under an older rule. A closed one
+     is history and is left exactly as it was recorded. */
+  if ((sp.rule ?? 1) !== SCOPE_RULE) {
+    return { ...sp, committed: joining, added: [], rule: SCOPE_RULE };
+  }
   const seen = new Set([...sp.committed, ...(sp.added ?? []), ...(sp.dropped ?? [])]);
   const fresh = joining.filter((cid) => !seen.has(cid));
   return fresh.length ? { ...sp, added: [...(sp.added ?? []), ...fresh] } : null;
