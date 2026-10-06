@@ -87,3 +87,8 @@ export function Logo() {
     </span>
   );
 }
+/** Expand / collapse to full screen: four corners, as every player and viewer draws it. */
+export const IcFull = (p: React.SVGProps<SVGSVGElement>) =>
+  S(p, <path d="M8 3H3v5M16 3h5v5M16 21h5v-5M8 21H3v-5" />);
+export const IcExitFull = (p: React.SVGProps<SVGSVGElement>) =>
+  S(p, <path d="M3 8h5V3M21 8h-5V3M21 16h-5v5M3 16h5v5" />);
