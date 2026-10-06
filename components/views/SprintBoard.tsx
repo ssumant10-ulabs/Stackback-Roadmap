@@ -375,7 +375,7 @@ export default function SprintBoard({ cards, onOpen }: { cards: BoardCard[]; onO
             {undated.map((c) => (
               <article className="sp-ucard" key={c.id}>
                 <StatusButton node={nodeOf(c)} size={13} />
-                <button type="button" className="sp-utitle" onClick={() => onOpen(c.id)}>{titleOf(c)}</button>
+                <button type="button" className="sp-utitle" title={titleOf(c)} onClick={() => onOpen(c.id)}>{titleOf(c)}</button>
                 <span className="assignees"><Assignees node={nodeOf(c)} small /></span>
                 <span className="sp-rowteam">{teamsOf(c) || "Unassigned"}</span>
                 <DateChip node={nodeOf(c)} variant="icon" />
@@ -403,7 +403,7 @@ export default function SprintBoard({ cards, onOpen }: { cards: BoardCard[]; onO
             <article className="sp-qcard" key={c.id}>
               <button type="button" className="btn ghost sp-ic" onClick={() => s.setPriority(c.id, 1)}
                 title="Pull into this sprint">+</button>
-              <span className="sp-qtitle">{titleOf(c)}</span>
+              <span className="sp-qtitle" title={titleOf(c)}>{titleOf(c)}</span>
               <span className="sp-qteam">{teamsOf(c) || "Unassigned"}</span>
             </article>
           ))}
@@ -453,7 +453,7 @@ function TrackRow({ card, from, to, pct, todayPct, onOpen, onDrop }: {
               {counts.total > 0 ? `${counts.done}/${counts.total}` : "\u2026"}
             </button>
           )}
-          <button type="button" className="sp-rowname" onClick={onOpen}>{titleOf(card)}</button>
+          <button type="button" className="sp-rowname" title={titleOf(card)} onClick={onOpen}>{titleOf(card)}</button>
         </span>
         <div className="sp-track">
           {todayPct !== null && <span className="sp-now" style={{ left: `${todayPct}%` }} aria-hidden />}

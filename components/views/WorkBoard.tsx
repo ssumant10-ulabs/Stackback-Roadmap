@@ -567,7 +567,7 @@ function Card({ card, view, rank: at, of, siblings, onMove, dragging, onDragStar
         <span className="wb-status"><StatusButton node={node} size={15} /></span>
       </div>
 
-      <button type="button" className="wb-title wb-titlebtn" onClick={onOpen}>{node.title}</button>
+      <button type="button" className="wb-title wb-titlebtn" title={node.title} onClick={onOpen}>{node.title}</button>
 
       <div className="wb-meta">
         <span className="assignees"><Assignees node={node} small /></span>

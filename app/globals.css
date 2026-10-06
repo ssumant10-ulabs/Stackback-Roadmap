@@ -2351,6 +2351,10 @@ select.wb-prio {
 .sp-bar.t-Engineering, .sp-seg.t-Engineering { --tc: var(--team-eng, #2560C4); }
 .sp-bar.t-Design, .sp-seg.t-Design { --tc: var(--team-dsg, #B23A82); }
 .sp-bar.t-PM, .sp-seg.t-PM { --tc: var(--team-pm, #C4551A); }
+/* `<i>` is used here as a positioned box, not as emphasis, so the browser's italic has to
+   come back off: it was the only italic text anywhere in the app and the track read as a
+   different typeface from the board next to it. */
+.sp-bar, .sp-seg, .sp-bar span, .sp-seg span { font-style: normal; }
 .sp-bar {
   position: absolute; top: 3px; bottom: 3px; border-radius: 5px; display: flex; align-items: center;
   padding: 0 7px; gap: 5px; overflow: hidden;
