@@ -2224,6 +2224,11 @@ select.wb-prio {
   padding-top: 4px; padding-bottom: 4px;
 }
 .sp.full .sp-time { border-radius: 16px; }
+/* `.sp` is a flex column, and full screen is the only place it has a FIXED height — so its
+   children start shrinking to fit, and the track, whose rows are absolutely positioned
+   inside relative tracks, collapsed to a sliver with half its ruler showing and no rows at
+   all. Nothing in this column may shrink; the container scrolls instead. */
+.sp.full > * { flex: none; }
 /* The ruler is NOT sticky. `.sp-time` clips its own overflow, which a sticky child cannot
    stick inside, so it detached and came to rest in the middle of the rows. The header and
    the meters above it are in the scrolling container and stick correctly. */
@@ -2234,21 +2239,19 @@ select.wb-prio {
   font-size: 11.5px; font-weight: 650; color: var(--ink-2, #555);
   background: var(--sunken, rgba(0,0,0,.07)); border-radius: 999px; padding: 3px 10px;
 }
-.sp-week button, .sp-today {
-  appearance: none; cursor: pointer; font: inherit; font-size: 12px;
-  border: 1px solid var(--line, rgba(0,0,0,.14)); background: var(--card, #fff);
-  color: var(--ink-2, #444); border-radius: 8px; padding: 3px 9px;
+/* The sprint's controls are the app's buttons at a smaller size, not a second set of
+   look-alikes. Five bespoke rules had drifted into five slightly different capsules sitting
+   next to the real ones, which is what made the row look assembled rather than designed. */
+.sp-sm { padding: 5px 11px; font-size: 12px; font-weight: 650; border-radius: 9px; }
+.sp-ic { padding: 0; width: 24px; height: 24px; justify-content: center; font-size: 14px; border-radius: 8px; }
+.sp-week button.sp-nav {
+  appearance: none; cursor: pointer; font: inherit; font-size: 13px; line-height: 1;
+  width: 28px; height: 28px; display: grid; place-items: center;
+  border: 1px solid var(--border-2); background: var(--card); color: var(--ink-2, #444); border-radius: 9px;
 }
-.sp-week button:hover { color: var(--ink, #111); border-color: var(--line-2, rgba(0,0,0,.24)); }
+.sp-week button.sp-nav:hover { background: var(--card-2); color: var(--ink, #111); }
 .sp-acts { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-.sp-close {
-  appearance: none; cursor: pointer; font: inherit; font-size: 12px; font-weight: 600;
-  /* --brand-ink, not white: in dark mode the brand is a light green and white on it is
-     unreadable. The token exists for exactly this pairing. */
-  border: 1px solid var(--brand, #4F7A00); background: var(--brand, #4F7A00);
-  color: var(--brand-ink, #fff); border-radius: 8px; padding: 4px 11px;
-}
-.sp-close:hover { filter: brightness(1.08); }
+
 
 /* Two lines, because one bar cannot show scope creep. The top track is the week's size and
    the hatched tail is what was added to it after it started; the bottom is what is done,
@@ -2273,6 +2276,12 @@ select.wb-prio {
 .sp-vel b { color: var(--ink-2, #444); font-weight: 650; }
 .sp-vel em { font-style: normal; color: var(--status-progress, #A9760A); }
 .sp-lede, .sp-qlede { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--ink-3, #777); }
+.sp-preview {
+  margin: 0; padding: 10px 14px; border-radius: 11px; font-size: 12.5px; line-height: 1.55;
+  color: var(--ink-2, #555); background: var(--sunken, rgba(0,0,0,.05));
+  border: 1px dashed var(--line-2, rgba(0,0,0,.18));
+}
+.sp-preview b { color: var(--ink, #111); font-weight: 700; }
 .sp-empty {
   margin: 0; padding: 22px; border-radius: 12px; border: 1px dashed var(--line-2, rgba(0,0,0,.18));
   font-size: 13px; color: var(--ink-3, #777); text-align: center;
@@ -2280,10 +2289,12 @@ select.wb-prio {
 /* The track: time across, cards down. One view, not one per team — a card in review is
    the sprint's problem whoever's review it is. */
 .sp-len { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-3, #777); }
-.sp-len select {
-  font: inherit; font-size: 11.5px; padding: 3px 6px; border-radius: 8px;
-  border: 1px solid var(--line, rgba(0,0,0,.14)); background: var(--card, #fff); color: var(--ink-2, #444);
+/* Same shell as the Sort control on the row above, so the two read as one family. */
+.sp-len select, .wb-sort select {
+  font: inherit; font-size: 12px; font-weight: 650; padding: 5px 9px; border-radius: 9px;
+  border: 1px solid var(--border-2); background: var(--card); color: var(--ink, #111); cursor: pointer;
 }
+.sp-len select:hover, .wb-sort select:hover { background: var(--card-2); }
 .sp-time {
   border: 1px solid var(--line, rgba(0,0,0,.1)); border-radius: 14px; padding: 11px 13px 13px;
   background: var(--card, #fff); display: flex; flex-direction: column; gap: 3px; overflow: hidden;
@@ -2447,24 +2458,13 @@ select.wb-prio {
   appearance: none; border: 0; background: none; padding: 0; color: var(--ink, #111); cursor: pointer;
 }
 .sp-utitle:hover { text-decoration: underline; text-underline-offset: 2px; }
-.sp-fit {
-  appearance: none; cursor: pointer; font: inherit; font-size: 11px; font-weight: 600; flex: none;
-  border: 1px solid var(--line, rgba(0,0,0,.14)); background: var(--card, #fff);
-  color: var(--ink-2, #444); border-radius: 8px; padding: 3px 9px; white-space: nowrap;
-}
-.sp-fit:hover { color: var(--ink, #111); border-color: var(--brand, #4F7A00); }
+.sp-fit { flex: none; white-space: nowrap; }
 .sp-queue h3 em, .sp-undated h3 em {
   font-style: normal; font-size: 11px; font-weight: 600; color: var(--ink-3, #777);
   background: var(--sunken, rgba(0,0,0,.06)); border-radius: 999px; padding: 1px 7px;
   font-variant-numeric: tabular-nums;
 }
-.sp-pull {
-  appearance: none; cursor: pointer; border: 1px solid var(--line, rgba(0,0,0,.14));
-  background: var(--card, #fff); color: var(--ink-3, #777); flex: none;
-  width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center;
-  font: inherit; font-size: 13px; line-height: 1;
-}
-.sp-pull:hover { color: var(--ink, #111); border-color: var(--brand, #4F7A00); }
+
 .sp-queue {
   border-top: 1px solid var(--line, rgba(0,0,0,.1)); padding-top: 16px;
   display: flex; flex-direction: column; gap: 9px;
@@ -2516,11 +2516,6 @@ select.wb-prio {
 .cx-add button:hover { color: var(--ink, #111); border-color: var(--brand, #4F7A00); }
 .wb-count.on { color: var(--ink, #111); border-color: var(--brand, #4F7A00); }
 .wb-sort { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-3, #777); }
-.wb-sort select {
-  font: inherit; font-size: 12px; padding: 5px 8px; border-radius: 9px;
-  border: 1px solid var(--line, rgba(0,0,0,.14)); background: var(--card, #fff); color: var(--ink-2, #444);
-}
-.wb-sort select:hover { color: var(--ink, #111); border-color: var(--line-2, rgba(0,0,0,.24)); }
 .wb-subassign { display: inline-flex; align-items: center; gap: 3px; flex: none; }
 .wb-subassign .assign-add { opacity: .45; }
 .wb-detsubs li:hover .wb-subassign .assign-add { opacity: 1; }

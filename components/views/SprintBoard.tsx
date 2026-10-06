@@ -4,7 +4,7 @@ import { useStore } from "@/lib/store";
 import { STAGE_LABEL, teamForStage, type BoardTeam, type Stage } from "@/lib/board";
 import {
   DAY, SPRINT_WEEKS, addDays, dayMonth, dayOfSprint, isFinished, overlapsWindow, shiftSprintId,
-  sprintId, subtaskSlices, velocity, weekStart, weeksOf, windowOf, type SprintWeeks,
+  inSprintScope, sprintId, subtaskSlices, velocity, weekStart, weeksOf, windowOf, type SprintWeeks,
 } from "@/lib/sprint";
 import { effRange } from "@/lib/dates";
 import { cardPriority, effStatus, subtreeCounts } from "@/lib/derive";
@@ -123,16 +123,31 @@ export default function SprintBoard({ cards, onOpen }: { cards: BoardCard[]; onO
   const closed = !!sprint?.closedAt;
 
   const byId = useMemo(() => new Map(cards.map((c) => [c.id, c])), [cards]);
+  /* A window with no record is not empty, it is UNOPENED. Only the current sprint opens
+     itself, so stepping forward used to show "no sprint recorded" over a board with
+     thirty-odd cards in flight — technically true and useless for planning. A future
+     window previews what would be in it: everything in scope now, drawn where its dates
+     fall. Nothing is written, and it is labelled a preview rather than a commitment. */
+  const preview = !sprint && offset > 0;
   /* The sprint's own members, then narrowed to the window. Both filters matter and they are
      different questions: membership is what we took on, the window is when it is happening.
      `cards` arrives already filtered by Who and Work, so those apply here too. */
   const members = useMemo(() => {
-    if (!sprint) return [];
-    return s.sprintMembers(sprint)
+    const ids = sprint
+      ? s.sprintMembers(sprint)
+      : preview
+        /* A preview is about THESE dates, so it is dated work only. Undated cards pass the
+           window test by definition — they are unscheduled, not scheduled-for-now — which
+           meant every future window previewed the same thirty-one cards and no two windows
+           ever looked different. A card with no dates is not forecast into any week. */
+        ? cards.filter((c) => inSprintScope({ stage: c.stage, now: cardPriority(c.node ?? c.feature) === 1 })
+            && !finished(c) && effRange(nodeOf(c))).map((c) => c.id)
+        : [];
+    return ids
       .map((cid) => byId.get(cid))
       .filter(Boolean)
       .filter((c) => overlapsWindow(effRange(nodeOf(c as BoardCard)), from, to)) as BoardCard[];
-  }, [sprint, byId, s, from, to]);
+  }, [sprint, preview, cards, byId, s, from, to]);
 
   const scheduled = members.filter((c) => effRange(nodeOf(c)));
   const undated = members.filter((c) => !effRange(nodeOf(c)));
@@ -186,16 +201,16 @@ export default function SprintBoard({ cards, onOpen }: { cards: BoardCard[]; onO
     <div className={"sp" + (full ? " full" : "")}>
       <header className="sp-head">
         <div className="sp-week">
-          <button type="button" onClick={() => setOffset(offset - 1)} aria-label="Previous sprint">&#8592;</button>
+          <button type="button" className="sp-nav" onClick={() => setOffset(offset - 1)} aria-label="Previous sprint">&#8592;</button>
           <b>{dayMonth(from)} &ndash; {dayMonth(to)}</b>
-          <button type="button" onClick={() => setOffset(offset + 1)} aria-label="Next sprint">&#8594;</button>
+          <button type="button" className="sp-nav" onClick={() => setOffset(offset + 1)} aria-label="Next sprint">&#8594;</button>
           <span className="sp-day">
             {closed ? "Closed" : thisWeek ? `Day ${day} of ${days}` : offset > 0 ? "Not started" : "Never closed"}
           </span>
-          {!thisWeek && <button type="button" className="sp-today" onClick={() => setOffset(0)}>This sprint</button>}
+          {!thisWeek && <button type="button" className="btn ghost sp-sm" onClick={() => setOffset(0)}>This sprint</button>}
         </div>
         <div className="sp-acts">
-          <button type="button" className="sp-today" onClick={() => setFull(!full)}
+          <button type="button" className="btn ghost sp-sm" onClick={() => setFull(!full)}
             title={full ? "Back to the page (Esc)" : "Fill the screen"}>
             {full ? "Exit full screen" : "Full screen"}
           </button>
@@ -211,11 +226,11 @@ export default function SprintBoard({ cards, onOpen }: { cards: BoardCard[]; onO
             </label>
           )}
           {members.length > 0 && (
-            <button type="button" className="sp-today" onClick={copy}
+            <button type="button" className="btn ghost sp-sm" onClick={copy}
               title="Copy a plain-text summary to paste into WhatsApp">Copy the update</button>
           )}
           {sprint && !closed && offset <= 0 && (
-            <button type="button" className="sp-close"
+            <button type="button" className="btn primary sp-sm"
               onClick={() => {
                 const carry = members.length - done.length;
                 if (!confirm(`Close this sprint?\n\n${done.length} done, ${carry} unfinished.\nThe ${carry} carry into the next one and stay on Now.`)) return;
@@ -256,10 +271,18 @@ export default function SprintBoard({ cards, onOpen }: { cards: BoardCard[]; onO
         </p>
       )}
 
-      {!sprint && (
+      {!sprint && !preview && (
         <p className="sp-empty">
           No sprint was recorded for this window. Only the current one opens on its own, so
           what a past sprint committed to is never guessed at after the fact.
+        </p>
+      )}
+      {preview && (
+        <p className="sp-preview">
+          <b>Preview.</b> This sprint has not opened yet, so nothing here is committed to.
+          It shows the {members.length} card{members.length === 1 ? "" : "s"}{" "}
+          already scheduled into these dates. Unscheduled work is not forecast into a week
+          nobody has put it in.
         </p>
       )}
       {sprint && !members.length && (
@@ -352,7 +375,7 @@ export default function SprintBoard({ cards, onOpen }: { cards: BoardCard[]; onO
                     title="Take it out of this sprint (it stays on the board)"
                     onClick={() => s.dropFromSprint(id, c.id)}>&times;</button>
                 )}
-                <button type="button" className="sp-fit"
+                <button type="button" className="btn ghost sp-sm sp-fit"
                   title={`Schedule it across this sprint, ${dayMonth(from)} to ${dayMonth(to)}`}
                   onClick={() => s.setDates(c.id, { start: iso(from), end: iso(to) }, "end")}>
                   Fit to sprint
@@ -369,7 +392,7 @@ export default function SprintBoard({ cards, onOpen }: { cards: BoardCard[]; onO
         <div className="sp-qlist">
           {queued.slice(0, 40).map((c) => (
             <article className="sp-qcard" key={c.id}>
-              <button type="button" className="sp-pull" onClick={() => s.setPriority(c.id, 1)}
+              <button type="button" className="btn ghost sp-ic" onClick={() => s.setPriority(c.id, 1)}
                 title="Pull into this sprint">+</button>
               <span className="sp-qtitle">{titleOf(c)}</span>
               <span className="sp-qteam">{teamsOf(c) || "Unassigned"}</span>
