@@ -781,7 +781,35 @@ export class Store {
        it passes the request and the answer is worked out here. */
     const node = this.findEntry(id)?.node;
     const kind = (node?.kind ?? this.features.find((x) => x.id === id)?.kind ?? "feature") as CardKind;
-    this.setStage(id, team ? stage : defaultStage(kind), { team, review: null });
+    if (!team) { this.sendToBacklog(id); return; }
+    this.setStage(id, stage, { team, review: null });
+  }
+
+  /** Give a card back: nobody holds it any more.
+   *
+   *  "Back to the backlog" only cleared `boardTeam`, and the backlog is filtered on the
+   *  DERIVED team list — the card's own Team column plus whoever is assigned to it. So on
+   *  any card with a name on it the menu item did nothing visible: the card stayed exactly
+   *  where it was, on the same board, and the one action whose whole purpose is to let go
+   *  of a card was the one action that could not.
+   *
+   *  The backlog is "cards nobody has taken", which the board says in those words. So
+   *  letting go has to mean letting go of all three: the handover, the Team column and the
+   *  people. The caller confirms first where there are people to lose. */
+  sendToBacklog(id: string) {
+    const e = this.findEntry(id);
+    const n = e?.node as (Node & Record<string, unknown>) | undefined;
+    if (!n) return;
+    const kind = (n.kind ?? "feature") as CardKind;
+    const had = (n.assignees || []).map((a) => a.name);
+    n.assignees = [];
+    n.team = null;
+    n.boardTeam = null;
+    n.reviewWith = null;
+    if ("updatedAt" in n) (n as { updatedAt?: string }).updatedAt = new Date().toISOString();
+    this.setStage(id, defaultStage(kind), { team: null, review: null });
+    this.log("move", n.title, had.length ? `back to the backlog, off ${had.join(", ")}` : "back to the backlog", id);
+    this.commit();
   }
 
   setStage(id: string, stage: Stage, opts?: { team?: BoardTeam | null; review?: ReviewWith | null }) {

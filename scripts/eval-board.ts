@@ -279,6 +279,20 @@ function live() {
     console.log(`  ${k.padEnd(8)} ${tally[k] || 0}`);
   }
 
+  /* "Back to the backlog" is the one action whose whole purpose is to let go of a card, and
+     it was the one action that could not: the lens filters on the DERIVED team list -- the
+     card's own Team column plus whoever is assigned -- and the menu only cleared the
+     handover. So on any card with a name on it, nothing moved. */
+  console.log("\nLetting go of a card reaches the backlog");
+  const held = { team: "Design" as const, assignees: ["Neel"], boardTeam: "Design" as const };
+  ok(!VIEW_BY_ID.backlog.holds(["Design"], 2),
+    "a card a team holds is not in the backlog");
+  ok(VIEW_BY_ID.backlog.holds([], 2),
+    "and clearing every owner is what puts it there");
+  ok(!VIEW_BY_ID.backlog.holds(["Design"], 1) && !VIEW_BY_ID.backlog.holds(["Design"], 2),
+    "clearing the handover alone cannot, at any horizon, while a name remains");
+  void held;
+
   console.log("\nThe rules, over the live data:");
   ok(homeless === 0, "every card lands in a column somewhere");
   ok(missingFromBacklog === 0, "the backlog holds exactly the cards nobody has taken");

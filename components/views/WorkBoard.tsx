@@ -575,7 +575,18 @@ function Card({ card, view, rank: at, of, siblings, onMove, dragging, onDragStar
               <span className="wb-moverule" />
               {MOVE_TO.map((m) => (
                 <button key={m.label} type="button"
-                  onClick={() => { s.moveToTeam(card.id, m.value, m.stage); setMoveAt(null); }}>
+                  onClick={() => {
+                    /* Letting go means letting go of the people too, or the card never
+                       reaches the backlog. Said out loud rather than done quietly. */
+                    if (!m.value) {
+                      const who = (node.assignees || []).map((a) => a.name);
+                      if (who.length && !confirm(
+                        `Send "${node.title}" back to the backlog?\n\n`
+                        + `${who.join(", ")} ${who.length === 1 ? "comes" : "come"} off it — the backlog is `
+                        + `for cards nobody has taken.`)) { setMoveAt(null); return; }
+                    }
+                    s.moveToTeam(card.id, m.value, m.stage); setMoveAt(null);
+                  }}>
                   {m.label === "Back to the backlog" ? m.label : `Hand to ${m.label}`}
                 </button>
               ))}
