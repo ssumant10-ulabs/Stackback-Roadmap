@@ -9,6 +9,7 @@
  *  Run: npx tsx scripts/eval-settings.ts
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
+import { SCALES } from "../lib/help/categories";
 import { join } from "node:path";
 import { TOGGLE_GROUPS } from "../lib/help/widget";
 
@@ -52,5 +53,29 @@ for (const g of TOGGLE_GROUPS) {
 
 dead.forEach((d) => console.log(`  DEAD  ${d}`));
 console.log(`\n  ${rows} settings on the panel, ${dead.length} with no reader.`);
+/* ---- the scale bands, and where AutoPay starts ----------------------------------------
+   A store doing a few thousand orders was shown "prepaid and pay as you go", because the
+   band ran 100 to 1,000 with no AutoPay in it at all and nothing above it until 1,000. The
+   threshold is 500: below that the Razorpay mandate setup and the drop-off at the mandate
+   screen cost more than the collection saves; above it, every band should at least offer it. */
+{
+  const lo = (b: { label: string }) => {
+    const m = b.label.replace(/,/g, "").match(/(\d+)/g);
+    return /^under/i.test(b.label) ? 0 : Number(m?.[0] ?? 0);
+  };
+  console.log("\nScale bands and AutoPay");
+  for (const b of SCALES) {
+    const has = b.modes.includes("auto_debit");
+    const want = lo(b) >= 500;
+    const line = `${b.label.padEnd(30)} AutoPay ${has ? "offered" : "not offered"}`;
+    if (has === want) console.log(`  ok    ${line}`);
+    else dead.push(`${line} — expected ${want ? "offered" : "not offered"} at this volume`);
+  }
+  if (!SCALES.every((b, i) => i === 0 || lo(b) >= lo(SCALES[i - 1]))) dead.push("the scale bands are out of order");
+  /* No gap and no overlap at the seam, or a store reads two bands and picks neither. */
+  if (!SCALES.some((b) => lo(b) === 500)) dead.push("no band starts at 500, where the AutoPay decision is");
+  else console.log("  ok    a band starts exactly at 500, which is where the decision is");
+}
+
 console.log(dead.length ? "FAIL" : "PASS");
 process.exit(dead.length ? 1 : 0);

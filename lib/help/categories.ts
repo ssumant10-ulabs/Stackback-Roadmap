@@ -87,9 +87,18 @@ export const SCALES: ScaleBand[] = [
     why: "Prepaid only. The money is in the bank on day one and there is nothing to chase, which matters more than conversion while the volume is small. Pay as you go here buys you invoices to follow up and little else.",
   },
   {
-    id: "growing", label: "100 to 1,000 orders a month", hint: "Growing",
+    id: "small", label: "100 to 500 orders a month", hint: "Finding its feet",
     modes: ["prepaid", "payg"],
-    why: "Prepaid and pay as you go. The upfront ask starts costing conversions at this size, and the invoice volume is still small enough for one person to chase.",
+    why: "Prepaid and pay as you go. The upfront ask starts costing conversions at this size, and the invoice volume is still small enough for one person to chase. AutoPay is deliberately not here: below 500 orders the Razorpay mandate setup and the drop-off at the mandate screen cost more than the collection it saves.",
+  },
+  {
+    /* 500 is the line AutoPay becomes worth offering. The band used to run 100 to 1,000 with
+       no AutoPay in it at all, so a store doing a few thousand orders was told prepaid and
+       pay as you go — which is the complaint, and it was the band's fault rather than the
+       answer's. Splitting at 500 puts the threshold where the decision actually is. */
+    id: "growing", label: "500 to 1,000 orders a month", hint: "Growing",
+    modes: ["prepaid", "payg", "auto_debit"],
+    why: "All three are worth offering from 500 up. AutoPay earns its setup at this volume, and it is the one that stops collection becoming somebody's weekly job \u2014 but pay as you go still converts better with customers who will not sign a mandate, so the choice is real rather than a default.",
   },
   {
     id: "established", label: "1,000 to 5,000 orders a month", hint: "Established",

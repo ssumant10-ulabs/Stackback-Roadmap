@@ -468,6 +468,17 @@ export function mapTokens(css: string, url: string, html?: string): BrandResult 
         ? `This theme does not publish Shopify colour settings, so ${grounded} of these were read off the elements themselves on your product page. Worth a look before you save.`
         : "This theme does not publish Shopify colour settings, and few of the usual elements could be found on the page we read, so some of these are the most common colours in its stylesheet rather than a sample. Check every one before saving.",
     );
+    /* The worst case, and it is worth naming rather than burying in the sentence above: the
+       only colour variables on the page belong to an app. Nothing here came from the theme,
+       so every one of these is a guess off somebody else's palette. */
+    if (onlyVendorVars(root)) {
+      notes.push(
+        "Every colour variable this page declares belongs to an app rather than to the theme "
+        + "\u2014 reviews, chat or a page builder. We ignore those, because an app's palette is "
+        + "evidence about the app and nothing else, so there was no theme colour to read at "
+        + "all. Set these by hand, or send us a screenshot of the page and we will sample it.",
+      );
+    }
     if (html && !ctaEl) {
       notes.push("We could not find an Add to cart button on that page, so the button colour is a guess from a rule that reads like one.");
     }
@@ -776,12 +787,36 @@ const ACCENT_VAR = [
   /^--[\w-]*(accent|highlight|secondary)[\w-]*$/,
 ];
 
+/** CSS variables that belong to something bolted onto the storefront, not to the store.
+ *
+ *  `--jdgm-primary-color` is Judge.me's review widget. `--loox-*` is Loox, `--swym-*` is a
+ *  wishlist, `--bs-*` is Bootstrap. The patterns below match any `--*primary*`, so every one
+ *  of those was a candidate for "the brand colour" — and on a theme that publishes no
+ *  settings of its own, the app's variable is the ONLY one there, so it won every time.
+ *
+ *  blepworld.com is the case: all twelve colour variables it declares are Judge.me's, and
+ *  the panel reported the review widget's black as the brand and its green as the canvas.
+ *  A namespaced variable is evidence about that app and about nothing else. */
+const VENDOR_VAR = new RegExp("^--(" + [
+  // Reviews and UGC
+  "jdgm", "judgeme", "loox", "yotpo", "okendo", "stamped", "ryviu", "fera", "opinew", "trustpilot",
+  // Support, chat, marketing
+  "gorgias", "tidio", "zendesk", "intercom", "klaviyo", "omnisend", "privy", "pushowl",
+  "attentive", "postscript", "mailchimp", "smile", "growave",
+  // Merchandising, search, page builders
+  "rebuy", "bold", "recharge", "wiser", "limespot", "boost", "searchanise", "algolia",
+  "shogun", "pagefly", "gempages", "tapcart", "vitals", "hextom", "swym",
+  // CSS frameworks, which are not a brand either
+  "bs", "mdb", "tw", "chakra", "mui", "ant", "ion", "wp",
+].join("|") + ")-");
+
 function namedVar(
   vars: Record<string, string>, pats: RegExp[], reject: (hex: string) => boolean,
 ): { hex: string; name: string } | null {
   for (const pat of pats) {
     for (const [name, raw] of Object.entries(vars)) {
       if (!pat.test(name)) continue;
+      if (VENDOR_VAR.test(name)) continue;
       if (/text|ink|fg|foreground|hover|border|radius|size|width|font|shadow|gap|space/.test(name)) continue;
       const hex = colourOf(raw, vars);
       if (hex && !reject(hex)) return { hex, name };
@@ -791,6 +826,14 @@ function namedVar(
 }
 
 const namedCtaVar = (vars: Record<string, string>) => namedVar(vars, CTA_VAR, notACta);
+
+/** True when every colour variable a page declares belongs to an app. The theme has then
+ *  published nothing, and anything the stylesheet offers is somebody else's palette — which
+ *  is worth saying out loud rather than quietly reporting a review widget's green. */
+export function onlyVendorVars(vars: Record<string, string>): boolean {
+  const names = Object.keys(vars).filter((n) => /color|colour|bg|background/.test(n));
+  return names.length > 0 && names.every((n) => VENDOR_VAR.test(n));
+}
 
 /** The theme's declared accent, for the fallback path. Exported because `mapTokens` reads it
  *  beside the element samples rather than after them. */
