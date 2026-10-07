@@ -1304,6 +1304,16 @@
 .hc-importstats span { font-size: 11px; color: var(--hc-muted); }
 .hc-importsug { margin-top: 11px; padding: 10px 12px; background: var(--sunken); border-radius: 10px; }
 .hc-importsug p { margin: 0 0 9px; font-size: 12.5px; line-height: 1.55; }
+/* Discounts the store has already given. Same stat shell as the counts above it, so the two
+   blocks read as one panel rather than two. */
+.hc-importdisc { margin-top: 14px; }
+.hc-importbands { list-style: none; margin: 9px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.hc-importbands li {
+  display: flex; align-items: baseline; gap: 6px; padding: 4px 9px;
+  border: 1px solid var(--border-2); border-radius: 999px; background: var(--card);
+}
+.hc-importbands li b { font-size: 12px; font-weight: 700; }
+.hc-importbands li span { font-size: 11px; color: var(--hc-muted); }
 .hc-importtop { margin-top: 12px; }
 .hc-importsub { margin: 0 0 6px; font-size: 11.5px; font-weight: 700; color: var(--ink-2); text-transform: uppercase; letter-spacing: .05em; }
 .hc-importtop ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; counter-reset: p; }

@@ -8,8 +8,28 @@ import { freqWord } from "@/lib/help/sim";
  *  The file is parsed in the browser and never sent anywhere. That is not a nicety: it is the
  *  only reason it is reasonable to drop a customer list into a help page, and it is said on
  *  the screen so nobody has to take it on trust. */
+/** The scale band this file implies, from orders per month across the window it covers.
+ *  The form asks for it as a guess; a file of real orders knows. */
+function bandFor(out: OrderInsight): string | null {
+  /* A file of 9,750 orders is not a volume until it says over how long. Three weeks of data
+     is not a month, so anything shorter than that is left alone rather than extrapolated. */
+  if (!out.windowDays || out.windowDays < 21) return null;
+  const per = out.orders / (out.windowDays / 30.44);
+  return per < 100 ? "early"
+    : per < 500 ? "small"
+    : per < 1000 ? "growing"
+    : per < 5000 ? "established"
+    : per < 20000 ? "large" : "enterprise";
+}
+
 export default function OrderImport({ onApply }: {
-  onApply: (v: { everyDays: number; runs: number[]; products: string[] }) => void;
+  onApply: (v: {
+    everyDays: number; runs: number[]; products: string[];
+    /* Everything else the file can answer, so one click fills the form rather than two
+       fields of it. A ladder the store's own customers have already accepted beats one off
+       a category table, which is the whole argument for reading the file at all. */
+    discountMin: number | null; discountMax: number | null; scale: string | null;
+  }) => void;
 }) {
   const file = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -73,14 +93,56 @@ export default function OrderImport({ onApply }: {
                   everyDays: out.suggestEveryDays as number,
                   runs: out.suggestRuns,
                   products: out.topProducts.slice(0, 3).map((p) => p.title),
+                  discountMin: out.discounts.bands[0]?.pct ?? out.discounts.medianPct,
+                  discountMax: out.discounts.maxPct,
+                  scale: bandFor(out),
                 })}>
-                Use this cadence and these runs
+                Use everything in this file
               </button>
             </div>
           ) : (
             <p className="hc-note">
               Not enough repeat behaviour in this file to name a cadence. That is an answer too: it
               usually means the window is too short rather than that nobody reorders.
+            </p>
+          )}
+
+          {/* What this store already discounts. The ask was the maximum and how many took it,
+              because a ladder anchored to a rate these customers have already accepted is a
+              different argument from one off a category table. */}
+          {out.discounts.orders > 0 ? (
+            <div className="hc-importdisc">
+              <p className="hc-importsub">Discounts already given</p>
+              <ul className="hc-importstats">
+                <li><b>{out.discounts.maxPct}%</b><span>deepest on one order</span></li>
+                <li><b>{out.discounts.medianPct}%</b><span>typical when discounted</span></li>
+                <li>
+                  <b>{out.discounts.orders.toLocaleString("en-IN")}</b>
+                  <span>orders discounted, {pct(out.discounts.share)} of all</span>
+                </li>
+              </ul>
+              {out.discounts.bands.length > 0 && (
+                <ol className="hc-importbands">
+                  {out.discounts.bands.map((b) => (
+                    <li key={b.pct}>
+                      <b>{b.pct}% off</b>
+                      <span>{b.orders.toLocaleString("en-IN")} {b.orders === 1 ? "order" : "orders"}</span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+              {out.discounts.codes.length > 0 && (
+                <p className="hc-note">
+                  Most used {out.discounts.codes.length === 1 ? "code" : "codes"}:{" "}
+                  {out.discounts.codes.map((c) => `${c.code} (${c.orders})`).join(", ")}.
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="hc-note">
+              No order-level discounts in this file, so the plan ladder has nothing of your own
+              to anchor to. The export carries them in a Discount Amount column; if yours has
+              none, discounts were applied some other way.
             </p>
           )}
 

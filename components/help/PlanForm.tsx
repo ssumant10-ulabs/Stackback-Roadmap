@@ -262,7 +262,12 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
       </div>
 
       <aside className={"hc-suggest" + (!cat && !scale ? " empty" : "")}>
-        <OrderImport onApply={({ everyDays, runs, products }) => {
+        {/* One click fills everything the file can answer. It used to set the cadence and
+            the runs and leave the volume, the ladder and the products to be typed in beside
+            a panel that already knew them — and the volume question in particular decides
+            which payment types are offered, so leaving it was leaving the main thing. */}
+        <OrderImport onApply={({ everyDays, runs, products, discountMin, discountMax, scale }) => {
+          const band = scale ? SCALE_BY_ID.get(scale) : null;
           const next: Answers = {
             ...answers,
             every_days: [String(everyDays)],
@@ -270,6 +275,15 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
             ...(products.length && !String(answers.scope_detail || "").trim()
               ? { scope_kind: "products", scope_detail: products.join(", ") }
               : {}),
+            /* The band sets the payment types the same way answering the question does, so
+               the two routes cannot disagree about what a volume means. */
+            ...(band ? { scale: band.id, modes: reconcileModes(band.modes, []) } : {}),
+            /* The ladder, anchored to rates these customers have already accepted. Only
+               where the file HAS discounts and the two ends differ — a single flat rate is
+               one number, and writing it into both ends reads as a tier that is not one. */
+            ...(discountMin != null && discountMax != null && discountMax > discountMin
+              ? { discount_min: String(discountMin), discount_max: String(discountMax), tiered: "yes" }
+              : discountMax != null ? { discount_min: String(discountMax), discount_max: String(discountMax) } : {}),
           };
           onAnswers(next); save(next);
         }} />

@@ -12,6 +12,7 @@
  *  Run: npx tsx scripts/eval-references.ts
  */
 import { readFileSync } from "node:fs";
+import { analyse, readOrders } from "../lib/help/orders";
 import { join } from "node:path";
 import { parseDiscounts, parsePlans } from "../lib/help/references";
 import { categoryIdFor } from "../lib/help/categories";
@@ -70,5 +71,43 @@ for (const [cell, want] of fx.alsoSeen.rows as [string, string][]) {
 
 const rows = filled.length;
 const read = filled.filter((r) => parsePlans(r.frequency).length).length;
+
+/* ---- discounts off the merchant's own orders ------------------------------------------
+   The ask was the deepest discount and how many took it. A category table says what
+   competitors do; this says what these customers have already accepted, which is the number
+   a plan ladder should be anchored to. The rate is currency over the gross line total,
+   because the export states the discount in money against a total it does not restate. */
+{
+  const csv = [
+    "Name,Email,Created at,Cancelled at,Discount Amount,Discount Code,Lineitem name,Lineitem quantity,Lineitem price",
+    "#1001,a@x.com,2026-01-01,,100,SAVE10,Tea,1,1000",
+    "#1002,b@x.com,2026-02-01,,200,SAVE20,Tea,1,1000",
+    "#1003,c@x.com,2026-03-01,,200,SAVE20,Tea,1,1000",
+    "#1004,d@x.com,2026-04-01,,,,Tea,1,1000",
+    "#1005,e@x.com,2026-05-01,,900,STAFF,Tea,1,1000",
+  ].join("\n");
+  const d = analyse(readOrders(csv).rows).discounts;
+  console.log("\nDiscounts already given");
+  /* This file reports by counting `bad`; give the block the same voice. */
+  const ok = (c: boolean, what: string) => {
+    if (c) console.log(`  ok    ${what}`);
+    else { bad++; console.log(`  FAIL  ${what}`); }
+  };
+  ok(d.orders === 4, `four of five orders were discounted, got ${d.orders}`);
+  ok(Math.abs(d.share - 0.8) < 0.001, "and that is 80% of the file");
+  ok(d.maxPct === 90, `the deepest single order is 90%, got ${d.maxPct}`);
+  ok(d.bands[0].pct === 20 && d.bands[0].orders === 2,
+    `the most-used rate is 20% on two orders, got ${d.bands[0]?.pct}% on ${d.bands[0]?.orders}`);
+  ok(d.codes[0].code === "SAVE20", "and the most-used code is named");
+  /* A one-off 90% staff order is not a plan. It is reported as the maximum and must not be
+     what the ladder anchors to, which is why the bands are ranked by USE and not by depth. */
+  ok(d.bands[0].pct !== d.maxPct, "the most-used rate is not the deepest one");
+  const none = analyse(readOrders([
+    "Name,Email,Created at,Lineitem name,Lineitem quantity,Lineitem price",
+    "#1,a@x.com,2026-01-01,Tea,1,1000",
+  ].join("\n")).rows).discounts;
+  ok(none.orders === 0 && none.maxPct === null, "a file with no discount column reports none rather than zero percent");
+}
+
 console.log(`\n${read}/${rows} live plan cells read, ${rows - bad ? "" : ""}${bad} failure${bad === 1 ? "" : "s"}`);
 process.exit(bad ? 1 : 0);

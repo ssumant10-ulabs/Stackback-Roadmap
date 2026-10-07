@@ -112,7 +112,13 @@ function toTheme(tokens: Token[], corners: string, customPx: number | null, base
     ...base,
     /* The savings colour was a fixed green on every store. It is what a discount is printed
        in, so it is the accent unless the site published something greener of its own. */
-    colors: { primary, subscriptionAccent: accent, savings: greenest(tokens) || accent },
+    /* The savings colour is the ACCENT, not a green hunted out of the stylesheet. It used
+       to be "the greenest colour your site publishes", which on a site with no green of its
+       own found one anyway — a review widget's success colour, a stock icon, an image
+       artefact — and printed every discount in a colour nobody had chosen. The skill names
+       a Savings token; it does not say the token must be green. Any merchant who wants
+       green now picks it, which is one click on an editable row. */
+    colors: { primary, subscriptionAccent: accent, savings: accent },
     surfaces: { widgetBackground: bg, mutedSurface: tint, inputBackground: tile },
     // A border the theme does not publish is derived from the tint rather than left slate.
     borders: { default: mix(tint, text, 0.12), strong: primary },
@@ -125,22 +131,6 @@ function toTheme(tokens: Token[], corners: string, customPx: number | null, base
     },
     shape: { radius, buttonRadius: radiusBtn },
   };
-}
-
-/** The most green-leaning colour the site actually publishes, if it has one. A discount
- *  reads as a saving in green, and where a brand has no green of its own the accent says it
- *  better than a colour we picked. */
-function greenest(tokens: Token[]): string | null {
-  let best: { hex: string; score: number } | null = null;
-  for (const t of tokens) {
-    const m = /^#?([0-9a-f]{6})$/i.exec(t.hex.replace("#", "").padStart(6, "0"));
-    if (!m) continue;
-    const n = parseInt(m[1], 16);
-    const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-    const score = g - Math.max(r, b);
-    if (score > 30 && (!best || score > best.score)) best = { hex: t.hex, score };
-  }
-  return best?.hex ?? null;
 }
 
 function mix(a: string, b: string, t: number): string {

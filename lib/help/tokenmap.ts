@@ -80,7 +80,7 @@ export function canonicalTokens(
         { label: "Primary", value: t.colors.primary, swatch: true, path: "colors.primary", ...from("Brand_Primary", "the subscribe button fill", "direct") },
         { label: "Subscription Accent", value: t.colors.subscriptionAccent, swatch: true, path: "colors.subscriptionAccent", ...from("Brand_Accent", "the savings and offer highlight", "direct") },
         { label: "Savings Color", value: t.colors.savings, swatch: true, path: "colors.savings",
-          note: "What a discount is printed in: the greenest colour your site publishes, or the accent",
+          note: "What a discount is printed in. Mirrors the Subscription Accent unless you set it",
           how: read && Object.keys(read).length ? "derived" : "logic" },
       ],
     },

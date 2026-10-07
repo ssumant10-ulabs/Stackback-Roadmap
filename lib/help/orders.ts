@@ -24,6 +24,10 @@ export interface OrderRow {
   cancelled: boolean;
   source: string;
   items: { title: string; qty: number; price: number }[];
+  /** Order-level discount in currency, and the code if one was used. A Shopify export puts
+   *  both on the first row of an order, so they are read with the rest of the header. */
+  discount: number;
+  discountCode: string;
 }
 
 export interface OrderInsight {
@@ -41,6 +45,21 @@ export interface OrderInsight {
   suggestRuns: number[];
   topProducts: { title: string; orders: number; units: number; revenue: number }[];
   aov: number;
+  /** Days between the first and last order in the file, so a count can become a rate. A
+   *  file is worth a volume band only if it says over how long it was collected. */
+  windowDays: number | null;
+  /** What the store already discounts, off its own orders rather than a category table.
+   *  `maxPct` is the deepest single order, `topPct` the deepest rate that more than a
+   *  handful of orders actually used — a one-off 90% staff order is not a plan. */
+  discounts: {
+    orders: number;
+    share: number;
+    medianPct: number | null;
+    maxPct: number | null;
+    /** The most-used rate and how many orders took it, rounded to whole percent. */
+    bands: { pct: number; orders: number }[];
+    codes: { code: string; orders: number }[];
+  };
   warnings: string[];
 }
 
@@ -92,6 +111,8 @@ const COL = {
   created: ["created at", "created_at", "processed at", "paid at"],
   cancelled: ["cancelled at", "cancelled_at"],
   source: ["source", "source name"],
+  discount: ["discount amount", "discount_amount", "discounts"],
+  code: ["discount code", "discount_code"],
   item: ["lineitem name", "lineitem_name", "line item name", "product title"],
   qty: ["lineitem quantity", "lineitem_quantity", "quantity"],
   price: ["lineitem price", "lineitem_price", "price"],
@@ -119,6 +140,8 @@ export function readOrders(csv: string): { rows: OrderRow[]; warnings: string[] 
   const iEmail = indexOfAny(head, COL.email);
   const iCancelled = indexOfAny(head, COL.cancelled);
   const iSource = indexOfAny(head, COL.source);
+  const iDiscount = indexOfAny(head, COL.discount);
+  const iCode = indexOfAny(head, COL.code);
   const iItem = indexOfAny(head, COL.item);
   const iQty = indexOfAny(head, COL.qty);
   const iPrice = indexOfAny(head, COL.price);
@@ -145,6 +168,8 @@ export function readOrders(csv: string): { rows: OrderRow[]; warnings: string[] 
         createdAt: when,
         cancelled: iCancelled >= 0 ? Boolean((r[iCancelled] || "").trim()) : false,
         source: iSource >= 0 ? (r[iSource] || "").trim() : "",
+        discount: iDiscount >= 0 ? num(r[iDiscount]) : 0,
+        discountCode: iCode >= 0 ? (r[iCode] || "").trim() : "",
         items: [],
       };
       byName.set(nm, o);
@@ -234,6 +259,34 @@ export function analyse(rows: OrderRow[], extraWarnings: string[] = []): OrderIn
 
   const revenue = live.reduce((s, o) => s + o.items.reduce((t, i) => t + i.qty * i.price, 0), 0);
 
+  /* What the store already discounts, read off its own orders. A category table says what
+     competitors do; this says what these customers have already accepted, which is the
+     number worth anchoring a plan ladder to.
+     The rate is discount over the GROSS line total, because the export's discount column is
+     currency off a total it does not restate. An order whose lines sum to nothing — a pure
+     gift card, a fully refunded row — would divide by zero, so it is left out. */
+  const discounted = live
+    .map((o) => {
+      const gross = o.items.reduce((t, i) => t + i.qty * i.price, 0);
+      return { pct: gross > 0 && o.discount > 0 ? (o.discount / gross) * 100 : 0, code: o.discountCode };
+    })
+    .filter((d) => d.pct > 0 && d.pct <= 100);
+  const pcts = discounted.map((d) => Math.round(d.pct));
+  const byBand = new Map<number, number>();
+  for (const p of pcts) byBand.set(p, (byBand.get(p) || 0) + 1);
+  const byCode = new Map<string, number>();
+  for (const d of discounted) if (d.code) byCode.set(d.code, (byCode.get(d.code) || 0) + 1);
+  const discounts = {
+    orders: discounted.length,
+    share: live.length ? discounted.length / live.length : 0,
+    medianPct: median(pcts),
+    maxPct: pcts.length ? Math.max(...pcts) : null,
+    bands: [...byBand.entries()].map(([pct, n]) => ({ pct, orders: n }))
+      .sort((a, b) => b.orders - a.orders || b.pct - a.pct).slice(0, 5),
+    codes: [...byCode.entries()].map(([code, n]) => ({ code, orders: n }))
+      .sort((a, b) => b.orders - a.orders).slice(0, 5),
+  };
+
   if (gaps.length > 0 && gaps.length < 20) {
     warnings.push(`Only ${gaps.length} repeat intervals in this file, so the median gap is indicative rather than solid. Export a longer window if you can.`);
   }
@@ -254,6 +307,12 @@ export function analyse(rows: OrderRow[], extraWarnings: string[] = []): OrderIn
     suggestRuns,
     topProducts,
     aov: live.length ? revenue / live.length : 0,
+    windowDays: live.length > 1
+      ? Math.max(1, Math.round(
+        (Math.max(...live.map((o) => o.createdAt.getTime()))
+          - Math.min(...live.map((o) => o.createdAt.getTime()))) / 86_400_000))
+      : null,
+    discounts,
     warnings,
   };
 }
