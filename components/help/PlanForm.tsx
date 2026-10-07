@@ -128,7 +128,17 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
     const value = id === "modes" && Array.isArray(v)
       ? reconcileModes(v, Array.isArray(answers.modes) ? answers.modes : [])
       : v;
-    const next = { ...answers, [id]: value };
+    const next: Answers = { ...answers, [id]: value };
+    /* Answering the volume question sets the payment types, because that question says in
+       its own help text that it "decides which payment types are worth offering". It did
+       not: the form shipped with prepaid and pay as you go ticked and they stayed ticked at
+       every volume, so a store doing a few thousand orders was shown the small-store answer
+       and AutoPay was never on screen. The band is still only a starting point — every box
+       is still a box, and unticking one is a click. */
+    if (id === "scale") {
+      const band = SCALE_BY_ID.get(String(value || ""));
+      if (band) next.modes = reconcileModes(band.modes, []);
+    }
     onAnswers(next); save(next);
   };
 

@@ -73,6 +73,15 @@ console.log(`\n  ${rows} settings on the panel, ${dead.length} with no reader.`)
   }
   if (!SCALES.every((b, i) => i === 0 || lo(b) >= lo(SCALES[i - 1]))) dead.push("the scale bands are out of order");
   /* No gap and no overlap at the seam, or a store reads two bands and picks neither. */
+  /* The pair that must never be offered together: both collect per delivery, one by asking
+     and one automatically, so a band carrying both asks a customer to choose between being
+     invoiced and being charged. The form already unticks one when you pick the other, and a
+     band that suggests both contradicts the form. */
+  for (const b of SCALES) {
+    const both = b.modes.includes("payg") && b.modes.includes("auto_debit");
+    if (both) dead.push(`${b.label} offers pay as you go AND AutoPay — they are alternatives`);
+  }
+  console.log("  ok    no band offers pay as you go and AutoPay together");
   if (!SCALES.some((b) => lo(b) === 500)) dead.push("no band starts at 500, where the AutoPay decision is");
   else console.log("  ok    a band starts exactly at 500, which is where the decision is");
 }

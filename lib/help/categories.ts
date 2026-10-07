@@ -97,8 +97,12 @@ export const SCALES: ScaleBand[] = [
        pay as you go — which is the complaint, and it was the band's fault rather than the
        answer's. Splitting at 500 puts the threshold where the decision actually is. */
     id: "growing", label: "500 to 1,000 orders a month", hint: "Growing",
-    modes: ["prepaid", "payg", "auto_debit"],
-    why: "All three are worth offering from 500 up. AutoPay earns its setup at this volume, and it is the one that stops collection becoming somebody's weekly job \u2014 but pay as you go still converts better with customers who will not sign a mandate, so the choice is real rather than a default.",
+    /* Never pay as you go AND AutoPay. They are two ways to collect the same money, one by
+       asking and one automatically, so offering both asks a customer to choose between
+       being invoiced and being charged — which nobody does. From 500 the automatic one is
+       the right half of that pair, which is the whole reason 500 is the line. */
+    modes: ["prepaid", "auto_debit"],
+    why: "Prepaid, and AutoPay in place of pay as you go. 500 is where the Razorpay setup starts paying for itself: below it the mandate screen costs more in drop-off than the chasing costs in time, and above it that reverses. Pay as you go comes off rather than sitting beside AutoPay \u2014 both collect per delivery, so offering the two asks a customer to choose between being invoiced and being charged.",
   },
   {
     id: "established", label: "1,000 to 5,000 orders a month", hint: "Established",
