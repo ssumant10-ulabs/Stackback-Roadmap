@@ -1657,6 +1657,37 @@
   width: 11px; height: 11px; border-radius: 3px; align-self: center;
   border: 1px solid var(--border-2); flex: none;
 }
+/* The swatch IS the control. Sized and bordered exactly like the static dot it replaces, so
+   a row that can be edited and one that cannot sit on the same line without a step. */
+.hc-tokpick {
+  width: 13px; height: 13px; padding: 0; align-self: center; flex: none; cursor: pointer;
+  border: 1px solid var(--border-2); border-radius: 3px; background: none; appearance: none;
+}
+.hc-tokpick::-webkit-color-swatch-wrapper { padding: 0; }
+.hc-tokpick::-webkit-color-swatch { border: none; border-radius: 2px; }
+.hc-tokpick::-moz-color-swatch { border: none; border-radius: 2px; }
+.hc-tokpick:hover { border-color: var(--hc-ink, var(--ink)); box-shadow: 0 0 0 2px var(--sunken); }
+
+/* Reading a screenshot: the upload row, and the palette it produces. */
+.hc-bfshot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.hc-bfshot span { font-size: 11.5px; line-height: 1.5; color: var(--hc-muted); flex: 1 1 260px; min-width: 0; }
+.hc-shotpal { margin-top: 14px; }
+.hc-shotph { margin: 0 0 2px; font-size: 12.5px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.hc-shotph em {
+  font-style: normal; font-size: 11px; font-weight: 600; color: var(--hc-muted);
+  background: var(--sunken); border-radius: 999px; padding: 0 7px;
+}
+.hc-shotrow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 9px; }
+.hc-shotsw {
+  display: flex; align-items: center; gap: 6px; padding: 5px 7px; min-width: 0;
+  border: 1px solid var(--border-2); border-radius: 9px; background: var(--card);
+}
+.hc-shotsw i { width: 18px; height: 18px; border-radius: 4px; border: 1px solid var(--border-2); flex: none; }
+.hc-shotsw b { font-family: ui-monospace, Menlo, monospace; font-size: 11px; font-weight: 600; }
+.hc-shotsw select {
+  font: inherit; font-size: 11px; padding: 2px 4px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--border-2); background: var(--card-2); color: var(--ink); max-width: 118px;
+}
 .hc-tokhow { font-style: normal; font-size: 9.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; border-radius: 4px; padding: 0 4px; }
 .hc-tokhow.h-direct { background: var(--hc-ok-soft); color: var(--hc-ok); }
 .hc-tokhow.h-derived { background: var(--sunken); color: var(--hc-muted); }

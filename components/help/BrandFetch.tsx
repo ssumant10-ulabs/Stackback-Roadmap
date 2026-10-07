@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { palette, suggestTokens, type Swatch } from "@/lib/help/shot-palette";
 import type { WidgetSettings, WidgetTheme } from "@/lib/help/widget";
 import { downloadTokens, tokensText } from "@/lib/help/tokens";
 import { canonicalTokens, tokenPasteBlock, type ReadShape, type ReadSources } from "@/lib/help/tokenmap";
@@ -18,6 +19,32 @@ import { canonicalTokens, tokenPasteBlock, type ReadShape, type ReadSources } fr
 type Token = { key: string; hex: string; source: string; confidence: "theme" | "derived" | "guessed" };
 
 /** One real product off the storefront, so the preview shows their product rather than a placeholder. */
+/** Which theme path each reader token writes to, for applying a screenshot guess. */
+const TOKEN_PATH: Record<string, string> = {
+  Brand_Primary: "colors.primary",
+  Brand_Accent: "colors.subscriptionAccent",
+  Brand_Secondary: "surfaces.mutedSurface",
+  Widget_Background: "surfaces.widgetBackground",
+  Product_Tile: "text.primary",
+  Text_Secondary: "text.secondary",
+  Product_Tile_Background: "surfaces.inputBackground",
+};
+
+/** Every token a sampled colour can be dropped onto, in the order the panel lists them. */
+const ASSIGNABLE: { path: string; label: string }[] = [
+  { path: "colors.primary", label: "Primary" },
+  { path: "colors.subscriptionAccent", label: "Subscription Accent" },
+  { path: "colors.savings", label: "Savings Color" },
+  { path: "text.primary", label: "Primary Text" },
+  { path: "text.secondary", label: "Secondary Text" },
+  { path: "text.muted", label: "Muted Text" },
+  { path: "surfaces.widgetBackground", label: "Widget Background" },
+  { path: "surfaces.mutedSurface", label: "Muted Surface" },
+  { path: "surfaces.inputBackground", label: "Input Background" },
+  { path: "borders.default", label: "Default Border" },
+  { path: "borders.strong", label: "Selected Border" },
+];
+
 export interface ReadProduct {
   title: string; handle: string;
   /** Minor units, as Shopify serves them. */
@@ -28,6 +55,24 @@ export interface ReadProduct {
 /** Flat brand tokens to the nested theme this preview draws from.
  *  Brand_Secondary is a light tint in the flat model and the nested model has no field for
  *  it, so it lands on mutedSurface, which is what fills an unselected tab and a section. */
+/** Set one dotted path on the theme, returning a new one. The token rows carry their own
+ *  path, so the panel can write a colour back without a switch statement that has to be kept
+ *  in step with the token list. */
+/** `<input type=color>` only accepts #rrggbb. A token can legitimately hold `transparent`
+ *  or a short hex, and feeding either to the control makes it silently show black. */
+function safeHex(v: string): string {
+  const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(v.trim());
+  if (!m) return "#000000";
+  const h = m[1];
+  return "#" + (h.length === 3 ? h.split("").map((c) => c + c).join("") : h).toUpperCase();
+}
+
+function setPath(t: WidgetTheme, path: string, value: string): WidgetTheme {
+  const [a, b] = path.split(".");
+  const branch = (t as unknown as Record<string, Record<string, string>>)[a];
+  return { ...t, [a]: { ...branch, [b]: value } } as WidgetTheme;
+}
+
 function toTheme(tokens: Token[], corners: string, customPx: number | null, base: WidgetTheme, cardPx: number | null, buttonPx: number | null): WidgetTheme {
   /* Nothing predefined. Every colour here comes off the merchant's own site, and a token the
      reader could not find falls back to another token that WAS read — never to the app's
@@ -136,6 +181,45 @@ export default function BrandFetch({ theme, onTheme, settings, storeName, onProd
   const [readFrom, setReadFrom] = useState<ReadSources | undefined>(undefined);
   /** What else the reader managed to find: shape, shadow, button style. */
   const [shape, setShape] = useState<ReadShape | undefined>(undefined);
+  /* Colours sampled from a screenshot the merchant uploads. The reader works from the served
+     HTML and CSS, and on a page whose colours are painted by JavaScript there is nothing in
+     the response to find — blepworld.com declares twelve colour variables and every one
+     belongs to Judge.me. A picture of the page has no such problem. */
+  const [shot, setShot] = useState<Swatch[] | null>(null);
+  const [shotName, setShotName] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function readShot(file: File) {
+    setMsg(null);
+    try {
+      const bmp = await createImageBitmap(file);
+      /* Scaled down before sampling: a 3000px screenshot is nine million pixels to bucket
+         for an answer that does not change, and the browser stalls while it does it. */
+      const scale = Math.min(1, 900 / Math.max(bmp.width, bmp.height));
+      const w = Math.max(1, Math.round(bmp.width * scale)), h = Math.max(1, Math.round(bmp.height * scale));
+      const cv = document.createElement("canvas");
+      cv.width = w; cv.height = h;
+      const ctx = cv.getContext("2d", { willReadFrequently: true });
+      if (!ctx) { setMsg("This browser will not let us read the image."); return; }
+      ctx.drawImage(bmp, 0, 0, w, h);
+      const sw = palette(ctx.getImageData(0, 0, w, h).data);
+      if (!sw.length) { setMsg("No colours could be read out of that image."); return; }
+      setShot(sw);
+      setShotName(file.name);
+      /* Offered, not applied. A flat picture knows its colours exactly and knows nothing
+         about which one is the button, so the guess goes on screen next to the swatches and
+         a person confirms it. */
+      const guess = suggestTokens(sw);
+      const next = Object.entries(guess).reduce((acc, [k, hex]) => {
+        const path = TOKEN_PATH[k];
+        return path ? setPath(acc, path, hex) : acc;
+      }, theme);
+      onTheme(next);
+      setNote(`Sampled ${sw.length} colours from ${file.name}. The five biggest were applied as a first guess \u2014 click any swatch to put it on a different token.`);
+    } catch {
+      setMsg("That file could not be read as an image.");
+    }
+  }
 
   async function run() {
     const q = url.trim();
@@ -199,13 +283,53 @@ export default function BrandFetch({ theme, onTheme, settings, storeName, onProd
         </button>
       </div>
 
+      {/* The other way in. A URL read can only see what the server sent; a screenshot is
+          what the merchant actually sees, which is the thing we were trying to infer. */}
+      <div className="hc-bfshot">
+        <input ref={fileRef} type="file" accept="image/*" hidden
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) readShot(f); e.target.value = ""; }} />
+        <button type="button" className="hc-btn ghost" onClick={() => fileRef.current?.click()}>
+          {shot ? "Read another screenshot" : "Read a screenshot instead"}
+        </button>
+        <span>
+          Where a theme publishes nothing of its own, or paints its colours with JavaScript,
+          the page as you see it is the only honest source. Read in this browser; the image
+          is never uploaded.
+        </span>
+      </div>
+
+      {shot && (
+        <div className="hc-shotpal">
+          <p className="hc-shotph">
+            Colours in {shotName}<em>{shot.length}</em>
+          </p>
+          <p className="hc-bfp">
+            Biggest area first. Pick the token each one belongs to &mdash; the picture knows
+            its colours exactly and nothing about which is the button.
+          </p>
+          <div className="hc-shotrow">
+            {shot.map((sw) => (
+              <label key={sw.hex} className="hc-shotsw" title={`${sw.hex} \u00b7 ${(sw.share * 100).toFixed(1)}% of the image`}>
+                <i style={{ background: sw.hex }} />
+                <b>{sw.hex}</b>
+                <select defaultValue="" aria-label={`Use ${sw.hex} for`}
+                  onChange={(e) => { if (e.target.value) { onTheme(setPath(theme, e.target.value, sw.hex)); e.target.value = ""; } }}>
+                  <option value="">Use for\u2026</option>
+                  {ASSIGNABLE.map((a) => <option key={a.path} value={a.path}>{a.label}</option>)}
+                </select>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
       {msg && <p className="hc-bferr">{msg}</p>}
 
       {/* Every token this widget actually has, named the way `stackback-color-tokens` names
           it, in its sections and its order. The reader answers six of them; the widget on
           every pilot store today has nineteen plus the portal's five and two fonts, and
           showing six and calling it the token set is why this panel kept reading as wrong. */}
-      <LiveTokens theme={theme} read={readFrom} font={font} shape={shape} storeName={storeName || url.trim() || null} />
+      <LiveTokens theme={theme} onTheme={onTheme} read={readFrom} font={font} shape={shape} storeName={storeName || url.trim() || null} />
 
       {tokens && (
         <>
@@ -234,8 +358,9 @@ export default function BrandFetch({ theme, onTheme, settings, storeName, onProd
  *  the six chips and the preview, and dev wants all twenty-six to paste into the app. The
  *  copy block at the bottom is the `field: value` shape the skill asks every derivation to
  *  end with, so nobody has to read a table to enter them. */
-function LiveTokens({ theme, read, font, shape, storeName }: {
-  theme: WidgetTheme; read?: ReadSources; font: string | null; shape?: ReadShape; storeName: string | null;
+function LiveTokens({ theme, onTheme, read, font, shape, storeName }: {
+  theme: WidgetTheme; onTheme: (t: WidgetTheme) => void;
+  read?: ReadSources; font: string | null; shape?: ReadShape; storeName: string | null;
 }) {
   /* Open. This is the token set, not an appendix to it. */
   const [open, setOpen] = useState(true);
@@ -273,7 +398,16 @@ function LiveTokens({ theme, read, font, shape, storeName }: {
                   <div key={r.label}>
                     <dt>{r.label}</dt>
                     <dd>
-                      {r.swatch && <i className="hc-tokdot" data-transparent={r.value === "transparent" ? "1" : undefined} style={{ background: r.value }} />}
+                      {/* The swatch is the control. Every read on this panel is a reading of
+                          somebody's site and some of them are wrong; correcting one should
+                          not mean leaving for the theme editor and coming back. */}
+                      {r.swatch && r.path && r.value !== "transparent" ? (
+                        <input type="color" className="hc-tokpick" value={safeHex(r.value)}
+                          aria-label={`${r.label} colour`} title={`${r.label} \u2014 click to change`}
+                          onChange={(e) => onTheme(setPath(theme, r.path!, e.target.value.toUpperCase()))} />
+                      ) : r.swatch ? (
+                        <i className="hc-tokdot" data-transparent={r.value === "transparent" ? "1" : undefined} style={{ background: r.value }} />
+                      ) : null}
                       <b>{r.value}</b>
                       {r.how && <em className={"hc-tokhow h-" + r.how}>{r.how}</em>}
                       {r.note && <span>{r.note}</span>}
