@@ -266,15 +266,25 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
             the runs and leave the volume, the ladder and the products to be typed in beside
             a panel that already knew them — and the volume question in particular decides
             which payment types are offered, so leaving it was leaving the main thing. */}
-        <OrderImport onApply={({ everyDays, runs, products, discountMin, discountMax, scale }) => {
+        <OrderImport onApply={({ everyDays, runs, products, discountMin, discountMax, scale, category, brand }) => {
           const band = scale ? SCALE_BY_ID.get(scale) : null;
           const next: Answers = {
             ...answers,
             every_days: [String(everyDays)],
             ...(runs.length ? { deliveries: runs.join(", ") } : {}),
-            ...(products.length && !String(answers.scope_detail || "").trim()
-              ? { scope_kind: "products", scope_detail: products.join(", ") }
-              : {}),
+            /* Overwrites. It used to fill the products only where the field was empty, so a
+               draft left over from another store survived a deliberate "use everything in
+               this file" and the form sat there naming somebody else's SKUs beside a panel
+               listing these ones. Pressing the button IS the instruction. */
+            ...(products.length ? { scope_kind: "products", scope_detail: products.join(", ") } : {}),
+            /* The category the products are in. Scored across the top products so one stray
+               title cannot decide it, and left alone entirely when nothing matches — a wrong
+               category is worse than an unanswered one, because the suggestion panel keys
+               off it. */
+            ...(category ? { category } : {}),
+            /* The file's own name, where it carries anything. `orders_export_1.csv` says
+               nothing and leaves the field empty rather than inventing a brand. */
+            ...(brand && !String(answers.brand_name || "").trim() ? { brand_name: brand } : {}),
             /* The band sets the payment types the same way answering the question does, so
                the two routes cannot disagree about what a volume means. */
             ...(band ? { scale: band.id, modes: reconcileModes(band.modes, []) } : {}),

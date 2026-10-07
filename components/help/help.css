@@ -1304,16 +1304,26 @@
 .hc-importstats span { font-size: 11px; color: var(--hc-muted); }
 .hc-importsug { margin-top: 11px; padding: 10px 12px; background: var(--sunken); border-radius: 10px; }
 .hc-importsug p { margin: 0 0 9px; font-size: 12.5px; line-height: 1.55; }
-/* Discounts the store has already given. Same stat shell as the counts above it, so the two
-   blocks read as one panel rather than two. */
-.hc-importdisc { margin-top: 14px; }
-.hc-importbands { list-style: none; margin: 9px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+/* Discounts the store has already given. Same stat shell as the counts above it so the two
+   blocks read as one panel — but THREE tiles in a two-column grid leaves a widow, so the
+   last one spans. The capsules were overflowing the panel and running into the codes line
+   underneath; they wrap on their own row with room of their own now. */
+.hc-importdisc { margin-top: 16px; }
+.hc-importdisc .hc-importstats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.hc-importdisc .hc-importstats li:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.hc-importbands {
+  list-style: none; margin: 10px 0 0; padding: 0;
+  display: flex; flex-wrap: wrap; gap: 6px; min-width: 0;
+}
 .hc-importbands li {
-  display: flex; align-items: baseline; gap: 6px; padding: 4px 9px;
+  display: inline-flex; align-items: baseline; gap: 6px; padding: 4px 10px; min-width: 0;
   border: 1px solid var(--border-2); border-radius: 999px; background: var(--card);
+  white-space: nowrap;
 }
 .hc-importbands li b { font-size: 12px; font-weight: 700; }
 .hc-importbands li span { font-size: 11px; color: var(--hc-muted); }
+/* The codes are a sentence, not a third row of chips, and it needs air above it. */
+.hc-importdisc > .hc-note { margin-top: 10px; line-height: 1.55; }
 .hc-importtop { margin-top: 12px; }
 .hc-importsub { margin: 0 0 6px; font-size: 11.5px; font-weight: 700; color: var(--ink-2); text-transform: uppercase; letter-spacing: .05em; }
 .hc-importtop ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; counter-reset: p; }

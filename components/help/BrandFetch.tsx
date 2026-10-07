@@ -73,6 +73,26 @@ function setPath(t: WidgetTheme, path: string, value: string): WidgetTheme {
   return { ...t, [a]: { ...branch, [b]: value } } as WidgetTheme;
 }
 
+/** Re-derive everything that is derived.
+ *
+ *  Four tokens are not read from anywhere — the default border, muted text, the savings
+ *  colour and the selected border all fall out of the ones that are. `setPath` writes a
+ *  single path, so applying a whole new palette left those four holding values computed from
+ *  the PREVIOUS one: a screenshot of a page with light blue and grey borders still showed a
+ *  green default border, because that green had been mixed out of a canvas read off the URL
+ *  minutes earlier and nothing recomputed it.
+ *
+ *  Run after any bulk change. A single row edit is left alone, so a border set by hand is
+ *  not undone by the next tweak. */
+function rederive(t: WidgetTheme): WidgetTheme {
+  return {
+    ...t,
+    colors: { ...t.colors, savings: t.colors.subscriptionAccent },
+    borders: { default: mix(t.surfaces.mutedSurface, t.text.primary, 0.12), strong: t.colors.primary },
+    text: { ...t.text, muted: mix(t.text.secondary, t.surfaces.widgetBackground, 0.4) },
+  };
+}
+
 function toTheme(tokens: Token[], corners: string, customPx: number | null, base: WidgetTheme, cardPx: number | null, buttonPx: number | null): WidgetTheme {
   /* Nothing predefined. Every colour here comes off the merchant's own site, and a token the
      reader could not find falls back to another token that WAS read — never to the app's
@@ -204,7 +224,10 @@ export default function BrandFetch({ theme, onTheme, settings, storeName, onProd
         const path = TOKEN_PATH[k];
         return path ? setPath(acc, path, hex) : acc;
       }, theme);
-      onTheme(next);
+      /* The derived four follow the new palette. Without this they keep values mixed out of
+         whatever was read before, which is how a screenshot of a page with grey borders
+         still showed a green one. */
+      onTheme(rederive(next));
       setNote(`Sampled ${sw.length} colours from ${file.name}. The five biggest were applied as a first guess \u2014 click any swatch to put it on a different token.`);
     } catch {
       setMsg("That file could not be read as an image.");

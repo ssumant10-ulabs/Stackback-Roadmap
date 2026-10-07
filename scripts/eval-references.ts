@@ -12,7 +12,7 @@
  *  Run: npx tsx scripts/eval-references.ts
  */
 import { readFileSync } from "node:fs";
-import { analyse, readOrders } from "../lib/help/orders";
+import { analyse, brandFromFilename, guessCategory, readOrders } from "../lib/help/orders";
 import { join } from "node:path";
 import { parseDiscounts, parsePlans } from "../lib/help/references";
 import { categoryIdFor } from "../lib/help/categories";
@@ -102,6 +102,30 @@ const read = filled.filter((r) => parsePlans(r.frequency).length).length;
   /* A one-off 90% staff order is not a plan. It is reported as the maximum and must not be
      what the ladder anchors to, which is why the bands are ranked by USE and not by depth. */
   ok(d.bands[0].pct !== d.maxPct, "the most-used rate is not the deepest one");
+  console.log("\nWhat else the file answers");
+  /* The form asks for a category beside a panel naming what the store sells five times over.
+     Scored across the top products so one stray title cannot decide it. */
+  const okc = (c: boolean, what: string) => { if (c) console.log(`  ok    ${what}`); else { bad++; console.log(`  FAIL  ${what}`); } };
+  okc(guessCategory([{ title: "Chicken Pumpkin Fresh Dog Food - 100g", orders: 1118 }]) === "pet",
+    "dog food is pet food and care");
+  okc(guessCategory([
+    { title: "Arabica Coffee Beans 250g", orders: 400 },
+    { title: "Chicken Dog Treats", orders: 10 },
+  ]) === "coffee-tea", "one stray pet title does not outvote four hundred coffee orders");
+  okc(guessCategory([{ title: "Blue Widget", orders: 900 }]) === null,
+    "nothing recognisable returns null, not 'other' — a wrong category is worse than none");
+  okc(guessCategory([]) === null, "no products, no guess");
+
+  /* A Shopify export has no store-name column, so the file name is all there is. It must
+     say something before it becomes a brand. */
+  okc(brandFromFilename("blepworld-orders-2026-10-07.csv") === "Blepworld",
+    "a named export gives a brand");
+  okc(brandFromFilename("orders_export_1.csv") === null,
+    "and a generic one gives nothing rather than a brand called Orders Export 1");
+  okc(brandFromFilename("orders_export.csv") === null, "nor from the plain Shopify default");
+  okc(brandFromFilename("the-good-roast-all-orders.csv") === "The Good Roast",
+    "hyphens become words and the export boilerplate comes off");
+
   const none = analyse(readOrders([
     "Name,Email,Created at,Lineitem name,Lineitem quantity,Lineitem price",
     "#1,a@x.com,2026-01-01,Tea,1,1000",

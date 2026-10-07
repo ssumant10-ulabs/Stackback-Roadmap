@@ -316,3 +316,62 @@ export function analyse(rows: OrderRow[], extraWarnings: string[] = []): OrderIn
     warnings,
   };
 }
+
+/* ---------------------------------------------------------------- reading the rest of it */
+
+/** The category the products in this file belong to.
+ *
+ *  A guess, and a cheap one: the form asks for a category and the file already names what
+ *  the store sells, so leaving it to be picked by hand beside a panel listing "Chicken
+ *  Pumpkin Fresh Dog Food" five times over is the form ignoring its own evidence. Scored
+ *  across the top products by order count, so one stray title cannot decide it, and it
+ *  returns null rather than "other" when nothing matches — a wrong category is worse than an
+ *  unanswered one, because the whole suggestion panel keys off it.
+ */
+const CATEGORY_WORDS: { id: string; words: RegExp }[] = [
+  { id: "pet", words: /\b(dog|cat|puppy|kitten|pet|kibble|paw|treats? for)\b/i },
+  { id: "coffee-tea", words: /\b(coffee|espresso|arabica|robusta|tea|chai|matcha|brew|beans?)\b/i },
+  { id: "supplements", words: /\b(supplement|vitamin|protein|collagen|omega|probiotic|capsule|tablet|gummies|booster|nutrition)\b/i },
+  { id: "personal-care", words: /\b(shampoo|conditioner|serum|cream|lotion|soap|skin|hair|face|body wash|moistur)\b/i },
+  { id: "beverages", words: /\b(juice|kombucha|soda|drink|mix|smoothie|cordial|syrup|hydration)\b/i },
+  { id: "food-staples", words: /\b(rice|atta|flour|dal|oil|ghee|masala|spice|sugar|salt|snack|chikki|mittai|namkeen)\b/i },
+  { id: "home", words: /\b(detergent|cleaner|cleaning|dish ?wash|floor|laundry|refill|wipes?)\b/i },
+];
+
+export function guessCategory(top: { title: string; orders: number }[]): string | null {
+  const score = new Map<string, number>();
+  for (const p of top) {
+    for (const c of CATEGORY_WORDS) {
+      if (c.words.test(p.title)) score.set(c.id, (score.get(c.id) || 0) + p.orders);
+    }
+  }
+  if (!score.size) return null;
+  const [best] = [...score.entries()].sort((a, b) => b[1] - a[1]);
+  return best[0];
+}
+
+/** A brand name out of the file's own name.
+ *
+ *  A Shopify order export carries no store-name column, so the only thing on hand is what the
+ *  merchant called the file. `orders_export_1.csv` says nothing and must stay empty rather
+ *  than becoming a brand called "Orders Export 1"; `blepworld-orders-2026.csv` says plenty.
+ *  So: strip the words every export carries, strip dates and numbers, and keep what is left
+ *  only if something is.
+ */
+export function brandFromFilename(name: string): string | null {
+  const stem = name.replace(/\.[a-z0-9]+$/i, "");
+  /* Separators are normalised FIRST. `_` is a word character, so `\borders\b` never matches
+     inside `orders_export_1` and the whole strip silently did nothing on the commonest
+     filename Shopify produces. */
+  const cleaned = stem
+    .replace(/[^a-z0-9]+/gi, " ")
+    .replace(/\b(orders?|export|exports|shopify|all|csv|xlsx?|report|data|screencapture|screenshot|final|copy|new)\b/gi, " ")
+    .replace(/\b\d+\b/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+  if (cleaned.length < 3) return null;
+  return cleaned
+    .split(/\s+/)
+    .map((w) => w[0].toUpperCase() + w.slice(1))
+    .join(" ");
+}

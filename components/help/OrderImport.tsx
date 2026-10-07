@@ -1,6 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
-import { analyse, readOrders, type OrderInsight } from "@/lib/help/orders";
+import { analyse, brandFromFilename, guessCategory, readOrders, type OrderInsight } from "@/lib/help/orders";
 import { freqWord } from "@/lib/help/sim";
 
 /** Read a store's own order export and propose plans from it.
@@ -29,15 +29,20 @@ export default function OrderImport({ onApply }: {
        fields of it. A ladder the store's own customers have already accepted beats one off
        a category table, which is the whole argument for reading the file at all. */
     discountMin: number | null; discountMax: number | null; scale: string | null;
+    category: string | null; brand: string | null;
   }) => void;
 }) {
   const file = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [out, setOut] = useState<OrderInsight | null>(null);
+  /* The file's own name is the only thing on hand that could be a brand: a Shopify export
+     carries no store-name column. */
+  const [name, setName] = useState<string | null>(null);
 
   async function read(f: File) {
     setBusy(true); setErr(null); setOut(null);
+    setName(f.name);
     try {
       const text = await f.text();
       const { rows, warnings } = readOrders(text);
@@ -96,6 +101,8 @@ export default function OrderImport({ onApply }: {
                   discountMin: out.discounts.bands[0]?.pct ?? out.discounts.medianPct,
                   discountMax: out.discounts.maxPct,
                   scale: bandFor(out),
+                  category: guessCategory(out.topProducts),
+                  brand: name ? brandFromFilename(name) : null,
                 })}>
                 Use everything in this file
               </button>
