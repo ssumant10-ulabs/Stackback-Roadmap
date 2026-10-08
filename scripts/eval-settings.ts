@@ -9,6 +9,7 @@
  *  Run: npx tsx scripts/eval-settings.ts
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
+import { DEFAULT_WIDGET, EXPORT_ROWS, readTheme } from "../lib/help/widget";
 import { SCALES } from "../lib/help/categories";
 import { join } from "node:path";
 import { TOGGLE_GROUPS } from "../lib/help/widget";
@@ -84,6 +85,23 @@ console.log(`\n  ${rows} settings on the panel, ${dead.length} with no reader.`)
   console.log("  ok    no band offers pay as you go and AutoPay together");
   if (!SCALES.some((b) => lo(b) === 500)) dead.push("no band starts at 500, where the AutoPay decision is");
   else console.log("  ok    a band starts exactly at 500, which is where the decision is");
+}
+
+/* ---- the exported sheet prints a VALUE, never an object ---------------------------------
+   Every "Shape and type" row shares `key: "theme"` and differs only by `themePath`, so
+   reading settings[d.key] handed back the whole theme object and seven rows on the exported
+   sheet printed "[object Object]". The value lives at the path. */
+{
+  const at = (d: { key: string; themePath?: string }) =>
+    d.themePath ? readTheme(DEFAULT_WIDGET, d.themePath)
+      : (DEFAULT_WIDGET as unknown as Record<string, unknown>)[d.key];
+  console.log("\nEvery export row resolves to a printable value");
+  let objs = 0;
+  for (const d of EXPORT_ROWS as { key: string; themePath?: string; label: string }[]) {
+    const v = at(d);
+    if (v !== null && typeof v === "object") { objs++; dead.push(`${d.label} resolves to an object, not a value`); }
+  }
+  if (!objs) console.log(`  ok    all ${(EXPORT_ROWS as unknown[]).length} rows resolve to a string, number or boolean`);
 }
 
 console.log(dead.length ? "FAIL" : "PASS");

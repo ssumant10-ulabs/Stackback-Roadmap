@@ -266,7 +266,7 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
             the runs and leave the volume, the ladder and the products to be typed in beside
             a panel that already knew them — and the volume question in particular decides
             which payment types are offered, so leaving it was leaving the main thing. */}
-        <OrderImport onApply={({ everyDays, extraEveryDays, runs, products, discountMin, discountMax, scale, category, brand }) => {
+        <OrderImport onApply={({ everyDays, extraEveryDays, runs, products, discountMin, discountMax, scale, category, brand, bands }) => {
           const band = scale ? SCALE_BY_ID.get(scale) : null;
           const next: Answers = {
             ...answers,
@@ -288,6 +288,9 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
             /* The file's own name, where it carries anything. `orders_export_1.csv` says
                nothing and leaves the field empty rather than inventing a brand. */
             ...(brand && !String(answers.brand_name || "").trim() ? { brand_name: brand } : {}),
+            /* The bands travel with the answers so the sheet and the document can print one
+               plan per pack size rather than one averaged plan over all of them. */
+            plan_bands: bands.length ? JSON.stringify(bands) : "",
             /* The band sets the payment types the same way answering the question does, so
                the two routes cannot disagree about what a volume means. */
             ...(band ? { scale: band.id, modes: reconcileModes(band.modes, []) } : {}),

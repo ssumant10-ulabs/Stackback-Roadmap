@@ -7,9 +7,9 @@
  *
  *  So this draws the sheet itself. More code, but it cannot hang, it needs no dependency,
  *  and the output is identical everywhere because nothing is inherited from the page. */
-import { QUESTIONS, parseBands, parseFreebies, parseList, visible, type Answers } from "./questions";
+import { QUESTIONS, parseBands, parseFreebies, parseList, readPlanBands, visible, type Answers, type PlanBand } from "./questions";
 import { DEFAULT_CONFIG } from "./sim";
-import type { WidgetSettings } from "./widget";
+import { readTheme, type WidgetSettings } from "./widget";
 import { DEFAULT_WIDGET, EXPORT_ROWS, matrixValue, toggleOn } from "./widget";
 import { CATEGORY_BY_ID, SCALE_BY_ID, freqWord } from "./categories";
 
@@ -94,6 +94,15 @@ export function drawPlanSheet(answers: Answers, settings?: WidgetSettings): HTML
   return canvas;
 }
 
+/** The value a settings row actually shows: from its `themePath` inside the theme where it
+ *  has one, otherwise from the settings object by key. `readTheme` is the module's own
+ *  resolver, so there is one of these rather than a second that can drift from it. */
+function themeValue(settings: WidgetSettings, d: { key: string; themePath?: string }): unknown {
+  return d.themePath
+    ? readTheme(settings, d.themePath)
+    : (settings as unknown as Record<string, unknown>)[d.key];
+}
+
 function render(t: Ctx, a: Answers, dry: boolean, settings?: WidgetSettings): number {
   const draw = !dry;
   const cat = CATEGORY_BY_ID.get(String(a.category || ""));
@@ -130,32 +139,78 @@ function render(t: Ctx, a: Answers, dry: boolean, settings?: WidgetSettings): nu
   if (draw) rule(t, INK, 2);
   t.y += 34;
 
-  /* ---------- plans ---------- */
+  /* ---------- plans ----------
+     One table per pack-size band where the order file found two. A 100g bag and a 1kg bag do
+     not reorder at the same rate, so one table over both is a plan that is wrong for one of
+     them; the sizes are named on each so nobody has to guess which is which.
+
+     AutoPay gets its own row and its own rate. It is not a run — it bills until the customer
+     stops it — so it has no run total, and it carries the SHALLOWEST rung of the ladder:
+     prepaid buys a bigger discount because the money is upfront, and giving the same rate to
+     a customer committing to nothing is the pricing error that makes prepaid pointless. */
+  const planBands = readPlanBands(a);
+  const offersAutopay = (Array.isArray(a.modes) ? a.modes : []).includes("auto_debit");
+  const cols = [PAD, PAD + 170, PAD + 330, W - PAD - 150, W - PAD];
+  const ladder = (rs: number[]) => rs.map((r) => (tiered ? (bands[r] ?? flat) : flat));
+  const autopayPct = (rs: number[]) => Math.min(...(ladder(rs).length ? ladder(rs) : [flat]));
+
+  const table = (heading: string | null, sizes: string[], rs: number[], freq: string) => {
+    if (draw && heading) {
+      text(t, heading, PAD, 14, 700, INK);
+      if (sizes.length) {
+        font(t.c, 12.5, 400); t.c.fillStyle = MUTED; t.c.textAlign = "right";
+        t.c.fillText(sizes.join(", "), W - PAD, t.y);
+      }
+      t.y += 20;
+    }
+    if (draw) {
+      label(t, "Plan", cols[0]); label(t, "Frequency", cols[1]); label(t, "Discount", cols[2]);
+      font(t.c, 11, 700, 1); t.c.fillStyle = MUTED; t.c.textAlign = "right";
+      t.c.fillText("PER DELIVERY", cols[3], t.y); t.c.fillText("RUN TOTAL", cols[4], t.y);
+      t.c.letterSpacing = "0px";
+    }
+    t.y += 10;
+    for (const r of rs) {
+      if (draw) rule(t);
+      t.y += 22;
+      const pct = tiered ? (bands[r] ?? flat) : flat;
+      const per = price * (1 - pct / 100);
+      if (draw) {
+        text(t, `${r} deliveries`, cols[0], 14, 700, INK);
+        text(t, freq, cols[1], 14, 400, INK);
+        text(t, `${pct}% off`, cols[2], 14, 400, INK);
+        text(t, money(per), cols[3], 14, 400, INK, "right");
+        text(t, money(per * r), cols[4], 14, 700, INK, "right");
+      }
+      t.y += 14;
+    }
+    if (offersAutopay) {
+      const pct = autopayPct(rs);
+      const per = price * (1 - pct / 100);
+      if (draw) rule(t);
+      t.y += 22;
+      if (draw) {
+        text(t, "AutoPay", cols[0], 14, 700, INK);
+        text(t, freq, cols[1], 14, 400, INK);
+        text(t, `${pct}% off`, cols[2], 14, 400, INK);
+        text(t, money(per), cols[3], 14, 400, INK, "right");
+        text(t, "no fixed run", cols[4], 12.5, 400, MUTED, "right");
+      }
+      t.y += 14;
+    }
+    if (draw) rule(t);
+  };
+
   if (draw) label(t, "The plans");
   t.y += 22;
-  const cols = [PAD, PAD + 170, PAD + 330, W - PAD - 150, W - PAD];
-  if (draw) {
-    label(t, "Plan", cols[0]); label(t, "Frequency", cols[1]); label(t, "Discount", cols[2]);
-    font(t.c, 11, 700, 1); t.c.fillStyle = MUTED; t.c.textAlign = "right";
-    t.c.fillText("PER DELIVERY", cols[3], t.y); t.c.fillText("RUN TOTAL", cols[4], t.y);
-    t.c.letterSpacing = "0px";
+  if (planBands.length > 1) {
+    planBands.forEach((b: PlanBand, i: number) => {
+      if (i) t.y += 26;
+      table(b.label, b.sizes, b.prepaidRuns, freqWord(b.everyDays));
+    });
+  } else {
+    table(null, [], runs, freqs[0] || "Not set");
   }
-  t.y += 10;
-  for (const r of runs) {
-    if (draw) rule(t);
-    t.y += 22;
-    const pct = tiered ? (bands[r] ?? flat) : flat;
-    const per = price * (1 - pct / 100);
-    if (draw) {
-      text(t, `${r} deliveries`, cols[0], 14, 700, INK);
-      text(t, freqs[0] || "Not set", cols[1], 14, 400, INK);
-      text(t, `${pct}% off`, cols[2], 14, 400, INK);
-      text(t, money(per), cols[3], 14, 400, INK, "right");
-      text(t, money(per * r), cols[4], 14, 700, INK, "right");
-    }
-    t.y += 14;
-  }
-  if (draw) rule(t);
   t.y += 20;
   const gifts = parseFreebies(a.freebies);
   const note = `Priced against an illustrative ${money(price)} per delivery.` +
@@ -238,7 +293,10 @@ function render(t: Ctx, a: Answers, dry: boolean, settings?: WidgetSettings): nu
     // Only what was changed from the default. A list of twenty rows all reading "off" tells
     // the reader nothing; the three that are on are the decisions somebody made.
     const changed = EXPORT_ROWS
-      .map((d) => ({ d, v: settings[d.key] }))
+      /* Theme rows all share `key: "theme"` and differ only by `themePath`, so reading
+         `settings[d.key]` handed back the whole theme object — and every one of them printed
+         "[object Object]" on the exported sheet. The value lives at the path. */
+      .map((d) => ({ d, v: themeValue(settings, d) }))
       .filter(({ d, v }) => {
         if (d.kind === "text") return Boolean(String(v || "").trim());
         if (d.kind === "select") return true;
@@ -263,7 +321,7 @@ function render(t: Ctx, a: Answers, dry: boolean, settings?: WidgetSettings): nu
           const val = d.kind === "matrix"
             ? (d.matrix?.find((o) => o.value === matrixValue(settings, d))?.label ?? "")
             : d.kind === "select"
-            ? (d.options?.find((o) => o.value === v)?.label ?? String(v))
+            ? (d.options?.find((o) => String(o.value) === String(v))?.label ?? String(v))
             : d.kind === "text" || d.kind === "number" ? String(v)
               : toggleOn(settings, d) ? "On" : "Off";
           text(t, val, W - PAD, 13, 400, SOFT, "right");

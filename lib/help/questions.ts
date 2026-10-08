@@ -152,8 +152,26 @@ export const DEFAULT_ANSWERS: Answers = {
   scope_kind: "products", scope_detail: "", variants: "all",
   every_days: ["30"], deliveries: "3, 6",
   tiered: "no", discount_min: "10", discount_max: "20", bands: "", freebies: "",
-  modes: ["prepaid", "payg"], shipping_charged: "no",
+  modes: ["prepaid", "payg"], shipping_charged: "no", plan_bands: "",
 };
+
+/** One plan per pack-size band, as the order file worked them out. Carried on the answers as
+ *  JSON because it is not something anyone types: it comes from the file or it is absent,
+ *  and the sheet and the document both need it. Empty means one plan covers everything. */
+export interface PlanBand {
+  label: string;
+  sizes: string[];
+  everyDays: number;
+  medianGap: number;
+  prepaidRuns: number[];
+  autopayCycles: number;
+}
+export function readPlanBands(a: Answers): PlanBand[] {
+  try {
+    const v = JSON.parse(String(a.plan_bands || "[]"));
+    return Array.isArray(v) ? (v as PlanBand[]) : [];
+  } catch { return []; }
+}
 
 export function autopayOnly(a: Answers): boolean {
   const m = Array.isArray(a.modes) ? a.modes : [];

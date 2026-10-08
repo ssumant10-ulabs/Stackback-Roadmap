@@ -8,8 +8,9 @@
  *  without anybody remembering to add it. Unanswered fields are listed rather than dropped:
  *  this downloads from a half-filled form on purpose, and a document that quietly omits what
  *  it does not know reads as a complete specification. */
-import { QUESTIONS, parseBands, parseFreebies, parseList, visible, type Answers, type Field } from "./questions";
+import { QUESTIONS, parseBands, parseFreebies, parseList, readPlanBands, visible, type Answers, type Field } from "./questions";
 import { CATEGORIES } from "./categories";
+import { freqWord } from "./sim";
 import type { WidgetSettings } from "./widget";
 
 const MODE_NAME: Record<string, string> = {
@@ -38,10 +39,41 @@ export function planDoc(a: Answers, brand: string, settings?: WidgetSettings): s
   const bands = parseBands(a.bands);
   const tiered = a.tiered === "yes";
   const flat = Number(a.discount_pct) || 0;
-  if (runs.length) {
-    L.push("## The plans", "", "| Run | Discount |", "|---|---|");
-    for (const r of runs) L.push(`| ${r} deliveries | ${tiered ? (bands[r] ?? flat) : flat}% off |`);
+  /* One table per pack-size band where the order file found two, because a 100g bag and a
+     1kg bag do not reorder at the same rate and one table over both is wrong for one of
+     them. AutoPay is its own row: it is not a run, it bills until the customer stops it, and
+     it carries the shallowest rung — prepaid buys a bigger discount because the money is
+     upfront, and matching it for a customer committing to nothing makes prepaid pointless. */
+  const planBands = readPlanBands(a);
+  const offersAutopay = (Array.isArray(a.modes) ? a.modes : []).includes("auto_debit");
+  const pctFor = (r: number) => (tiered ? (bands[r] ?? flat) : flat);
+  const table = (rs: number[], freq: string) => {
+    L.push("", "| Plan | Frequency | Discount |", "|---|---|---|");
+    for (const r of rs) L.push(`| ${r} deliveries | ${freq} | ${pctFor(r)}% off |`);
+    if (offersAutopay) {
+      const lowest = Math.min(...(rs.length ? rs.map(pctFor) : [flat]));
+      L.push(`| AutoPay — no fixed run | ${freq} | ${lowest}% off |`);
+    }
     L.push("");
+  };
+
+  if (planBands.length > 1) {
+    L.push("## The plans");
+    for (const b of planBands) {
+      L.push("", `### ${b.label}${b.sizes.length ? ` — ${b.sizes.join(", ")}` : ""}`);
+      L.push("", `Reorders about every ${b.medianGap} days off this band's own customers.`);
+      table(b.prepaidRuns, freqWord(b.everyDays));
+    }
+    if (offersAutopay) {
+      L.push(
+        "AutoPay has no run length: it bills until the customer stops it. The number to price",
+        "and forecast against is " + planBands[0].autopayCycles + " deliveries, a year at that cadence.",
+        "",
+      );
+    }
+  } else if (runs.length) {
+    L.push("## The plans");
+    table(runs, freqWord(Number((Array.isArray(a.every_days) ? a.every_days : [])[0]) || 30));
   }
   const gifts = parseFreebies(a.freebies);
   if (gifts.length) {

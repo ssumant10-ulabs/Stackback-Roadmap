@@ -30,6 +30,8 @@ export default function OrderImport({ onApply }: {
        a category table, which is the whole argument for reading the file at all. */
     discountMin: number | null; discountMax: number | null; scale: string | null;
     category: string | null; brand: string | null;
+    /** One plan per pack-size band, for the sheet and the document. */
+    bands: { label: string; sizes: string[]; everyDays: number; medianGap: number; prepaidRuns: number[]; autopayCycles: number }[];
   }) => void;
 }) {
   const file = useRef<HTMLInputElement>(null);
@@ -139,6 +141,12 @@ export default function OrderImport({ onApply }: {
                   scale: bandFor(out),
                   category: guessCategory(out.topProducts),
                   brand: name ? brandFromFilename(name) : null,
+                  /* Only where the file genuinely split. One plan over everything is the
+                     normal case and must not print as a band. */
+                  bands: out.plans.length > 1 ? out.plans.map((p) => ({
+                    label: p.label, sizes: [...new Set(p.sizes)], everyDays: p.everyDays,
+                    medianGap: p.medianGap, prepaidRuns: p.prepaidRuns, autopayCycles: p.autopayCycles,
+                  })) : [],
                 })}>
                 Use everything in this file
               </button>
