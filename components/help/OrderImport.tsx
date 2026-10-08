@@ -24,7 +24,7 @@ function bandFor(out: OrderInsight): string | null {
 
 export default function OrderImport({ onApply }: {
   onApply: (v: {
-    everyDays: number; runs: number[]; products: string[];
+    everyDays: number; extraEveryDays: number[]; runs: number[]; products: string[];
     /* Everything else the file can answer, so one click fills the form rather than two
        fields of it. A ladder the store's own customers have already accepted beats one off
        a category table, which is the whole argument for reading the file at all. */
@@ -87,16 +87,52 @@ export default function OrderImport({ onApply }: {
 
           {out.suggestEveryDays ? (
             <div className="hc-importsug">
-              <p>
-                They reorder about <b>{freqWord(out.suggestEveryDays).toLowerCase()}</b>, from{" "}
-                {out.gapSample.toLocaleString("en-IN")} intervals across {out.repeatCustomers.toLocaleString("en-IN")}{" "}
-                repeat {out.repeatCustomers === 1 ? "customer" : "customers"}.
-                {out.suggestRuns.length > 0 && <> Run lengths of <b>{out.suggestRuns.join(", ")}</b> cover roughly three months, six months and a year at that cadence.</>}
-              </p>
+              {/* One block per pack-size band. A 100g bag and a 1kg bag do not reorder at the
+                  same rate, and one median over both is wrong for whichever band has fewer
+                  intervals in it. Single block when the file does not support a split. */}
+              {out.plans.map((pl) => (
+                <div className="hc-plan" key={pl.label}>
+                  <p className="hc-planh">
+                    {pl.label}
+                    {pl.sizes.length > 0 && <em>{[...new Set(pl.sizes)].slice(0, 4).join(", ")}</em>}
+                  </p>
+                  <p>
+                    {out.plans.length > 1 ? "These" : "They"} reorder about{" "}
+                    <b>{freqWord(pl.everyDays).toLowerCase()}</b>, from{" "}
+                    {pl.gapSample.toLocaleString("en-IN")} intervals
+                    {pl.customers > 0 && <> across {pl.customers.toLocaleString("en-IN")} {pl.customers === 1 ? "customer" : "customers"}</>}.
+                  </p>
+                  {/* Prepaid and AutoPay are not the same product, so they do not share a
+                      line. Prepaid is a fixed run bought upfront. AutoPay runs until the
+                      customer stops it — the twelve is a year at this cadence, which is what
+                      a merchant prices against, not a commitment anyone is making. */}
+                  <dl className="hc-planmodes">
+                    <div>
+                      <dt>Prepaid</dt>
+                      <dd>
+                        {pl.prepaidRuns.length
+                          ? <>Runs of <b>{pl.prepaidRuns.join(", ")}</b> deliveries &mdash; roughly three months, six months and a year.</>
+                          : <>No run length this cadence supports.</>}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>AutoPay</dt>
+                      <dd>
+                        No fixed run: it bills until they stop it. Price and forecast against{" "}
+                        <b>{pl.autopayCycles}</b> deliveries, a year at this cadence.
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+              ))}
               <button type="button" className="hc-btn hc-sugapply" data-noexport="true"
                 onClick={() => onApply({
-                  everyDays: out.suggestEveryDays as number,
-                  runs: out.suggestRuns,
+                  /* Both cadences where the file supports two plans: the form takes a list,
+                     so a store with two pack sizes offers both rather than one averaged
+                     number that is wrong for one of them. */
+                  everyDays: out.plans.length ? out.plans[0].everyDays : (out.suggestEveryDays as number),
+                  extraEveryDays: out.plans.slice(1).map((p) => p.everyDays),
+                  runs: out.plans.length ? out.plans[0].prepaidRuns : out.suggestRuns,
                   products: out.topProducts.slice(0, 3).map((p) => p.title),
                   discountMin: out.discounts.bands[0]?.pct ?? out.discounts.medianPct,
                   discountMax: out.discounts.maxPct,

@@ -266,11 +266,14 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
             the runs and leave the volume, the ladder and the products to be typed in beside
             a panel that already knew them — and the volume question in particular decides
             which payment types are offered, so leaving it was leaving the main thing. */}
-        <OrderImport onApply={({ everyDays, runs, products, discountMin, discountMax, scale, category, brand }) => {
+        <OrderImport onApply={({ everyDays, extraEveryDays, runs, products, discountMin, discountMax, scale, category, brand }) => {
           const band = scale ? SCALE_BY_ID.get(scale) : null;
           const next: Answers = {
             ...answers,
-            every_days: [String(everyDays)],
+            /* Both cadences where the pack sizes reorder differently. The widget offers a
+               customer the choice, which is the honest answer when a 100g bag comes back in
+               a fortnight and a 1kg bag in two months. */
+            every_days: [...new Set([everyDays, ...extraEveryDays])].sort((a, b) => a - b).map(String),
             ...(runs.length ? { deliveries: runs.join(", ") } : {}),
             /* Overwrites. It used to fill the products only where the field was empty, so a
                draft left over from another store survived a deliberate "use everything in
