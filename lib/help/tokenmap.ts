@@ -12,6 +12,9 @@
 import type { WidgetTheme } from "./widget";
 
 export interface TokenRow {
+  /** Where this value lives in the theme, dotted. Present on every colour row, absent on the
+   *  shape and chrome rows, which is what makes a row editable in the panel. */
+  path?: string;
   /** The skill's field name, exactly. A merchant reads these beside the app's own labels. */
   label: string;
   value: string;
@@ -65,35 +68,35 @@ export function canonicalTokens(
         /* The skill's steps 5, 6 and 7: headings and price, then sub-labels and body copy,
            then the lightest readable text. Two of these were one read and two derivations
            off it, so Secondary Text was a colour off nobody's page. */
-        { label: "Primary Text", value: t.text.primary, swatch: true, ...from("Product_Tile", "your product title, heading or price", "direct") },
-        { label: "Secondary Text", value: t.text.secondary, swatch: true,
+        { label: "Primary Text", value: t.text.primary, swatch: true, path: "text.primary", ...from("Product_Tile", "your product title, heading or price", "direct") },
+        { label: "Secondary Text", value: t.text.secondary, swatch: true, path: "text.secondary",
           ...from("Text_Secondary", "Primary mixed toward the background, because your theme publishes one ink", "derived") },
-        { label: "Muted Text", value: t.text.muted, swatch: true, note: "Secondary stepped further toward the background", how: "derived" },
+        { label: "Muted Text", value: t.text.muted, swatch: true, path: "text.muted", note: "Secondary stepped further toward the background", how: "derived" },
       ],
     },
     {
       title: "Brand colours",
       rows: [
-        { label: "Primary", value: t.colors.primary, swatch: true, ...from("Brand_Primary", "the subscribe button fill", "direct") },
-        { label: "Subscription Accent", value: t.colors.subscriptionAccent, swatch: true, ...from("Brand_Accent", "the savings and offer highlight", "direct") },
-        { label: "Savings Color", value: t.colors.savings, swatch: true,
-          note: "What a discount is printed in: the greenest colour your site publishes, or the accent",
+        { label: "Primary", value: t.colors.primary, swatch: true, path: "colors.primary", ...from("Brand_Primary", "the subscribe button fill", "direct") },
+        { label: "Subscription Accent", value: t.colors.subscriptionAccent, swatch: true, path: "colors.subscriptionAccent", ...from("Brand_Accent", "the savings and offer highlight", "direct") },
+        { label: "Savings Color", value: t.colors.savings, swatch: true, path: "colors.savings",
+          note: "What a discount is printed in. Mirrors the Subscription Accent unless you set it",
           how: read && Object.keys(read).length ? "derived" : "logic" },
       ],
     },
     {
       title: "Surfaces",
       rows: [
-        { label: "Widget Background", value: t.surfaces.widgetBackground, swatch: true, ...from("Widget_Background", "the widget's own ground", "direct") },
-        { label: "Muted Surface", value: t.surfaces.mutedSurface, swatch: true, ...from("Brand_Secondary", "an unselected tab and a tinted section", "direct") },
-        { label: "Input Background", value: t.surfaces.inputBackground, swatch: true, ...from("Product_Tile_Background", "the quantity field and the product tile", "direct") },
+        { label: "Widget Background", value: t.surfaces.widgetBackground, swatch: true, path: "surfaces.widgetBackground", ...from("Widget_Background", "the widget's own ground", "direct") },
+        { label: "Muted Surface", value: t.surfaces.mutedSurface, swatch: true, path: "surfaces.mutedSurface", ...from("Brand_Secondary", "an unselected tab and a tinted section", "direct") },
+        { label: "Input Background", value: t.surfaces.inputBackground, swatch: true, path: "surfaces.inputBackground", ...from("Product_Tile_Background", "the quantity field and the product tile", "direct") },
       ],
     },
     {
       title: "Borders",
       rows: [
-        { label: "Default Border", value: t.borders.default, swatch: true, note: "The tint stepped toward the text colour", how: "derived" },
-        { label: "Selected Border", value: t.borders.strong, swatch: true, note: "Mirrors Primary", how: "logic" },
+        { label: "Default Border", value: t.borders.default, swatch: true, path: "borders.default", note: "The tint stepped toward the text colour", how: "derived" },
+        { label: "Selected Border", value: t.borders.strong, swatch: true, path: "borders.strong", note: "Mirrors Primary", how: "logic" },
       ],
     },
     {

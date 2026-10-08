@@ -152,8 +152,43 @@ export const DEFAULT_ANSWERS: Answers = {
   scope_kind: "products", scope_detail: "", variants: "all",
   every_days: ["30"], deliveries: "3, 6",
   tiered: "no", discount_min: "10", discount_max: "20", bands: "", freebies: "",
-  modes: ["prepaid", "payg"], shipping_charged: "no",
+  modes: ["prepaid", "payg"], shipping_charged: "no", plan_bands: "",
 };
+
+/** One plan per pack-size band, as the order file worked them out. Carried on the answers as
+ *  JSON because it is not something anyone types: it comes from the file or it is absent,
+ *  and the sheet and the document both need it. Empty means one plan covers everything. */
+export interface PlanBand {
+  label: string;
+  sizes: string[];
+  everyDays: number;
+  medianGap: number;
+  prepaidRuns: number[];
+  autopayCycles: number;
+}
+/** What AutoPay is discounted at, given the prepaid ladder.
+ *
+ *  The SECOND-HIGHEST rung, not the lowest. AutoPay is open-ended — it bills until the
+ *  customer stops it — so in practice it is the longest commitment on the page and pricing
+ *  it at the floor tells a customer the honest thing is to take the shortest prepaid run
+ *  instead. It still sits below the top rung, because paying twelve deliveries upfront is
+ *  worth more to a merchant than a mandate that can be cancelled next month: on a 15 / 18 /
+ *  20 ladder AutoPay is 18.
+ *
+ *  Distinct rungs, so a ladder that repeats a rate does not collapse the gap to nothing.
+ *  With one rate there is nothing to choose and AutoPay takes it. */
+export function autopayRate(ladder: number[]): number {
+  const rungs = [...new Set(ladder.filter((n) => Number.isFinite(n)))].sort((a, b) => b - a);
+  if (!rungs.length) return 0;
+  return rungs.length === 1 ? rungs[0] : rungs[1];
+}
+
+export function readPlanBands(a: Answers): PlanBand[] {
+  try {
+    const v = JSON.parse(String(a.plan_bands || "[]"));
+    return Array.isArray(v) ? (v as PlanBand[]) : [];
+  } catch { return []; }
+}
 
 export function autopayOnly(a: Answers): boolean {
   const m = Array.isArray(a.modes) ? a.modes : [];

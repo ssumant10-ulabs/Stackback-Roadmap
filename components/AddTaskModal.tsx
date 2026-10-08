@@ -48,7 +48,6 @@ export function AddTaskModal({ onClose, defaultHorizon = 2 }:
   const [pending, setPending] = useState<Assignee[]>([]);
   const [custom, setCustom] = useState("");
   const [type, setType] = useState<"person" | "team">("person");
-  const [err, setErr] = useState(false);
 
   const toggle = (name: string, isTeam: boolean) => {
     setPending((p) => {
@@ -56,12 +55,14 @@ export function AddTaskModal({ onClose, defaultHorizon = 2 }:
       if (idx >= 0) return p.filter((_, i) => i !== idx);
       return [...p, isTeam ? { name, isTeam: true } : { name }];
     });
-    setErr(false);
   };
   const addCustom = () => { const v = custom.trim(); if (!v) return; toggle(v, type === "team"); setCustom(""); };
   const save = () => {
     if (!title.trim()) return;
-    if (pending.length === 0) { setErr(true); return; }
+    /* Owners are optional. They were required, which made it impossible to file anything
+       into the backlog from here — and the backlog is precisely where a card with nobody on
+       it belongs, which is also where a new card now starts. A form that will not let you
+       create the default thing is the wrong form. */
     s.addTask(title.trim(), priority, eta.trim() || null,
       subs.split("\n").map((x) => x.trim()).filter(Boolean), pending,
       { desc: desc.trim() || null, kind, surface: surface || null, subModule: subModule || null, errorType: errorType || null });
@@ -151,7 +152,10 @@ export function AddTaskModal({ onClose, defaultHorizon = 2 }:
             </div>
             <button className="btn" type="button" onClick={addCustom}>Add</button>
           </div>
-          <div className={`field-error${err ? " show" : ""}`}>Assign at least one owner.</div>
+          <div className="field-hint">
+            Optional. A card with nobody on it goes to the backlog, which is where unsorted
+            work belongs until somebody picks it up.
+          </div>
         </div>
 
         <div className="field"><label>Target / note <span className="opt">(optional)</span></label>

@@ -128,7 +128,17 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
     const value = id === "modes" && Array.isArray(v)
       ? reconcileModes(v, Array.isArray(answers.modes) ? answers.modes : [])
       : v;
-    const next = { ...answers, [id]: value };
+    const next: Answers = { ...answers, [id]: value };
+    /* Answering the volume question sets the payment types, because that question says in
+       its own help text that it "decides which payment types are worth offering". It did
+       not: the form shipped with prepaid and pay as you go ticked and they stayed ticked at
+       every volume, so a store doing a few thousand orders was shown the small-store answer
+       and AutoPay was never on screen. The band is still only a starting point — every box
+       is still a box, and unticking one is a click. */
+    if (id === "scale") {
+      const band = SCALE_BY_ID.get(String(value || ""));
+      if (band) next.modes = reconcileModes(band.modes, []);
+    }
     onAnswers(next); save(next);
   };
 
@@ -252,14 +262,44 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
       </div>
 
       <aside className={"hc-suggest" + (!cat && !scale ? " empty" : "")}>
-        <OrderImport onApply={({ everyDays, runs, products }) => {
+        {/* One click fills everything the file can answer. It used to set the cadence and
+            the runs and leave the volume, the ladder and the products to be typed in beside
+            a panel that already knew them — and the volume question in particular decides
+            which payment types are offered, so leaving it was leaving the main thing. */}
+        <OrderImport onApply={({ everyDays, extraEveryDays, runs, products, discountMin, discountMax, scale, category, brand, bands }) => {
+          const band = scale ? SCALE_BY_ID.get(scale) : null;
           const next: Answers = {
             ...answers,
-            every_days: [String(everyDays)],
+            /* Both cadences where the pack sizes reorder differently. The widget offers a
+               customer the choice, which is the honest answer when a 100g bag comes back in
+               a fortnight and a 1kg bag in two months. */
+            every_days: [...new Set([everyDays, ...extraEveryDays])].sort((a, b) => a - b).map(String),
             ...(runs.length ? { deliveries: runs.join(", ") } : {}),
-            ...(products.length && !String(answers.scope_detail || "").trim()
-              ? { scope_kind: "products", scope_detail: products.join(", ") }
-              : {}),
+            /* Overwrites. It used to fill the products only where the field was empty, so a
+               draft left over from another store survived a deliberate "use everything in
+               this file" and the form sat there naming somebody else's SKUs beside a panel
+               listing these ones. Pressing the button IS the instruction. */
+            ...(products.length ? { scope_kind: "products", scope_detail: products.join(", ") } : {}),
+            /* The category the products are in. Scored across the top products so one stray
+               title cannot decide it, and left alone entirely when nothing matches — a wrong
+               category is worse than an unanswered one, because the suggestion panel keys
+               off it. */
+            ...(category ? { category } : {}),
+            /* The file's own name, where it carries anything. `orders_export_1.csv` says
+               nothing and leaves the field empty rather than inventing a brand. */
+            ...(brand && !String(answers.brand_name || "").trim() ? { brand_name: brand } : {}),
+            /* The bands travel with the answers so the sheet and the document can print one
+               plan per pack size rather than one averaged plan over all of them. */
+            plan_bands: bands.length ? JSON.stringify(bands) : "",
+            /* The band sets the payment types the same way answering the question does, so
+               the two routes cannot disagree about what a volume means. */
+            ...(band ? { scale: band.id, modes: reconcileModes(band.modes, []) } : {}),
+            /* The ladder, anchored to rates these customers have already accepted. Only
+               where the file HAS discounts and the two ends differ — a single flat rate is
+               one number, and writing it into both ends reads as a tier that is not one. */
+            ...(discountMin != null && discountMax != null && discountMax > discountMin
+              ? { discount_min: String(discountMin), discount_max: String(discountMax), tiered: "yes" }
+              : discountMax != null ? { discount_min: String(discountMax), discount_max: String(discountMax) } : {}),
           };
           onAnswers(next); save(next);
         }} />

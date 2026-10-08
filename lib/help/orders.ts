@@ -24,6 +24,33 @@ export interface OrderRow {
   cancelled: boolean;
   source: string;
   items: { title: string; qty: number; price: number }[];
+  /** Order-level discount in currency, and the code if one was used. A Shopify export puts
+   *  both on the first row of an order, so they are read with the rest of the header. */
+  discount: number;
+  discountCode: string;
+}
+
+/** A plan the file supports, for one group of pack sizes.
+ *
+ *  Prepaid and AutoPay are listed apart because they are not the same product. Prepaid is a
+ *  fixed run bought upfront, so it has run lengths. AutoPay runs until the customer stops
+ *  it, so it has no fixed run at all — the twelve is a year at this cadence, which is what a
+ *  merchant needs for pricing and forecasting rather than a commitment anyone is making. */
+export interface PlanSuggestion {
+  /** "Smaller packs", "Larger packs", or "All products" when there is nothing to split. */
+  label: string;
+  /** The pack sizes in this group, as written on the products. */
+  sizes: string[];
+  products: string[];
+  everyDays: number;
+  medianGap: number;
+  gapSample: number;
+  customers: number;
+  /** Prepaid only: the fixed runs worth selling at this cadence. */
+  prepaidRuns: number[];
+  /** AutoPay: a year at this cadence, and never a commitment. Always 12 deliveries' worth
+   *  of planning regardless of cadence, because that is the horizon merchants price against. */
+  autopayCycles: number;
 }
 
 export interface OrderInsight {
@@ -36,11 +63,31 @@ export interface OrderInsight {
   /** Median days between consecutive orders from the same customer. */
   medianGap: number | null;
   gapSample: number;
-  /** Nearest frequency we actually offer. */
+  /** Nearest frequency we actually offer, across the whole file. Kept because a store with
+   *  one pack size has one answer and should not be shown two. */
   suggestEveryDays: number | null;
   suggestRuns: number[];
+  /** One plan per pack-size band, where the bands genuinely reorder differently. A 100g bag
+   *  comes back in three weeks and a 1kg bag in three months; averaging them produces a
+   *  cadence that is wrong for both. Single-entry when the file does not support a split. */
+  plans: PlanSuggestion[];
   topProducts: { title: string; orders: number; units: number; revenue: number }[];
   aov: number;
+  /** Days between the first and last order in the file, so a count can become a rate. A
+   *  file is worth a volume band only if it says over how long it was collected. */
+  windowDays: number | null;
+  /** What the store already discounts, off its own orders rather than a category table.
+   *  `maxPct` is the deepest single order, `topPct` the deepest rate that more than a
+   *  handful of orders actually used — a one-off 90% staff order is not a plan. */
+  discounts: {
+    orders: number;
+    share: number;
+    medianPct: number | null;
+    maxPct: number | null;
+    /** The most-used rate and how many orders took it, rounded to whole percent. */
+    bands: { pct: number; orders: number }[];
+    codes: { code: string; orders: number }[];
+  };
   warnings: string[];
 }
 
@@ -92,6 +139,8 @@ const COL = {
   created: ["created at", "created_at", "processed at", "paid at"],
   cancelled: ["cancelled at", "cancelled_at"],
   source: ["source", "source name"],
+  discount: ["discount amount", "discount_amount", "discounts"],
+  code: ["discount code", "discount_code"],
   item: ["lineitem name", "lineitem_name", "line item name", "product title"],
   qty: ["lineitem quantity", "lineitem_quantity", "quantity"],
   price: ["lineitem price", "lineitem_price", "price"],
@@ -119,6 +168,8 @@ export function readOrders(csv: string): { rows: OrderRow[]; warnings: string[] 
   const iEmail = indexOfAny(head, COL.email);
   const iCancelled = indexOfAny(head, COL.cancelled);
   const iSource = indexOfAny(head, COL.source);
+  const iDiscount = indexOfAny(head, COL.discount);
+  const iCode = indexOfAny(head, COL.code);
   const iItem = indexOfAny(head, COL.item);
   const iQty = indexOfAny(head, COL.qty);
   const iPrice = indexOfAny(head, COL.price);
@@ -145,6 +196,8 @@ export function readOrders(csv: string): { rows: OrderRow[]; warnings: string[] 
         createdAt: when,
         cancelled: iCancelled >= 0 ? Boolean((r[iCancelled] || "").trim()) : false,
         source: iSource >= 0 ? (r[iSource] || "").trim() : "",
+        discount: iDiscount >= 0 ? num(r[iDiscount]) : 0,
+        discountCode: iCode >= 0 ? (r[iCode] || "").trim() : "",
         items: [],
       };
       byName.set(nm, o);
@@ -168,6 +221,49 @@ const median = (xs: number[]) => {
 
 /** The frequencies the widget offers, so a suggestion is always one a merchant can pick. */
 const OFFERED = [7, 14, 30, 60];
+const nearestOffered = (days: number) =>
+  OFFERED.reduce((a, b) => (Math.abs(b - days) < Math.abs(a - days) ? b : a), OFFERED[0]);
+
+/** The runs worth selling at a cadence: roughly three months, six months and a year.
+ *  Prepaid only — AutoPay has no run, which is the point of it. */
+const runsFor = (everyDays: number) => [...new Set([
+  Math.max(2, Math.round(90 / everyDays)),
+  Math.max(3, Math.round(180 / everyDays)),
+  Math.max(4, Math.round(365 / everyDays)),
+])].sort((a, b) => a - b).slice(0, 3);
+
+/** AutoPay never ends, so there is no run length to suggest. Twelve is a year's worth of
+ *  deliveries at any cadence — the horizon a merchant prices and forecasts against, not a
+ *  commitment anybody is being asked for. */
+export const AUTOPAY_CYCLES = 12;
+
+/* ---- pack size -------------------------------------------------------------------------
+   A 100g bag comes back in three weeks and a 1kg bag in three months. Averaging them gives a
+   cadence that is wrong for both, which is what this file did until now: one median gap over
+   every customer regardless of what they bought. */
+
+const UNIT_TO_G: Record<string, number> = {
+  g: 1, gm: 1, gms: 1, gram: 1, grams: 1, kg: 1000, kgs: 1000,
+  ml: 1, l: 1000, ltr: 1000, litre: 1000, liter: 1000, litres: 1000,
+};
+
+/** The pack size a title names, normalised to grams or millilitres, with a count as a
+ *  fallback. Returns null when the title says nothing about size, which is most of them on
+ *  some stores and is why a split is never forced. */
+export function packSize(title: string): { grams: number; text: string } | null {
+  const m = /(\d+(?:\.\d+)?)\s*(kgs?|gms?|grams?|g|ml|litres?|liters?|ltr|l)\b/i.exec(title);
+  if (m) {
+    const n = parseFloat(m[1]);
+    const mult = UNIT_TO_G[m[2].toLowerCase()];
+    if (mult && n > 0) return { grams: n * mult, text: `${m[1]}${m[2].toLowerCase()}` };
+  }
+  /* A pack of N, for stores that sell by count rather than weight. Treated as its own scale
+     and only ever compared with other counts, which the banding handles by splitting on the
+     median of whatever scale the file is on. */
+  const c = /(\d+)\s*(?:x|pack|packs|count|ct|pcs|pieces|sachets?|capsules?|tablets?|chews?)\b/i.exec(title);
+  if (c) { const n = parseInt(c[1], 10); if (n > 0) return { grams: n, text: `${n} pack` }; }
+  return null;
+}
 
 export function analyse(rows: OrderRow[], extraWarnings: string[] = []): OrderInsight {
   const warnings = [...extraWarnings];
@@ -208,13 +304,9 @@ export function analyse(rows: OrderRow[], extraWarnings: string[] = []): OrderIn
 
   /* Run lengths from the gap, not from a category table: three months of cover is the
      shortest commitment worth selling, and a year is the longest most people will take. */
-  const suggestRuns = suggestEveryDays
-    ? [...new Set([
-        Math.max(2, Math.round(90 / suggestEveryDays)),
-        Math.max(3, Math.round(180 / suggestEveryDays)),
-        Math.max(4, Math.round(365 / suggestEveryDays)),
-      ])].sort((a, b) => a - b).slice(0, 3)
-    : [];
+  const suggestRuns = suggestEveryDays ? runsFor(suggestEveryDays) : [];
+
+  const plans = plansBySize(withEmail, suggestEveryDays, warnings);
 
   const prod = new Map<string, { orders: number; units: number; revenue: number }>();
   for (const o of live) {
@@ -234,6 +326,34 @@ export function analyse(rows: OrderRow[], extraWarnings: string[] = []): OrderIn
 
   const revenue = live.reduce((s, o) => s + o.items.reduce((t, i) => t + i.qty * i.price, 0), 0);
 
+  /* What the store already discounts, read off its own orders. A category table says what
+     competitors do; this says what these customers have already accepted, which is the
+     number worth anchoring a plan ladder to.
+     The rate is discount over the GROSS line total, because the export's discount column is
+     currency off a total it does not restate. An order whose lines sum to nothing — a pure
+     gift card, a fully refunded row — would divide by zero, so it is left out. */
+  const discounted = live
+    .map((o) => {
+      const gross = o.items.reduce((t, i) => t + i.qty * i.price, 0);
+      return { pct: gross > 0 && o.discount > 0 ? (o.discount / gross) * 100 : 0, code: o.discountCode };
+    })
+    .filter((d) => d.pct > 0 && d.pct <= 100);
+  const pcts = discounted.map((d) => Math.round(d.pct));
+  const byBand = new Map<number, number>();
+  for (const p of pcts) byBand.set(p, (byBand.get(p) || 0) + 1);
+  const byCode = new Map<string, number>();
+  for (const d of discounted) if (d.code) byCode.set(d.code, (byCode.get(d.code) || 0) + 1);
+  const discounts = {
+    orders: discounted.length,
+    share: live.length ? discounted.length / live.length : 0,
+    medianPct: median(pcts),
+    maxPct: pcts.length ? Math.max(...pcts) : null,
+    bands: [...byBand.entries()].map(([pct, n]) => ({ pct, orders: n }))
+      .sort((a, b) => b.orders - a.orders || b.pct - a.pct).slice(0, 5),
+    codes: [...byCode.entries()].map(([code, n]) => ({ code, orders: n }))
+      .sort((a, b) => b.orders - a.orders).slice(0, 5),
+  };
+
   if (gaps.length > 0 && gaps.length < 20) {
     warnings.push(`Only ${gaps.length} repeat intervals in this file, so the median gap is indicative rather than solid. Export a longer window if you can.`);
   }
@@ -252,8 +372,198 @@ export function analyse(rows: OrderRow[], extraWarnings: string[] = []): OrderIn
     gapSample: gaps.length,
     suggestEveryDays,
     suggestRuns,
+    plans,
     topProducts,
     aov: live.length ? revenue / live.length : 0,
+    windowDays: live.length > 1
+      ? Math.max(1, Math.round(
+        (Math.max(...live.map((o) => o.createdAt.getTime()))
+          - Math.min(...live.map((o) => o.createdAt.getTime()))) / 86_400_000))
+      : null,
+    discounts,
     warnings,
   };
+}
+
+/* ---------------------------------------------------------------- reading the rest of it */
+
+/** The category the products in this file belong to.
+ *
+ *  A guess, and a cheap one: the form asks for a category and the file already names what
+ *  the store sells, so leaving it to be picked by hand beside a panel listing "Chicken
+ *  Pumpkin Fresh Dog Food" five times over is the form ignoring its own evidence. Scored
+ *  across the top products by order count, so one stray title cannot decide it, and it
+ *  returns null rather than "other" when nothing matches — a wrong category is worse than an
+ *  unanswered one, because the whole suggestion panel keys off it.
+ */
+const CATEGORY_WORDS: { id: string; words: RegExp }[] = [
+  { id: "pet", words: /\b(dog|cat|puppy|kitten|pet|kibble|paw|treats? for)\b/i },
+  { id: "coffee-tea", words: /\b(coffee|espresso|arabica|robusta|tea|chai|matcha|brew|beans?)\b/i },
+  { id: "supplements", words: /\b(supplement|vitamin|protein|collagen|omega|probiotic|capsule|tablet|gummies|booster|nutrition)\b/i },
+  { id: "personal-care", words: /\b(shampoo|conditioner|serum|cream|lotion|soap|skin|hair|face|body wash|moistur)\b/i },
+  { id: "beverages", words: /\b(juice|kombucha|soda|drink|mix|smoothie|cordial|syrup|hydration)\b/i },
+  { id: "food-staples", words: /\b(rice|atta|flour|dal|oil|ghee|masala|spice|sugar|salt|snack|chikki|mittai|namkeen)\b/i },
+  { id: "home", words: /\b(detergent|cleaner|cleaning|dish ?wash|floor|laundry|refill|wipes?)\b/i },
+];
+
+export function guessCategory(top: { title: string; orders: number }[]): string | null {
+  const score = new Map<string, number>();
+  for (const p of top) {
+    for (const c of CATEGORY_WORDS) {
+      if (c.words.test(p.title)) score.set(c.id, (score.get(c.id) || 0) + p.orders);
+    }
+  }
+  if (!score.size) return null;
+  const [best] = [...score.entries()].sort((a, b) => b[1] - a[1]);
+  return best[0];
+}
+
+/** A brand name out of the file's own name.
+ *
+ *  A Shopify order export carries no store-name column, so the only thing on hand is what the
+ *  merchant called the file. `orders_export_1.csv` says nothing and must stay empty rather
+ *  than becoming a brand called "Orders Export 1"; `blepworld-orders-2026.csv` says plenty.
+ *  So: strip the words every export carries, strip dates and numbers, and keep what is left
+ *  only if something is.
+ */
+export function brandFromFilename(name: string): string | null {
+  const stem = name.replace(/\.[a-z0-9]+$/i, "");
+  /* Separators are normalised FIRST. `_` is a word character, so `\borders\b` never matches
+     inside `orders_export_1` and the whole strip silently did nothing on the commonest
+     filename Shopify produces. */
+  const cleaned = stem
+    .replace(/[^a-z0-9]+/gi, " ")
+    .replace(/\b(orders?|export|exports|shopify|all|csv|xlsx?|report|data|screencapture|screenshot|final|copy|new)\b/gi, " ")
+    .replace(/\b\d+\b/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+  if (cleaned.length < 3) return null;
+  return cleaned
+    .split(/\s+/)
+    .map((w) => w[0].toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+
+/** One plan per pack-size band, where the file supports a split.
+ *
+ *  Customers are assigned to the band they actually buy from — by order count, not by a
+ *  single purchase — and each band's gaps are measured among its own customers only. A
+ *  split is offered only when both bands carry enough intervals to mean anything AND their
+ *  cadences land on different offered frequencies. A 29-day gap and a 31-day gap are the
+ *  same plan; printing two of them is noise dressed as insight.
+ */
+function plansBySize(
+  withEmail: OrderRow[], overall: number | null, warnings: string[],
+): PlanSuggestion[] {
+  const all = (): PlanSuggestion[] => overall == null ? [] : [{
+    label: "All products",
+    sizes: [], products: [],
+    everyDays: overall,
+    medianGap: overall,
+    gapSample: 0,
+    customers: new Set(withEmail.map((o) => o.email)).size,
+    prepaidRuns: runsFor(overall),
+    autopayCycles: AUTOPAY_CYCLES,
+  }];
+
+  /* Every distinct size the file names, weighted by how many orders carried it. */
+  const sized = new Map<number, { text: string; orders: number }>();
+  for (const o of withEmail) {
+    for (const it of o.items) {
+      const ps = packSize(it.title);
+      if (!ps) continue;
+      const e = sized.get(ps.grams) || { text: ps.text, orders: 0 };
+      e.orders++;
+      sized.set(ps.grams, e);
+    }
+  }
+  if (sized.size < 2) return all();
+
+  /* Split at the median SIZE weighted by orders, so the line falls where the volume is
+     rather than between two sizes nobody buys. */
+  const bySize = [...sized.entries()].sort((a, b) => a[0] - b[0]);
+  const totalOrders = bySize.reduce((n, [, v]) => n + v.orders, 0);
+  let seen = 0;
+  let cut = bySize[0][0];
+  for (const [g, v] of bySize) { seen += v.orders; cut = g; if (seen >= totalOrders / 2) break; }
+  const smallSizes = bySize.filter(([g]) => g <= cut);
+  const largeSizes = bySize.filter(([g]) => g > cut);
+  if (!smallSizes.length || !largeSizes.length) return all();
+
+  /* Which band a customer belongs to: whichever they ordered from more often. */
+  const bandOf = (title: string): "small" | "large" | null => {
+    const ps = packSize(title);
+    return ps ? (ps.grams <= cut ? "small" : "large") : null;
+  };
+  const byCustomer = new Map<string, { small: number; large: number; dates: { band: string; at: Date }[] }>();
+  for (const o of withEmail) {
+    const e = byCustomer.get(o.email) || { small: 0, large: 0, dates: [] };
+    let band: string | null = null;
+    for (const it of o.items) {
+      const b = bandOf(it.title);
+      if (!b) continue;
+      e[b]++;
+      band = band ?? b;
+    }
+    if (band) e.dates.push({ band, at: o.createdAt });
+    byCustomer.set(o.email, e);
+  }
+
+  const gapsFor = (want: "small" | "large") => {
+    const gaps: number[] = [];
+    let customers = 0;
+    for (const e of byCustomer.values()) {
+      const mine = e.small === e.large ? null : e.small > e.large ? "small" : "large";
+      if (mine !== want) continue;
+      customers++;
+      const ds = e.dates.map((d) => d.at).sort((a, b) => a.getTime() - b.getTime());
+      for (let i = 1; i < ds.length; i++) {
+        const days = Math.round((ds[i].getTime() - ds[i - 1].getTime()) / 86_400_000);
+        if (days >= 1 && days <= 400) gaps.push(days);
+      }
+    }
+    return { gaps, customers };
+  };
+
+  const small = gapsFor("small");
+  const large = gapsFor("large");
+  const sg = median(small.gaps);
+  const lg = median(large.gaps);
+  /* Both have to say something, and they have to say different things. */
+  if (sg == null || lg == null || small.gaps.length < 15 || large.gaps.length < 15) return all();
+  const sEvery = nearestOffered(sg);
+  const lEvery = nearestOffered(lg);
+  if (sEvery === lEvery) {
+    warnings.push(
+      `Smaller and larger packs reorder at much the same rate (${sg} and ${lg} days), so one plan covers both.`,
+    );
+    return all();
+  }
+
+  const titlesFor = (want: "small" | "large") => {
+    const n = new Map<string, number>();
+    for (const o of withEmail) for (const it of o.items) {
+      if (bandOf(it.title) === want) n.set(it.title, (n.get(it.title) || 0) + 1);
+    }
+    return [...n.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([t]) => t);
+  };
+  const mk = (
+    label: string, sizes: [number, { text: string; orders: number }][],
+    g: number, every: number, got: { gaps: number[]; customers: number }, want: "small" | "large",
+  ): PlanSuggestion => ({
+    label,
+    sizes: sizes.map(([, v]) => v.text),
+    products: titlesFor(want),
+    everyDays: every,
+    medianGap: g,
+    gapSample: got.gaps.length,
+    customers: got.customers,
+    prepaidRuns: runsFor(every),
+    autopayCycles: AUTOPAY_CYCLES,
+  });
+  return [
+    mk("Smaller packs", smallSizes, sg, sEvery, small, "small"),
+    mk("Larger packs", largeSizes, lg, lEvery, large, "large"),
+  ];
 }

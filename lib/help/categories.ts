@@ -87,9 +87,22 @@ export const SCALES: ScaleBand[] = [
     why: "Prepaid only. The money is in the bank on day one and there is nothing to chase, which matters more than conversion while the volume is small. Pay as you go here buys you invoices to follow up and little else.",
   },
   {
-    id: "growing", label: "100 to 1,000 orders a month", hint: "Growing",
+    id: "small", label: "100 to 500 orders a month", hint: "Finding its feet",
     modes: ["prepaid", "payg"],
-    why: "Prepaid and pay as you go. The upfront ask starts costing conversions at this size, and the invoice volume is still small enough for one person to chase.",
+    why: "Prepaid and pay as you go. The upfront ask starts costing conversions at this size, and the invoice volume is still small enough for one person to chase. AutoPay is deliberately not here: below 500 orders the Razorpay mandate setup and the drop-off at the mandate screen cost more than the collection it saves.",
+  },
+  {
+    /* 500 is the line AutoPay becomes worth offering. The band used to run 100 to 1,000 with
+       no AutoPay in it at all, so a store doing a few thousand orders was told prepaid and
+       pay as you go — which is the complaint, and it was the band's fault rather than the
+       answer's. Splitting at 500 puts the threshold where the decision actually is. */
+    id: "growing", label: "500 to 1,000 orders a month", hint: "Growing",
+    /* Never pay as you go AND AutoPay. They are two ways to collect the same money, one by
+       asking and one automatically, so offering both asks a customer to choose between
+       being invoiced and being charged — which nobody does. From 500 the automatic one is
+       the right half of that pair, which is the whole reason 500 is the line. */
+    modes: ["prepaid", "auto_debit"],
+    why: "Prepaid, and AutoPay in place of pay as you go. 500 is where the Razorpay setup starts paying for itself: below it the mandate screen costs more in drop-off than the chasing costs in time, and above it that reverses. Pay as you go comes off rather than sitting beside AutoPay \u2014 both collect per delivery, so offering the two asks a customer to choose between being invoiced and being charged.",
   },
   {
     id: "established", label: "1,000 to 5,000 orders a month", hint: "Established",
