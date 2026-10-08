@@ -1298,11 +1298,11 @@
 .hc-importfile { display: none; }
 .hc-importhow { flex: 1 1 180px; min-width: 0; font-size:calc(11px * var(--text-scale, 1)); }
 .hc-importerr { margin: 10px 0 0; font-size:calc(12px * var(--text-scale, 1)); color: var(--hc-limit); line-height: 1.5; }
-.hc-importstats { list-style: none; margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.hc-importstats { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .hc-importstats li { background: var(--page); border: 1px solid var(--border-2); border-radius: 9px; padding: 8px 10px; }
 .hc-importstats b { display: block; font-size:calc(16px * var(--text-scale, 1)); font-weight: 750; letter-spacing: -.01em; }
 .hc-importstats span { font-size:calc(11px * var(--text-scale, 1)); color: var(--hc-muted); }
-.hc-importsug { margin-top: 11px; padding: 10px 12px; background: var(--sunken); border-radius: 10px; }
+.hc-importsug { margin-top: 14px; padding: 10px 12px; background: var(--sunken); border-radius: 10px; }
 .hc-importsug p { margin: 0 0 9px; font-size:calc(12.5px * var(--text-scale, 1)); line-height: 1.55; }
 /* One block per pack-size band. Two of them have to read as two plans rather than one long
    paragraph, so each is ruled off and named. */
@@ -1328,7 +1328,7 @@
    blocks read as one panel — but THREE tiles in a two-column grid leaves a widow, so the
    last one spans. The capsules were overflowing the panel and running into the codes line
    underneath; they wrap on their own row with room of their own now. */
-.hc-importdisc { margin-top: 16px; }
+.hc-importdisc { margin-top: 14px; }
 .hc-importdisc .hc-importstats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .hc-importdisc .hc-importstats li:last-child:nth-child(odd) { grid-column: 1 / -1; }
 .hc-importbands {
@@ -1344,8 +1344,14 @@
 .hc-importbands li span { font-size:calc(11px * var(--text-scale, 1)); color: var(--hc-muted); }
 /* The codes are a sentence, not a third row of chips, and it needs air above it. */
 .hc-importdisc > .hc-note { margin-top: 10px; line-height: 1.55; }
-.hc-importtop { margin-top: 12px; }
-.hc-importsub { margin: 0 0 6px; font-size:calc(11.5px * var(--text-scale, 1)); font-weight: 700; color: var(--ink-2); text-transform: uppercase; letter-spacing: .05em; }
+.hc-importtop { margin-top: 14px; }
+/* Same job as `.hc-toksech` below — an uppercase label over a block — so the same size,
+   weight, tracking and colour. They were 11.5 against 10.5 with different tracking and
+   different inks, which reads as a wobble down a panel that stacks both. */
+.hc-importsub {
+  margin: 0 0 6px; font-size:calc(10.5px * var(--text-scale, 1)); font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--hc-muted);
+}
 .hc-importtop ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; counter-reset: p; }
 .hc-importtop li { display: flex; flex-direction: column; gap: 1px; font-size:calc(12px * var(--text-scale, 1)); }
 .hc-importtop li b { font-weight: 650; }
@@ -1712,16 +1718,22 @@
 .hc-bfshot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
 .hc-bfshot span { font-size:calc(11.5px * var(--text-scale, 1)); line-height: 1.5; color: var(--hc-muted); flex: 1 1 260px; min-width: 0; }
 .hc-shotpal { margin-top: 14px; }
-.hc-shotph { margin: 0 0 2px; font-size:calc(12.5px * var(--text-scale, 1)); font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.hc-shotph { margin: 0 0 6px; font-size:calc(12.5px * var(--text-scale, 1)); font-weight: 700; display: flex; align-items: center; gap: 8px; }
 .hc-shotph em {
   font-style: normal; font-size:calc(11px * var(--text-scale, 1)); font-weight: 600; color: var(--hc-muted);
   background: var(--sunken); border-radius: 999px; padding: 0 7px;
 }
-.hc-shotrow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 9px; }
+/* A column rather than a wrapping row: each swatch now carries a hex, a picker and the
+   token it is used for, which is more than fits side by side in this panel — they were
+   being cut off at its edge. */
+.hc-shotrow { display: grid; grid-template-columns: 1fr; gap: 6px; margin-top: 10px; min-width: 0; }
+@media (min-width: 1100px) { .hc-shotrow { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .hc-shotsw {
-  display: flex; align-items: center; gap: 6px; padding: 5px 7px; min-width: 0;
+  display: flex; align-items: center; gap: 7px; padding: 5px 8px; min-width: 0;
   border: 1px solid var(--border-2); border-radius: 9px; background: var(--card);
 }
+.hc-shotsw b { flex: none; }
+.hc-shotsw select { flex: 0 1 auto; min-width: 0; }
 .hc-shotsw i { width: 18px; height: 18px; border-radius: 4px; border: 1px solid var(--border-2); flex: none; }
 .hc-shotsw b { font-family: ui-monospace, Menlo, monospace; font-size:calc(11px * var(--text-scale, 1)); font-weight: 600; }
 /* Pointing at a colour lights it up everywhere it is used, in both directions: a swatch
@@ -1732,6 +1744,17 @@
 .hc-tokrows > div { border-radius: 7px; padding: 2px 6px; margin: 0 -6px; transition: background .1s; }
 .hc-tokrows > div.on { background: var(--sunken); }
 .hc-tokrows > div.on dt { color: var(--ink); }
+/* The token a colour is already used for, said on the swatch. Hovering lights the rows up a
+   list away, which answers it once the pointer is there; this answers it at a glance. */
+.hc-shotsw.used { border-color: var(--border-2); background: var(--card-2); }
+.hc-shotuse {
+  font-size: calc(10.5px * var(--text-scale, 1)); font-weight: 600; color: var(--hc-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 108px;
+}
+.hc-shotuse em {
+  font-style: normal; margin-left: 4px; padding: 0 5px; border-radius: 999px;
+  background: var(--sunken); color: var(--hc-muted);
+}
 .hc-shotsw select {
   font: inherit; font-size:calc(11px * var(--text-scale, 1)); padding: 2px 4px; border-radius: 6px; cursor: pointer;
   border: 1px solid var(--border-2); background: var(--card-2); color: var(--ink); max-width: 118px;

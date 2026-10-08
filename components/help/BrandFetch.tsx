@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { palette, suggestTokens, type Swatch } from "@/lib/help/shot-palette";
 import type { WidgetSettings, WidgetTheme } from "@/lib/help/widget";
 import { downloadTokens, tokensText } from "@/lib/help/tokens";
@@ -215,6 +215,21 @@ export default function BrandFetch({ theme, onTheme, settings, storeName, onProd
      lights up the swatch it came from — so "which of these is the button" is answered by
      pointing at it rather than by reading hexes off two lists. */
   const [hover, setHover] = useState<string | null>(null);
+  /* Every token that currently holds each colour, keyed by normalised hex. Built off the
+     same rows the panel lists, so the swatch and the list can never disagree about what a
+     colour is being used for. */
+  const assigned = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const sec of canonicalTokens(theme)) {
+      for (const r of sec.rows) {
+        if (!r.swatch || !r.path) continue;
+        const k = safeHex(r.value);
+        if (k === "#000000" && !/^#0{3,6}$/i.test(r.value.trim())) continue;
+        m.set(k, [...(m.get(k) || []), r.label]);
+      }
+    }
+    return m;
+  }, [theme]);
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function readShot(file: File) {
@@ -339,20 +354,31 @@ export default function BrandFetch({ theme, onTheme, settings, storeName, onProd
             its colours exactly and nothing about which is the button.
           </p>
           <div className="hc-shotrow">
-            {shot.map((sw) => (
+            {shot.map((sw) => {
+              /* Which tokens already hold this colour. Hovering told you by lighting rows up
+                 a list away; saying it on the swatch answers it without moving the pointer,
+                 and the hover still lights the rows for the reverse direction. */
+              const holders = assigned.get(sw.hex.toUpperCase()) || [];
+              return (
               <label key={sw.hex}
-                className={"hc-shotsw" + (hover && sameHex(hover, sw.hex) ? " on" : "")}
+                className={"hc-shotsw" + (hover && sameHex(hover, sw.hex) ? " on" : "") + (holders.length ? " used" : "")}
                 onMouseEnter={() => setHover(sw.hex)} onMouseLeave={() => setHover(null)}
                 title={`${sw.hex} \u00b7 ${(sw.share * 100).toFixed(1)}% of the image`}>
                 <i style={{ background: sw.hex }} />
                 <b>{sw.hex}</b>
                 <select defaultValue="" aria-label={`Use ${sw.hex} for`}
                   onChange={(e) => { if (e.target.value) { onTheme(setPath(theme, e.target.value, sw.hex)); e.target.value = ""; } }}>
-                  <option value="">Use for\u2026</option>
+                  <option value="">Use for…</option>
                   {ASSIGNABLE.map((a) => <option key={a.path} value={a.path}>{a.label}</option>)}
                 </select>
+                {holders.length > 0 && (
+                  <span className="hc-shotuse" title={`In use for: ${holders.join(", ")}`}>
+                    {holders[0]}{holders.length > 1 && <em>+{holders.length - 1}</em>}
+                  </span>
+                )}
               </label>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
