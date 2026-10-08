@@ -1,6 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
-import { analyse, brandFromFilename, guessCategory, readOrders, type OrderInsight } from "@/lib/help/orders";
+import { analyse, brandFromFilename, guessCategory, planRates, readOrders, type OrderInsight } from "@/lib/help/orders";
+import { ladderFor } from "@/lib/help/questions";
 import { freqWord } from "@/lib/help/sim";
 
 /** Read a store's own order export and propose plans from it.
@@ -29,6 +30,8 @@ export default function OrderImport({ onApply }: {
        fields of it. A ladder the store's own customers have already accepted beats one off
        a category table, which is the whole argument for reading the file at all. */
     discountMin: number | null; discountMax: number | null; scale: string | null;
+    /** The prepaid rate per run length, so the document and the widget agree. */
+    ladder: Record<number, number>;
     category: string | null; brand: string | null;
     /** One plan per pack-size band, for the sheet and the document. */
     bands: { label: string; sizes: string[]; everyDays: number; medianGap: number; prepaidRuns: number[]; autopayCycles: number }[];
@@ -128,16 +131,22 @@ export default function OrderImport({ onApply }: {
                 </div>
               ))}
               <button type="button" className="hc-btn hc-sugapply" data-noexport="true"
-                onClick={() => onApply({
+                onClick={() => {
+                  const rates = planRates(out.discounts);
+                  const runsOut = out.plans.length ? out.plans[0].prepaidRuns : out.suggestRuns;
+                  return onApply({
                   /* Both cadences where the file supports two plans: the form takes a list,
                      so a store with two pack sizes offers both rather than one averaged
                      number that is wrong for one of them. */
                   everyDays: out.plans.length ? out.plans[0].everyDays : (out.suggestEveryDays as number),
                   extraEveryDays: out.plans.slice(1).map((p) => p.everyDays),
-                  runs: out.plans.length ? out.plans[0].prepaidRuns : out.suggestRuns,
+                  runs: runsOut,
                   products: out.topProducts.slice(0, 3).map((p) => p.title),
-                  discountMin: out.discounts.bands[0]?.pct ?? out.discounts.medianPct,
-                  discountMax: out.discounts.maxPct,
+                  /* The rates this store's customers actually took, not the deepest single
+                     order: one free replacement used to set the top of the ladder. */
+                  discountMin: rates[0] ?? null,
+                  discountMax: rates.length ? rates[rates.length - 1] : null,
+                  ladder: ladderFor(runsOut, rates),
                   scale: bandFor(out),
                   category: guessCategory(out.topProducts),
                   brand: name ? brandFromFilename(name) : null,
@@ -147,7 +156,8 @@ export default function OrderImport({ onApply }: {
                     label: p.label, sizes: [...new Set(p.sizes)], everyDays: p.everyDays,
                     medianGap: p.medianGap, prepaidRuns: p.prepaidRuns, autopayCycles: p.autopayCycles,
                   })) : [],
-                })}>
+                  });
+                }}>
                 Use everything in this file
               </button>
             </div>

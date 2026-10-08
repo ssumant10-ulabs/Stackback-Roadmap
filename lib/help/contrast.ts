@@ -56,3 +56,21 @@ export function checkWidget(t: {
   }
   return out;
 }
+
+/** A foreground that can actually be read on `bg`. White was hardcoded on every surface
+ *  painted with an accent, which is right for a saturated brand colour and unreadable the
+ *  moment a theme's accent is pale: a light blue selected tab carried white text that
+ *  disappeared into it. Picks whichever of ink and white the background actually supports. */
+export function onColor(bg: string, ink = "#101828", white = "#ffffff"): string {
+  const w = contrast(white, bg);
+  const d = contrast(ink, bg);
+  if (w == null || d == null) return white;
+  const best = d > w ? ink : white;
+  /* A mid grey clears AA against neither the soft ink nor white — only against true black.
+     Reaching for it just here keeps every other surface on the softer ink. */
+  if (Math.max(w, d) < 4.5) {
+    const k = contrast("#000000", bg) ?? 0;
+    if (k > Math.max(w, d)) return "#000000";
+  }
+  return best;
+}

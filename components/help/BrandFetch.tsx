@@ -182,7 +182,7 @@ function mix(a: string, b: string, t: number): string {
     .join("");
 }
 
-export default function BrandFetch({ theme, onTheme, settings, storeName, onProduct }: {
+export default function BrandFetch({ theme, onTheme, settings, storeName, onProduct, lit = null }: {
   theme: WidgetTheme;
   onTheme: (next: WidgetTheme) => void;
   /** The whole settings object, because the token file hands over the purchase options too. */
@@ -192,6 +192,10 @@ export default function BrandFetch({ theme, onTheme, settings, storeName, onProd
    *  merchant's own product at their own price is the difference between a demo of our
    *  widget and a picture of their page. */
   onProduct?: (p: ReadProduct) => void;
+  /** A colour the PREVIEW is reporting the pointer is over, so pointing at the widget lights
+   *  the token holding that colour. The panel's own hover still works; whichever is active
+   *  wins, and the preview wins a tie because that is the pointer's real position. */
+  lit?: string | null;
 }) {
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
@@ -214,7 +218,9 @@ export default function BrandFetch({ theme, onTheme, settings, storeName, onProd
      rows. Hovering a swatch lights up every token already holding it, and hovering a token
      lights up the swatch it came from — so "which of these is the button" is answered by
      pointing at it rather than by reading hexes off two lists. */
-  const [hover, setHover] = useState<string | null>(null);
+  const [ownHover, setOwnHover] = useState<string | null>(null);
+  const hover = lit ?? ownHover;
+  const setHover = setOwnHover;
   /* Every token that currently holds each colour, keyed by normalised hex. Built off the
      same rows the panel lists, so the swatch and the list can never disagree about what a
      colour is being used for. */

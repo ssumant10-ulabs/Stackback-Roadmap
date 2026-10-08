@@ -567,3 +567,24 @@ function plansBySize(
     mk("Larger packs", largeSizes, lg, lEvery, large, "large"),
   ];
 }
+
+/** The deepest rate a plan may be built at. Anything above this in an export is a staff
+ *  order, a replacement or a full refund, never a subscription tier. */
+export const PLAN_RATE_CEILING = 60;
+
+/** The rates worth anchoring a plan ladder to: the ones enough of the store's own orders
+ *  actually took, ascending.
+ *
+ *  The ladder used to read `maxPct`, the deepest SINGLE order. One 100%-off order — a free
+ *  replacement, in every export that has ever been handed to us — then set the top of the
+ *  ladder, and the widget priced every delivery at zero and printed "100% OFF" on a
+ *  client's preview. A rate one order took is not a rate the store offers. */
+export function planRates(d: OrderInsight["discounts"]): number[] {
+  const usable = (b: { pct: number }) => b.pct > 0 && b.pct <= PLAN_RATE_CEILING;
+  /* Two percent of discounted orders, and never fewer than three: enough that the rate is
+     something the store ran rather than something that happened to it. */
+  const floor = Math.max(3, Math.round(d.orders * 0.02));
+  const used = d.bands.filter((b) => usable(b) && b.orders >= floor);
+  const pool = used.length ? used : d.bands.filter(usable);
+  return [...new Set(pool.map((b) => Math.round(b.pct)))].sort((a, b) => a - b);
+}

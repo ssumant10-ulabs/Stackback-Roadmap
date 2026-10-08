@@ -9,6 +9,7 @@
  *  Run: npx tsx scripts/eval-palette.ts
  */
 import { luminance, palette, saturation, suggestTokens, toHex } from "../lib/help/shot-palette";
+import { contrast, onColor } from "../lib/help/contrast";
 
 let fails = 0;
 const ok = (c: boolean, what: string) => { if (!c) { fails++; console.log(`  FAIL  ${what}`); } else console.log(`  ok    ${what}`); };
@@ -68,6 +69,16 @@ ok(g.Widget_Background === "#F6F3EC", "the biggest area is offered as the page")
 ok(g.Product_Tile === "#1A1A1A", "the darkest is offered as the text");
 ok(g.Brand_Primary === "#2779B4", "the saturated one is offered as the brand");
 ok(Object.keys(suggestTokens([])).length === 0, "no picture, no guesses");
+
+console.log("\nText on a painted surface has to be readable");
+/* The selected payment tab painted itself with the accent and hardcoded white on top. On a
+   pale blue accent that is white on light blue, which is what reached a client's screen. */
+ok(onColor("#E1EFFA") !== "#ffffff", "a pale accent does not keep white text");
+ok(onColor("#1A4E8A") === "#ffffff", "a dark accent does");
+for (const bg of ["#E1EFFA", "#1A4E8A", "#F06676", "#FFFFFF", "#000000", "#7F7F7F"]) {
+  const r = contrast(onColor(bg), bg) ?? 0;
+  ok(r >= 4.5, `${bg} gets a foreground that clears AA — ${r.toFixed(1)}:1`);
+}
 
 console.log(fails ? `\n${fails} FAILED\n` : "\nAll palette assertions pass.\n");
 process.exit(fails ? 1 : 0);

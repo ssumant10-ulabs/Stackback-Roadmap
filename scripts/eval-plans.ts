@@ -12,8 +12,8 @@
  *
  *  Run: npx tsx scripts/eval-plans.ts
  */
-import { AUTOPAY_CYCLES, analyse, packSize, readOrders } from "../lib/help/orders";
-import { autopayRate } from "../lib/help/questions";
+import { AUTOPAY_CYCLES, analyse, packSize, planRates, readOrders } from "../lib/help/orders";
+import { autopayRate, ladderFor, writeBands } from "../lib/help/questions";
 
 let fails = 0;
 const ok = (c: boolean, what: string) => { if (!c) { fails++; console.log(`  FAIL  ${what}`); } else console.log(`  ok    ${what}`); };
@@ -102,6 +102,36 @@ const plain = analyse(readOrders(file(nosize)).rows);
 eq(plain.plans.length, 1, "titles with no size give one plan");
 eq(plain.plans[0].everyDays, 30, "at the cadence the whole file shows");
 eq(analyse([]).plans.length, 0, "an empty file proposes nothing at all");
+
+console.log("\nThe ladder is built from rates the store actually ran");
+/* The bug this guards: one 100%-off order set the top of the ladder, the widget priced
+   every delivery at zero and printed "100% OFF" on a client's preview. */
+const D = (bands: { pct: number; orders: number }[], orders: number) =>
+  ({ orders, share: 0, medianPct: null, maxPct: Math.max(...bands.map((b) => b.pct), 0), bands, codes: [] });
+
+eq(planRates(D([{ pct: 10, orders: 40 }, { pct: 15, orders: 30 }, { pct: 100, orders: 1 }], 71)).join(),
+   "10,15", "a single 100% order never reaches the ladder");
+eq(planRates(D([{ pct: 10, orders: 40 }, { pct: 90, orders: 40 }], 80)).join(),
+   "10", "nor does a well-used rate above the ceiling");
+ok(!planRates(D([{ pct: 100, orders: 1 }], 1)).includes(100), "even when it is the only rate in the file");
+eq(planRates(D([{ pct: 12, orders: 2 }], 4)).join(), "12",
+   "a thin file falls back to its rates rather than to nothing");
+eq(planRates(D([], 0)).length, 0, "a file with no discounts proposes no ladder");
+
+console.log("\nEvery run offered gets a rung");
+const lad = ladderFor([3, 6, 12], [10, 20]);
+eq(Object.keys(lad).length, 3, "three runs, three rungs");
+eq(lad[3], 10, "the shortest run takes the lowest accepted rate");
+eq(lad[12], 20, "the longest takes the highest");
+ok(lad[6] > lad[3] && lad[6] < lad[12], "and the middle sits between them");
+eq(writeBands(ladderFor([3, 6], [15])).split(",").map((x) => x.split(":")[1]).join(),
+   "15,15", "one accepted rate is flat, not an invented slope");
+eq(Object.keys(ladderFor([3, 6], [])).length, 0, "no rates, no ladder");
+/* The two surfaces that disagreed: the document reads the ladder, the widget falls back to
+   discount_max. They must land on the same number for the longest run. */
+const runs = [3, 6, 12], rates = [10, 20];
+eq(ladderFor(runs, rates)[runs[runs.length - 1]], rates[rates.length - 1],
+   "the document's deepest rung is the widget's fallback rate");
 
 console.log(fails ? `\n${fails} FAILED\n` : "\nAll plan assertions pass.\n");
 process.exit(fails ? 1 : 0);

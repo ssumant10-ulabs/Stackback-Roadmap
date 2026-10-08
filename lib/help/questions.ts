@@ -288,3 +288,23 @@ export function reconcileModes(next: string[], prev: string[]): string[] {
   if (added === "auto_debit") return next.filter((m) => m !== "payg");
   return next;
 }
+
+/** A prepaid rate for every run length offered, spread across the rates the store's own
+ *  customers have already accepted. Longer runs earn more, which is the entire argument for
+ *  a tiered plan.
+ *
+ *  Without this the import set `tiered: "yes"` and left the ladder itself empty, so the
+ *  document printed every plan at 0% under a "still to answer" note while the widget fell
+ *  back to the single max rate — two surfaces disagreeing about the same store. */
+export function ladderFor(runs: number[], rates: number[]): Record<number, number> {
+  const out: Record<number, number> = {};
+  const r = [...new Set(runs.filter((n) => Number.isFinite(n) && n > 0))].sort((a, b) => a - b);
+  if (!r.length || !rates.length) return out;
+  const lo = rates[0], hi = rates[rates.length - 1];
+  /* One accepted rate is flat across every run. Inventing a slope from a single number is
+     making the tier up, which is the thing the file was read to avoid. */
+  r.forEach((run, i) => {
+    out[run] = r.length === 1 ? hi : Math.round(lo + ((hi - lo) * i) / (r.length - 1));
+  });
+  return out;
+}
