@@ -8,7 +8,7 @@
  *  without anybody remembering to add it. Unanswered fields are listed rather than dropped:
  *  this downloads from a half-filled form on purpose, and a document that quietly omits what
  *  it does not know reads as a complete specification. */
-import { QUESTIONS, parseBands, parseFreebies, parseList, readPlanBands, visible, type Answers, type Field } from "./questions";
+import { QUESTIONS, autopayRate, parseBands, parseFreebies, parseList, readPlanBands, visible, type Answers, type Field } from "./questions";
 import { CATEGORIES } from "./categories";
 import { freqWord } from "./sim";
 import type { WidgetSettings } from "./widget";
@@ -42,8 +42,9 @@ export function planDoc(a: Answers, brand: string, settings?: WidgetSettings): s
   /* One table per pack-size band where the order file found two, because a 100g bag and a
      1kg bag do not reorder at the same rate and one table over both is wrong for one of
      them. AutoPay is its own row: it is not a run, it bills until the customer stops it, and
-     it carries the shallowest rung — prepaid buys a bigger discount because the money is
-     upfront, and matching it for a customer committing to nothing makes prepaid pointless. */
+     it takes the second-highest rung — open-ended is in practice the longest commitment on
+     the page, so the floor would point a customer at the shortest prepaid run instead, while
+     the top rung stays with the money paid upfront. */
   const planBands = readPlanBands(a);
   const offersAutopay = (Array.isArray(a.modes) ? a.modes : []).includes("auto_debit");
   const pctFor = (r: number) => (tiered ? (bands[r] ?? flat) : flat);
@@ -51,8 +52,7 @@ export function planDoc(a: Answers, brand: string, settings?: WidgetSettings): s
     L.push("", "| Plan | Frequency | Discount |", "|---|---|---|");
     for (const r of rs) L.push(`| ${r} deliveries | ${freq} | ${pctFor(r)}% off |`);
     if (offersAutopay) {
-      const lowest = Math.min(...(rs.length ? rs.map(pctFor) : [flat]));
-      L.push(`| AutoPay — no fixed run | ${freq} | ${lowest}% off |`);
+      L.push(`| AutoPay — no fixed run | ${freq} | ${autopayRate(rs.length ? rs.map(pctFor) : [flat])}% off |`);
     }
     L.push("");
   };

@@ -60,6 +60,19 @@ export interface ReadProduct {
  *  in step with the token list. */
 /** `<input type=color>` only accepts #rrggbb. A token can legitimately hold `transparent`
  *  or a short hex, and feeding either to the control makes it silently show black. */
+/** Two token values are the same colour. Case and the shorthand form both vary across a
+ *  theme, and `transparent` must never match itself into a highlight. */
+function sameHex(a: string, b: string): boolean {
+  const n = (v: string) => {
+    const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec((v || "").trim());
+    if (!m) return null;
+    const h = m[1];
+    return (h.length === 3 ? h.split("").map((c) => c + c).join("") : h).toUpperCase();
+  };
+  const x = n(a), y = n(b);
+  return Boolean(x && y && x === y);
+}
+
 function safeHex(v: string): string {
   const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(v.trim());
   if (!m) return "#000000";
@@ -197,6 +210,11 @@ export default function BrandFetch({ theme, onTheme, settings, storeName, onProd
      belongs to Judge.me. A picture of the page has no such problem. */
   const [shot, setShot] = useState<Swatch[] | null>(null);
   const [shotName, setShotName] = useState<string | null>(null);
+  /* Which colour the pointer is over, shared between the sampled swatches and the token
+     rows. Hovering a swatch lights up every token already holding it, and hovering a token
+     lights up the swatch it came from — so "which of these is the button" is answered by
+     pointing at it rather than by reading hexes off two lists. */
+  const [hover, setHover] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function readShot(file: File) {
@@ -322,7 +340,10 @@ export default function BrandFetch({ theme, onTheme, settings, storeName, onProd
           </p>
           <div className="hc-shotrow">
             {shot.map((sw) => (
-              <label key={sw.hex} className="hc-shotsw" title={`${sw.hex} \u00b7 ${(sw.share * 100).toFixed(1)}% of the image`}>
+              <label key={sw.hex}
+                className={"hc-shotsw" + (hover && sameHex(hover, sw.hex) ? " on" : "")}
+                onMouseEnter={() => setHover(sw.hex)} onMouseLeave={() => setHover(null)}
+                title={`${sw.hex} \u00b7 ${(sw.share * 100).toFixed(1)}% of the image`}>
                 <i style={{ background: sw.hex }} />
                 <b>{sw.hex}</b>
                 <select defaultValue="" aria-label={`Use ${sw.hex} for`}
@@ -342,7 +363,7 @@ export default function BrandFetch({ theme, onTheme, settings, storeName, onProd
           it, in its sections and its order. The reader answers six of them; the widget on
           every pilot store today has nineteen plus the portal's five and two fonts, and
           showing six and calling it the token set is why this panel kept reading as wrong. */}
-      <LiveTokens theme={theme} onTheme={onTheme} read={readFrom} font={font} shape={shape} storeName={storeName || url.trim() || null} />
+      <LiveTokens theme={theme} onTheme={onTheme} hover={hover} onHover={setHover} read={readFrom} font={font} shape={shape} storeName={storeName || url.trim() || null} />
 
       {tokens && (
         <>
@@ -371,8 +392,9 @@ export default function BrandFetch({ theme, onTheme, settings, storeName, onProd
  *  the six chips and the preview, and dev wants all twenty-six to paste into the app. The
  *  copy block at the bottom is the `field: value` shape the skill asks every derivation to
  *  end with, so nobody has to read a table to enter them. */
-function LiveTokens({ theme, onTheme, read, font, shape, storeName }: {
+function LiveTokens({ theme, onTheme, hover, onHover, read, font, shape, storeName }: {
   theme: WidgetTheme; onTheme: (t: WidgetTheme) => void;
+  hover: string | null; onHover: (hex: string | null) => void;
   read?: ReadSources; font: string | null; shape?: ReadShape; storeName: string | null;
 }) {
   /* Open. This is the token set, not an appendix to it. */
@@ -408,7 +430,10 @@ function LiveTokens({ theme, onTheme, read, font, shape, storeName }: {
               <p className="hc-toksech">{sec.title}</p>
               <dl className="hc-tokrows">
                 {sec.rows.map((r) => (
-                  <div key={r.label}>
+                  <div key={r.label}
+                    className={hover && r.swatch && sameHex(hover, r.value) ? "on" : undefined}
+                    onMouseEnter={() => r.swatch && onHover(r.value)}
+                    onMouseLeave={() => onHover(null)}>
                     <dt>{r.label}</dt>
                     <dd>
                       {/* The swatch is the control. Every read on this panel is a reading of

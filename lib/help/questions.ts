@@ -166,6 +166,23 @@ export interface PlanBand {
   prepaidRuns: number[];
   autopayCycles: number;
 }
+/** What AutoPay is discounted at, given the prepaid ladder.
+ *
+ *  The SECOND-HIGHEST rung, not the lowest. AutoPay is open-ended — it bills until the
+ *  customer stops it — so in practice it is the longest commitment on the page and pricing
+ *  it at the floor tells a customer the honest thing is to take the shortest prepaid run
+ *  instead. It still sits below the top rung, because paying twelve deliveries upfront is
+ *  worth more to a merchant than a mandate that can be cancelled next month: on a 15 / 18 /
+ *  20 ladder AutoPay is 18.
+ *
+ *  Distinct rungs, so a ladder that repeats a rate does not collapse the gap to nothing.
+ *  With one rate there is nothing to choose and AutoPay takes it. */
+export function autopayRate(ladder: number[]): number {
+  const rungs = [...new Set(ladder.filter((n) => Number.isFinite(n)))].sort((a, b) => b - a);
+  if (!rungs.length) return 0;
+  return rungs.length === 1 ? rungs[0] : rungs[1];
+}
+
 export function readPlanBands(a: Answers): PlanBand[] {
   try {
     const v = JSON.parse(String(a.plan_bands || "[]"));

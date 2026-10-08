@@ -13,6 +13,7 @@
  *  Run: npx tsx scripts/eval-plans.ts
  */
 import { AUTOPAY_CYCLES, analyse, packSize, readOrders } from "../lib/help/orders";
+import { autopayRate } from "../lib/help/questions";
 
 let fails = 0;
 const ok = (c: boolean, what: string) => { if (!c) { fails++; console.log(`  FAIL  ${what}`); } else console.log(`  ok    ${what}`); };
@@ -67,6 +68,23 @@ for (const p of two.plans) {
 }
 eq(two.plans[0].prepaidRuns, [6, 13, 26], "fortnightly prepaid runs cover three months, six and a year");
 eq(two.plans[1].prepaidRuns, [2, 3, 6], "and two-monthly runs are shorter in count for the same cover");
+
+console.log("\nWhat AutoPay is discounted at");
+/* The second-highest rung, not the floor. AutoPay is open-ended — it bills until the
+   customer stops it — so in practice it is the longest commitment on the page, and pricing
+   it at the bottom tells a customer the honest move is the shortest prepaid run instead. It
+   stays below the top rung, because twelve deliveries paid upfront is worth more than a
+   mandate that can be cancelled next month. */
+eq(autopayRate([15, 18, 20]), 18, "a 15/18/20 ladder gives AutoPay 18, not 15");
+eq(autopayRate([10, 15, 20]), 15, "and 10/15/20 gives 15");
+eq(autopayRate([5, 10, 15, 18, 20]), 18, "on a five-rung ladder it is still one below the top");
+eq(autopayRate([10, 20]), 10, "with two rungs the second-highest is the lower one");
+eq(autopayRate([20]), 20, "with one rate there is nothing to choose");
+/* A ladder that repeats a rate must not collapse the gap to nothing. */
+eq(autopayRate([15, 15, 20]), 15, "a repeated rung counts once");
+eq(autopayRate([]), 0, "no ladder, no rate");
+ok(autopayRate([15, 18, 20]) < Math.max(15, 18, 20), "it is always below the best prepaid rate");
+ok(autopayRate([15, 18, 20]) > Math.min(15, 18, 20), "and always above the worst");
 
 console.log("\nA split that is not real is not offered");
 const same: { email: string; day: number; title: string }[] = [];

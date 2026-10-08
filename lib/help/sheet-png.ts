@@ -7,7 +7,7 @@
  *
  *  So this draws the sheet itself. More code, but it cannot hang, it needs no dependency,
  *  and the output is identical everywhere because nothing is inherited from the page. */
-import { QUESTIONS, parseBands, parseFreebies, parseList, readPlanBands, visible, type Answers, type PlanBand } from "./questions";
+import { QUESTIONS, autopayRate, parseBands, parseFreebies, parseList, readPlanBands, visible, type Answers, type PlanBand } from "./questions";
 import { DEFAULT_CONFIG } from "./sim";
 import { readTheme, type WidgetSettings } from "./widget";
 import { DEFAULT_WIDGET, EXPORT_ROWS, matrixValue, toggleOn } from "./widget";
@@ -145,14 +145,15 @@ function render(t: Ctx, a: Answers, dry: boolean, settings?: WidgetSettings): nu
      them; the sizes are named on each so nobody has to guess which is which.
 
      AutoPay gets its own row and its own rate. It is not a run — it bills until the customer
-     stops it — so it has no run total, and it carries the SHALLOWEST rung of the ladder:
-     prepaid buys a bigger discount because the money is upfront, and giving the same rate to
-     a customer committing to nothing is the pricing error that makes prepaid pointless. */
+     stops it — so it has no run total, and it takes the second-highest rung: open-ended is in
+     practice the longest commitment on the page, so pricing it at the floor tells a customer
+     to take the shortest prepaid run instead, while the top rung stays with the money paid
+     upfront. See `autopayRate`. */
   const planBands = readPlanBands(a);
   const offersAutopay = (Array.isArray(a.modes) ? a.modes : []).includes("auto_debit");
   const cols = [PAD, PAD + 170, PAD + 330, W - PAD - 150, W - PAD];
   const ladder = (rs: number[]) => rs.map((r) => (tiered ? (bands[r] ?? flat) : flat));
-  const autopayPct = (rs: number[]) => Math.min(...(ladder(rs).length ? ladder(rs) : [flat]));
+  const autopayPct = (rs: number[]) => autopayRate(ladder(rs).length ? ladder(rs) : [flat]);
 
   const table = (heading: string | null, sizes: string[], rs: number[], freq: string) => {
     if (draw && heading) {
