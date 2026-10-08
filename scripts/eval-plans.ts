@@ -118,6 +118,16 @@ eq(planRates(D([{ pct: 12, orders: 2 }], 4)).join(), "12",
    "a thin file falls back to its rates rather than to nothing");
 eq(planRates(D([], 0)).length, 0, "a file with no discounts proposes no ladder");
 
+/* The second thing this got wrong, and the one that reached a client's document: a 5% promo
+   and a 30% clearance either side of a 10% house rate were read as the two ends of a tier,
+   and the plan printed 5 / 18 / 30 on a store that runs 10. */
+eq(planRates(D([{ pct: 10, orders: 900 }, { pct: 15, orders: 160 }, { pct: 5, orders: 70 }, { pct: 30, orders: 55 }], 1185)).join(),
+   "10", "a house rate with promos either side is one rate, not a 5-to-30 spread");
+eq(planRates(D([{ pct: 10, orders: 600 }, { pct: 15, orders: 520 }, { pct: 5, orders: 40 }], 1160)).join(),
+   "10,15", "two rates the store genuinely leans on both stay");
+ok(planRates(D([{ pct: 10, orders: 900 }, { pct: 30, orders: 55 }], 955)).every((r) => r <= 15),
+   "a thin clearance code never sets the top of the ladder");
+
 console.log("\nEvery run offered gets a rung");
 const lad = ladderFor([3, 6, 12], [10, 20]);
 eq(Object.keys(lad).length, 3, "three runs, three rungs");

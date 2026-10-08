@@ -572,19 +572,35 @@ function plansBySize(
  *  order, a replacement or a full refund, never a subscription tier. */
 export const PLAN_RATE_CEILING = 60;
 
-/** The rates worth anchoring a plan ladder to: the ones enough of the store's own orders
- *  actually took, ascending.
+/** How much of a store's discounted volume the ladder has to be built from. The rates that
+ *  carry the bulk of the orders are the ones the store runs; everything past that is a promo,
+ *  a win-back or a clearance code, and those are not tiers. */
+export const PLAN_RATE_COVERAGE = 0.6;
+
+/** The rates worth anchoring a plan ladder to, ascending.
  *
- *  The ladder used to read `maxPct`, the deepest SINGLE order. One 100%-off order — a free
- *  replacement, in every export that has ever been handed to us — then set the top of the
- *  ladder, and the widget priced every delivery at zero and printed "100% OFF" on a
- *  client's preview. A rate one order took is not a rate the store offers. */
+ *  Two things this has been wrong about, both of which reached a client's document:
+ *
+ *  1. It read `maxPct`, the deepest SINGLE order. One 100%-off replacement then set the top
+ *     of the ladder and the widget priced every delivery at zero.
+ *  2. It then read the lowest and highest rate that cleared a 2% floor, which on a file of a
+ *     few thousand discounted orders is any code used a few dozen times. A one-week 5% promo
+ *     and a clearance 30% became the two ends of the plan — 5/18/30 on a store that runs 10.
+ *
+ *  So: take the rates in order of volume until they account for most of the discounting, and
+ *  build the ladder out of those. A store with one house rate gets one rate, flat, which is
+ *  the honest answer rather than an invented slope. */
 export function planRates(d: OrderInsight["discounts"]): number[] {
-  const usable = (b: { pct: number }) => b.pct > 0 && b.pct <= PLAN_RATE_CEILING;
-  /* Two percent of discounted orders, and never fewer than three: enough that the rate is
-     something the store ran rather than something that happened to it. */
-  const floor = Math.max(3, Math.round(d.orders * 0.02));
-  const used = d.bands.filter((b) => usable(b) && b.orders >= floor);
-  const pool = used.length ? used : d.bands.filter(usable);
-  return [...new Set(pool.map((b) => Math.round(b.pct)))].sort((a, b) => a - b);
+  const pool = d.bands.filter((b) => b.pct > 0 && b.pct <= PLAN_RATE_CEILING);
+  if (!pool.length) return [];
+  const total = pool.reduce((n, b) => n + b.orders, 0);
+  /* `bands` arrives sorted by volume, so this walks the rates the store leans on first. */
+  const keep: typeof pool = [];
+  let seen = 0;
+  for (const b of pool) {
+    keep.push(b);
+    seen += b.orders;
+    if (seen >= total * PLAN_RATE_COVERAGE) break;
+  }
+  return [...new Set(keep.map((b) => Math.round(b.pct)))].sort((a, b) => a - b);
 }
