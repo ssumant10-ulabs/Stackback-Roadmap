@@ -85,8 +85,15 @@ export const inSprintScope = (c: { owned: boolean; now: boolean; parked: boolean
 /** Bumped when the rule above changes. A sprint's commitment was snapshotted under whatever
  *  rule was current when it opened, so a sprint carrying an older one has a baseline that
  *  measures nothing and is re-taken once. Without this, changing the rule retroactively
- *  turned most of an open week into "added after we started". */
-export const SCOPE_RULE = 2;
+ *  turned most of an open week into "added after we started".
+ *
+ *  Bumped to 3 for the deploy, not because the rule changed again but because the live
+ *  record spent a few days being written by two different ones: it was re-baselined under
+ *  rule 2 from a local build while the deployed app was still maintaining it under rule 1,
+ *  so twenty-one cards are marked as added that are only a disagreement between the two.
+ *  Stamping 3 re-takes the baseline once on the first load after this ships, and the week's
+ *  scope line means something again. */
+export const SCOPE_RULE = 3;
 
 /** Monday of the week `offset` weeks from the one containing `from`. Weeks start Monday
  *  because the team's does; nothing in the data says otherwise. */

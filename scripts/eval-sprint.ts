@@ -120,7 +120,7 @@ console.log("\nRe-baselining when the rule changes");
 /* A commitment snapshotted under an older rule measures nothing: changing the rule turned
    most of an open week into "added after we started". It is re-taken once, and a CLOSED
    sprint is history and is never touched. */
-const stale: Sprint = { id: "2026-10-05", committed: ["a"], added: ["b"], rule: 1 };
+const stale: Sprint = { id: "2026-10-05", committed: ["a"], added: ["b"], rule: 2 };
 const board = [
   C("a", "dev_progress", { now: false }),
   C("b", "dev_progress", { now: false }),
@@ -130,6 +130,7 @@ const fixed = syncSprint(stale, "2026-10-05", board)!;
 eq(fixed.committed, ["a", "b", "c"], "an open sprint's baseline is re-taken under the new rule");
 eq(fixed.added, [], "and nothing is left marked as added after the fact");
 eq(fixed.rule, SCOPE_RULE, "and it is stamped so it only happens once");
+ok(SCOPE_RULE > 2, "and a bump re-takes a baseline two rules wrote over each other");
 ok(syncSprint(fixed, "2026-10-05", board) === null, "the very next render writes nothing");
 ok(syncSprint({ ...stale, closedAt: "x" }, "2026-10-05", board) === null,
   "a closed sprint is history and is never re-baselined");
