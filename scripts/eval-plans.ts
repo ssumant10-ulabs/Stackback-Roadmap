@@ -13,7 +13,9 @@
  *  Run: npx tsx scripts/eval-plans.ts
  */
 import { AUTOPAY_CYCLES, analyse, packSize, planRates, readOrders } from "../lib/help/orders";
-import { autopayRate, ladderFor, writeBands } from "../lib/help/questions";
+import { DEFAULT_ANSWERS, autopayRate, ladderFor, parseBands, parseList, writeBands } from "../lib/help/questions";
+import { planDoc } from "../lib/help/plan-doc";
+import type { Answers } from "../lib/help/questions";
 
 let fails = 0;
 const ok = (c: boolean, what: string) => { if (!c) { fails++; console.log(`  FAIL  ${what}`); } else console.log(`  ok    ${what}`); };
@@ -104,29 +106,35 @@ eq(plain.plans[0].everyDays, 30, "at the cadence the whole file shows");
 eq(analyse([]).plans.length, 0, "an empty file proposes nothing at all");
 
 console.log("\nThe ladder is built from rates the store actually ran");
-/* The bug this guards: one 100%-off order set the top of the ladder, the widget priced
-   every delivery at zero and printed "100% OFF" on a client's preview. */
-const D = (bands: { pct: number; orders: number }[], orders: number) =>
-  ({ orders, share: 0, medianPct: null, maxPct: Math.max(...bands.map((b) => b.pct), 0), bands, codes: [] });
+/* Three bugs this guards, each of which reached a client's document. */
+const D = (bands: { pct: number; orders: number }[], medianPct: number | null = null) => ({
+  orders: bands.reduce((n, b) => n + b.orders, 0), share: 0, medianPct,
+  maxPct: Math.max(...bands.map((b) => b.pct), 0),
+  bands: [...bands].sort((a2, b2) => b2.orders - a2.orders).slice(0, 5), codes: [],
+});
 
-eq(planRates(D([{ pct: 10, orders: 40 }, { pct: 15, orders: 30 }, { pct: 100, orders: 1 }], 71)).join(),
-   "10,15", "a single 100% order never reaches the ladder");
-eq(planRates(D([{ pct: 10, orders: 40 }, { pct: 90, orders: 40 }], 80)).join(),
-   "10", "nor does a well-used rate above the ceiling");
-ok(!planRates(D([{ pct: 100, orders: 1 }], 1)).includes(100), "even when it is the only rate in the file");
-eq(planRates(D([{ pct: 12, orders: 2 }], 4)).join(), "12",
-   "a thin file falls back to its rates rather than to nothing");
-eq(planRates(D([], 0)).length, 0, "a file with no discounts proposes no ladder");
+/* 1. The deepest single order is not a rate the store offers. */
+eq(planRates(D([{ pct: 12, orders: 400 }, { pct: 100, orders: 1 }], 12)).join(), "12",
+   "a single 100% order never reaches the ladder");
+eq(planRates(D([{ pct: 100, orders: 1 }], 100)).length, 0, "even when it is the only rate in the file");
+eq(planRates(D([], null)).length, 0, "a file with no discounts proposes no ladder");
 
-/* The second thing this got wrong, and the one that reached a client's document: a 5% promo
-   and a 30% clearance either side of a 10% house rate were read as the two ends of a tier,
-   and the plan printed 5 / 18 / 30 on a store that runs 10. */
-eq(planRates(D([{ pct: 10, orders: 900 }, { pct: 15, orders: 160 }, { pct: 5, orders: 70 }, { pct: 30, orders: 55 }], 1185)).join(),
-   "10", "a house rate with promos either side is one rate, not a 5-to-30 spread");
-eq(planRates(D([{ pct: 10, orders: 600 }, { pct: 15, orders: 520 }, { pct: 5, orders: 40 }], 1160)).join(),
-   "10,15", "two rates the store genuinely leans on both stay");
-ok(planRates(D([{ pct: 10, orders: 900 }, { pct: 30, orders: 55 }], 955)).every((r) => r <= 15),
-   "a thin clearance code never sets the top of the ladder");
+/* 2. A thin clearance code is not the top of a tier. */
+const thin = planRates(D([{ pct: 10, orders: 900 }, { pct: 50, orders: 12 }], 10));
+ok(thin[thin.length - 1] <= 20, "a code a dozen orders took cannot drag the ladder up behind it");
+
+/* 3. And the busiest band is not the base: on a store that discounts by hand it is whichever
+      coupon it mailed most, which is its cheapest. Belp's own file — a 5% code on 2,346
+      orders, a median order at 12% — proposed a 5% subscription. */
+const belp = planRates(D(
+  [{ pct: 5, orders: 2346 }, { pct: 10, orders: 296 }, { pct: 28, orders: 255 },
+   { pct: 30, orders: 220 }, { pct: 22, orders: 186 }], 12));
+eq(belp.join(), "12,24", "the base is what a customer typically already gets, not the cheapest code");
+ok(belp[0] >= 12, "so a subscription is never proposed below the one-off discount");
+ok(belp[1] <= belp[0] * 2, "and the top is capped at twice the base");
+
+eq(planRates(D([{ pct: 15, orders: 500 }], 15)).join(), "15",
+   "one rate with no room above it is flat, not a slope");
 
 console.log("\nEvery run offered gets a rung");
 const lad = ladderFor([3, 6, 12], [10, 20]);
@@ -142,6 +150,43 @@ eq(Object.keys(ladderFor([3, 6], [])).length, 0, "no rates, no ladder");
 const runs = [3, 6, 12], rates = [10, 20];
 eq(ladderFor(runs, rates)[runs[runs.length - 1]], rates[rates.length - 1],
    "the document's deepest rung is the widget's fallback rate");
+
+console.log("\nThe document and the widget quote the same rate");
+/* Twice now these have disagreed, both times because each read a different field: the doc
+   reads `discount_pct`, the widget `discount_max`, and the import wrote only the ends. The
+   merchant sees a document saying 0% off beside a widget saying 20%. */
+const widgetPct = (a: Answers, run: number) => {
+  const flat = Number(a.discount_pct) || Number(a.discount_max) || 0;
+  return a.tiered === "yes" ? (parseBands(a.bands)[run] ?? flat) : flat;
+};
+const docPct = (a: Answers, run: number) => {
+  const row = planDoc(a, "Test").split("\n").find((l) => l.startsWith(`| ${run} deliveries `));
+  return row ? Number((row.match(/(\d+)% off/) || [])[1]) : NaN;
+};
+for (const [name, a] of [
+  ["a tiered ladder off an order file", {
+    ...DEFAULT_ANSWERS, deliveries: "3, 6, 12", every_days: ["30"], tiered: "yes",
+    discount_pct: "12", discount_min: "12", discount_max: "24", bands: writeBands(ladderFor([3, 6, 12], [12, 24])),
+  }],
+  ["a flat rate off an order file", {
+    ...DEFAULT_ANSWERS, deliveries: "3, 6, 12", every_days: ["30"], tiered: "no",
+    discount_pct: "15", discount_min: "15", discount_max: "15", bands: "",
+  }],
+  ["answers saved before the flat rate was written", {
+    ...DEFAULT_ANSWERS, deliveries: "3, 6", every_days: ["30"], tiered: "no",
+    discount_pct: "", discount_min: "20", discount_max: "20", bands: "",
+  }],
+] as [string, Answers][]) {
+  for (const run of parseList(a.deliveries as string)) {
+    eq(docPct(a, run), widgetPct(a, run), `${name}: run ${run} reads the same on both`);
+  }
+  /* Under the "Still to answer" heading specifically — the label also appears, correctly, on
+     the answered row above it. */
+  const doc = planDoc(a, "Test");
+  const open = doc.slice(doc.indexOf("## Still to answer"));
+  ok(doc.indexOf("## Still to answer") < 0 || !/rate per run length|Most you would give/i.test(open),
+     `${name}: and the discount is not still to answer`);
+}
 
 console.log(fails ? `\n${fails} FAILED\n` : "\nAll plan assertions pass.\n");
 process.exit(fails ? 1 : 0);

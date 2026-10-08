@@ -38,7 +38,9 @@ export function planDoc(a: Answers, brand: string, settings?: WidgetSettings): s
   const runs = parseList(a.deliveries);
   const bands = parseBands(a.bands);
   const tiered = a.tiered === "yes";
-  const flat = Number(a.discount_pct) || 0;
+  /* `discount_max` as a fallback: the widget reads that one, and a saved answer set before
+     the import wrote both would otherwise print 0% off here against a widget showing a rate. */
+  const flat = Number(a.discount_pct) || Number(a.discount_max) || 0;
   /* One table per pack-size band where the order file found two, because a 100g bag and a
      1kg bag do not reorder at the same rate and one table over both is wrong for one of
      them. AutoPay is its own row: it is not a run, it bills until the customer stops it, and

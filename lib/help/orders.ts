@@ -572,35 +572,37 @@ function plansBySize(
  *  order, a replacement or a full refund, never a subscription tier. */
 export const PLAN_RATE_CEILING = 60;
 
-/** How much of a store's discounted volume the ladder has to be built from. The rates that
- *  carry the bulk of the orders are the ones the store runs; everything past that is a promo,
- *  a win-back or a clearance code, and those are not tiers. */
-export const PLAN_RATE_COVERAGE = 0.6;
+/** A rate needs this share of the busiest band's volume to count as something the store
+ *  runs, rather than a clearance code or a one-week promo. */
+export const PLAN_RATE_SHARE = 0.1;
 
-/** The rates worth anchoring a plan ladder to, ascending.
+/** The two ends of a plan ladder, read off the store's own orders: `[base, top]`, or `[base]`
+ *  where the file shows no room above it, or `[]` where it shows no discounting at all.
  *
- *  Two things this has been wrong about, both of which reached a client's document:
+ *  Three rules this has been wrong about, each of which reached a client's document:
  *
- *  1. It read `maxPct`, the deepest SINGLE order. One 100%-off replacement then set the top
- *     of the ladder and the widget priced every delivery at zero.
- *  2. It then read the lowest and highest rate that cleared a 2% floor, which on a file of a
- *     few thousand discounted orders is any code used a few dozen times. A one-week 5% promo
- *     and a clearance 30% became the two ends of the plan — 5/18/30 on a store that runs 10.
+ *  1. It read `maxPct`, the deepest SINGLE order. One 100%-off replacement set the top of the
+ *     ladder and the widget priced every delivery at zero.
+ *  2. It read the extremes of every rate clearing a 2% floor, so a one-week promo and a
+ *     clearance code became the two ends of the plan — 5/18/30 on a store that runs 12.
+ *  3. It read only the most-voluminous rate, which on a store that discounts ad hoc is its
+ *     cheapest code, and proposed a 5% subscription on a file whose median order is 12% off.
  *
- *  So: take the rates in order of volume until they account for most of the discounting, and
- *  build the ladder out of those. A store with one house rate gets one rate, flat, which is
- *  the honest answer rather than an invented slope. */
+ *  So: start at the discount its customers typically already get, because a subscription has
+ *  to beat a one-off, and rise towards the deepest rate the store genuinely runs — capped at
+ *  twice the base, so a thin 30% code cannot drag the whole ladder up behind it. */
 export function planRates(d: OrderInsight["discounts"]): number[] {
   const pool = d.bands.filter((b) => b.pct > 0 && b.pct <= PLAN_RATE_CEILING);
   if (!pool.length) return [];
-  const total = pool.reduce((n, b) => n + b.orders, 0);
-  /* `bands` arrives sorted by volume, so this walks the rates the store leans on first. */
-  const keep: typeof pool = [];
-  let seen = 0;
-  for (const b of pool) {
-    keep.push(b);
-    seen += b.orders;
-    if (seen >= total * PLAN_RATE_COVERAGE) break;
-  }
-  return [...new Set(keep.map((b) => Math.round(b.pct)))].sort((a, b) => a - b);
+  /* The median of the discounted orders, not the busiest band: the busiest band on a store
+     that discounts by hand is whichever coupon it mailed most, which is its cheapest. */
+  const busiest = Math.max(...pool.map((b) => b.orders));
+  const base = Math.round(
+    d.medianPct != null && d.medianPct > 0 && d.medianPct <= PLAN_RATE_CEILING
+      ? d.medianPct
+      : pool[0].pct,
+  );
+  const real = pool.filter((b) => b.orders >= busiest * PLAN_RATE_SHARE).map((b) => b.pct);
+  const top = Math.min(Math.max(base, ...real), base * 2, PLAN_RATE_CEILING);
+  return top > base ? [base, Math.round(top)] : [base];
 }

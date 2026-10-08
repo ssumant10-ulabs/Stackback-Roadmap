@@ -297,16 +297,24 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
             /* The ladder, anchored to rates these customers have already accepted. Only
                where the file HAS discounts and the two ends differ — a single flat rate is
                one number, and writing it into both ends reads as a tier that is not one. */
+            /* `discount_pct` as well as the ends, because the DOCUMENT reads that one and the
+               widget reads `discount_max`. Writing only the ends left the document printing
+               0% off against a widget showing the real rate — the same two-surfaces bug as
+               the empty ladder, one field further down. */
             ...(discountMin != null && discountMax != null && discountMax > discountMin
               /* Tiered, AND the ladder itself. Setting the flag without filling the rungs
-                 left the document printing 0% under "still to answer" while the widget fell
-                 back to the top rate. */
+                 left the document printing 0% under "still to answer". */
               ? {
+                  discount_pct: String(discountMin),
                   discount_min: String(discountMin), discount_max: String(discountMax),
                   tiered: "yes", bands: writeBands(ladder),
                 }
               : discountMax != null
-                ? { discount_min: String(discountMax), discount_max: String(discountMax), tiered: "no", bands: "" }
+                ? {
+                    discount_pct: String(discountMax),
+                    discount_min: String(discountMax), discount_max: String(discountMax),
+                    tiered: "no", bands: "",
+                  }
                 : {}),
           };
           onAnswers(next); save(next);
