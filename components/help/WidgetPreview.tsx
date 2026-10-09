@@ -52,7 +52,7 @@ export default function WidgetPreview({
      this token show up"; this answers the question merchants actually ask, which is "that
      thing there — which token is it". Pushed into BrandFetch so the swatch and the token row
      light up together. */
-  const [paint, setPaint] = useState<string | null>(null);
+  const [paint, setPaint] = useState<{ label: string; hex: string } | null>(null);
   const [intent, setIntent] = useState<"onetime" | "subscribe" | "bundle">(
     s.default_intent === "onetime" ? "onetime" : "subscribe",
   );
@@ -122,9 +122,12 @@ export default function WidgetPreview({
   const rad = (less: number) => Math.max(0, radius - less);
   const btnRadius = Math.min(999, Math.max(0, t.shape.buttonRadius ?? 10));
   const lit = (tag: string) => (hot === tag ? " sb-lit" : "");
-  /* Spread onto anything painted with a token: hovering it lights that colour in the panel. */
-  const tok = (hex: string | undefined | null) => (hex ? {
-    onMouseEnter: () => setPaint(hex),
+  /* Spread onto anything painted with a token. Hovering it names the token AT THE POINTER
+     and lights its row in the panel below. The row alone was not enough: the token table sits
+     a long way under the widget and is collapsed by default, so pointing at the button lit
+     something nobody was looking at. */
+  const tok = (label: string, hex: string | undefined | null) => (hex ? {
+    onMouseEnter: () => setPaint({ label, hex }),
     onMouseLeave: () => setPaint(null),
   } : {});
   const shadow = t.chrome.shadow === "none" ? "none"
@@ -133,7 +136,12 @@ export default function WidgetPreview({
   return (
     <div className="hc-wgrid">
       <div className="hc-wstage">
-        <div className="hc-wshell" {...tok(t.surfaces.widgetBackground)} style={{
+        {/* Which token the pointer is on, said where the pointer is. */}
+        <p className={"hc-wtokchip" + (paint ? " on" : "")} aria-live="polite">
+          {paint ? (<><i style={{ background: paint.hex }} /><b>{paint.label}</b><span>{paint.hex.toUpperCase()}</span></>)
+                 : <span>Hover any part of the widget to see which colour token paints it</span>}
+        </p>
+        <div className="hc-wshell" {...tok("Widget Background", t.surfaces.widgetBackground)} style={{
           background: t.surfaces.widgetBackground,
           border: t.chrome.borderVisible ? `1px solid ${t.chrome.borderColor}` : "1px solid transparent",
           borderRadius: radius, boxShadow: shadow,
@@ -163,8 +171,8 @@ export default function WidgetPreview({
             <div className={"hc-wprow" + lit("product-row")}>
               <span className="hc-wthumb" style={{ background: t.surfaces.mutedSurface, borderRadius: rad(6) }} />
               <span className="hc-wprowl">
-                <b {...tok(t.text.primary)} style={{ color: t.text.primary }}>{productName}</b>
-                <em className={lit("price")} {...tok(t.text.secondary)} style={{ color: t.text.secondary }}>
+                <b {...tok("Primary Text", t.text.primary)} style={{ color: t.text.primary }}>{productName}</b>
+                <em className={lit("price")} {...tok("Secondary Text", t.text.secondary)} style={{ color: t.text.secondary }}>
                   {variantLine ? `${variantLine} · ` : ""}{money(unitPrice)}
                   {compareAt && compareAt > unitPrice && <s style={{ color: t.text.muted }}>{money(compareAt)}</s>}
                 </em>
@@ -181,7 +189,7 @@ export default function WidgetPreview({
                 {modes.map((m) => (
                   <button key={m.id} type="button" onClick={() => setMode(m.id)}
                     className={"hc-wseg" + (m.id === activeMode?.id ? " on" : "") + lit(m.tag)}
-                    {...(m.id === activeMode?.id ? tok(t.colors.subscriptionAccent) : tok(t.text.secondary))}
+                    {...(m.id === activeMode?.id ? tok("Subscription Accent", t.colors.subscriptionAccent) : tok("Secondary Text", t.text.secondary))}
                     style={{
                       background: m.id === activeMode?.id ? t.colors.subscriptionAccent : "transparent",
                       color: m.id === activeMode?.id ? onColor(t.colors.subscriptionAccent) : t.text.secondary,
@@ -191,7 +199,7 @@ export default function WidgetPreview({
                 ))}
               </div>
               {activeMode && (
-                <p className="hc-wsegnote" {...tok(t.colors.subscriptionAccent)} style={{ background: withAlpha(t.colors.subscriptionAccent, .07), color: t.colors.subscriptionAccent }}>
+                <p className="hc-wsegnote" {...tok("Subscription Accent", t.colors.subscriptionAccent)} style={{ background: withAlpha(t.colors.subscriptionAccent, .07), color: t.colors.subscriptionAccent }}>
                   <i style={{ background: t.colors.subscriptionAccent }} />{activeMode.note}
                 </p>
               )}
@@ -218,7 +226,7 @@ export default function WidgetPreview({
               const on = i === picked;
               return (
                 <button key={plan.title + i} type="button" onClick={() => setPicked(i)} className="hc-wplan"
-                  {...tok(on ? t.colors.subscriptionAccent : t.borders.default)}
+                  {...(on ? tok("Selected Border", t.colors.subscriptionAccent) : tok("Default Border", t.borders.default))}
                   style={{
                     borderRadius: rad(2),
                     border: `${on ? 1.5 : 1}px solid ${on ? t.colors.subscriptionAccent : t.borders.default}`,
@@ -241,11 +249,11 @@ export default function WidgetPreview({
                   </span>
                   <span className="hc-wplanr">
                     {s.tag_shows_per_delivery_price && (
-                      <i className="hc-wper" {...tok(t.colors.primary)} style={{ background: t.colors.primary, color: onColor(t.colors.primary), borderRadius: rad(6) }}>
+                      <i className="hc-wper" {...tok("Primary", t.colors.primary)} style={{ background: t.colors.primary, color: onColor(t.colors.primary), borderRadius: rad(6) }}>
                         {money(plan.perDelivery)}/delivery
                       </i>
                     )}
-                    <i className="hc-woff" {...tok(t.colors.savings)} style={{
+                    <i className="hc-woff" {...tok("Savings Color", t.colors.savings)} style={{
                       background: t.components.discountBadge === "filled" ? withAlpha(t.colors.savings, .14) : "transparent",
                       color: t.colors.savings,
                       border: t.components.discountBadge === "filled" ? "1px solid transparent" : `1px solid ${t.colors.savings}`,
@@ -259,7 +267,7 @@ export default function WidgetPreview({
           {/* The line only ever announces free shipping. When it is charged, the summary
               carries the figure and there is nothing to announce. */}
           {!s.hide_free_shipping_line && shippingRate === 0 && (
-            <p className={"hc-wship" + lit("shipping-line")} {...tok(t.colors.savings)} style={{ color: t.colors.savings }}>
+            <p className={"hc-wship" + lit("shipping-line")} {...tok("Savings Color", t.colors.savings)} style={{ color: t.colors.savings }}>
               <i style={{ background: t.colors.savings }} />Free Shipping
             </p>
           )}
@@ -281,7 +289,7 @@ export default function WidgetPreview({
               <i style={{ borderColor: t.text.muted, color: t.text.muted }}>i</i>Cancellation Policy
             </span>
             {!s.hide_branding && (
-              <span className={"hc-wbrand" + lit("branding")} {...tok(t.text.muted)} style={{ color: t.text.muted }}>
+              <span className={"hc-wbrand" + lit("branding")} {...tok("Muted Text", t.text.muted)} style={{ color: t.text.muted }}>
                 Powered by <b style={{ color: t.text.secondary }}>StackBack</b>
               </span>
             )}
@@ -340,7 +348,7 @@ export default function WidgetPreview({
               </span>
             )}
           </span>
-          <button className={"hc-wcta" + lit("cta")} type="button" onClick={onSubscribe} {...tok(t.colors.primary)}
+          <button className={"hc-wcta" + lit("cta")} type="button" onClick={onSubscribe} {...tok("Primary", t.colors.primary)}
             style={{
               borderRadius: btnRadius,
               background: t.components.ctaButton === "solid" ? t.colors.primary : "transparent",
@@ -364,7 +372,7 @@ export default function WidgetPreview({
 
       <div className="hc-wtoggles">
         <BrandFetch theme={t} onTheme={(next) => onChange({ ...s, theme: next })}
-          settings={s} storeName={storeName} onProduct={onProduct} lit={paint} />
+          settings={s} storeName={storeName} onProduct={onProduct} lit={paint?.hex ?? null} />
         <p className="hc-wtogglesh">What the customer sees</p>
         <p className="hc-note hc-wtoggleshelp">
           Every setting on the Purchase Options block. Hover a row to see what it changes in the

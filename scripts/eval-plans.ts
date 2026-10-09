@@ -13,8 +13,9 @@
  *  Run: npx tsx scripts/eval-plans.ts
  */
 import { AUTOPAY_CYCLES, analyse, packSize, planRates, readOrders } from "../lib/help/orders";
-import { DEFAULT_ANSWERS, autopayRate, ladderFor, parseBands, parseList, writeBands } from "../lib/help/questions";
+import { DEFAULT_ANSWERS, autopayRate, ladderFor, parseBands, parseList, rateForRun, writeBands } from "../lib/help/questions";
 import { planDoc } from "../lib/help/plan-doc";
+import { readFileSync } from "fs";
 import type { Answers } from "../lib/help/questions";
 
 let fails = 0;
@@ -187,6 +188,21 @@ for (const [name, a] of [
   ok(doc.indexOf("## Still to answer") < 0 || !/rate per run length|Most you would give/i.test(open),
      `${name}: and the discount is not still to answer`);
 }
+
+console.log("\nAnd every surface reads the rate from the same place");
+/* The PNG sheet is the artefact that actually gets sent to a merchant, and it kept its own
+   copy of this: fixing the markdown document left the sheet printing 0% off for another
+   round. Both now go through `flatRate`. */
+for (const f of ["sheet-png", "plan-doc"]) {
+  const src = readFileSync(new URL(`../lib/help/${f}.ts`, import.meta.url), "utf8");
+  ok(!/Number\(a\.discount_pct\)\s*\|\|\s*0/.test(src), `${f} does not compute the flat rate itself`);
+  ok(/flatRate\(/.test(src), `${f} reads it from flatRate`);
+}
+eq(rateForRun({ ...DEFAULT_ANSWERS, tiered: "no", discount_pct: "", discount_max: "5" } as Answers, 3), 5,
+   "answers saved before discount_pct was written still carry a rate");
+eq(rateForRun({ ...DEFAULT_ANSWERS, tiered: "yes", discount_pct: "12", discount_max: "24",
+                bands: writeBands(ladderFor([3, 6, 12], [12, 24])) } as Answers, 12), 24,
+   "and a tiered ladder reads its own rung");
 
 console.log(fails ? `\n${fails} FAILED\n` : "\nAll plan assertions pass.\n");
 process.exit(fails ? 1 : 0);

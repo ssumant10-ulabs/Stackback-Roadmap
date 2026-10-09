@@ -11,6 +11,7 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { DEFAULT_WIDGET, EXPORT_ROWS, readTheme } from "../lib/help/widget";
 import { SCALES } from "../lib/help/categories";
+import { isOwner } from "../lib/firebase";
 import { join } from "node:path";
 import { TOGGLE_GROUPS } from "../lib/help/widget";
 
@@ -102,6 +103,27 @@ console.log(`\n  ${rows} settings on the panel, ${dead.length} with no reader.`)
     if (v !== null && typeof v === "object") { objs++; dead.push(`${d.label} resolves to an object, not a value`); }
   }
   if (!objs) console.log(`  ok    all ${(EXPORT_ROWS as unknown[]).length} rows resolve to a string, number or boolean`);
+}
+
+/* Restore replaces the roadmap for the whole team and sat behind nothing but being signed in,
+   so anybody on the allowed domain could roll the board back from a file. */
+console.log("\nOnly the owner may replace what the team sees");
+for (const [email, want] of [
+  ["ai@ulabsglobal.com", true], ["AI@ULABSGLOBAL.COM", true], [" ai@ulabsglobal.com ", true],
+  ["someone@ulabsglobal.com", false], ["ai@example.com", false], ["", false], [null, false],
+] as [string | null, boolean][]) {
+  if (isOwner(email) !== want) {
+    dead.push(`isOwner(${JSON.stringify(email)}) should be ${want}`);
+    console.log(`  FAIL  isOwner(${JSON.stringify(email)}) should be ${want}`);
+  } else console.log(`  ok    ${JSON.stringify(email)} -> ${want}`);
+}
+/* And the gate has to be ON the controls, not merely defined. */
+const modal = readFileSync(new URL("../components/SettingsModal.tsx", import.meta.url), "utf8");
+for (const needle of ["Restore from file", "Restore this browser", "Download backup"]) {
+  const at = modal.indexOf(needle);
+  const guarded = at > 0 && /owner/.test(modal.slice(Math.max(0, at - 900), at));
+  if (!guarded) { dead.push(`"${needle}" is not behind the owner check`); console.log(`  FAIL  "${needle}" is not behind the owner check`); }
+  else console.log(`  ok    "${needle}" is behind the owner check`);
 }
 
 console.log(dead.length ? "FAIL" : "PASS");

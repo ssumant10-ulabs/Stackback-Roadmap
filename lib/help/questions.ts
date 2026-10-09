@@ -308,3 +308,20 @@ export function ladderFor(runs: number[], rates: number[]): Record<number, numbe
   });
   return out;
 }
+
+/** The single rate a plan carries when it is not tiered.
+ *
+ *  It lives here because three surfaces need it and each used to compute its own: the markdown
+ *  document and the PNG sheet read `discount_pct`, the widget reads `discount_max`, and the
+ *  order import wrote only the ends of the ladder. The merchant got a sheet saying 0% off
+ *  beside a widget quoting a real rate, twice, because fixing one left the other. */
+export function flatRate(a: Answers): number {
+  return Number(a.discount_pct) || Number(a.discount_max) || 0;
+}
+
+/** The rate for one run length, however the plan is configured. The one place that decides
+ *  it, so the sheet, the document and the widget cannot disagree again. */
+export function rateForRun(a: Answers, run: number): number {
+  const flat = flatRate(a);
+  return a.tiered === "yes" ? (parseBands(a.bands)[run] ?? flat) : flat;
+}

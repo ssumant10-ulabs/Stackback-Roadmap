@@ -2561,3 +2561,29 @@ select.wb-prio {
 .wb-tabs-sub .wb-tab { font-size:calc(12px * var(--text-scale, 1)); padding: 5px 11px; }
 .wb-tabs-sub .wb-tab.on { background: var(--card, #fff); color: var(--ink, #111); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
 .wb-head { row-gap: 4px; }
+
+/* ---- board card type scale -------------------------------------------------------------
+   Eight sizes were in play on one board — 10.5, 11, 11.5, 12, 12.5, 13, 13.5, 15 — and the
+   hierarchy ran backwards: the column header (12.5/700) was SMALLER and heavier than the card
+   title it was heading (13/600), while the horizon pill carried 700 weight and .04em tracking,
+   so the loudest thing on a card was its status rather than its name.
+
+   Three steps, and the title is the largest thing on the card:
+     title 14      secondary 11.5      meta 10.5
+   Weights fall as the size falls, so nothing small is also shouting. */
+.wb-colh b { font-size: calc(12px * var(--text-scale, 1)); font-weight: 700; color: var(--ink-2, #444); }
+.wb-title { font-size: calc(14px * var(--text-scale, 1)); font-weight: 600; line-height: 1.4; }
+.wb-store { font-size: calc(11.5px * var(--text-scale, 1)); }
+.wb-kind,
+.wb-urg,
+.wb-ref { font-size: calc(10.5px * var(--text-scale, 1)); }
+.wb-kind { font-weight: 650; letter-spacing: .02em; }
+.wb-urg { font-weight: 600; }
+.wb-team, .wb-stage, .wb-task { font-size: calc(10.5px * var(--text-scale, 1)); }
+/* The horizon select sits on the card top beside the title and was reading as a second
+   heading. Same meta step as everything else up there. */
+.wb-cardtop select,
+.wb-cardtop .wb-hz { font-size: calc(10.5px * var(--text-scale, 1)); font-weight: 650; }
+@media (max-width: 900px) {
+  .wb-title { font-size: calc(13.5px * var(--text-scale, 1)); }
+}
