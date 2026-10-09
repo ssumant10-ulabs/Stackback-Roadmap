@@ -2117,23 +2117,6 @@
 .hc-simkeep > summary b { font-weight: 700; color: var(--ink); }
 .hc-simkeep > .hc-simwrap { padding: 0 14px 14px; }
 
-/* Which colour token the pointer is over, named at the widget rather than only in the table
-   below it. The row highlight alone was invisible: the token table is collapsed by default
-   and sits a long way under the preview, so pointing at the button lit something off-screen. */
-.hc-wtokchip {
-  display: flex; align-items: center; gap: 7px; min-height: 26px; margin: 0 0 8px;
-  padding: 4px 9px; border: 1px solid var(--border); border-radius: 999px;
-  background: var(--card); font-size: calc(11.5px * var(--text-scale, 1));
-  color: var(--hc-muted); transition: border-color .12s ease, color .12s ease;
-}
-.hc-wtokchip.on { border-color: var(--brand-deep); color: var(--ink); }
-.hc-wtokchip i {
-  width: 12px; height: 12px; border-radius: 3px; flex: none;
-  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, .18);
-}
-.hc-wtokchip b { font-weight: 650; }
-.hc-wtokchip span { font-family: ui-monospace, Menlo, monospace; color: var(--hc-muted); }
-
 /* And the row it points at, unmistakably rather than a tint. */
 .hc-tokrows > div.on {
   background: var(--brand); border-radius: 5px;

@@ -182,7 +182,7 @@ function mix(a: string, b: string, t: number): string {
     .join("");
 }
 
-export default function BrandFetch({ theme, onTheme, settings, storeName, onProduct, lit = null }: {
+export default function BrandFetch({ theme, onTheme, settings, storeName, onProduct, litPath = null }: {
   theme: WidgetTheme;
   onTheme: (next: WidgetTheme) => void;
   /** The whole settings object, because the token file hands over the purchase options too. */
@@ -192,10 +192,12 @@ export default function BrandFetch({ theme, onTheme, settings, storeName, onProd
    *  merchant's own product at their own price is the difference between a demo of our
    *  widget and a picture of their page. */
   onProduct?: (p: ReadProduct) => void;
-  /** A colour the PREVIEW is reporting the pointer is over, so pointing at the widget lights
-   *  the token holding that colour. The panel's own hover still works; whichever is active
-   *  wins, and the preview wins a tie because that is the pointer's real position. */
-  lit?: string | null;
+  /** The token PATH the preview is reporting the pointer is over, so pointing at the widget
+   *  lights exactly the token painting that thing. A hex would light every token holding the
+   *  same value, which on a theme whose accent and savings colour match is two rows for one
+   *  pointer. The panel's own swatch hover still works by colour, because there a swatch
+   *  genuinely does belong to several tokens. */
+  litPath?: string | null;
 }) {
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
@@ -218,9 +220,7 @@ export default function BrandFetch({ theme, onTheme, settings, storeName, onProd
      rows. Hovering a swatch lights up every token already holding it, and hovering a token
      lights up the swatch it came from — so "which of these is the button" is answered by
      pointing at it rather than by reading hexes off two lists. */
-  const [ownHover, setOwnHover] = useState<string | null>(null);
-  const hover = lit ?? ownHover;
-  const setHover = setOwnHover;
+  const [hover, setHover] = useState<string | null>(null);
   /* Every token that currently holds each colour, keyed by normalised hex. Built off the
      same rows the panel lists, so the swatch and the list can never disagree about what a
      colour is being used for. */
@@ -395,7 +395,7 @@ export default function BrandFetch({ theme, onTheme, settings, storeName, onProd
           it, in its sections and its order. The reader answers six of them; the widget on
           every pilot store today has nineteen plus the portal's five and two fonts, and
           showing six and calling it the token set is why this panel kept reading as wrong. */}
-      <LiveTokens theme={theme} onTheme={onTheme} hover={hover} onHover={setHover} read={readFrom} font={font} shape={shape} storeName={storeName || url.trim() || null} />
+      <LiveTokens theme={theme} onTheme={onTheme} hover={hover} onHover={setHover} litPath={litPath} read={readFrom} font={font} shape={shape} storeName={storeName || url.trim() || null} />
 
       {tokens && (
         <>
@@ -424,9 +424,10 @@ export default function BrandFetch({ theme, onTheme, settings, storeName, onProd
  *  the six chips and the preview, and dev wants all twenty-six to paste into the app. The
  *  copy block at the bottom is the `field: value` shape the skill asks every derivation to
  *  end with, so nobody has to read a table to enter them. */
-function LiveTokens({ theme, onTheme, hover, onHover, read, font, shape, storeName }: {
+function LiveTokens({ theme, onTheme, hover, onHover, litPath, read, font, shape, storeName }: {
   theme: WidgetTheme; onTheme: (t: WidgetTheme) => void;
   hover: string | null; onHover: (hex: string | null) => void;
+  litPath?: string | null;
   read?: ReadSources; font: string | null; shape?: ReadShape; storeName: string | null;
 }) {
   /* Open. This is the token set, not an appendix to it. */
@@ -463,7 +464,8 @@ function LiveTokens({ theme, onTheme, hover, onHover, read, font, shape, storeNa
               <dl className="hc-tokrows">
                 {sec.rows.map((r) => (
                   <div key={r.label}
-                    className={hover && r.swatch && sameHex(hover, r.value) ? "on" : undefined}
+                    className={(litPath ? r.path === litPath
+                                        : hover && r.swatch && sameHex(hover, r.value)) ? "on" : undefined}
                     onMouseEnter={() => r.swatch && onHover(r.value)}
                     onMouseLeave={() => onHover(null)}>
                     <dt>{r.label}</dt>
