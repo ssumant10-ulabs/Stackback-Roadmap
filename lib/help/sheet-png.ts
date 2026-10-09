@@ -7,7 +7,7 @@
  *
  *  So this draws the sheet itself. More code, but it cannot hang, it needs no dependency,
  *  and the output is identical everywhere because nothing is inherited from the page. */
-import { QUESTIONS, autopayRate, parseBands, parseFreebies, parseList, readPlanBands, visible, type Answers, type PlanBand } from "./questions";
+import { QUESTIONS, autopayRate, flatRate, parseBands, parseFreebies, parseList, readPlanBands, visible, type Answers, type PlanBand } from "./questions";
 import { DEFAULT_CONFIG } from "./sim";
 import { readTheme, type WidgetSettings } from "./widget";
 import { DEFAULT_WIDGET, EXPORT_ROWS, matrixValue, toggleOn } from "./widget";
@@ -110,7 +110,7 @@ function render(t: Ctx, a: Answers, dry: boolean, settings?: WidgetSettings): nu
   const runs = parseList(a.deliveries);
   const bands = parseBands(a.bands);
   const tiered = a.tiered === "yes";
-  const flat = Number(a.discount_pct) || 0;
+  const flat = flatRate(a);
   /* The form stopped asking for a price: the preview is of a dummy product, and a real one
    * invited a figure nobody could check. The sheet quotes the same illustrative price the
    * widget does, and says so. */

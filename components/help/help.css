@@ -2116,3 +2116,10 @@
 .hc-simkeep[open] > summary::before { transform: rotate(90deg); }
 .hc-simkeep > summary b { font-weight: 700; color: var(--ink); }
 .hc-simkeep > .hc-simwrap { padding: 0 14px 14px; }
+
+/* And the row it points at, unmistakably rather than a tint. */
+.hc-tokrows > div.on {
+  background: var(--brand); border-radius: 5px;
+  box-shadow: inset 2px 0 0 var(--brand-deep);
+}
+.hc-tokrows > div.on dt { color: var(--ink); font-weight: 650; }

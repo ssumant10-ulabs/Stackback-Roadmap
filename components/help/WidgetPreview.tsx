@@ -5,6 +5,7 @@ import {
   type ToggleDef, type WidgetSettings,
 } from "@/lib/help/widget";
 import type { PlanOption } from "@/lib/help/sim";
+import { onColor } from "@/lib/help/contrast";
 import BrandFetch, { type ReadProduct } from "./BrandFetch";
 
 /** The storefront widget, rendered from the settings object.
@@ -47,6 +48,11 @@ export default function WidgetPreview({
 }) {
   const t = s.theme;
   const [hot, setHot] = useState<string | null>(null);
+  /* Which colour the pointer is over IN THE PREVIEW. The panel already answered "where does
+     this token show up"; this answers the question merchants actually ask, which is "that
+     thing there — which token is it". Pushed into BrandFetch so the swatch and the token row
+     light up together. */
+  const [paint, setPaint] = useState<string | null>(null);
   const [intent, setIntent] = useState<"onetime" | "subscribe" | "bundle">(
     s.default_intent === "onetime" ? "onetime" : "subscribe",
   );
@@ -91,7 +97,9 @@ export default function WidgetPreview({
   const endless = activeModeId === "auto_debit";
   const source = endless ? plans.slice(0, 1) : plans;
   const shown = source.map((p) => {
-    const pct = Math.round(p.discountPct * shift);
+    /* Clamped. A rate of 100 prices every delivery at zero and prints "100% OFF" on a
+       client's preview, which is how a single free order in an export reached a call. */
+    const pct = Math.min(95, Math.max(0, Math.round(p.discountPct * shift)));
     const per = unitPrice * (1 - pct / 100);
     return {
       ...p,
@@ -114,13 +122,21 @@ export default function WidgetPreview({
   const rad = (less: number) => Math.max(0, radius - less);
   const btnRadius = Math.min(999, Math.max(0, t.shape.buttonRadius ?? 10));
   const lit = (tag: string) => (hot === tag ? " sb-lit" : "");
+  /* Spread onto anything painted with a token: hovering it lights that token's row in the
+     panel. The token PATH, not its colour — matching on hex lit every token that happened to
+     hold the same value, so pointing at one thing highlighted two rows and answered a
+     question nobody asked. */
+  const tok = (path: string) => ({
+    onMouseEnter: () => setPaint(path),
+    onMouseLeave: () => setPaint(null),
+  });
   const shadow = t.chrome.shadow === "none" ? "none"
     : t.chrome.shadow === "strong" ? "0 12px 32px rgba(15,23,42,.18)" : "0 1px 3px rgba(15,23,42,.08)";
 
   return (
     <div className="hc-wgrid">
       <div className="hc-wstage">
-        <div className="hc-wshell" style={{
+        <div className="hc-wshell" {...tok("surfaces.widgetBackground")} style={{
           background: t.surfaces.widgetBackground,
           border: t.chrome.borderVisible ? `1px solid ${t.chrome.borderColor}` : "1px solid transparent",
           borderRadius: radius, boxShadow: shadow,
@@ -150,8 +166,8 @@ export default function WidgetPreview({
             <div className={"hc-wprow" + lit("product-row")}>
               <span className="hc-wthumb" style={{ background: t.surfaces.mutedSurface, borderRadius: rad(6) }} />
               <span className="hc-wprowl">
-                <b style={{ color: t.text.primary }}>{productName}</b>
-                <em className={lit("price")} style={{ color: t.text.secondary }}>
+                <b {...tok("text.primary")} style={{ color: t.text.primary }}>{productName}</b>
+                <em className={lit("price")} {...tok("text.secondary")} style={{ color: t.text.secondary }}>
                   {variantLine ? `${variantLine} · ` : ""}{money(unitPrice)}
                   {compareAt && compareAt > unitPrice && <s style={{ color: t.text.muted }}>{money(compareAt)}</s>}
                 </em>
@@ -168,16 +184,17 @@ export default function WidgetPreview({
                 {modes.map((m) => (
                   <button key={m.id} type="button" onClick={() => setMode(m.id)}
                     className={"hc-wseg" + (m.id === activeMode?.id ? " on" : "") + lit(m.tag)}
+                    {...(m.id === activeMode?.id ? tok("colors.subscriptionAccent") : tok("text.secondary"))}
                     style={{
                       background: m.id === activeMode?.id ? t.colors.subscriptionAccent : "transparent",
-                      color: m.id === activeMode?.id ? "#fff" : t.text.secondary,
+                      color: m.id === activeMode?.id ? onColor(t.colors.subscriptionAccent) : t.text.secondary,
                     }}>
                     {m.label}
                   </button>
                 ))}
               </div>
               {activeMode && (
-                <p className="hc-wsegnote" style={{ background: withAlpha(t.colors.subscriptionAccent, .07), color: t.colors.subscriptionAccent }}>
+                <p className="hc-wsegnote" {...tok("colors.subscriptionAccent")} style={{ background: withAlpha(t.colors.subscriptionAccent, .07), color: t.colors.subscriptionAccent }}>
                   <i style={{ background: t.colors.subscriptionAccent }} />{activeMode.note}
                 </p>
               )}
@@ -204,6 +221,7 @@ export default function WidgetPreview({
               const on = i === picked;
               return (
                 <button key={plan.title + i} type="button" onClick={() => setPicked(i)} className="hc-wplan"
+                  {...(on ? tok("borders.strong") : tok("borders.default"))}
                   style={{
                     borderRadius: rad(2),
                     border: `${on ? 1.5 : 1}px solid ${on ? t.colors.subscriptionAccent : t.borders.default}`,
@@ -226,11 +244,11 @@ export default function WidgetPreview({
                   </span>
                   <span className="hc-wplanr">
                     {s.tag_shows_per_delivery_price && (
-                      <i className="hc-wper" style={{ background: t.colors.primary, color: "#fff", borderRadius: rad(6) }}>
+                      <i className="hc-wper" {...tok("colors.primary")} style={{ background: t.colors.primary, color: onColor(t.colors.primary), borderRadius: rad(6) }}>
                         {money(plan.perDelivery)}/delivery
                       </i>
                     )}
-                    <i className="hc-woff" style={{
+                    <i className="hc-woff" {...tok("colors.savings")} style={{
                       background: t.components.discountBadge === "filled" ? withAlpha(t.colors.savings, .14) : "transparent",
                       color: t.colors.savings,
                       border: t.components.discountBadge === "filled" ? "1px solid transparent" : `1px solid ${t.colors.savings}`,
@@ -244,7 +262,7 @@ export default function WidgetPreview({
           {/* The line only ever announces free shipping. When it is charged, the summary
               carries the figure and there is nothing to announce. */}
           {!s.hide_free_shipping_line && shippingRate === 0 && (
-            <p className={"hc-wship" + lit("shipping-line")} style={{ color: t.colors.savings }}>
+            <p className={"hc-wship" + lit("shipping-line")} {...tok("colors.savings")} style={{ color: t.colors.savings }}>
               <i style={{ background: t.colors.savings }} />Free Shipping
             </p>
           )}
@@ -266,7 +284,7 @@ export default function WidgetPreview({
               <i style={{ borderColor: t.text.muted, color: t.text.muted }}>i</i>Cancellation Policy
             </span>
             {!s.hide_branding && (
-              <span className={"hc-wbrand" + lit("branding")} style={{ color: t.text.muted }}>
+              <span className={"hc-wbrand" + lit("branding")} {...tok("text.muted")} style={{ color: t.text.muted }}>
                 Powered by <b style={{ color: t.text.secondary }}>StackBack</b>
               </span>
             )}
@@ -325,11 +343,11 @@ export default function WidgetPreview({
               </span>
             )}
           </span>
-          <button className={"hc-wcta" + lit("cta")} type="button" onClick={onSubscribe}
+          <button className={"hc-wcta" + lit("cta")} type="button" onClick={onSubscribe} {...tok("colors.primary")}
             style={{
               borderRadius: btnRadius,
               background: t.components.ctaButton === "solid" ? t.colors.primary : "transparent",
-              color: t.components.ctaButton === "solid" ? "#fff" : t.colors.primary,
+              color: t.components.ctaButton === "solid" ? onColor(t.colors.primary) : t.colors.primary,
               border: `1px solid ${t.colors.primary}`,
             }}>
             {/* `direct_checkout` was a control that changed nothing: it was declared, it was
@@ -349,7 +367,7 @@ export default function WidgetPreview({
 
       <div className="hc-wtoggles">
         <BrandFetch theme={t} onTheme={(next) => onChange({ ...s, theme: next })}
-          settings={s} storeName={storeName} onProduct={onProduct} />
+          settings={s} storeName={storeName} onProduct={onProduct} litPath={paint} />
         <p className="hc-wtogglesh">What the customer sees</p>
         <p className="hc-note hc-wtoggleshelp">
           Every setting on the Purchase Options block. Hover a row to see what it changes in the

@@ -288,3 +288,40 @@ export function reconcileModes(next: string[], prev: string[]): string[] {
   if (added === "auto_debit") return next.filter((m) => m !== "payg");
   return next;
 }
+
+/** A prepaid rate for every run length offered, spread across the rates the store's own
+ *  customers have already accepted. Longer runs earn more, which is the entire argument for
+ *  a tiered plan.
+ *
+ *  Without this the import set `tiered: "yes"` and left the ladder itself empty, so the
+ *  document printed every plan at 0% under a "still to answer" note while the widget fell
+ *  back to the single max rate — two surfaces disagreeing about the same store. */
+export function ladderFor(runs: number[], rates: number[]): Record<number, number> {
+  const out: Record<number, number> = {};
+  const r = [...new Set(runs.filter((n) => Number.isFinite(n) && n > 0))].sort((a, b) => a - b);
+  if (!r.length || !rates.length) return out;
+  const lo = rates[0], hi = rates[rates.length - 1];
+  /* One accepted rate is flat across every run. Inventing a slope from a single number is
+     making the tier up, which is the thing the file was read to avoid. */
+  r.forEach((run, i) => {
+    out[run] = r.length === 1 ? hi : Math.round(lo + ((hi - lo) * i) / (r.length - 1));
+  });
+  return out;
+}
+
+/** The single rate a plan carries when it is not tiered.
+ *
+ *  It lives here because three surfaces need it and each used to compute its own: the markdown
+ *  document and the PNG sheet read `discount_pct`, the widget reads `discount_max`, and the
+ *  order import wrote only the ends of the ladder. The merchant got a sheet saying 0% off
+ *  beside a widget quoting a real rate, twice, because fixing one left the other. */
+export function flatRate(a: Answers): number {
+  return Number(a.discount_pct) || Number(a.discount_max) || 0;
+}
+
+/** The rate for one run length, however the plan is configured. The one place that decides
+ *  it, so the sheet, the document and the widget cannot disagree again. */
+export function rateForRun(a: Answers, run: number): number {
+  const flat = flatRate(a);
+  return a.tiered === "yes" ? (parseBands(a.bands)[run] ?? flat) : flat;
+}

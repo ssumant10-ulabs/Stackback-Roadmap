@@ -2,12 +2,16 @@
 import { useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import { TEAM_ORDER } from "@/lib/constants";
-import { firebaseEnabled } from "@/lib/firebase";
+import { firebaseEnabled, isOwner } from "@/lib/firebase";
+import { useAuth } from "./AuthGate";
 import { PALETTES } from "@/lib/palettes";
 import { IcTrash } from "./icons";
 
 export function SettingsModal({ onClose }: { onClose: () => void }) {
   const s = useStore();
+  /* Backup and restore replace what the WHOLE TEAM sees, and sat behind nothing but being
+     signed in, so anybody on the domain could roll the board back from a file. */
+  const owner = isOwner(useAuth().user?.email);
   const [newName, setNewName] = useState("");
   const [restore, setRestore] = useState("");
   const add = () => { if (s.addRoadmap(newName)) setNewName(""); };
@@ -144,16 +148,20 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
             Currently holding <b>{sum.tasks}</b> tasks ({sum.done} done), <b>{sum.features}</b> features,
             <b> {sum.pilots}</b> pilot stores.
           </div>
-          <div className="bk-actions">
-            <button type="button" className="btn" onClick={download}>Download backup</button>
-            <button type="button" className="btn ghost" onClick={() => fileRef.current?.click()}>Restore from file</button>
-            <input ref={fileRef} type="file" accept="application/json" style={{ display: "none" }}
-              onChange={(e) => { const f = e.target.files?.[0];
-                const warn = firebaseEnabled
-                  ? "Restore this backup? It replaces the roadmap for everyone on the shared backend, not just you."
-                  : "Restore this backup? It replaces everything currently in this browser.";
-                if (f && confirm(warn)) upload(f); e.target.value = ""; }} />
-          </div>
+          {owner ? (
+            <div className="bk-actions">
+              <button type="button" className="btn" onClick={download}>Download backup</button>
+              <button type="button" className="btn ghost" onClick={() => fileRef.current?.click()}>Restore from file</button>
+              <input ref={fileRef} type="file" accept="application/json" style={{ display: "none" }}
+                onChange={(e) => { const f = e.target.files?.[0];
+                  const warn = firebaseEnabled
+                    ? "Restore this backup? It replaces the roadmap for everyone on the shared backend, not just you."
+                    : "Restore this backup? It replaces everything currently in this browser.";
+                  if (f && confirm(warn)) upload(f); e.target.value = ""; }} />
+            </div>
+          ) : (
+            <p className="ss-desc">Exporting and restoring are limited to the roadmap owner.</p>
+          )}
           {!firebaseEnabled && snaps.length > 0 && (
             <div className="bk-snaps">
               <div className="bk-snaps-h">
@@ -195,17 +203,19 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                       ? "Nothing had been saved yet, so the shared copy started from the default roadmap."
                       : "A shared copy already existed, so this browser is showing that one."}
                 </p>
-                <button
-                  className="btn"
-                  onClick={async () => {
-                    if (!confirm("Replace the shared board with the copy saved in this browser? Everyone will see this browser's version instead. Use this only if the wrong browser connected first.")) return;
-                    const r = await s.restoreLocal();
-                    setRestore(r.ok ? `Restored ${r.tasks} tasks from this browser.` : "This browser has no saved copy to restore.");
-                  }}
-                >
-                  Restore this browser's copy
-                </button>
-                {restore && <p className="ss-desc">{restore}</p>}
+                {owner && (
+                  <button
+                    className="btn"
+                    onClick={async () => {
+                      if (!confirm("Replace the shared board with the copy saved in this browser? Everyone will see this browser's version instead. Use this only if the wrong browser connected first.")) return;
+                      const r = await s.restoreLocal();
+                      setRestore(r.ok ? `Restored ${r.tasks} tasks from this browser.` : "This browser has no saved copy to restore.");
+                    }}
+                  >
+                    Restore this browser&apos;s copy
+                  </button>
+                )}
+                {owner && restore && <p className="ss-desc">{restore}</p>}
               </>
             )}
           </div>

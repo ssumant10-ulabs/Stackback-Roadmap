@@ -30,6 +30,20 @@ export function emailAllowed(email: string | null | undefined): boolean {
   return !!at && ALLOWED_DOMAINS.includes(at);
 }
 
+/** Who may replace what the whole team sees. Restore overwrites the shared Firestore copy for
+ *  everyone, and it sat behind nothing but being signed in, so anybody on the domain could
+ *  roll the board back from a file. Set NEXT_PUBLIC_OWNER_EMAILS to the addresses that may,
+ *  comma separated. Unset, it is the one address below, so a deploy does not need an env var
+ *  in place before the controls work — change it there if you sign in as somebody else. */
+const OWNER_FALLBACK = "ai@ulabsglobal.com";
+export const OWNER_EMAILS = (process.env.NEXT_PUBLIC_OWNER_EMAILS || OWNER_FALLBACK)
+  .split(",").map((d) => d.trim().toLowerCase()).filter(Boolean);
+
+export function isOwner(email: string | null | undefined): boolean {
+  const e = (email || "").trim().toLowerCase();
+  return !!e && OWNER_EMAILS.includes(e);
+}
+
 let _app: FirebaseApp | null = null;
 function app(): FirebaseApp | null {
   if (!firebaseEnabled) return null;

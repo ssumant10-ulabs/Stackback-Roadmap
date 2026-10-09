@@ -8,7 +8,7 @@
  *  without anybody remembering to add it. Unanswered fields are listed rather than dropped:
  *  this downloads from a half-filled form on purpose, and a document that quietly omits what
  *  it does not know reads as a complete specification. */
-import { QUESTIONS, autopayRate, parseBands, parseFreebies, parseList, readPlanBands, visible, type Answers, type Field } from "./questions";
+import { QUESTIONS, autopayRate, flatRate, parseBands, parseFreebies, parseList, readPlanBands, visible, type Answers, type Field } from "./questions";
 import { CATEGORIES } from "./categories";
 import { freqWord } from "./sim";
 import type { WidgetSettings } from "./widget";
@@ -38,7 +38,7 @@ export function planDoc(a: Answers, brand: string, settings?: WidgetSettings): s
   const runs = parseList(a.deliveries);
   const bands = parseBands(a.bands);
   const tiered = a.tiered === "yes";
-  const flat = Number(a.discount_pct) || 0;
+  const flat = flatRate(a);
   /* One table per pack-size band where the order file found two, because a 100g bag and a
      1kg bag do not reorder at the same rate and one table over both is wrong for one of
      them. AutoPay is its own row: it is not a run, it bills until the customer stops it, and
