@@ -1,7 +1,7 @@
 import { lookup as dnsLookup, type LookupAddress } from "node:dns";
 import http from "node:http";
 import https from "node:https";
-import { isIP } from "node:net";
+import { BlockList, isIP } from "node:net";
 import zlib from "node:zlib";
 
 /** Fetching a merchant's storefront from our server, safely.
@@ -43,22 +43,28 @@ export function safeUrl(raw: string): URL | null {
    redirects are followed by hand, each hop checked again. */
 
 
+/* Every non-public range, checked numerically (net.BlockList) rather than on the text, so an
+   address cannot slip past in another spelling (::ffff:7f00:1 is 127.0.0.1). IPv6 forms that
+   carry an IPv4 address inside (mapped, compatible, 6to4, NAT64) are refused outright. */
+/* One list per family: a single BlockList matches IPv4 addresses against IPv6 rules such as
+   ::/96, which would refuse every public IPv4 host. */
+const BLOCKED_V4 = new BlockList();
+for (const [net, bits] of [
+  ["0.0.0.0", 8], ["10.0.0.0", 8], ["100.64.0.0", 10], ["127.0.0.0", 8], ["169.254.0.0", 16],
+  ["172.16.0.0", 12], ["192.0.0.0", 24], ["192.0.2.0", 24], ["192.168.0.0", 16], ["198.18.0.0", 15],
+  ["198.51.100.0", 24], ["203.0.113.0", 24], ["224.0.0.0", 4], ["240.0.0.0", 4],
+] as const) BLOCKED_V4.addSubnet(net, bits, "ipv4");
+const BLOCKED_V6 = new BlockList();
+for (const [net, bits] of [
+  ["::", 96], ["::ffff:0:0", 96], ["64:ff9b::", 96], ["64:ff9b:1::", 48], ["100::", 64],
+  ["2001:db8::", 32], ["2002::", 16], ["fc00::", 7], ["fe80::", 10], ["fec0::", 10], ["ff00::", 8],
+] as const) BLOCKED_V6.addSubnet(net, bits, "ipv6");
+
 /** Loopback, private, link-local, CGNAT, multicast, reserved and documentation ranges. */
 export function isPrivateAddress(ip: string): boolean {
   const v = isIP(ip);
-  if (v === 4) {
-    const [a, b] = ip.split(".").map(Number);
-    return a === 0 || a === 10 || a === 127 || a >= 224 ||
-      (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254) ||
-      (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) ||
-      (a === 192 && b === 0) || (a === 198 && (b === 18 || b === 19));
-  }
-  if (v === 6) {
-    const x = ip.toLowerCase();
-    const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(x);
-    if (mapped) return isPrivateAddress(mapped[1]);
-    return x === "::" || x === "::1" || /^f[cd]/.test(x) || /^fe[89ab]/.test(x) || /^ff/.test(x) || x.startsWith("64:ff9b:");
-  }
+  if (v === 4) return BLOCKED_V4.check(ip, "ipv4");
+  if (v === 6) return BLOCKED_V6.check(ip, "ipv6");
   return true;
 }
 
