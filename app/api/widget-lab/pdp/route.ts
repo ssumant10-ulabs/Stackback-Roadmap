@@ -31,7 +31,7 @@ function throttled(key: string): boolean {
 }
 
 const fail = (error: string, status: number) =>
-  NextResponse.json({ ok: false, error }, { status, headers: { "access-control-allow-origin": "*" } });
+  NextResponse.json({ ok: false, error }, { status });
 
 const abs = (src: unknown) => {
   const s = String(src || "");
@@ -95,7 +95,6 @@ export async function GET(req: Request) {
   return NextResponse.json({ ok: true, url: page.toString(), html, product, currency }, {
     headers: {
       "cache-control": "public, max-age=600, stale-while-revalidate=3600",
-      "access-control-allow-origin": "*",
     },
   });
 }
