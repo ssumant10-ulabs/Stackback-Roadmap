@@ -43,6 +43,7 @@ export default function Article({ art, open, onToggle, internal, showCat }: {
 
       {open && (
         <div className="hc-a">
+          {art.short && <p className="hc-short">{art.short}</p>}
           {art.path && <Path path={art.path} />}
           {/* Authored HTML from the versioned deliverable in this repo, not user input. */}
           <div className="hc-prose" dangerouslySetInnerHTML={{ __html: art.a }} />

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { inlineCss, looksPasswordProtected, mapTokens, stylesheetHrefs } from "@/lib/brand/extract";
+import { getText as fetchText, safeUrl } from "@/lib/net/storefront";
 
 /** Read a storefront's theme settings and return StackBack's six brand tokens.
  *
@@ -16,6 +17,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const TIMEOUT_MS = 8000;
+const getText = (url: string, cap: number) => fetchText(url, cap, TIMEOUT_MS);
 const MAX_BYTES = 3_000_000;
 const WINDOW_MS = 60_000;
 const MAX_PER_WINDOW = 12;
@@ -31,48 +33,6 @@ function throttled(key: string): boolean {
     for (const [k, v] of RECENT) if (!v.some((t) => now - t < WINDOW_MS)) RECENT.delete(k);
   }
   return hits.length > MAX_PER_WINDOW;
-}
-
-/** Reject anything that is not a public web host. Blocks the obvious SSRF shapes. */
-function safeUrl(raw: string): URL | null {
-  let s = raw.trim();
-  if (!s) return null;
-  if (!/^https?:\/\//i.test(s)) s = "https://" + s;
-  let u: URL;
-  try { u = new URL(s); } catch { return null; }
-  if (u.protocol !== "http:" && u.protocol !== "https:") return null;
-  const h = u.hostname.toLowerCase();
-  if (
-    h === "localhost" || h.endsWith(".local") || h.endsWith(".internal") ||
-    /^\d+\.\d+\.\d+\.\d+$/.test(h) && (
-      h.startsWith("10.") || h.startsWith("127.") || h.startsWith("0.") ||
-      h.startsWith("169.254.") || h.startsWith("192.168.") ||
-      /^172\.(1[6-9]|2\d|3[01])\./.test(h)
-    ) ||
-    h.includes(":")
-  ) return null;
-  return u;
-}
-
-async function getText(url: string, cap: number): Promise<string> {
-  const c = new AbortController();
-  const timer = setTimeout(() => c.abort(), TIMEOUT_MS);
-  try {
-    const r = await fetch(url, {
-      signal: c.signal,
-      redirect: "follow",
-      headers: {
-        // Identify honestly. A storefront that blocks us should be able to see who we are.
-        "user-agent": "StackBackBrandReader/1.0 (+https://stackback.ai)",
-        accept: "text/html,text/css,*/*",
-      },
-    });
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    const buf = await r.arrayBuffer();
-    return new TextDecoder("utf-8").decode(buf.slice(0, cap));
-  } finally {
-    clearTimeout(timer);
-  }
 }
 
 /** One real product off the storefront: its name, its price and its picture.

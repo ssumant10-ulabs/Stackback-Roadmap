@@ -21,6 +21,27 @@
 
 export type Mode = "prepaid" | "payg" | "autopay";
 
+/** Settings › First delivery. Both are live; a store picks one.
+ *  - "same": Add to the original order. Delivery 1's goods are added to the checkout order by
+ *    an order edit, so one order carries the money AND ships delivery 1 (the single parent).
+ *  - "separate": Create a separate order. The checkout order keeps only the placeholder, has
+ *    no shipping and is auto-fulfilled; delivery 1 ships from its own child order created
+ *    about 8 to 12 seconds later. This is the flow that existed before the single parent.
+ *  AutoPay ignores the setting: its first order carries the real goods from the start. */
+export type FirstDelivery = "same" | "separate";
+
+export const FIRST_DELIVERY_LABEL: Record<FirstDelivery, { name: string; setting: string }> = {
+  same: { name: "Single order", setting: "Add to the original order" },
+  separate: { name: "Separate order", setting: "Create a separate order" },
+};
+
+/** The checkout order's tags in the separate flow: nothing was converted, so neither
+ *  `sb-delivery-1-*` tag is written. Observed on the 2026-11-16 split-flow round. */
+export function parentTags(mode: Mode, flow: FirstDelivery): string[] {
+  if (mode === "autopay" || flow === "same") return ORDER_TAGS[mode].parent;
+  return ORDER_TAGS[mode].parent.filter((t) => !t.startsWith("sb-delivery-1"));
+}
+
 /** The tags we actually write, per payment type, quoted from the code that writes them.
  *  Parent: applyParentTags in webhooks.app.orders-create.tsx, plus the two conversion tags
  *  from delivery-conversion.server.ts, plus autopay-order.server.ts for the Razorpay order.
@@ -74,6 +95,8 @@ export interface SimConfig {
   leadDays: number;
   /** First delivery date, ISO yyyy-mm-dd. */
   startDate: string;
+  /** Settings › First delivery. */
+  firstDelivery: FirstDelivery;
 }
 
 /** The widget's own vocabulary, and its own arithmetic: "every 2 weeks" is 14 days, not 15,
@@ -117,6 +140,7 @@ export const DEFAULT_CONFIG: SimConfig = {
   mode: "prepaid",
   leadDays: 7,
   startDate: "",
+  firstDelivery: "same",
 };
 
 export const money = (n: number) =>
@@ -197,9 +221,11 @@ export function schedule(c: SimConfig, mode: Mode = c.mode): ChildOrder[] {
 
   return Array.from({ length: c.deliveries }, (_, i) => {
     const deliveryDate = addDays(first, i * c.everyDays);
-    // Delivery 1 goes onto the checkout order itself. Later ones wait for their lead
-    // window and become orders of their own.
+    // Delivery 1 is created at checkout either way: on the checkout order itself (single
+    // order, and always on AutoPay) or as its own child order seconds later (separate order).
+    // Later ones wait for their lead window and become orders of their own.
     const atCheckout = i === 0;
+    const onParent = atCheckout && (mode === "autopay" || (c.firstDelivery ?? "same") === "same");
     const due = addDays(deliveryDate, -c.leadDays);
     const createdOn = atCheckout ? today : (due <= today ? today : due);
     /* Prepaid pays the run at checkout. AutoPay debits each delivery through the mandate
@@ -210,7 +236,7 @@ export function schedule(c: SimConfig, mode: Mode = c.mode): ChildOrder[] {
       n: i + 1,
       deliveryDate,
       createdOn,
-      onParent: atCheckout,
+      onParent,
       early: !atCheckout && due <= today,
       // Paid and inside the lead window. Prepaid pays for everything up front, which is why
       // "paid" on its own was the wrong test and made the whole run look like it exists.
@@ -239,10 +265,11 @@ export interface ParentOrder {
   converted: boolean;
   /** Dummy line after the edit: one unit per delivery still to come. */
   held: OrderLine | null;
-  /** Delivery 1's real goods, added by the edit. */
-  shipping: OrderLine;
+  /** Delivery 1's real goods, added by the edit. Null in the separate flow: they ship
+   *  from their own child order instead. */
+  shipping: OrderLine | null;
   /** The dummy line as it stood before the edit, which Shopify keeps under Removed. */
-  removed: OrderLine;
+  removed: OrderLine | null;
   subtotal: number;
   discount: number;
   total: number;
@@ -276,6 +303,22 @@ export function parentOrder(c: SimConfig, mode: Mode = c.mode, productName = "Yo
     ["Info", `${freqWord(c.everyDays)} for ${c.deliveries} deliveries`],
     ["_sb_shipping_service", "Free Shipping"],
   ];
+  if (converted && (c.firstDelivery ?? "same") === "separate") {
+    /* Separate order: the checkout order is never edited. It keeps the whole placeholder,
+       carries no shipping and is fulfilled straight away, so nothing on it ships. */
+    const units = mode === "prepaid" ? c.deliveries : 1;
+    return {
+      converted: false,
+      held: { title: planTitle, sub: `${productName} · placeholder for ${units} deliver${units === 1 ? "y" : "ies"}`, qty: units, unit: p.perDelivery, attrs },
+      shipping: null,
+      removed: null,
+      subtotal: c.unitPrice * units,
+      discount: (c.unitPrice - p.perDelivery) * units,
+      total: p.chargedNow,
+      deliveryValue: p.perDelivery,
+      tags: parentTags(mode, "separate"),
+    };
+  }
   if (!converted) {
     return {
       held: null,
@@ -345,4 +388,4 @@ export function planOptions(
 
 export const freqWord = (d: number) =>
   d === 7 ? "Every week" : d === 14 ? "Every 2 weeks" : d === 30 ? "Every month"
-  : d === 60 ? "Every 2 months" : `Every ${d} days`;
+  : d === 60 ? "Every 2 months" : d === 90 ? "Every 3 months" : `Every ${d} days`;

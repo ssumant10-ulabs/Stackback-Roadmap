@@ -49,19 +49,15 @@ const rows: { email: string; day: number; title: string }[] = [];
 for (let c = 0; c < 20; c++) for (let k = 0; k < 6; k++) rows.push({ email: `s${c}@x.com`, day: k * 14, title: "Daily Pack 100g" });
 for (let c = 0; c < 20; c++) for (let k = 0; k < 4; k++) rows.push({ email: `l${c}@x.com`, day: k * 60, title: "Family Pack 1kg" });
 const two = analyse(readOrders(file(rows)).rows);
-eq(two.plans.length, 2, "two plans");
-eq(two.plans.map((p) => p.label), ["Smaller packs", "Larger packs"], "named by size, smaller first");
-eq(two.plans.map((p) => p.everyDays), [14, 60], "each band gets its own cadence");
-ok(two.plans[0].medianGap === 14 && two.plans[1].medianGap === 60, "off their own customers' gaps");
-ok(two.plans[0].sizes.includes("100g") && two.plans[1].sizes.includes("1kg"), "and the sizes are named");
-ok(two.plans[0].products[0].includes("100g"), "with the products that are in the band");
-/* The whole point. One median over both bands can only ever be right for one of them —
-   here it lands on the smaller band, because that band has more intervals in it, and is
-   wrong by a month and a half for every customer buying the big bag. */
+eq(two.plans.length, 2, "two plan groups");
+eq(two.plans.map((p) => p.label), ["Every month", "Every 2 months"], "one group per delivery frequency, shortest first");
+eq(two.plans.map((p) => p.everyDays), [30, 60], "each product on its own cycle, snapped to a plan frequency (14 days leans to monthly)");
+ok(two.plans[0].products.includes("Daily Pack 100g") && two.plans[1].products.includes("Family Pack 1kg"),
+  "and each group names its products");
+const dm = two.mix.find((m) => m.title === "Daily Pack 100g");
+ok(dm?.role === "subscription" && dm.variants[0].source === "reorders", "a reordered product is a subscription, read off its reorders");
 ok(two.plans.some((p) => p.everyDays !== two.suggestEveryDays),
-  `the single averaged cadence (${two.suggestEveryDays} days) is wrong for at least one band, which is why the split exists`);
-ok(two.suggestEveryDays === 14 && two.plans[1].everyDays === 60,
-  "and here it is the larger-pack customers it is wrong for");
+  `the single averaged cadence (${two.suggestEveryDays} days) is wrong for at least one product, which is why it is per product`);
 
 console.log("\nPrepaid has runs, AutoPay does not");
 for (const p of two.plans) {
@@ -69,8 +65,8 @@ for (const p of two.plans) {
   ok(p.autopayCycles === AUTOPAY_CYCLES && AUTOPAY_CYCLES === 12,
     `${p.label}: AutoPay is 12 cycles, a year at this cadence rather than a commitment`);
 }
-eq(two.plans[0].prepaidRuns, [6, 13, 26], "fortnightly prepaid runs cover three months, six and a year");
-eq(two.plans[1].prepaidRuns, [2, 3, 6], "and two-monthly runs are shorter in count for the same cover");
+eq(two.plans[0].prepaidRuns, [3, 6, 12], "monthly prepaid runs are round counts, first plan 2 or 3 deliveries");
+eq(two.plans[1].prepaidRuns, [2, 4, 6], "and two-monthly runs start at 2 deliveries");
 
 console.log("\nWhat AutoPay is discounted at");
 /* The second-highest rung, not the floor. AutoPay is open-ended — it bills until the
@@ -94,9 +90,26 @@ const same: { email: string; day: number; title: string }[] = [];
 for (let c = 0; c < 20; c++) for (let k = 0; k < 5; k++) same.push({ email: `s${c}@x.com`, day: k * 30, title: "Small 100g" });
 for (let c = 0; c < 20; c++) for (let k = 0; k < 5; k++) same.push({ email: `l${c}@x.com`, day: k * 31, title: "Large 500g" });
 const one = analyse(readOrders(file(same)).rows);
-eq(one.plans.length, 1, "30 and 31 days is one plan, not two");
-eq(one.plans[0].label, "All products", "and it says so");
-ok(one.warnings.some((w) => /much the same rate/.test(w)), "and the file says why rather than going quiet");
+eq(one.plans.length, 1, "30 and 31 days is one plan group, not two");
+eq(one.plans[0].label, "Every month", "and it is monthly");
+eq(one.plans[0].products.length, 2, "carrying both products");
+
+console.log("\nVariants: the pack's own duration, then pack size");
+const dur: { email: string; day: number; title: string }[] = [];
+for (let c = 0; c < 6; c++) dur.push({ email: `d${c}@x.com`, day: c, title: "Balance Tea - 3 Months" });
+for (let c = 0; c < 9; c++) dur.push({ email: `e${c}@x.com`, day: c, title: "Balance Tea - 1 Month" });
+for (let c = 0; c < 8; c++) dur.push({ email: `f${c}@x.com`, day: c, title: "Plant Protein - 500g" });
+for (let c = 0; c < 4; c++) dur.push({ email: `g${c}@x.com`, day: c, title: "Plant Protein - 2x500g" });
+for (let c = 0; c < 5; c++) dur.push({ email: `h${c}@x.com`, day: c, title: "Starter Kit" });
+for (let c = 0; c < 5; c++) dur.push({ email: `i${c}@x.com`, day: c, title: "Steel Mug" });
+const dmx = analyse(readOrders(file(dur)).rows).mix;
+const v = (t: string, n: string) => dmx.find((m) => m.title === t)?.variants.find((x) => x.name === n);
+eq([v("Balance Tea", "1 Month")?.everyDays, v("Balance Tea", "3 Months")?.everyDays], [30, 90], "a variant sold as 3 months ships every 3 months");
+eq(v("Balance Tea", "3 Months")?.source, "pack", "read off the pack's own duration");
+eq([v("Plant Protein", "500g")?.everyDays, v("Plant Protein", "2x500g")?.everyDays], [30, 60], "2x500g lasts twice 500g");
+eq(v("Plant Protein", "2x500g")?.source, "size", "scaled by pack size");
+eq(dmx.find((m) => m.title === "Starter Kit")?.role, "bundle", "a kit goes in a box, not on subscription");
+eq(dmx.find((m) => m.title === "Steel Mug")?.role, "bundle", "and so does an accessory");
 
 console.log("\nNothing to split on");
 const nosize: { email: string; day: number; title: string }[] = [];
@@ -112,6 +125,7 @@ const D = (bands: { pct: number; orders: number }[], medianPct: number | null = 
   orders: bands.reduce((n, b) => n + b.orders, 0), share: 0, medianPct,
   maxPct: Math.max(...bands.map((b) => b.pct), 0),
   bands: [...bands].sort((a2, b2) => b2.orders - a2.orders).slice(0, 5), codes: [],
+  payment: null, promos: [] as { code: string; pct: number; orders: number }[], usualPct: null as number | null,
 });
 
 /* 1. The deepest single order is not a rate the store offers. */
@@ -137,14 +151,21 @@ ok(belp[1] <= belp[0] * 2, "and the top is capped at twice the base");
 eq(planRates(D([{ pct: 15, orders: 500 }], 15)).join(), "15",
    "one rate with no room above it is flat, not a slope");
 
+/* 4. A pay-online discount is not a promotion. TBW: PREPAID-DISCOUNT 2% on 338 orders put
+      the median at 2% and proposed a 2 / 3 / 4% ladder beside a 15% code the store runs. */
+eq(planRates({ ...D([{ pct: 2, orders: 338 }, { pct: 17, orders: 132 }, { pct: 15, orders: 49 }], 2),
+  payment: { code: "PREPAID-DISCOUNT", pct: 2, orders: 334 },
+  promos: [{ code: "basics15", pct: 15, orders: 178 }], usualPct: 15 }).join(), "15",
+  "the store's promo code sets the base, not the pay-online discount");
+
 console.log("\nEvery run offered gets a rung");
 const lad = ladderFor([3, 6, 12], [10, 20]);
 eq(Object.keys(lad).length, 3, "three runs, three rungs");
-eq(lad[3], 10, "the shortest run takes the lowest accepted rate");
+eq(lad[3], 12, "the shortest run sits a little above the usual rate");
 eq(lad[12], 20, "the longest takes the highest");
 ok(lad[6] > lad[3] && lad[6] < lad[12], "and the middle sits between them");
 eq(writeBands(ladderFor([3, 6], [15])).split(",").map((x) => x.split(":")[1]).join(),
-   "15,15", "one accepted rate is flat, not an invented slope");
+   "17,20", "one accepted rate still steps up for the longer run, so it is worth taking");
 eq(Object.keys(ladderFor([3, 6], [])).length, 0, "no rates, no ladder");
 /* The two surfaces that disagreed: the document reads the ladder, the widget falls back to
    discount_max. They must land on the same number for the longest run. */
@@ -201,7 +222,7 @@ for (const f of ["sheet-png", "plan-doc"]) {
 eq(rateForRun({ ...DEFAULT_ANSWERS, tiered: "no", discount_pct: "", discount_max: "5" } as Answers, 3), 5,
    "answers saved before discount_pct was written still carry a rate");
 eq(rateForRun({ ...DEFAULT_ANSWERS, tiered: "yes", discount_pct: "12", discount_max: "24",
-                bands: writeBands(ladderFor([3, 6, 12], [12, 24])) } as Answers, 12), 24,
+                bands: writeBands(ladderFor([3, 6, 12], [12, 24])) } as Answers, 12), ladderFor([3, 6, 12], [12, 24])[12],
    "and a tiered ladder reads its own rung");
 
 console.log(fails ? `\n${fails} FAILED\n` : "\nAll plan assertions pass.\n");

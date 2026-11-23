@@ -67,11 +67,11 @@ console.log(`\n  ${rows} settings on the panel, ${dead.length} with no reader.`)
   };
   console.log("\nScale bands and AutoPay");
   for (const b of SCALES) {
-    const has = b.modes.includes("auto_debit");
-    const want = lo(b) >= 500;
-    const line = `${b.label.padEnd(30)} AutoPay ${has ? "offered" : "not offered"}`;
-    if (has === want) console.log(`  ok    ${line}`);
-    else dead.push(`${line} — expected ${want ? "offered" : "not offered"} at this volume`);
+    /* Prepaid and AutoPay at every volume, pay as you go at none (decided 2026-11-20). */
+    const has = b.modes.includes("auto_debit") && b.modes.includes("prepaid") && !b.modes.includes("payg");
+    const line = `${b.label.padEnd(30)} Prepaid and AutoPay ${has ? "offered" : "not both offered"}`;
+    if (has) console.log(`  ok    ${line}`);
+    else dead.push(`${line}: every band offers prepaid and AutoPay, and never pay as you go`);
   }
   if (!SCALES.every((b, i) => i === 0 || lo(b) >= lo(SCALES[i - 1]))) dead.push("the scale bands are out of order");
   /* No gap and no overlap at the seam, or a store reads two bands and picks neither. */

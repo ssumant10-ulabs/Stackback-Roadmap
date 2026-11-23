@@ -34,11 +34,11 @@ export interface FaqSection {
 export const FAQ_SECTIONS: FaqSection[] = [
   {
     phase: "pre",
-    title: "Before you go live",
-    blurb: "Deciding what to sell on subscription, and how it looks on your product page.",
+    title: "Before launch",
+    blurb: "Choosing what to sell on subscription, and how it looks on your product page.",
     groups: [
       {
-        title: "The plans",
+        title: "Choosing your plans",
         ids: [
           "which-products-or-collections-should-carry-a-subscription",
           "what-payment-options-can-we-offer-and-which-should-we-pick",
@@ -49,7 +49,7 @@ export const FAQ_SECTIONS: FaqSection[] = [
         ],
       },
       {
-        title: "The widget",
+        title: "On your product page",
         ids: [
           "where-can-the-widget-sit-on-the-product-page",
           "can-the-widget-match-our-fonts-and-colours",
@@ -68,14 +68,13 @@ export const FAQ_SECTIONS: FaqSection[] = [
   },
   {
     phase: "post",
-    title: "Once you are live",
-    blurb: "Orders, money and the customer portal. Almost every question after launch is one of these.",
+    title: "After launch",
+    blurb: "Orders, money and what customers can change. Almost every question after launch is one of these.",
     groups: [
       {
         title: "Orders and money",
         ids: [
           "what-does-one-subscription-create-in-shopify",
-          "what-happens-the-moment-a-customer-subscribes",
           "how-do-we-identify-subscription-orders-inside-shopify",
           "will-the-checkout-order-inflate-our-revenue-and-inventory-number",
           "how-pay-as-you-go-billing-decides-to-charge-or-pause",
@@ -92,7 +91,7 @@ export const FAQ_SECTIONS: FaqSection[] = [
         ],
       },
       {
-        title: "AutoPay in flight",
+        title: "AutoPay",
         ids: [
           "how-do-we-know-who-cancelled-an-autopay-mandate",
           "a-subscription-order-shows-as-cancelled-and-we-did-not-cancel-it",
@@ -166,10 +165,10 @@ export const FAQ_COUNT = FAQ_SECTIONS.reduce(
  *  Five categories to a group at most, because the rail expands one group at a time and a
  *  group longer than that is the flat list again. 105 / 56 / 39 / 36 of 236. */
 export const NAV_GROUPS: { title: string; ids: string[] }[] = [
-  { title: "Before you go live", ids: ["start", "access", "plans", "bundles", "widget"] },
-  { title: "Orders and money", ids: ["orders", "pay", "ship", "stock"] },
-  { title: "Your customers", ids: ["portal", "cancel", "notify"] },
-  { title: "The app itself", ids: ["flows", "admin", "integ", "report", "bill"] },
+  { title: "Setting up", ids: ["start", "access", "plans", "bundles", "widget"] },
+  { title: "Orders and payments", ids: ["orders", "pay", "ship", "stock"] },
+  { title: "Customers", ids: ["portal", "cancel", "notify"] },
+  { title: "The app", ids: ["flows", "admin", "integ", "report", "bill"] },
 ];
 
 /** Which wizard step answers a question better than prose does. A widget question is really
@@ -182,7 +181,6 @@ export const FAQ_JUMPS: Record<string, { step: 2 | 3; label: string }> = {
   "what-payment-options-can-we-offer-and-which-should-we-pick": { step: 2, label: "See the payment tabs" },
   "does-cod-need-to-be-disabled-for-subscriptions": { step: 2, label: "See the payment tabs" },
   "what-does-one-subscription-create-in-shopify": { step: 3, label: "See the orders it creates" },
-  "what-happens-the-moment-a-customer-subscribes": { step: 3, label: "See the orders it creates" },
   "how-do-we-identify-subscription-orders-inside-shopify": { step: 3, label: "See the tags we write" },
   "will-the-checkout-order-inflate-our-revenue-and-inventory-number": { step: 3, label: "See the orders it creates" },
   "how-pay-as-you-go-billing-decides-to-charge-or-pause": { step: 3, label: "Compare the payment types" },
@@ -209,7 +207,6 @@ export const FAQ_MEDIA: Record<string, { clip?: string; step?: 1 | 2 | 3 }> = {
   "how-is-shipping-handled-on-subscriptions": { clip: "eeea4461" },
   // once you are live
   "what-does-one-subscription-create-in-shopify": { clip: "0816f724", step: 3 },
-  "what-happens-the-moment-a-customer-subscribes": { clip: "0816f724", step: 3 },
   "how-do-we-identify-subscription-orders-inside-shopify": { step: 3 },
   "will-the-checkout-order-inflate-our-revenue-and-inventory-number": { clip: "p-revenue-filter", step: 3 },
   "how-pay-as-you-go-billing-decides-to-charge-or-pause": { clip: "p-payg-billing", step: 3 },

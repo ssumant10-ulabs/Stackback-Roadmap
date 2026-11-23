@@ -33,11 +33,12 @@ export default function Faq({ onOpen, onJump }: {
 
   return (
     <section className="hc-faq">
-      <h1 className="hc-h1">The questions that come up</h1>
-      <p className="hc-blurb">
-        Mined from the pilot conversations and the calls. Every answer is the same one the
-        Help Centre holds, so there is one version of it.
-      </p>
+      <header className="hc-pagehead">
+        <h1 className="hc-h1">Common questions</h1>
+        <p className="hc-blurb">
+          What stores ask most. Open a question for the short answer and the detail.
+        </p>
+      </header>
 
       {/* A filter, at a filter's weight. It was two cards the width of the column, ~80px of
           vertical each, carrying three words and a count; and the titles rendered white on
@@ -56,7 +57,9 @@ export default function Faq({ onOpen, onJump }: {
         ))}
       </div>
 
-      <p className="hc-note hc-faqblurb">{section.blurb}</p>
+      <p className="hc-note hc-faqblurb">{section.blurb} <span className="hc-faqjumps">{groups.map((g) => (
+        <a key={g.title} href={`#faq-${slug(g.title)}`} onClick={(e) => { e.preventDefault(); document.getElementById(`faq-${slug(g.title)}`)?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>{g.title}</a>
+      ))}</span></p>
 
       {groups.map((g) => (
         <div key={g.title} id={`faq-${slug(g.title)}`} className="hc-faqgroup">
@@ -68,11 +71,12 @@ export default function Faq({ onOpen, onJump }: {
                 <li key={a.id} className={on ? "on" : ""}>
                   <button type="button" className="hc-faqq" aria-expanded={on}
                     onClick={() => setOpen(on ? null : a.id)}>
-                    <span>{a.q}</span>
+                    <span className="hc-faqqt"><span>{a.q}</span></span>
                     <i className={"hc-st s-" + a.status}>{STATUS_LABEL[a.status]}</i>
                   </button>
                   {on && (
                     <div className="hc-faqa">
+                      {a.short && <p className="hc-faqlead">{a.short}</p>}
                       <div className="hc-prose" dangerouslySetInnerHTML={{ __html: a.a }} />
                       {a.path && <p className="hc-faqpath">{a.path}</p>}
                       <div className="hc-faqjump">
@@ -90,7 +94,7 @@ export default function Faq({ onOpen, onJump }: {
                         )}
                         {onOpen && (
                           <button type="button" className="hc-btn ghost"
-                            onClick={() => onOpen(a)}>Open the full answer</button>
+                            onClick={() => onOpen(a)}>More on this topic</button>
                         )}
                       </div>
                       {/* Every answer offers the module it is about, not only the two dozen

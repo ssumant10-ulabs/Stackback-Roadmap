@@ -48,12 +48,14 @@ export default function Insights() {
 
   return (
     <section>
-      <p className="hc-eyebrow">Internal</p>
-      <h1 className="hc-h1">Insights</h1>
-      <p className="hc-blurb">
-        What the corpus says about support load, and what people asked it that it could not answer.
-        Merchants never see this view.
-      </p>
+      <header className="hc-pagehead">
+        <p className="hc-eyebrow">Internal</p>
+        <h1 className="hc-h1">Insights</h1>
+        <p className="hc-blurb">
+          What the corpus says about support load, and what people asked it that it could not answer.
+          Merchants never see this view.
+        </p>
+      </header>
 
       <div className="hc-stats">
         <div className="hc-stat"><b>{total}</b><span>store-raisings behind {ARTICLES.length} answers</span></div>

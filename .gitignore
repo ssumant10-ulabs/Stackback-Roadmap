@@ -42,3 +42,6 @@ next-env.d.ts
 
 # keep the example env
 !.env.example
+
+# landing page lab build scratch
+/.lp-build/
