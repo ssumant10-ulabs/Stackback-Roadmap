@@ -2,3 +2,5 @@ html,body{margin:0;padding:0}
 /* the page fills the frame: the design's own outer padding is for its settings screen */
 .dk-root>div[data-sub-frame],.dk-root>div[data-desktop-wrap]{margin:0}
 .lab-img>*{display:none!important}
+/* Pincode only: the country and state pickers are not part of the landing page */
+[data-address-row]{display:none!important}
