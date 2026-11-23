@@ -2592,3 +2592,8 @@ select.hc-labin { appearance: none; -webkit-appearance: none; cursor: pointer; }
 .hc-lpsecs label { display: flex; align-items: center; gap: 7px; padding: 7px 9px; border: 1px solid var(--border); border-radius: 9px; font-size: calc(12.5px * var(--text-scale, 1)); cursor: pointer; background: var(--card-2); color: var(--hc-muted); }
 .hc-lpsecs label.on { border-color: var(--brand-deep); background: var(--hc-ok-soft); color: var(--ink); font-weight: 550; }
 .hc-lpsecs input { accent-color: var(--brand-deep); margin: 0; }
+.hc-lpdiv { display: flex; align-items: center; gap: 7px; margin-top: 8px; padding: 7px 9px; border: 1px solid var(--border); border-radius: 9px; font-size: calc(12.5px * var(--text-scale, 1)); cursor: pointer; background: var(--card-2); color: var(--hc-muted); }
+.hc-lpdiv.on { border-color: var(--brand-deep); background: var(--hc-ok-soft); color: var(--ink); font-weight: 550; }
+.hc-lpdiv input { accent-color: var(--brand-deep); margin: 0; }
+.hc-lplogo { display: flex; align-items: center; gap: 10px; margin-top: 8px; padding: 8px; border: 1px dashed var(--border-2); border-radius: 10px; }
+.hc-lplogo img { max-height: 36px; max-width: 160px; object-fit: contain; }

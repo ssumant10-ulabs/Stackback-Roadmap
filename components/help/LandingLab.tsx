@@ -24,7 +24,24 @@ interface LPState {
   source: "sample" | "collection" | "plans";
   /** Subscription page sections switched off (the admin Content tab's sections). */
   hide?: string[];
+  /** Diya dividers: off on the Normal theme and on for Diwali, unless set here. */
+  dividers?: boolean;
+  /** Payment types offered: upfront, perDelivery, payg. */
+  pay?: string[];
+  /** Store header: the logo image and the name, from the store or typed in. */
+  logo?: string;
+  brandName?: string;
+  /** Complete your routine (subscription page): the collection's other products. */
+  upsell?: { subs: Prod[]; bundles: Prod[] };
 }
+
+const PAY_TYPES: { k: string; name: string }[] = [
+  { k: "upfront", name: "Pay Upfront (prepaid)" },
+  { k: "perDelivery", name: "Pay Per Delivery (AutoPay)" },
+  { k: "payg", name: "Pay As You Go" },
+];
+const DEFAULT_PAY = ["upfront", "perDelivery"];
+const KITLIKE = /\b(kit|duo|trio|combo|bundle|box|set|pack of|hamper|starter)\b/i;
 
 /* The Subscription V2 sections the admin's Content tab can switch, in page order. The first
    two sit inside the product form; the rest are the page below it. */
@@ -166,13 +183,22 @@ export default function LandingLab() {
 
   /* What the page gets: the design's settings with the page type, the brand, and products
      (a list for a bundle page, one product for a subscription page). */
-  const cfg = useMemo(() => ({
-    settings: { ...s.settings, type: s.page },
-    brand: s.brand,
-    view,
-    ...(sub && s.hide?.length ? { hide: s.hide } : {}),
-    ...(sub ? (s.product ? { product: s.product } : {}) : (s.products?.length ? { products: s.products } : {})),
-  }), [s, view, sub]);
+  const theme = String(s.settings.theme ?? meta?.s?.theme ?? "normal");
+  const dividersOn = s.dividers ?? theme === "festive";
+  const cfg = useMemo(() => {
+    const hide = [...(s.hide || []), ...(sub && !dividersOn ? ["divider"] : [])];
+    return {
+      settings: { ...s.settings, type: s.page },
+      brand: s.brand,
+      view,
+      pay: s.pay || DEFAULT_PAY,
+      ...(s.logo ? { logo: s.logo } : {}),
+      ...(s.brandName ? { brandName: s.brandName } : {}),
+      ...(sub && hide.length ? { hide } : {}),
+      ...(sub && s.upsell ? { upsell: s.upsell } : {}),
+      ...(sub ? (s.product ? { product: s.product } : {}) : (s.products?.length ? { products: s.products } : {})),
+    };
+  }, [s, view, sub, dividersOn]);
   const code = useMemo(() => encode(cfg), [cfg]);
   const [frameCode, setFrameCode] = useState(code);
   useEffect(() => { const t = setTimeout(() => setFrameCode(code), 250); return () => clearTimeout(t); }, [code]);
@@ -192,14 +218,14 @@ export default function LandingLab() {
           const r = await fetch(u, { credentials: "omit" });
           if (!r.ok) continue;
           const list = mapShopifyProducts(((await r.json()) as { products?: ShopifyProduct[] }).products || []);
-          if (list.length) { setColl({ url: `${c.origin}/collections/${c.handle}`, products: list }); pickDefault(list); return; }
+          if (list.length) { setColl({ url: `${c.origin}/collections/${c.handle}`, products: list }); pickDefault(list, c.origin); return; }
         } catch { /* blocked in the browser: try the next */ }
       }
       const r = await fetch(`/api/lp-lab/collection?url=${encodeURIComponent(`${c.origin}/collections/${c.handle}`)}`);
       const j = await r.json();
       if (!j.ok) { setErr(j.error); return; }
       setColl({ url: j.url, products: j.products });
-      pickDefault(j.products);
+      pickDefault(j.products, c.origin);
     } catch { setErr("That collection could not be read. Upload the saved collection page instead."); } finally { setBusy(false); }
   }
   async function uploadCollection(f?: File) {
@@ -210,16 +236,37 @@ export default function LandingLab() {
     setColl({ url: f.name, products: list });
     pickDefault(list);
   }
-  function pickDefault(list: Prod[]) {
-    setS((x) => ({ ...x, source: "collection",
-      products: list.filter((p) => p.available !== false).slice(0, 12),
-      product: x.product && list.some((p) => (p.handle || p.name) === (x.product!.handle || x.product!.name)) ? x.product : list[0] }));
+  function pickDefault(list: Prod[], origin?: string) {
+    setS((x) => {
+      const product = x.product && list.some((p) => (p.handle || p.name) === (x.product!.handle || x.product!.name)) ? x.product : list[0];
+      return { ...x, source: "collection",
+        products: list.filter((p) => p.available !== false).slice(0, 12),
+        product, upsell: upsellFrom(list, product) };
+    });
+    if (origin) void readStore(origin);
+  }
+  /* The rest of the collection fills Complete your routine: kits and sets on the Bundles tab,
+     everything else on Subscriptions. The page's own product is left out. */
+  function upsellFrom(list: Prod[], main?: Prod): LPState["upsell"] {
+    const rest = list.filter((p) => p.available !== false && (!main || (p.handle || p.name) !== (main.handle || main.name)));
+    const kits = rest.filter((p) => KITLIKE.test(p.name));
+    const subsList = rest.filter((p) => !KITLIKE.test(p.name));
+    return { subs: subsList.slice(0, 8), bundles: (kits.length ? kits : rest.slice(8)).slice(0, 8) };
+  }
+  /* The store's own name and logo for the header (only when not typed in by hand). */
+  async function readStore(origin: string) {
+    try {
+      const r = await fetch(`/api/lp-lab/store?url=${encodeURIComponent(origin)}`);
+      const j = await r.json();
+      if (!j.ok) return;
+      setS((x) => ({ ...x, logo: x.logo || j.logo || undefined, brandName: x.brandName || j.name || undefined }));
+    } catch { /* the header keeps the store name typed in, or Your Brand */ }
   }
   /* Keyed by handle: a store can carry two products with the same title. */
   const pid = (p: Prod) => p.handle || p.name;
   const picked = (p: Prod) => sub ? !!s.product && pid(s.product) === pid(p) : !!s.products?.some((x) => pid(x) === pid(p));
   function toggle(p: Prod) {
-    if (sub) { set("product", p); return; }
+    if (sub) { setS((x) => ({ ...x, product: p, upsell: coll ? upsellFrom(coll.products, p) : x.upsell })); return; }
     const cur = s.products || [];
     set("products", cur.some((x) => pid(x) === pid(p)) ? cur.filter((x) => pid(x) !== pid(p)) : [...cur, p].slice(0, 24));
   }
@@ -297,6 +344,25 @@ export default function LandingLab() {
               );
             }) : <p className="hc-labhint" style={{ padding: "0 16px 16px" }}>Loading the page&rsquo;s settings…</p>
           )}
+          {pane === "settings" && (
+            <fieldset className="hc-labset">
+              <legend>Payment types</legend>
+              <div className="hc-labchecks">
+                {PAY_TYPES.map((t) => {
+                  const cur = s.pay || DEFAULT_PAY;
+                  const on = cur.includes(t.k);
+                  return (
+                    <label key={t.k}>
+                      <input type="checkbox" checked={on}
+                        onChange={() => set("pay", on ? (cur.length > 1 ? cur.filter((k) => k !== t.k) : cur) : PAY_TYPES.map((x) => x.k).filter((k) => k === t.k || cur.includes(k)))} />
+                      {t.name}
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="hc-labhint">Only these show on the page. At least one stays on.</p>
+            </fieldset>
+          )}
           {pane === "settings" && sub && (
             <fieldset className="hc-labset">
               <legend>Sections</legend>
@@ -313,6 +379,10 @@ export default function LandingLab() {
                   );
                 })}
               </div>
+              <label className={"hc-lpdiv" + (dividersOn ? " on" : "")}>
+                <input type="checkbox" checked={dividersOn} onChange={() => set("dividers", !dividersOn)} />
+                <span>Diya dividers between sections</span>
+              </label>
               <div className="hc-labrow">
                 <button type="button" className="hc-linkish" onClick={() => set("hide", [])}>Show all</button>
                 <button type="button" className="hc-linkish" onClick={() => set("hide", SECTIONS.slice(2).map((x) => x.k))}>Hide all below the product</button>
@@ -372,7 +442,18 @@ export default function LandingLab() {
             )}
           </>)}
 
-          {pane === "brand" && (
+          {pane === "brand" && (<>
+            <fieldset className="hc-labset">
+              <legend>Store header</legend>
+              <label className="hc-labfield"><span>Store name</span>
+                <input className="hc-labin" value={s.brandName || ""} maxLength={40} placeholder="Your Brand" onChange={(e) => set("brandName", e.target.value || undefined)} />
+              </label>
+              <label className="hc-labfield" style={{ marginTop: 8 }}><span>Logo image link</span>
+                <input className="hc-labin" value={s.logo || ""} placeholder="Read from the store when a collection loads" spellCheck={false}
+                  onChange={(e) => { const v = e.target.value.trim(); set("logo", /^https?:\/\//i.test(v) ? v : undefined); }} />
+              </label>
+              {s.logo && <div className="hc-lplogo"><img src={s.logo} alt="Store logo" /><button type="button" className="hc-linkish" onClick={() => set("logo", undefined)}>Remove</button></div>}
+            </fieldset>
             <fieldset className="hc-labset">
               <legend>Widget settings colours</legend>
               <div className="hc-labpresets">
@@ -400,7 +481,7 @@ export default function LandingLab() {
               </div>
               <p className="hc-labhint">The Diwali theme draws its own palette; these apply on the Normal theme.</p>
             </fieldset>
-          )}
+          </>)}
         </aside>
 
         <div className="hc-labview">

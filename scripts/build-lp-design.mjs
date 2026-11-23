@@ -79,6 +79,26 @@ function __labProducts(cats) {
     });
   }
 }
+/* Payment types the landing page offers. Ids vary by widget (perDelivery / perdelivery,
+   payg / payAsYouGo); all map to upfront, perDelivery, payg. No list means all. */
+function __labPayKey(id) { const x = String(id).toLowerCase(); return x === "perdelivery" ? "perDelivery" : x === "payasyougo" ? "payg" : x; }
+function __labPayOn(id) { const P = __LAB.pay; return !P || !P.length || P.indexOf(__labPayKey(id)) >= 0; }
+function __labPayStart(vocab) { return vocab.find(__labPayOn) || vocab[0]; }
+/* Complete your routine: the collection's products in the design's upsell card shape. */
+function __labUpsell(subs, bundles) {
+  const U = __LAB.upsell;
+  if (!U) return;
+  const card = (p, kind) => {
+    const mrp = p.mrp && p.mrp > p.price ? p.mrp : p.price;
+    const off = mrp > p.price ? Math.round((1 - p.price / mrp) * 100) : 0;
+    return { name: p.name, price: "₹" + Math.round(p.price), mrp: "₹" + Math.round(mrp), off: off ? off + "% OFF" : "",
+      image: p.image || "", media: { type: kind === "bundle" ? "split2" : "single" },
+      badges: [{ label: kind === "bundle" ? "Bundle" : "Subscription", tone: kind === "bundle" ? "bundle" : "subscription" }],
+      cta: kind === "bundle" ? "Add Bundle" : "Subscribe" };
+  };
+  if (U.subs && U.subs.length) subs.splice(0, subs.length, ...U.subs.map((p) => card(p, "sub")));
+  if (U.bundles && U.bundles.length) bundles.splice(0, bundles.length, ...U.bundles.map((p) => card(p, "bundle")));
+}
 function __labPost(s, source) {
   try {
     if (window.parent === window) return;
@@ -95,6 +115,7 @@ function __labPost(s, source) {
 
 function patchCommon(src, file) {
   let s = PRELUDE + patchBrands(src);
+  s = must(s, 'brand: "Your Brand",', 'brand: __LAB.brandName || "Your Brand",', 2, "brand name");
   /* the setup line the design's own root runs before rendering */
   const m = /\n {2}SET = s; FEST = [^\n]*\n/.exec(s);
   if (!m) throw new Error(`${file}: settings line not found`);
@@ -106,6 +127,19 @@ function patchCommon(src, file) {
   const file = "SB_LP_Bundles.jsx";
   let { s, setup } = patchCommon(readFileSync(join(root, "design-src/lp", file), "utf8"), file);
   s = must(s, "\nlet CATS = CATS_ALL.slice(0, 3);", "\n__labProducts(CATS_ALL);\nlet CATS = CATS_ALL.slice(0, 3);", 1, "CATS_ALL products");
+  /* store logo in the header, when the lab has one */
+  s = must(s, "const BrandLogo = ({ textSize = 18 }) =>",
+    'const BrandLogo = ({ textSize = 18 }) => __LAB.logo ? <img src={__LAB.logo} alt={COPY.brand} style={{ height: FS(textSize) * 1.7, width: "auto", maxWidth: 180, objectFit: "contain", display: "block" }} /> :', 1, "bundle logo");
+  /* BYOB desktop: side panel (the design's default) or the bottom sticky bar */
+  s = must(s, "const SIDEMODE = D && BYOB;", 'const SIDEMODE = D && BYOB && SET.byobDock !== "bar";', 1, "BYOB dock");
+  s = must(s, '["dock", "Bottom bar", [["sticky", "Sticky"], ["floating", "Floating pill"]]],',
+    '["dock", "Bottom bar", [["sticky", "Sticky"], ["floating", "Floating pill"]]],\n  ["byobDock", "Desktop cart (BYOB)", [["side", "Side panel"], ["bar", "Bottom sticky bar"]]],', 1, "BYOB dock setting");
+  s = must(s, '["Layout", ["cards", "dock", "giftWall"]],', '["Layout", ["byobDock", "cards", "dock", "giftWall"]],', 1, "BYOB dock section");
+  s = must(s, "function settingVisible(key, s) {", 'function settingVisible(key, s) {\n  if (key === "byobDock") return s.type === "byob";', 1, "BYOB dock visible");
+  s = must(s, 'cards: "grid", flow: "steps", dock: "sticky",', 'cards: "grid", flow: "steps", dock: "sticky", byobDock: "side",', 1, "BYOB dock default");
+  /* payment types */
+  s = must(s, '<button key={id} onClick={() => onChange(id)} className="sb-anim"', '<button key={id} data-lab-pay={id} onClick={() => onChange(id)} className="sb-anim"', 1, "bundle pay toggle");
+  s = must(s, 'const [payMode, setPayMode] = useState("upfront");', 'const [payMode, setPayMode] = useState(__labPayStart(["upfront", "perDelivery", "payAsYouGo"]));', 1, "bundle pay start");
   s = must(s, 'aspectRatio: "1 / 1", background: C.fill, borderRadius: sh.img, overflow: "hidden", cursor: locked',
     'aspectRatio: "1 / 1", background: p.image ? `url(${JSON.stringify(p.image)}) center / cover no-repeat` : C.fill, borderRadius: sh.img, overflow: "hidden", cursor: locked', 1, "card image");
   s += `
@@ -150,6 +184,7 @@ ${setup}
     ['<section className="banner-carousel-section">', "banner"],
     ['{!isSB && (<section className="section">', "reviews"],
     ['<div style={{ padding: P.d ? "28px 0" : "16px 0" }}><GIFT.DiyaDivider d={!!P.d} /></div>\n<section className="section">', "faq"],
+    ['{fest && <div style={{ padding: P.d ? "28px 0" : "16px 0" }}><GIFT.DiyaDivider d={!!P.d} /></div>}', "divider"],
     ['<div className="sb-only-d"><GIFT.IllustrationWall d /></div>', "wall"],
     ['<div className="sb-only-m"><GIFT.IllustrationWall d={false} /></div>', "wall"],
     ['<div className="sticky-ticker">', "ticker"],
@@ -157,6 +192,26 @@ ${setup}
   for (const [find, key] of SECTIONS) {
     s = must(s, find, find.replace(/<(section|div)(?=[\s>])/g, `<$1 data-lab-sec="${key}"`), 1, `section ${key}`);
   }
+  /* the divider above the FAQ is its own section, so it can go while the FAQ stays */
+  s = must(s, '<div data-lab-sec="faq" style={{ padding: P.d ? "28px 0" : "16px 0" }}><GIFT.DiyaDivider', '<div data-lab-sec="divider" style={{ padding: P.d ? "28px 0" : "16px 0" }}><GIFT.DiyaDivider', 1, "faq divider");
+  /* store name and logo in the header */
+  s = must(s, '<div className="logo-wordmark">Your Brand</div>',
+    '<div className="logo-wordmark">{__LAB.logo ? <img src={__LAB.logo} alt={__LAB.brandName || ""} style={{ height: 34, width: "auto", maxWidth: 190, objectFit: "contain", display: "block" }} /> : (__LAB.brandName || "Your Brand")}</div>', 2, "sub logo");
+  s = must(s, 'GIFT.setBrand("Your Brand")', 'GIFT.setBrand(__LAB.brandName || "Your Brand")', 1, "gift brand");
+  /* Complete your routine: collection products, with their images */
+  s = must(s, "const REVIEWS = [", "__labUpsell(SUBSCRIPTION_PRODUCTS, BUNDLE_PRODUCTS);\nconst REVIEWS = [", 1, "upsell products");
+  s = must(s, "media={bundle ? <BundleImage glyphs={glyphs} gap={COPY.bundleHex} /> : null} />;",
+    'media={item.image ? <img src={item.image} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /> : bundle ? <BundleImage glyphs={glyphs} gap={COPY.bundleHex} /> : null} />;', 1, "upsell image");
+  /* payment types */
+  s = must(s, 'const modes = hideUpfront ? PAY_MODES.filter((o) => o.id !== "upfront") : PAY_MODES;',
+    'const modes = (hideUpfront ? PAY_MODES.filter((o) => o.id !== "upfront") : PAY_MODES).filter((o) => __labPayOn(o.id));', 1, "sub pay toggle");
+  s = must(s, '<button key={id} onClick={() => onChange(id)} className="sb-anim"', '<button key={id} data-lab-pay={id} onClick={() => onChange(id)} className="sb-anim"', 1, "gift pay toggle");
+  for (const id of ["upfront", "perdelivery", "payg"]) s = must(s, `onClick={() => setSelected("${id}")}`, `data-lab-pay="${id}" onClick={() => setSelected("${id}")}`, 1, `single ${id}`);
+  s = must(s, "<button key={plan.id} onClick={() => { setSelected(plan.id); setMilestonesOpen(true); }}", "<button key={plan.id} data-lab-pay={plan.id} onClick={() => { setSelected(plan.id); setMilestonesOpen(true); }}", 1, "intl pay");
+  s = must(s, 'const [selected, setSelected] = useState("upfront");', 'const [selected, setSelected] = useState(__labPayStart(["upfront", "perdelivery", "payg"]));', 2, "sub single start");
+  s = must(s, 'const [payMode, setPayMode] = useState("upfront");', 'const [payMode, setPayMode] = useState(__labPayStart(["upfront", "perDelivery", "payg"]));', 2, "sub toggle start");
+  /* pincode only: the delivery popup's country + state row */
+  s = must(s, '{/* country + state */}\n      <div style={{ display: "flex", gap: 6, width: "100%" }}>', '{/* country + state */}\n      <div data-address-row="1" style={{ display: "flex", gap: 6, width: "100%" }}>', 1, "sub address row");
   s += `
 export function LabRoot() {
   const view = __LAB.view === "mobile" ? "mobile" : "desktop";
