@@ -218,13 +218,20 @@
 
   /* Everything that could run code goes, before any of it touches this document. */
   function sanitize(root) {
-    root.querySelectorAll('script, iframe, frame, object, embed, applet, base, meta, noscript, portal, link:not([rel~="stylesheet"])')
+    /* The page's CSP (script-src 'self', no inline) is the lock; this strip is the second one.
+       SVG animation elements go too: they can rewrite an href after the strip has run. */
+    root.querySelectorAll('script, iframe, frame, frameset, object, embed, applet, base, meta, noscript, portal, template, ' +
+      'animate, set, animateMotion, animateTransform, discard, link:not([rel~="stylesheet"])')
       .forEach(function (n) { n.remove(); });
     root.querySelectorAll('*').forEach(function (el) {
       Array.prototype.slice.call(el.attributes).forEach(function (a) {
         var n = a.name.toLowerCase();
-        if (n.indexOf('on') === 0 || n === 'srcdoc' || n === 'formaction' ||
-            (/^(href|src|action|xlink:href|data)$/.test(n) && /^\s*(javascript|vbscript|data:text\/html)/i.test(a.value))) el.removeAttribute(a.name);
+        /* URL attributes: only web, mail, phone, same-page and image data URLs survive. Control
+           characters and whitespace are dropped first, so "java\tscript:" reads as it runs. */
+        var v = a.value.replace(/[\u0000-\u0020\u007f-\u009f]+/g, '').toLowerCase();
+        var url = /^(href|src|action|xlink:href|data|poster|formaction|background|cite|ping)$/.test(n);
+        var bad = url && /^[a-z][a-z0-9+.-]*:/.test(v) && !/^(https?:|mailto:|tel:|data:image\/(png|jpe?g|gif|webp|avif|svg\+xml)[;,])/.test(v);
+        if (n.indexOf('on') === 0 || n === 'srcdoc' || n === 'formaction' || bad) el.removeAttribute(a.name);
       });
     });
   }
