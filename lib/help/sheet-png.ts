@@ -24,7 +24,7 @@ const FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, 
 
 const money = (n: number) => "₹" + Math.round(n).toLocaleString("en-IN");
 const MODE_NAME: Record<string, string> = {
-  prepaid: "Prepaid", payg: "Pay as you go", auto_debit: "Pay per delivery",
+  prepaid: "Prepaid", payg: "Pay per delivery (AutoPay)", auto_debit: "Pay per delivery (AutoPay)",
 };
 
 interface Ctx { c: CanvasRenderingContext2D; y: number }

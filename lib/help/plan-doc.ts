@@ -105,6 +105,16 @@ export function planDoc(a: Answers, brand: string, settings?: WidgetSettings): s
     L.push("## Still to answer", "", ...missing.map((m) => `- ${m}`), "");
   }
 
+  try {
+    const b = a.byob_plan ? JSON.parse(String(a.byob_plan)) as { pool: string[]; tiers: { size: number; pct: number }[]; share: number } : null;
+    if (b?.tiers?.length) {
+      L.push("## Build your own box", "",
+        `${Math.round(b.share * 100)}% of orders already combine products. Pick from: ${b.pool.join(", ")}.`, "",
+        "| Box | Discount |", "|---|---|",
+        ...b.tiers.map((t) => `| Pick any ${t.size} | ${t.pct}% off |`), "");
+    }
+  } catch { /* an unreadable saved box is left out rather than breaking the document */ }
+
   if (settings) {
     const t = settings.theme;
     L.push("## Widget", "",

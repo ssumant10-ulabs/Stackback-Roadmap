@@ -4,12 +4,11 @@ import { PortableText } from "@portabletext/react";
 import { QUERY_TOPIC_NAME } from "@/lib/help/topics";
 import { parseSettings, type WidgetSettings } from "@/lib/help/widget";
 import { APP_NAME } from "@/lib/help/types";
-import { DEFAULT_CONFIG, money, planOptions, type SimConfig } from "@/lib/help/sim";
-import { DEFAULT_ANSWERS, freebieRuns, parseBands, parseList, parseNames, type Answers } from "@/lib/help/questions";
-import { modeDiscounts } from "@/lib/help/categories";
+import { DEFAULT_CONFIG, money, type SimConfig } from "@/lib/help/sim";
+import { DEFAULT_ANSWERS, parseBands, parseList, parseNames, type Answers } from "@/lib/help/questions";
 import type { LoggedQuery, PlanRec, StoreRecord } from "@/lib/sanity/queries";
-import PlanForm from "./PlanForm";
-import WidgetPreview from "./WidgetPreview";
+import PlanForm, { answersFromImport, saveDraft } from "./PlanForm";
+import OrderImport from "./OrderImport";
 import type { PilotStore } from "@/lib/types";
 import { CATEGORY_DEFAULTS } from "@/lib/help/categories";
 import Simulator from "./Simulator";
@@ -25,8 +24,8 @@ const freqLabel = (d: number) =>
   : d === 60 ? "Every 2 months" : `Every ${d} days`;
 
 const STEPS = [
-  { id: 1, title: "Your plans", sub: "The four we need decided" },
-  { id: 2, title: "What customers see", sub: "The flow, and the widget" },
+  { id: 1, title: "Your orders", sub: "Upload them, or skip" },
+  { id: 2, title: "Your plans", sub: "Check, edit, download" },
   { id: 3, title: "What you get", sub: "The orders in Shopify" },
 ];
 
@@ -51,6 +50,10 @@ export default function Brief({ store, open, answered, connected, step, onStep, 
   const [settings, setSettings] = useState<WidgetSettings>(() => parseSettings(store?.widgetSettings));
   const [cfg, setCfg] = useState<SimConfig>(() => ({ ...DEFAULT_CONFIG }));
   const [active, setActive] = useState(0);
+  /* How step two was reached. From the order file the plans are already answered, so step
+     two shows them as the sheet; by hand, or once "Edit" is pressed, it is the form. */
+  const [fromOrders, setFromOrders] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   const recs = store?.recommendations || [];
   const rec: PlanRec | undefined = recs[active];
@@ -105,32 +108,35 @@ export default function Brief({ store, open, answered, connected, step, onStep, 
     setCfg((prev) => ({ ...prev, unitPrice: rec.unitPrice || prev.unitPrice }));
   }, [rec]);
 
-  const rates = useMemo(
-    () => modeDiscounts(Number(answers.discount_min) || 0, Number(answers.discount_max) || 0),
-    [answers.discount_min, answers.discount_max],
-  );
-  const plans = useMemo(() => planOptions(cfg, runs, bands, settings.schedule_text_format, settings.schedule_text_custom),
-    [cfg, runs, bands, settings.schedule_text_format, settings.schedule_text_custom]);
   const go = (n: number) => { onStep(n); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
   return (
     <section>
-      <p className="hc-eyebrow">{store ? store.name : "Part one"}</p>
-      <h1 className="hc-h1">{store ? "Your subscription plans" : "Subscription plans"}</h1>
-      {store?.intro && <p className="hc-blurb">{store.intro}</p>}
+      <header className="hc-pagehead">
+        <p className="hc-eyebrow">{store ? store.name : "Subscription plan setup"}</p>
+        <h1 className="hc-h1">{store ? "Your subscription plans" : "Set up your plans"}</h1>
+        <p className="hc-blurb">{store?.intro || "Start from your own orders, or skip and answer by hand. Then see the orders your plans create in Shopify."}</p>
+      </header>
 
-      <ol className="hc-steps-nav">
-        {STEPS.map((sdef) => (
-          <li key={sdef.id} className={step === sdef.id ? "on" : step > sdef.id ? "past" : ""}>
-            <button onClick={() => go(sdef.id)}>
-              <i>{step > sdef.id ? "✓" : sdef.id}</i>
-              <span><b>{sdef.title}</b><em>{sdef.sub}</em></span>
-            </button>
-          </li>
-        ))}
-      </ol>
+      {/* Where you are, in one line. The four step cards were a second navigation over a
+          flow that only goes forward and back. */}
+      <p className="hc-stepcount">Step {step} of {STEPS.length}<b>{STEPS[step - 1].title}</b></p>
 
-      {recs.length > 1 && step === 1 && (
+      {/* ------------------------------------------------------------ step 1 */}
+      {step === 1 && (
+        <OrderImport onApply={(v) => {
+          const next = answersFromImport(answers, v);
+          setAnswers(next); saveDraft(next);
+          setFromOrders(true); setEditing(false); go(2);
+        }} />
+      )}
+      {step === 1 && (
+        <StepNav
+          next={fromOrders ? "Next: your plans" : "Next: enter plans by hand"}
+          onNext={() => { if (!fromOrders) setEditing(true); go(2); }} />
+      )}
+
+      {recs.length > 1 && step === 2 && (
         <div className="hc-rectabs">
           {recs.map((r, i) => (
             <button key={r._key} className={"hc-rectab" + (i === active ? " on" : "")} onClick={() => setActive(i)}>
@@ -139,71 +145,34 @@ export default function Brief({ store, open, answered, connected, step, onStep, 
           ))}
         </div>
       )}
-      {rec && step === 1 && <RecCard rec={rec} />}
+      {rec && step === 2 && <RecCard rec={rec} />}
 
-      {/* ------------------------------------------------------------ step 1 */}
-      {step === 1 && (
+      {/* ------------------------------------------------------------ step 2 */}
+      {step === 2 && (
         <PlanForm
           settings={settings}
           answers={answers} onAnswers={setAnswers}
           storeId={store?._id ?? null} storeName={store?.name ?? null}
-          connected={connected} onDone={() => go(2)} pilots={pilots}
+          connected={connected} pilots={pilots}
+          editing={editing}
+          fromOrders={fromOrders}
+          onEdit={() => setEditing((e) => !e)}
         />
       )}
+      {step === 2 && <StepNav prev="Previous: your orders" onPrev={() => go(1)} next="Next: what lands in your orders" onNext={() => go(3)} />}
 
-      {/* ------------------------------------------------------------ step 2 */}
-      {step === 2 && (
-        <>
-          <h2 className="hc-h2">What the customer does</h2>
-          <p className="hc-note">One page, one choice, one payment. They never see the order flow in step three.</p>
-          <ol className="hc-userflow">
-            <li><b>Opens the product page</b><span>Sees the one-time price at {money(cfg.unitPrice)}, and your subscription beside it.</span></li>
-            <li><b>Picks a schedule</b><span>{freqLabel(cfg.everyDays)}, {cfg.deliveries} deliveries, {money(plans[0].perDelivery)} each.</span></li>
-            <li><b>Chooses how to pay</b><span>Whichever of prepaid, pay as you go and pay per delivery you accept.</span></li>
-            <li><b>Checks out once</b><span>The last action they take. Every delivery after this happens on its own.</span></li>
-          </ol>
-
-          <h2 className="hc-h2">The widget on your product page</h2>
-          <WidgetPreview
-            s={settings} onChange={setSettings}
-            plans={plans}
-            productName={cfg.productName || "Your product"}
-            variantLine={rec?.scope === "collection" ? rec.scopeDetail || undefined : undefined}
-            unitPrice={cfg.unitPrice}
-            compareAt={Math.round(cfg.unitPrice * 1.22)}
-            onSubscribe={() => go(3)}
-            rates={rates}
-            shippingRate={answers.shipping_charged === "yes" ? Number(answers.shipping_rate) || 0 : 0}
-            freebieRuns={freebieRuns(answers.freebies)}
-            scale={String(answers.scale || "")}
-            storeName={String(answers.brand_name || store?.name || "")}
-            /* Their product, their price, in step two and in every order step three draws. */
-            onProduct={(pr) => setCfg((c) => ({
-              ...c,
-              productName: pr.title || c.productName,
-              unitPrice: pr.priceMinor != null ? Math.round(pr.priceMinor / 100) : c.unitPrice,
-            }))}
-          />
-
-          <div className="hc-stepnav">
-            <button className="hc-btn" onClick={() => go(1)}>Back to your answers</button>
-            <button className="hc-btn primary" onClick={() => go(3)}>Next: what lands in your orders</button>
-          </div>
-        </>
-      )}
-
-      {/* ------------------------------------------------------------ step 3 */}
+      {/* ------------------------------------------------------------ step 3
+          "What customers see" was step three, archived 2026-11-20: the Widget Lab shows the
+          widget on the store's own page, which this step only approximated. */}
       {step === 3 && (
         <>
           <Simulator config={cfg} onConfig={setCfg} />
-          <div className="hc-stepnav">
-            <button className="hc-btn" onClick={() => go(2)}>Back to the widget</button>
-          </div>
+          <StepNav prev="Previous: your plans" onPrev={() => go(2)} />
         </>
       )}
 
       {/* ------------------------------------------------------------ always */}
-      {open.length > 0 && step === 1 && (
+      {open.length > 0 && step === 2 && (
         <>
           <h2 className="hc-h2">Also waiting on you</h2>
           <ol className="hc-openq">
@@ -217,13 +186,22 @@ export default function Brief({ store, open, answered, connected, step, onStep, 
         </>
       )}
 
-      {answered.length > 0 && step === 1 && (
+      {answered.length > 0 && step === 2 && (
         <>
           <h2 className="hc-h2">Answered</h2>
           <div className="hc-list">{answered.map((q) => <Answered key={q._id} q={q} />)}</div>
         </>
       )}
     </section>
+  );
+}
+
+function StepNav({ prev, onPrev, next, onNext }: { prev?: string; onPrev?: () => void; next?: string; onNext?: () => void }) {
+  return (
+    <div className="hc-stepnav">
+      {prev && onPrev ? <button type="button" className="hc-btn" onClick={onPrev}>&larr; {prev}</button> : <span />}
+      {next && onNext && <button type="button" className="hc-btn primary" onClick={onNext}>{next} &rarr;</button>}
+    </div>
   );
 }
 

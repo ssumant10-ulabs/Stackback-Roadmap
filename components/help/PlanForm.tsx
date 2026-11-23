@@ -1,14 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
 import {
-  DEFAULT_ANSWERS, QUESTIONS, asLines, complete, parseBands, parseFreebies, parseList,
+  DEFAULT_ANSWERS, QUESTIONS, asLines, autopayRate, complete, flatRate, parseBands, parseFreebies, parseList, parseNames, rateForRun, readPlanBands,
   reconcileModes, visible, writeBands, writeFreebies,
   type Answers, type Field, type Freebie,
 } from "@/lib/help/questions";
 import { CATEGORY_BY_ID, SCALE_BY_ID, freqWord } from "@/lib/help/categories";
 import { drawPlanSheet } from "@/lib/help/sheet-png";
 import { planDoc } from "@/lib/help/plan-doc";
-import OrderImport from "./OrderImport";
+import type { ImportResult } from "./OrderImport";
 import type { PilotStore } from "@/lib/types";
 import { coverage, discountBand, referenceFor, type CategoryReference } from "@/lib/help/references";
 import ReferenceDrawer from "./ReferenceDrawer";
@@ -41,14 +41,20 @@ function payWord(r: CategoryReference): string {
   return parts.join(", ");
 }
 
-export default function PlanForm({ answers, onAnswers, storeName, onDone, settings, pilots = [] }: {
+export default function PlanForm({ answers, onAnswers, storeName, settings, pilots = [], editing, onEdit, fromOrders }: {
   answers: Answers; onAnswers: (a: Answers) => void;
   /** Snapshotted into the export, so the picture records what was toggled as well as priced. */
   settings: WidgetSettings;
   storeId: string | null; storeName: string | null;
-  connected: boolean; onDone: () => void;
+  connected: boolean;
   /** Pilot rows, for naming stores already on this setup. */
   pilots?: PilotStore[];
+  /** The form is open under the summary. */
+  editing: boolean;
+  /** Opens or closes the form. */
+  onEdit: () => void;
+  /** The answers came from the store's order file. */
+  fromOrders?: boolean;
 }) {
   /* Stores already on this setup, named. A category average is an argument; "three of your
      own pilots run exactly this" is a fact, and it is the thing that ends the discussion on a
@@ -108,7 +114,10 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
       const raw = localStorage.getItem(DRAFT);
       if (raw) {
         const d = JSON.parse(raw) as { answers?: Answers };
-        if (d.answers) onAnswers({ ...DEFAULT_ANSWERS, ...d.answers });
+        if (d.answers) {
+          const m = d.answers.modes;
+          onAnswers({ ...DEFAULT_ANSWERS, ...d.answers, ...(Array.isArray(m) ? { modes: reconcileModes(m) } : {}) });
+        }
       } else if (storeName) {
         onAnswers({ ...DEFAULT_ANSWERS, brand_name: storeName });
       }
@@ -117,10 +126,7 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const save = (a: Answers) => {
-    try { localStorage.setItem(DRAFT, JSON.stringify({ answers: a })); }
-    catch { /* the answer is still in the box */ }
-  };
+  const save = saveDraft;
   const set = (id: string, v: string | string[]) => {
     // Pay as you go and pay per delivery both collect per delivery, one by asking and one
     // automatically. Offering both asks a customer to choose between those, which nobody
@@ -219,117 +225,68 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
 
   const scale = SCALE_BY_ID.get(String(answers.scale || ""));
 
+  const [likeOpen, setLikeOpen] = useState(false);
+  useEffect(() => {
+    if (!likeOpen) return;
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setLikeOpen(false); };
+    document.addEventListener("keydown", esc);
+    return () => document.removeEventListener("keydown", esc);
+  }, [likeOpen]);
   return (
-    <div className="hc-formgrid">
-      <div className="hc-form">
-        {QUESTIONS.map((q, i) => (
-          <fieldset key={q.id} className="hc-qblock">
-            <legend><i>{i + 1}</i>{q.title}</legend>
-            <p className="hc-qblurb">{q.blurb}</p>
-            <div className="hc-qfields">
-            {q.fields.filter((f) => visible(f, answers)).map((f) => (
-              <FieldRow key={f.id} f={f} answers={answers} value={answers[f.id]}
-                onChange={(v) => set(f.id, v)}
-                onFreebies={(v) => set("freebies", v)}
-                readOnly={f.id === "brand_name" && Boolean(storeName)} />
-            ))}
-            </div>
-          </fieldset>
-        ))}
+    <div className="hc-planwrap">
+      {/* The plans first, as a summary, and the form only on "Edit". From an order file the
+          answers are already there, and a form of thirty fields is the wrong way to read them. */}
+      <PlanSummary a={answers} storeName={storeName} fromOrders={Boolean(fromOrders)} />
 
-        <div className="hc-formactions" data-noexport="true">
-          {/* Not gated on a complete form any more. Half a plan is exactly what you want to
-              send somebody mid-conversation — "here is where we have got to" — and a button
-              that does nothing when you press it reads as broken, not as a rule. The sheet
-              says what is still unanswered instead. */}
-          <button className="hc-btn primary" onClick={download} disabled={busy}>
-            {busy ? "Making the image" : "Download these plans"}
-          </button>
-          <button className="hc-btn" onClick={downloadDoc} disabled={busy}>Download as a document</button>
-          <button className="hc-btn" onClick={onDone}>
-            {done ? "Next: what your customers see" : "Skip ahead and look first"}
-          </button>
-          <span className="hc-savedat">Saved on this device as you type.</span>
-        </div>
-
-        {!done && (
-          <p className="hc-note hc-incomplete" data-noexport="true">
-            Some fields are still blank. You can download what is set so far; the unanswered
-            ones are listed on the sheet.
-          </p>
-        )}
-        {result && <p className={"hc-result " + (result.ok ? "ok" : "bad")} role="status" data-noexport="true">{result.msg}</p>}
+      <div className="hc-plantools" data-noexport="true">
+        <button type="button" className={"hc-btn" + (editing ? "" : " primary")} onClick={onEdit}>
+          {editing ? "Done editing" : "Edit these plans"}
+        </button>
+        <button type="button" className="hc-btn" onClick={download} disabled={busy}>
+          {busy ? "Making the image" : "Download as image"}
+        </button>
+        <button type="button" className="hc-btn" onClick={downloadDoc} disabled={busy}>Download as a document</button>
+        <button type="button" className="hc-btn ghost hc-plansim" onClick={() => setLikeOpen(true)}>What similar stores run</button>
       </div>
+      {result && <p className={"hc-result " + (result.ok ? "ok" : "bad")} role="status" data-noexport="true">{result.msg}</p>}
 
-      <aside className={"hc-suggest" + (!cat && !scale ? " empty" : "")}>
-        {/* One click fills everything the file can answer. It used to set the cadence and
-            the runs and leave the volume, the ladder and the products to be typed in beside
-            a panel that already knew them — and the volume question in particular decides
-            which payment types are offered, so leaving it was leaving the main thing. */}
-        <OrderImport onApply={({ everyDays, extraEveryDays, runs, products, discountMin, discountMax, scale, category, brand, bands, ladder }) => {
-          const band = scale ? SCALE_BY_ID.get(scale) : null;
-          const next: Answers = {
-            ...answers,
-            /* Both cadences where the pack sizes reorder differently. The widget offers a
-               customer the choice, which is the honest answer when a 100g bag comes back in
-               a fortnight and a 1kg bag in two months. */
-            every_days: [...new Set([everyDays, ...extraEveryDays])].sort((a, b) => a - b).map(String),
-            ...(runs.length ? { deliveries: runs.join(", ") } : {}),
-            /* Overwrites. It used to fill the products only where the field was empty, so a
-               draft left over from another store survived a deliberate "use everything in
-               this file" and the form sat there naming somebody else's SKUs beside a panel
-               listing these ones. Pressing the button IS the instruction. */
-            ...(products.length ? { scope_kind: "products", scope_detail: products.join(", ") } : {}),
-            /* The category the products are in. Scored across the top products so one stray
-               title cannot decide it, and left alone entirely when nothing matches — a wrong
-               category is worse than an unanswered one, because the suggestion panel keys
-               off it. */
-            ...(category ? { category } : {}),
-            /* The file's own name, where it carries anything. `orders_export_1.csv` says
-               nothing and leaves the field empty rather than inventing a brand. */
-            ...(brand && !String(answers.brand_name || "").trim() ? { brand_name: brand } : {}),
-            /* The bands travel with the answers so the sheet and the document can print one
-               plan per pack size rather than one averaged plan over all of them. */
-            plan_bands: bands.length ? JSON.stringify(bands) : "",
-            /* The band sets the payment types the same way answering the question does, so
-               the two routes cannot disagree about what a volume means. */
-            ...(band ? { scale: band.id, modes: reconcileModes(band.modes, []) } : {}),
-            /* The ladder, anchored to rates these customers have already accepted. Only
-               where the file HAS discounts and the two ends differ — a single flat rate is
-               one number, and writing it into both ends reads as a tier that is not one. */
-            /* `discount_pct` as well as the ends, because the DOCUMENT reads that one and the
-               widget reads `discount_max`. Writing only the ends left the document printing
-               0% off against a widget showing the real rate — the same two-surfaces bug as
-               the empty ladder, one field further down. */
-            ...(discountMin != null && discountMax != null && discountMax > discountMin
-              /* Tiered, AND the ladder itself. Setting the flag without filling the rungs
-                 left the document printing 0% under "still to answer". */
-              ? {
-                  discount_pct: String(discountMin),
-                  discount_min: String(discountMin), discount_max: String(discountMax),
-                  tiered: "yes", bands: writeBands(ladder),
-                }
-              : discountMax != null
-                ? {
-                    discount_pct: String(discountMax),
-                    discount_min: String(discountMax), discount_max: String(discountMax),
-                    tiered: "no", bands: "",
-                  }
-                : {}),
-          };
-          onAnswers(next); save(next);
-        }} />
+      {editing && (
+        <div className="hc-form">
+          <p className="hc-note">Answer what you know. The summary above follows as you type, and it saves on this device.</p>
+          {QUESTIONS.map((q, i) => (
+            <fieldset key={q.id} className="hc-qblock">
+              <legend><i>{i + 1}</i>{q.title}</legend>
+              <p className="hc-qblurb">{q.blurb}</p>
+              <div className="hc-qfields">
+              {q.fields.filter((f) => visible(f, answers)).map((f) => (
+                <FieldRow key={f.id} f={f} answers={answers} value={answers[f.id]}
+                  onChange={(v) => set(f.id, v)}
+                  onFreebies={(v) => set("freebies", v)}
+                  readOnly={f.id === "brand_name" && Boolean(storeName)} />
+              ))}
+              </div>
+            </fieldset>
+          ))}
+        </div>
+      )}
 
-        <p className="hc-suggesth">
-          What similar stores run
-          {/* The panel answers "what does MY category do". The drawer answers "show me all of
-              them", which is the question the moment a merchant says their category is
-              different, and it was a tab nobody opened. */}
-          <button type="button" className="hc-refbtn" onClick={() => setRefsOpen(true)}>
-            References
-          </button>
-        </p>
-
+      {/* What similar stores run, on demand. It was a sticky panel beside the form, which
+          halved the form on a laptop for something asked about once per call. */}
+      {likeOpen && (
+        <div className="hc-drawerwrap" role="dialog" aria-modal="true" aria-label="What similar stores run">
+          <div className="hc-drawerscrim" onClick={() => setLikeOpen(false)} role="presentation" />
+          <aside className="hc-drawer">
+            <header className="hc-drawerh">
+              <div>
+                <b>What similar stores run</b>
+                <span>{cat ? cat.label : "Pick a category in the plans"}{scale ? `, ${scale.hint.toLowerCase()}` : ""}</span>
+              </div>
+              <button type="button" onClick={() => setLikeOpen(false)} aria-label="Close">&times;</button>
+            </header>
+            <div className="hc-drawerbody hc-suggest hc-suggestin">
+              <button type="button" className="hc-btn ghost hc-refbtn" onClick={() => { setLikeOpen(false); setRefsOpen(true); }}>
+                See every category
+              </button>
         {!cat && !scale && (
           <p className="hc-note">Pick a category and a size, and this fills in.</p>
         )}
@@ -465,11 +422,55 @@ export default function PlanForm({ answers, onAnswers, storeName, onDone, settin
             </p>
           </div>
         )}
-      </aside>
+            </div>
+          </aside>
+        </div>
+      )}
 
       {refsOpen && <ReferenceDrawer pilots={pilots} onClose={() => setRefsOpen(false)} />}
     </div>
   );
+}
+
+/** The order file's answers, written over the form's. Pressing "use everything in this file"
+ *  IS the instruction, so it overwrites rather than filling only the blanks. */
+export function answersFromImport(answers: Answers, v: ImportResult): Answers {
+  const { everyDays, extraEveryDays, runs, products, discountMin, discountMax, scale, category, brand, bands, ladder } = v;
+  const band = scale ? SCALE_BY_ID.get(scale) : null;
+  return {
+    ...answers,
+    every_days: [...new Set([everyDays, ...extraEveryDays])].sort((a, b) => a - b).map(String),
+    ...(runs.length ? { deliveries: runs.join(", ") } : {}),
+    ...(products.length ? { scope_kind: "products", scope_detail: products.join(", ") } : {}),
+    ...(category ? { category } : {}),
+    ...(brand && !String(answers.brand_name || "").trim() ? { brand_name: brand } : {}),
+    plan_bands: bands.length ? JSON.stringify(bands) : "",
+    byob_plan: v.byob ? JSON.stringify(v.byob) : "",
+    product_mix: v.mix?.length ? JSON.stringify(v.mix.map((m) => ({ title: m.title, role: m.role, why: m.why, orders: m.orders, price: m.price,
+      variants: m.variants.map((x) => ({ name: x.name, everyDays: x.everyDays, source: x.source, orders: x.orders })) }))) : "",
+    ...(band ? { scale: band.id, modes: reconcileModes(band.modes, []) } : {}),
+    /* `discount_pct` as well as the ends: the document reads that one and the widget reads
+       `discount_max`, and a flat rate is not written as a tier. */
+    ...(discountMin != null && discountMax != null && new Set(Object.values(ladder)).size > 1
+      ? {
+          discount_pct: String(discountMin),
+          discount_min: String(Math.min(...Object.values(ladder))), discount_max: String(Math.max(...Object.values(ladder))),
+          tiered: "yes", bands: writeBands(ladder),
+        }
+      : discountMax != null
+        ? {
+            discount_pct: String(discountMax),
+            discount_min: String(discountMax), discount_max: String(discountMax),
+            tiered: "no", bands: "",
+          }
+        : {}),
+  };
+}
+
+/** Kept on this device, so leaving the step and coming back finds the same answers. */
+export function saveDraft(a: Answers) {
+  try { localStorage.setItem(DRAFT, JSON.stringify({ answers: a })); }
+  catch { /* private window: the answers still hold for this visit */ }
 }
 
 function FieldRow({ f, value, answers, onChange, onFreebies, readOnly }: {
@@ -598,9 +599,256 @@ function evenCols(n: number): number {
 }
 
 const MODE_NAME: Record<string, string> = {
-  prepaid: "Prepaid", payg: "Pay as you go", auto_debit: "Pay per delivery",
+  prepaid: "Prepaid", payg: "Pay per delivery (AutoPay)", auto_debit: "Pay per delivery (AutoPay)",
 };
 
 /** The category's discounts are quoted at the prepaid rate. The other two scale off it, the
  *  same split the form takes as a lowest and a most. */
 const MODE_RATE: Record<string, number> = { prepaid: 1, auto_debit: 0.75, payg: 0.5 };
+
+const SCOPE_WORD: Record<string, string> = { products: "Named products", collection: "A collection", all: "All products" };
+const PAY_WORD: Record<string, string> = { prepaid: "Prepaid", payg: "Pay per delivery (AutoPay)", auto_debit: "Pay per delivery (AutoPay)" };
+/** A run length as time, so "12 deliveries" reads as the commitment it is. */
+function spanWord(run: number, every: number[]): string {
+  if (!every.length) return "";
+  const days = run * Math.min(...every);
+  if (days < 56) return `about ${Math.round(days / 7)} weeks`;
+  const m = Math.round(days / 30);
+  return m >= 12 && m % 12 === 0 ? (m === 12 ? "about a year" : `about ${m / 12} years`) : `about ${m} months`;
+}
+
+/** The plans in one card: what a merchant reads and what the image download carries. */
+type MixRow = { title: string; role: "subscription" | "bundle"; why: string; orders: number;
+  variants: { name: string; everyDays: number; source: "reorders" | "pack" | "size" | "default"; orders: number }[] };
+function readMix(a: Answers): MixRow[] {
+  try { const v = JSON.parse(String(a.product_mix || "[]")); return Array.isArray(v) ? v : []; } catch { return []; }
+}
+const SOURCE_WORD: Record<string, string> = {
+  reorders: "from reorders", pack: "pack duration", size: "scaled by pack size", default: "default, no reorders yet",
+};
+const RUNS_FOR: Record<number, number[]> = { 7: [3, 6, 12], 30: [3, 6, 12], 60: [2, 4, 6], 90: [2, 4] };
+/** A group's prepaid rates by position: the first plan at the lowest rate, stepping to the
+ *  most you would give, so every group's first plan reads the same rate. */
+function groupRates(a: Answers, n: number): number[] {
+  const lo = Number(a.discount_min) || flatRate(a), hi = Number(a.discount_max) || lo;
+  if (a.tiered !== "yes") return Array.from({ length: n }, () => flatRate(a) || lo);
+  return Array.from({ length: n }, (_, i) => Math.round(lo + ((hi - lo) * i) / 2));
+}
+
+/** Step 2 off an order file: what goes on subscription, what goes in a box, and the plans for
+ *  each delivery frequency, with every product's evidence underneath. */
+function MixSummary({ a, mix, brand, fromOrders }: { a: Answers; mix: MixRow[]; brand: string; fromOrders: boolean }) {
+  const cat = CATEGORY_BY_ID.get(String(a.category || ""));
+  const modes = Array.isArray(a.modes) ? a.modes : [];
+  const subs = mix.filter((m) => m.role === "subscription"), boxes = mix.filter((m) => m.role === "bundle");
+  const groups = new Map<number, { title: string; variants: string[]; all: boolean }[]>();
+  for (const m of subs) {
+    const by = new Map<number, string[]>();
+    for (const v of m.variants) by.set(v.everyDays, [...(by.get(v.everyDays) || []), v.name]);
+    for (const [e, vs] of by) groups.set(e, [...(groups.get(e) || []), { title: m.title, variants: vs, all: by.size === 1 }]);
+  }
+  let byob: { pool: string[]; tiers: { size: number; pct: number }[]; share: number } | null = null;
+  try { byob = a.byob_plan ? JSON.parse(String(a.byob_plan)) : null; } catch { byob = null; }
+  const freebies = parseFreebies(a.freebies);
+  const ship = a.shipping_charged === "yes"
+    ? `\u20b9${Number(a.shipping_rate) || 0} per delivery${Number(a.shipping_threshold) ? ` below \u20b9${Number(a.shipping_threshold)}` : ""}`
+    : "Free on every delivery";
+  return (
+    <section className="hc-plansum hc-mix">
+      <header>
+        <div>
+          <b>{brand || "Your plans"}</b>
+          <span>{cat?.label || "Category not set"}</span>
+        </div>
+        {fromOrders && <em>Read from your orders</em>}
+      </header>
+
+      <div className="hc-mixsplit">
+        <div>
+          <p className="hc-mixh">On subscription <em>{subs.length}</em></p>
+          <p className="hc-mixsub">Refills customers run out of. Sold as prepaid runs and AutoPay.</p>
+          <ul className="hc-mixchips">{subs.map((m) => <li key={m.title}>{m.title}</li>)}</ul>
+        </div>
+        <div>
+          <p className="hc-mixh">In a bundle <em>{boxes.length}</em></p>
+          <p className="hc-mixsub">Kits, trials and accessories: bought once, best in a Build your own box.</p>
+          <ul className="hc-mixchips alt">{boxes.length ? boxes.map((m) => <li key={m.title}>{m.title}</li>) : <li>None</li>}</ul>
+        </div>
+      </div>
+
+      <h3 className="hc-mixsect">Subscription plans, by delivery frequency</h3>
+      {[...groups.entries()].sort((x, y) => x[0] - y[0]).map(([every, items]) => {
+        const runs = RUNS_FOR[every] || [3, 6, 12];
+        const rates = groupRates(a, runs.length);
+        return (
+          <div key={every} className="hc-mixgrp">
+            <div className="hc-mixgrph">
+              <b>{freqWord(every)}</b>
+              <span>{items.map((i) => i.all ? i.title : `${i.title} (${i.variants.join(", ")})`).join(" \u00b7 ")}</span>
+            </div>
+            <table>
+              <thead><tr><th>Plan</th><th>Payment</th><th>Discount</th></tr></thead>
+              <tbody>
+                {modes.includes("prepaid") && runs.map((r, i) => (
+                  <tr key={r}>
+                    <td>{r} deliveries <small>{spanWord(r, [every])}</small></td>
+                    <td>Prepaid</td>
+                    <td><b>{rates[i]}% off</b></td>
+                  </tr>
+                ))}
+                {modes.includes("auto_debit") && (
+                  <tr>
+                    <td>Ongoing <small>until they stop</small></td>
+                    <td>Pay per delivery (AutoPay)</td>
+                    <td><b>{autopayRate(rates)}% off</b></td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        );
+      })}
+
+      {byob?.tiers?.length ? (
+        <>
+          <h3 className="hc-mixsect">Build your own box</h3>
+          <div className="hc-mixgrp">
+            <div className="hc-mixgrph">
+              <b>Pick from {byob.pool.length} products</b>
+              <span>{byob.pool.join(" \u00b7 ")}</span>
+            </div>
+            <table>
+              <thead><tr><th>Box</th><th>Bought</th><th>Discount</th></tr></thead>
+              <tbody>
+                {byob.tiers.map((t) => (
+                  <tr key={t.size}><td>Pick any {t.size}</td><td>One time, or on subscription</td><td><b>{t.pct}% off</b></td></tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="hc-mixnote">{Math.round(byob.share * 100)}% of your orders already combine two or more products.</p>
+          </div>
+        </>
+      ) : null}
+
+      <details className="hc-mixdetail" open>
+        <summary>Product by product <span>why each one went where it did</span></summary>
+        <table>
+          <thead><tr><th>Product</th><th>Variants and delivery</th><th>Goes under</th></tr></thead>
+          <tbody>
+            {mix.map((m) => (
+              <tr key={m.title}>
+                <td><b>{m.title}</b><small>{m.orders} orders &middot; {m.why}</small></td>
+                <td>{m.role === "bundle" ? <span className="hc-mixmute">Not delivered on a cycle</span> : (
+                  <ul className="hc-mixvars">{m.variants.map((v) => (
+                    <li key={v.name}><span>{v.name === "Default" ? "All" : v.name}</span><b>{freqWord(v.everyDays)}</b><em>{SOURCE_WORD[v.source]}</em></li>
+                  ))}</ul>
+                )}</td>
+                <td><i className={"hc-mixrole " + m.role}>{m.role === "subscription" ? "Subscription" : "Bundle"}</i></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </details>
+
+      <dl className="hc-plansumfacts">
+        <div><dt>Payment</dt><dd>{modes.length ? modes.map((m) => PAY_WORD[m] || m).join(", ") : "Not set"}</dd></div>
+        <div><dt>Shipping</dt><dd>{ship}</dd></div>
+        <div><dt>Freebies</dt><dd>{freebies.length ? freebies.map((f) => `${f.product || "A gift"} on delivery ${f.delivery} of ${f.run}`).join("; ") : "None"}</dd></div>
+      </dl>
+    </section>
+  );
+}
+
+function PlanSummary({ a, storeName, fromOrders }: { a: Answers; storeName: string | null; fromOrders: boolean }) {
+  const mixRows = readMix(a);
+  if (mixRows.length) return <MixSummary a={a} mix={mixRows} brand={String(a.brand_name || storeName || "").trim()} fromOrders={fromOrders} />;
+  const cat = CATEGORY_BY_ID.get(String(a.category || ""));
+  const scale = SCALE_BY_ID.get(String(a.scale || ""));
+  const freqs = (Array.isArray(a.every_days) ? a.every_days : []).map(Number).filter(Boolean);
+  const runs = parseList(a.deliveries);
+  const modes = Array.isArray(a.modes) ? a.modes : [];
+  const bands = readPlanBands(a);
+  const freebies = parseFreebies(a.freebies);
+  const products = parseNames(a.scope_detail);
+  const groups = bands.length > 1
+    ? bands.map((b) => ({ label: b.label + (b.sizes.length ? ` (${b.sizes.slice(0, 3).join(", ")})` : ""), every: [b.everyDays], runs: b.prepaidRuns }))
+    : [{ label: "", every: freqs, runs }];
+  const brand = String(a.brand_name || storeName || "").trim();
+  const ship = a.shipping_charged === "yes"
+    ? `\u20b9${Number(a.shipping_rate) || 0} per delivery${Number(a.shipping_threshold) ? ` below \u20b9${Number(a.shipping_threshold)}` : ""}`
+    : "Free on every delivery";
+  return (
+    <section className="hc-plansum">
+      <header>
+        <div>
+          <b>{brand || "Your plans"}</b>
+          <span>{[cat?.label, scale?.label].filter(Boolean).join(" \u00b7 ") || "Category and size not set"}</span>
+        </div>
+        {fromOrders && <em>Read from your orders</em>}
+      </header>
+      {groups.map((g) => (
+        <div key={g.label || "all"} className="hc-plansumgrp">
+          {g.label && <p className="hc-plansumh">{g.label}</p>}
+          {modes.includes("prepaid") && (g.runs.length ? (
+            <table>
+              <caption>Prepaid <span>paid upfront for the whole run</span></caption>
+              <thead><tr><th>Plan</th><th>Frequency</th><th>Discount</th></tr></thead>
+              <tbody>
+                {g.runs.map((r) => (
+                  <tr key={r}>
+                    <td>{r} deliveries <small>{spanWord(r, g.every)}</small></td>
+                    <td>{g.every.length ? g.every.map(freqWord).join(" or ") : "Not set"}</td>
+                    <td><b>{rateForRun(a, r)}% off</b></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : <p className="hc-note">No prepaid run lengths yet. Edit the plans to add them.</p>)}
+          {modes.includes("auto_debit") && (
+            <table>
+              <caption>Pay per delivery (AutoPay) <span>charged each delivery, runs until they stop</span></caption>
+              <thead><tr><th>Plan</th><th>Frequency</th><th>Discount</th></tr></thead>
+              <tbody>
+                {(g.every.length ? g.every : [0]).map((e) => (
+                  <tr key={e}>
+                    <td>Ongoing <small>no fixed run</small></td>
+                    <td>{e ? freqWord(e) : "Not set"}</td>
+                    <td><b>{autopayRate(g.runs.map((r) => rateForRun(a, r)))}% off</b></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+      {(() => {
+        let b: { pool: string[]; pairs: string[]; tiers: { size: number; pct: number }[]; share: number } | null = null;
+        try { b = a.byob_plan ? JSON.parse(String(a.byob_plan)) : null; } catch { b = null; }
+        if (!b || !b.tiers?.length) return null;
+        return (
+          <div className="hc-plansumgrp">
+            <table>
+              <caption>Build your own box <span>{Math.round(b.share * 100)}% of your orders already combine products</span></caption>
+              <thead><tr><th>Box</th><th>Pick from</th><th>Discount</th></tr></thead>
+              <tbody>
+                {b.tiers.map((t, i) => (
+                  <tr key={t.size}>
+                    <td>Pick any {t.size}</td>
+                    <td>{i === 0 ? `${b!.pool.slice(0, 4).join(", ")}${b!.pool.length > 4 ? ` +${b!.pool.length - 4}` : ""}` : "Same list"}</td>
+                    <td><b>{t.pct}% off</b></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      })()}
+      <dl className="hc-plansumfacts">
+        <div><dt>Products</dt><dd>{SCOPE_WORD[String(a.scope_kind || "")] || "Not set"}{products.length ? `: ${products.slice(0, 3).join(", ")}${products.length > 3 ? ` +${products.length - 3}` : ""}` : ""}</dd></div>
+        <div><dt>Payment</dt><dd>{modes.length ? modes.map((m) => PAY_WORD[m] || m).join(", ") : "Not set"}</dd></div>
+        <div><dt>Shipping</dt><dd>{ship}</dd></div>
+        <div><dt>Freebies</dt><dd>{freebies.length ? freebies.map((f) => `${f.product || "A gift"} on delivery ${f.delivery} of ${f.run}`).join("; ") : "None"}</dd></div>
+      </dl>
+    </section>
+  );
+}

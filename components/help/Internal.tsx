@@ -55,11 +55,13 @@ export default function Internal({ store, stores, connected, getToken }: {
   if (!store) {
     return (
       <section>
-        <p className="hc-eyebrow">Internal</p>
-        <h1 className="hc-h1">Store checklists</h1>
-        <p className="hc-blurb">
-          Every store against the same {TOTAL_STEPS} steps. Open one to tick it off, or read the spine below.
-        </p>
+        <header className="hc-pagehead">
+          <p className="hc-eyebrow">Internal</p>
+          <h1 className="hc-h1">Store checklists</h1>
+          <p className="hc-blurb">
+            Every store against the same {TOTAL_STEPS} steps. Open one to tick it off, or read the spine below.
+          </p>
+        </header>
         {stores.length === 0
           ? <div className="hc-empty"><p>No stores in the CMS yet. Add one in the Studio and its link appears here.</p></div>
           : <StoreTable stores={stores} />}
@@ -70,12 +72,14 @@ export default function Internal({ store, stores, connected, getToken }: {
 
   return (
     <section>
-      <p className="hc-eyebrow">Internal · {store.name}</p>
-      <h1 className="hc-h1">Onboarding checklist</h1>
-      <p className="hc-blurb">
-        {doneCount} of {TOTAL_STEPS} done. Steps are ordered, and a step whose blocker is open is
-        marked: it is nearly always the client-side one, which is worth saying out loud on a status call.
-      </p>
+      <header className="hc-pagehead">
+        <p className="hc-eyebrow">Internal · {store.name}</p>
+        <h1 className="hc-h1">Onboarding checklist</h1>
+        <p className="hc-blurb">
+          {doneCount} of {TOTAL_STEPS} done. Steps are ordered, and a step whose blocker is open is
+          marked: it is nearly always the client-side one, which is worth saying out loud on a status call.
+        </p>
+      </header>
 
       <div className="hc-progress" role="img" aria-label={`${doneCount} of ${TOTAL_STEPS} steps complete`}>
         <i style={{ width: `${(doneCount / TOTAL_STEPS) * 100}%` }} />
@@ -152,11 +156,13 @@ function StoreTable({ stores }: { stores: StoreSummary[] }) {
 function Spine() {
   return (
     <>
-      <h1 className="hc-h1">Onboarding</h1>
-      <p className="hc-blurb">
-        Five phases, in order. Every store is measured against the same spine, and the message we
-        send at a step sits on that step.
-      </p>
+      <header className="hc-pagehead">
+        <h1 className="hc-h1">Onboarding</h1>
+        <p className="hc-blurb">
+          Five phases, in order. Every store is measured against the same spine, and the message we
+          send at a step sits on that step.
+        </p>
+      </header>
 
       {/* Buttons, not anchors. `href="#phase-access"` writes the document hash, and the hash
           is this app's router: `parseHash` did not recognise it, fell back to the FAQ, and

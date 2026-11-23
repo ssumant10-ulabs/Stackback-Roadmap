@@ -1,7 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
-import { analyse, brandFromFilename, guessCategory, planRates, readOrders, type OrderInsight } from "@/lib/help/orders";
-import { ladderFor } from "@/lib/help/questions";
+import { analyse, brandFromFilename, byobTiers, guessCategory, planRates, readOrders, type OrderInsight } from "@/lib/help/orders";
+import { autopayRate, ladderFor } from "@/lib/help/questions";
 import { freqWord } from "@/lib/help/sim";
 
 /** Read a store's own order export and propose plans from it.
@@ -23,8 +23,7 @@ function bandFor(out: OrderInsight): string | null {
     : per < 20000 ? "large" : "enterprise";
 }
 
-export default function OrderImport({ onApply }: {
-  onApply: (v: {
+export interface ImportResult {
     everyDays: number; extraEveryDays: number[]; runs: number[]; products: string[];
     /* Everything else the file can answer, so one click fills the form rather than two
        fields of it. A ladder the store's own customers have already accepted beats one off
@@ -35,7 +34,16 @@ export default function OrderImport({ onApply }: {
     category: string | null; brand: string | null;
     /** One plan per pack-size band, for the sheet and the document. */
     bands: { label: string; sizes: string[]; everyDays: number; medianGap: number; prepaidRuns: number[]; autopayCycles: number }[];
-  }) => void;
+    /** A Build Your Own Box off what customers already buy together, or null. */
+    byob: ByobPlan | null;
+    /** Every product with its role and each variant's delivery frequency. */
+    mix: OrderInsight["mix"];
+}
+
+export interface ByobPlan { pool: string[]; pairs: string[]; tiers: { size: number; pct: number }[]; share: number }
+
+export default function OrderImport({ onApply }: {
+  onApply: (v: ImportResult) => void;
 }) {
   const file = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -59,80 +67,17 @@ export default function OrderImport({ onApply }: {
   }
 
   const pct = (n: number) => `${Math.round(n * 100)}%`;
+  const n = (x: number) => x.toLocaleString("en-IN");
+  const rates = out ? planRates(out.discounts) : [];
+  const byobPlan: ByobPlan | null = out?.byob ? {
+    pool: out.byob.pool.map((p) => p.title),
+    pairs: out.byob.pairs.slice(0, 3).map((p) => `${p.a} + ${p.b}`),
+    tiers: byobTiers(out.byob, out.discounts.usualPct),
+    share: out.byob.share,
+  } : null;
 
-  return (
-    <section className="hc-import">
-      <p className="hc-importh">Read it from your own orders</p>
-      <p className="hc-note">
-        Export your orders from Shopify and drop the CSV here. It is read <b>in this browser</b> and
-        never uploaded, so nothing leaves your machine. Your own repeat gap beats a category
-        average every time.
-      </p>
-
-      <div className="hc-importrow" data-noexport="true">
-        <input ref={file} type="file" accept=".csv,text/csv" className="hc-importfile"
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) read(f); }} />
-        <button type="button" className="hc-btn" disabled={busy}
-          onClick={() => file.current?.click()}>
-          {busy ? "Reading…" : out ? "Read another file" : "Choose your orders CSV"}
-        </button>
-        <span className="hc-note hc-importhow">Shopify admin &rsaquo; Orders &rsaquo; Export &rsaquo; all orders, CSV for Excel</span>
-      </div>
-
-      {err && <p className="hc-importerr">{err}</p>}
-
-      {out && (
-        <>
-          <ul className="hc-importstats">
-            <li><b>{out.orders.toLocaleString("en-IN")}</b><span>orders read</span></li>
-            <li><b>{out.customers.toLocaleString("en-IN")}</b><span>customers</span></li>
-            <li><b>{pct(out.repeatRate)}</b><span>ordered more than once</span></li>
-            <li><b>{out.medianGap ?? "—"}{out.medianGap ? " days" : ""}</b><span>median gap between orders</span></li>
-          </ul>
-
-          {out.suggestEveryDays ? (
-            <div className="hc-importsug">
-              {/* One block per pack-size band. A 100g bag and a 1kg bag do not reorder at the
-                  same rate, and one median over both is wrong for whichever band has fewer
-                  intervals in it. Single block when the file does not support a split. */}
-              {out.plans.map((pl) => (
-                <div className="hc-plan" key={pl.label}>
-                  <p className="hc-planh">
-                    {pl.label}
-                    {pl.sizes.length > 0 && <em>{[...new Set(pl.sizes)].slice(0, 4).join(", ")}</em>}
-                  </p>
-                  <p>
-                    {out.plans.length > 1 ? "These" : "They"} reorder about{" "}
-                    <b>{freqWord(pl.everyDays).toLowerCase()}</b>, from{" "}
-                    {pl.gapSample.toLocaleString("en-IN")} intervals
-                    {pl.customers > 0 && <> across {pl.customers.toLocaleString("en-IN")} {pl.customers === 1 ? "customer" : "customers"}</>}.
-                  </p>
-                  {/* Prepaid and AutoPay are not the same product, so they do not share a
-                      line. Prepaid is a fixed run bought upfront. AutoPay runs until the
-                      customer stops it — the twelve is a year at this cadence, which is what
-                      a merchant prices against, not a commitment anyone is making. */}
-                  <dl className="hc-planmodes">
-                    <div>
-                      <dt>Prepaid</dt>
-                      <dd>
-                        {pl.prepaidRuns.length
-                          ? <>Runs of <b>{pl.prepaidRuns.join(", ")}</b> deliveries &mdash; roughly three months, six months and a year.</>
-                          : <>No run length this cadence supports.</>}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>AutoPay</dt>
-                      <dd>
-                        No fixed run: it bills until they stop it. Price and forecast against{" "}
-                        <b>{pl.autopayCycles}</b> deliveries, a year at this cadence.
-                      </dd>
-                    </div>
-                  </dl>
-                </div>
-              ))}
-              <button type="button" className="hc-btn hc-sugapply" data-noexport="true"
-                onClick={() => {
-                  const rates = planRates(out.discounts);
+  function apply() {
+    if (!out) return;
                   const runsOut = out.plans.length ? out.plans[0].prepaidRuns : out.suggestRuns;
                   return onApply({
                   /* Both cadences where the file supports two plans: the form takes a list,
@@ -141,7 +86,7 @@ export default function OrderImport({ onApply }: {
                   everyDays: out.plans.length ? out.plans[0].everyDays : (out.suggestEveryDays as number),
                   extraEveryDays: out.plans.slice(1).map((p) => p.everyDays),
                   runs: runsOut,
-                  products: out.topProducts.slice(0, 3).map((p) => p.title),
+                  products: out.mix.filter((m) => m.role === "subscription").map((m) => m.title),
                   /* The rates this store's customers actually took, not the deepest single
                      order: one free replacement used to set the top of the ladder. */
                   discountMin: rates[0] ?? null,
@@ -152,82 +97,171 @@ export default function OrderImport({ onApply }: {
                   brand: name ? brandFromFilename(name) : null,
                   /* Only where the file genuinely split. One plan over everything is the
                      normal case and must not print as a band. */
-                  bands: out.plans.length > 1 ? out.plans.map((p) => ({
+                  bands: out.plans.length > 1 || out.mix.length ? out.plans.map((p) => ({
                     label: p.label, sizes: [...new Set(p.sizes)], everyDays: p.everyDays,
                     medianGap: p.medianGap, prepaidRuns: p.prepaidRuns, autopayCycles: p.autopayCycles,
                   })) : [],
+                  byob: byobPlan,
+                  mix: out.mix,
                   });
-                }}>
-                Use everything in this file
-              </button>
-            </div>
-          ) : (
-            <p className="hc-note">
-              Not enough repeat behaviour in this file to name a cadence. That is an answer too: it
-              usually means the window is too short rather than that nobody reorders.
-            </p>
-          )}
+  }
 
-          {/* What this store already discounts. The ask was the maximum and how many took it,
-              because a ladder anchored to a rate these customers have already accepted is a
-              different argument from one off a category table. */}
-          {out.discounts.orders > 0 ? (
-            <div className="hc-importdisc">
-              <p className="hc-importsub">Discounts already given</p>
-              <ul className="hc-importstats">
-                <li><b>{out.discounts.maxPct}%</b><span>deepest on one order</span></li>
-                <li><b>{out.discounts.medianPct}%</b><span>typical when discounted</span></li>
-                <li>
-                  <b>{out.discounts.orders.toLocaleString("en-IN")}</b>
-                  <span>orders discounted, {pct(out.discounts.share)} of all</span>
-                </li>
-              </ul>
-              {out.discounts.bands.length > 0 && (
-                <ol className="hc-importbands">
-                  {out.discounts.bands.map((b) => (
-                    <li key={b.pct}>
-                      <b>{b.pct}% off</b>
-                      <span>{b.orders.toLocaleString("en-IN")} {b.orders === 1 ? "order" : "orders"}</span>
-                    </li>
-                  ))}
-                </ol>
-              )}
-              {out.discounts.codes.length > 0 && (
-                <p className="hc-note">
-                  Most used {out.discounts.codes.length === 1 ? "code" : "codes"}:{" "}
-                  {out.discounts.codes.map((c) => `${c.code} (${c.orders})`).join(", ")}.
-                </p>
-              )}
-            </div>
-          ) : (
-            <p className="hc-note">
-              No order-level discounts in this file, so the plan ladder has nothing of your own
-              to anchor to. The export carries them in a Discount Amount column; if yours has
-              none, discounts were applied some other way.
-            </p>
-          )}
+  const picker = (
+    <input ref={file} type="file" accept=".csv,text/csv" className="hc-importfile"
+      onChange={(e) => { const f = e.target.files?.[0]; if (f) read(f); }} />
+  );
 
-          {out.topProducts.length > 0 && (
-            <div className="hc-importtop">
-              <p className="hc-importsub">Most ordered, by number of orders</p>
-              <ol>
-                {out.topProducts.slice(0, 5).map((p) => (
+  /* Before a file: one card, one action. The skip route is the step's Next button. */
+  if (!out) {
+    return (
+      <section className="hc-oi-empty">
+        {picker}
+        <div className="hc-oi-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5M9 13h6M9 17h6" /></svg>
+        </div>
+        <h2>Start from your own orders</h2>
+        <p>
+          Drop in your Shopify orders export and we propose plans from how your customers already
+          reorder. It is read <b>in this browser</b> and never uploaded.
+        </p>
+        <button type="button" className="hc-btn primary hc-oi-cta" disabled={busy} onClick={() => file.current?.click()}>
+          {busy ? "Reading\u2026" : "Choose your orders CSV"}
+        </button>
+        <span className="hc-oi-path">Shopify admin &rsaquo; Orders &rsaquo; Export &rsaquo; All orders &rsaquo; CSV for Excel</span>
+        {err && <p className="hc-importerr">{err}</p>}
+        <p className="hc-oi-skip">No file to hand? Press <b>Next</b> below and answer the plans by hand.</p>
+      </section>
+    );
+  }
+
+  const top = out.topProducts.slice(0, 5);
+  const topMax = Math.max(1, ...top.map((p) => p.orders));
+
+  return (
+    <section className="hc-oi">
+      {picker}
+      <div className="hc-oi-file">
+        <span className="hc-oi-fileic" aria-hidden="true">CSV</span>
+        <div><b>{name || "Orders file"}</b><span>{n(out.orders)} orders read in this browser, nothing uploaded</span></div>
+        <button type="button" className="hc-btn ghost" disabled={busy} onClick={() => file.current?.click()}>
+          {busy ? "Reading\u2026" : "Use another file"}
+        </button>
+      </div>
+
+      <div className="hc-oi-grid">
+        <div className="hc-oi-main">
+          <ul className="hc-oi-stats">
+            <li><b>{n(out.orders)}</b><span>Orders</span></li>
+            <li><b>{n(out.customers)}</b><span>Customers</span></li>
+            <li><b>{pct(out.repeatRate)}</b><span>Ordered again</span></li>
+            <li><b>{out.medianGap ? `${out.medianGap}d` : "\u2014"}</b><span>Typical gap</span></li>
+          </ul>
+
+          <div className="hc-oi-card">
+            <p className="hc-oi-h">Discounts already given</p>
+            {out.discounts.orders > 0 ? (
+              <>
+                <div className="hc-oi-disc">
+                  <div><b>{out.discounts.usualPct != null ? `${out.discounts.usualPct}%` : `${out.discounts.medianPct}%`}</b><span>{out.discounts.usualPct != null ? "your usual promo" : "typical"}</span></div>
+                  <div><b>{pct(out.discounts.share)}</b><span>of orders discounted</span></div>
+                  <div><b>{rates.length ? `${ladderFor([3], rates)[3]}%` : "\u2014"}</b><span>first plan starts at</span></div>
+                </div>
+                {out.discounts.promos.length > 0 && (
+                  <ul className="hc-oi-chips">
+                    {out.discounts.promos.map((p) => <li key={p.code}><b>{p.pct}%</b> {p.code} &middot; {n(p.orders)}</li>)}
+                  </ul>
+                )}
+                {out.discounts.payment && (
+                  <p className="hc-oi-codes">
+                    Left out: {out.discounts.payment.code} ({out.discounts.payment.pct}% on {n(out.discounts.payment.orders)} orders) is a
+                    pay-online discount, not a product discount. Higher rates on a code are that code stacked with it.
+                  </p>
+                )}
+                {!out.discounts.promos.length && out.discounts.codes.length > 0 && (
+                  <p className="hc-oi-codes">Top codes: {out.discounts.codes.slice(0, 3).map((c) => `${c.code} (${c.orders})`).join(", ")}</p>
+                )}
+              </>
+            ) : (
+              <p className="hc-note">No order-level discounts in this file, so the plans start from your category instead.</p>
+            )}
+          </div>
+
+          {top.length > 0 && (
+            <div className="hc-oi-card">
+              <p className="hc-oi-h">Most ordered</p>
+              <ol className="hc-oi-top">
+                {top.map((p) => (
                   <li key={p.title}>
-                    <b>{p.title}</b>
-                    <span>{p.orders.toLocaleString("en-IN")} orders &middot; {p.units.toLocaleString("en-IN")} units</span>
+                    <span className="hc-oi-topname">{p.title}</span>
+                    <span className="hc-oi-bar"><i style={{ width: `${Math.round((p.orders / topMax) * 100)}%` }} /></span>
+                    <span className="hc-oi-topn">{n(p.orders)}</span>
                   </li>
                 ))}
               </ol>
             </div>
           )}
 
-          {out.warnings.length > 0 && (
-            <ul className="hc-importwarn">
-              {out.warnings.map((w) => <li key={w}>{w}</li>)}
-            </ul>
+          {byobPlan && (
+            <div className="hc-oi-card">
+              <p className="hc-oi-h">Bought together</p>
+              <p className="hc-oi-codes">{pct(byobPlan.share)} of orders carry two or more products. Most common pairs:</p>
+              <ul className="hc-oi-pairs">{byobPlan.pairs.map((p) => <li key={p}>{p}</li>)}</ul>
+            </div>
           )}
-        </>
-      )}
+
+          {out.warnings.length > 0 && (
+            <ul className="hc-importwarn">{out.warnings.map((w) => <li key={w}>{w}</li>)}</ul>
+          )}
+        </div>
+
+        <aside className="hc-oi-plan">
+          <p className="hc-oi-eyebrow">Proposed from your orders</p>
+          {out.suggestEveryDays || out.plans.length ? (
+            <>
+              {out.repeatRate < 0.05 && (
+                <p className="hc-oi-after">Few reorders in this file, so each product&rsquo;s frequency comes from its pack: the duration in the variant name, or its size.</p>
+              )}
+              {out.plans.map((pl) => (
+                <div key={pl.label} className="hc-oi-pl">
+                  <p className="hc-oi-plh">{pl.label}{pl.sizes.length > 0 && <em>{[...new Set(pl.sizes)].slice(0, 3).join(", ")}</em>}</p>
+                  {pl.products.length > 0
+                    ? <p className="hc-oi-cad">{pl.products.slice(0, 4).join(" \u00b7 ")}{pl.products.length > 4 ? ` +${pl.products.length - 4} more` : ""}</p>
+                    : <p className="hc-oi-cad">Delivered <b>{freqWord(pl.everyDays).toLowerCase()}</b></p>}
+                  <div className="hc-oi-mode">
+                    <span>Prepaid</span>
+                    {pl.prepaidRuns.length
+                      ? <ul>{pl.prepaidRuns.map((r) => <li key={r}>{r} deliveries{rates.length ? <b> {ladderFor(pl.prepaidRuns, rates)[r]}%</b> : null}</li>)}</ul>
+                      : <em>No run length fits this cadence</em>}
+                  </div>
+                  <div className="hc-oi-mode">
+                    <span>Pay per delivery (AutoPay)</span>
+                    <em>Charged each delivery, runs until they stop.{rates.length ? <b> {autopayRate(Object.values(ladderFor(pl.prepaidRuns, rates)))}% off</b> : null}</em>
+                  </div>
+                </div>
+              ))}
+              {byobPlan && (
+                <div className="hc-oi-pl">
+                  <p className="hc-oi-plh">Build your own box<em>from products bought together</em></p>
+                  <div className="hc-oi-mode">
+                    <span>Box sizes</span>
+                    <ul>{byobPlan.tiers.map((t) => <li key={t.size}>Pick {t.size}<b> {t.pct}%</b></li>)}</ul>
+                  </div>
+                  <p className="hc-oi-cad">From: {byobPlan.pool.slice(0, 5).join(", ")}{byobPlan.pool.length > 5 ? ` +${byobPlan.pool.length - 5}` : ""}</p>
+                </div>
+              )}
+              <button type="button" className="hc-btn primary hc-oi-cta" onClick={apply}>
+                Build my plans from this file <span aria-hidden="true">&rarr;</span>
+              </button>
+              <p className="hc-oi-after">Fills in your plans. You can change any of it on the next step.</p>
+            </>
+          ) : (
+            <p className="hc-note">
+              Not enough repeat orders in this file to name a cadence. It usually means the window is
+              too short. Press Next and set the plans by hand.
+            </p>
+          )}
+        </aside>
+      </div>
     </section>
   );
 }

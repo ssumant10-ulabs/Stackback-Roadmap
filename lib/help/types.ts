@@ -14,6 +14,8 @@ export interface HelpArticle {
   q: string;
   /** Answer body as HTML, authored in the deliverable. */
   a: string;
+  /** The answer in one plain sentence, from overrides.ts. Shown before the full answer. */
+  short?: string;
   /** Where in the Shopify admin to go, when the answer has a place. */
   path: string;
   /** Position in the deliverable, which is a deliberate reading order within a category. */

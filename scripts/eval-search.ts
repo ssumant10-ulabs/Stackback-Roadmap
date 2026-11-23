@@ -34,7 +34,7 @@ const CASES: [string, string, string[]?][] = [
   ["customer already logged in on our site checkout session", "will-your-checkout-use-our-sites-existing-login-session"],
   ["why does a logged in customer see the address screen", "why-does-a-signed-in-customer-still-see-the-address-screen"],
   ["mandate cancelled", "how-do-we-know-who-cancelled-an-autopay-mandate"],
-  ["why two orders", "what-does-one-subscription-create-in-shopify", ["what-happens-the-moment-a-customer-subscribes"]],
+  ["why two orders", "what-does-one-subscription-create-in-shopify"],
   ["does the checkout order double my revenue", "will-the-checkout-order-inflate-our-revenue-and-inventory-number"],
   ["how do I know which order is a subscription", "how-do-we-identify-subscription-orders-inside-shopify"],
   ["what does the parent order mean", "what-does-one-subscription-create-in-shopify", ["how-do-we-identify-subscription-orders-inside-shopify"]],
@@ -43,7 +43,7 @@ const CASES: [string, string, string[]?][] = [
   // Shiprocket is only ever a CHECKOUT in this corpus. The first version of this case
   // expected a WMS article, which no article supports; the ranking was right and the case
   // was wrong.
-  ["shiprocket", "does-stackback-work-with-our-third-party-checkout", ["which-checkouts-have-you-worked-with"]],
+  ["shiprocket", "does-stackback-work-with-our-third-party-checkout"],
   ["pause subscription", "can-you-pause-a-customer-s-subscription-for-a-month"],
   ["customer wants to cancel", "how-does-cancellation-work"],
   ["byob", "what-is-the-difference-between-a-fixed-bundle-and-build-your-own"],

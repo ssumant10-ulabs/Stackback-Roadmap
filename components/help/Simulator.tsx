@@ -1,8 +1,9 @@
 "use client";
 import { useMemo, useState } from "react";
 import {
-  BUNDLE_NOTE, CUSTOMER_TAGS, DEFAULT_CONFIG, FREQUENCIES, MODE_LABEL, ORDER_TAGS, fmtDate, money, parentOrder, price, schedule, startOf,
-  type Mode, type OrderLine, type SimConfig,
+  BUNDLE_NOTE, CUSTOMER_TAGS, DEFAULT_CONFIG, FIRST_DELIVERY_LABEL, FREQUENCIES, MODE_LABEL, ORDER_TAGS, fmtDate, freqWord, money,
+  parentOrder, parentTags, price, runLabel, schedule, startOf,
+  type FirstDelivery, type Mode, type OrderLine, type SimConfig,
 } from "@/lib/help/sim";
 import { APP_NAME } from "@/lib/help/types";
 
@@ -28,7 +29,8 @@ export default function Simulator({ config, onConfig }: {
   const write = onConfig ?? setOwn;
   const set = <K extends keyof SimConfig>(k: K, v: SimConfig[K]) => write({ ...c, [k]: v });
 
-  const [surface, setSurface] = useState<"shopify" | "contracts">("shopify");
+  const [surface, setSurface] = useState<"shopify" | "contracts" | "customer">("shopify");
+  const flow: FirstDelivery = c.firstDelivery ?? "same";
 
   const prepaid = useMemo(() => ({ p: price({ ...c, mode: "prepaid" }), rows: schedule(c, "prepaid") }), [c]);
   const payg = useMemo(() => ({ p: price({ ...c, mode: "payg" }), rows: schedule(c, "payg") }), [c]);
@@ -53,6 +55,33 @@ export default function Simulator({ config, onConfig }: {
 
   return (
     <section>
+      <header className="hc-pagehead">
+        <p className="hc-eyebrow">Simulate an order</p>
+        <h1 className="hc-h1">What one checkout creates</h1>
+        <p className="hc-blurb">
+          Pick how your store ships the first delivery, set a plan, and see the orders in Shopify, the
+          subscription in StackBack and what your customer sees.
+        </p>
+      </header>
+
+      {/* Settings › First delivery. The two flows a store can run, side by side, because the
+          question behind most "why do I have two orders" tickets is which one the store is on. */}
+      <div className="hc-flowpick" role="radiogroup" aria-label="First delivery setting">
+        <p className="hc-flowpickh">Your <b>Settings › First delivery</b> setting</p>
+        <div className="hc-flowopts">
+          {(["same", "separate"] as FirstDelivery[]).map((f) => (
+            <button key={f} type="button" role="radio" aria-checked={flow === f}
+              className={"hc-flowopt" + (flow === f ? " on" : "")} onClick={() => set("firstDelivery", f)}>
+              <b>{FIRST_DELIVERY_LABEL[f].name}</b>
+              <em>&ldquo;{FIRST_DELIVERY_LABEL[f].setting}&rdquo;</em>
+              <span>{f === "same"
+                ? "Delivery 1 ships from the order the customer paid on. One order at checkout."
+                : "Delivery 1 ships from its own order, created seconds after checkout. Two orders at checkout."}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* The plan the orders are drawn from, as controls rather than as a widget. The widget
           belongs to the widget module; this screen is about what a checkout BECOMES, and a
           second copy of the storefront on top of it was the premise taking up half the page
@@ -61,7 +90,7 @@ export default function Simulator({ config, onConfig }: {
         <label className="hc-field">
           <span>Deliver</span>
           <select value={c.everyDays} onChange={(e) => set("everyDays", +e.target.value)}>
-            {FREQUENCIES.map((f) => <option key={f.days} value={f.days}>{f.label.toLowerCase()}</option>)}
+            {FREQUENCIES.map((f) => <option key={f.days} value={f.days}>{f.label}</option>)}
           </select>
         </label>
         <label className="hc-field hc-simnum">
@@ -85,49 +114,55 @@ export default function Simulator({ config, onConfig }: {
             onChange={(e) => set("leadDays", Math.min(30, Math.max(0, +e.target.value || 0)))} />
         </label>
         <label className="hc-field">
-          <span>First delivery</span>
+          <span>First delivery date</span>
           <input type="date" value={c.startDate || startOf(c).toISOString().slice(0, 10)}
             onChange={(e) => set("startDate", e.target.value)} />
         </label>
       </div>
-      <p className="hc-blurb hc-flowlede">
-        Checkout creates <b>one order</b>, whatever the run length. Delivery one&rsquo;s goods go onto
-        that same order. Everything after it appears later, and only when it is paid for.
-      </p>
-
       <ol className="hc-atcheckout">
         <li>
-          <span className="hc-otag ok">THE ORDER</span>
+          <span className="hc-otag ok">AT CHECKOUT</span>
           <b>One order takes the money</b>
           <p>
-            Checkout writes a single order carrying a placeholder line: one unit per delivery, priced
-            per delivery, so the whole run is paid on one line.
+            The customer pays once. That order is tagged <code>parent</code> and holds a placeholder
+            line: one unit per delivery paid for, so the payment sits on one line.
           </p>
         </li>
-        <li>
-          <span className="hc-otag ok">MINUTES LATER</span>
-          <b>Delivery one is added to it</b>
-          <p>
-            A job edits that same order. The placeholder drops by one delivery, the real product is
-            added at the plan price, and the order is tagged <code>sb-delivery-1-converted</code>. The
-            pre-edit line stays visible under <b>Removed</b>, which is Shopify keeping history, not a
-            cancellation.
-          </p>
-        </li>
+        {flow === "same" ? (
+          <li>
+            <span className="hc-otag ok">MINUTES LATER</span>
+            <b>Delivery 1 is added to that same order</b>
+            <p>
+              We edit the order: the placeholder drops by one and delivery 1&rsquo;s product is added.
+              Your warehouse ships it from this order. The old line shows under <b>Removed</b>, which is
+              Shopify keeping history, not a cancellation.
+            </p>
+          </li>
+        ) : (
+          <li>
+            <span className="hc-otag ok">SECONDS LATER</span>
+            <b>Delivery 1 gets its own order</b>
+            <p>
+              A second order, tagged <code>child</code>, appears with delivery 1&rsquo;s product. Your
+              warehouse ships that one. The <code>parent</code> keeps the placeholder, has no shipping
+              and is fulfilled automatically, so it never reaches your warehouse.
+            </p>
+          </li>
+        )}
         <li className="hc-later">
           <span className="hc-otag muted">LATER</span>
-          <b>Nothing else exists yet</b>
+          <b>Each later delivery, when it is due</b>
           <p>
-            Every remaining delivery becomes <b>its own order</b>, created {c.leadDays} days before its
-            delivery date, and only if that delivery is <b>paid for</b>.
+            Deliveries 2 onward become <b>their own orders</b>, {c.leadDays} days before each delivery
+            date, and only once that delivery is <b>paid for</b>.
           </p>
         </li>
       </ol>
 
       <p className="hc-note hc-flowwas">
-        The checkout order is tagged <code>parent</code>. Every delivery order after it is tagged{" "}
-        <code>child</code>. That is how you tell them apart in a report, and it is the same on all
-        three payment types.
+        {drawn === "autopay"
+          ? <>AutoPay works the same on both settings: its first order already carries the real product, so there is nothing to add and no separate delivery 1 order.</>
+          : <>Count revenue on <code>parent</code> orders only. <code>child</code> orders are deliveries the customer has already paid for.</>}
       </p>
 
       <div className="hc-surfaces" role="tablist" aria-label="Which screen">
@@ -140,6 +175,11 @@ export default function Simulator({ config, onConfig }: {
           className={"hc-surface" + (surface === "contracts" ? " on" : "")}
           onClick={() => setSurface("contracts")}>
           <b>{APP_NAME} · Purchase Contracts</b><em>One row per subscription. Deliveries counted off.</em>
+        </button>
+        <button role="tab" aria-selected={surface === "customer"}
+          className={"hc-surface" + (surface === "customer" ? " on" : "")}
+          onClick={() => setSurface("customer")}>
+          <b>What your customer sees</b><em>Thank-you page, emails and their portal.</em>
         </button>
       </div>
 
@@ -159,10 +199,10 @@ export default function Simulator({ config, onConfig }: {
           <div className="hc-modepick hc-whichorder" role="tablist" aria-label="Which order">
             <button role="tab" aria-selected={which === "parent"}
               className={"hc-modepillb" + (which === "parent" ? " on" : "")}
-              onClick={() => setWhich("parent")}>The checkout order</button>
+              onClick={() => setWhich("parent")}>The checkout order (parent)</button>
             <button role="tab" aria-selected={which === "child"}
               className={"hc-modepillb" + (which === "child" ? " on" : "")}
-              onClick={() => setWhich("child")}>A delivery order</button>
+              onClick={() => setWhich("child")}>A delivery order (child)</button>
           </div>
 
           {which === "parent" ? <ShopifyOrder c={c} mode={drawn} /> : <ShopifyChildOrder c={c} mode={drawn} />}
@@ -189,7 +229,7 @@ export default function Simulator({ config, onConfig }: {
                 {(["prepaid", "payg", "autopay"] as Mode[]).flatMap((m) => [
                   <tr key={m + "-p"}>
                     <td>{MODE_LABEL[m]}<em>checkout order</em></td>
-                    <td className="hc-tagcell">{ORDER_TAGS[m].parent.map((t) => <Tag key={t}>{t}</Tag>)}</td>
+                    <td className="hc-tagcell">{parentTags(m, flow).map((t) => <Tag key={t}>{t}</Tag>)}</td>
                   </tr>,
                   <tr key={m + "-c"}>
                     <td>{MODE_LABEL[m]}<em>delivery order</em></td>
@@ -209,15 +249,37 @@ export default function Simulator({ config, onConfig }: {
           </div>
 
           <ul className="hc-oflags hc-childnote">
-            <li>The checkout order carries <b>two kinds of line</b>: the real product for delivery one, which your 3PL ships, and the placeholder holding the deliveries still to come, which is fulfilled as <b>shipping not required</b> so nothing picks it up</li>
-            <li>The order total does not move when the edit commits. The placeholder is reduced and the goods are added at the same value, so <b>revenue is counted once</b>, on this one order</li>
-            <li>Every delivery after the first appears <b>{c.leadDays} {c.leadDays === 1 ? "day" : "days"} before</b> its
-              delivery date, not at checkout. That is <code>time_to_delivery</code>, a per-store setting</li>
-            <li>On pay as you go, <b>no Shopify order exists</b> for an unpaid delivery. It is not an unpaid order sitting in your admin, it is not there at all, which is what stops anything shipping unpaid</li>
+            {flow === "same" && drawn !== "autopay" ? (
+              <>
+                <li>The checkout order carries <b>two kinds of line</b>: delivery 1&rsquo;s product, which your warehouse ships, and the placeholder for the deliveries still to come, marked <b>shipping not required</b> so nothing picks it up</li>
+                <li>The order total does not move when we add delivery 1, so <b>revenue is counted once</b>, on this one order</li>
+              </>
+            ) : drawn !== "autopay" ? (
+              <>
+                <li>Two orders appear at checkout: the <code>parent</code> takes the money and ships nothing, the <code>child</code> ships delivery 1. <b>This is expected, not a duplicate</b></li>
+                <li>Count revenue on the <code>parent</code> only. The delivery 1 <code>child</code> is paid for by it</li>
+              </>
+            ) : (
+              <li>AutoPay&rsquo;s first order is placed by us through Razorpay with the real product on it, on either setting</li>
+            )}
+            <li>Every later delivery appears <b>{c.leadDays} {c.leadDays === 1 ? "day" : "days"} before</b> its
+              delivery date, not at checkout. That is your <code>time_to_delivery</code> setting</li>
+            <li>On pay as you go, an unpaid delivery has <b>no order at all</b>. That is what stops anything shipping unpaid</li>
           </ul>
         </>
-      ) : (
+      ) : surface === "contracts" ? (
         <Contracts c={c} prepaidRows={prepaid.rows} paygRows={payg.rows} />
+      ) : (
+        <>
+          <div className="hc-modepick" role="tablist" aria-label="Payment type">
+            {(["prepaid", "payg", "autopay"] as Mode[]).map((m) => (
+              <button key={m} role="tab" aria-selected={drawn === m}
+                className={"hc-modepillb" + (drawn === m ? " on" : "")}
+                onClick={() => pickMode(m)}>{MODE_LABEL[m]}</button>
+            ))}
+          </div>
+          <CustomerView c={c} mode={drawn} />
+        </>
       )}
 
       <p className="hc-note hc-simfoot">
@@ -236,17 +298,19 @@ function OrdersColumn({ mode, c, p, rows }: {
   mode: Mode; c: SimConfig;
   p: ReturnType<typeof price>; rows: ReturnType<typeof schedule>;
 }) {
-  const prepaid = mode === "prepaid";
   const base = ORDER_NO;
-  // Orders in the admin today: the checkout order, plus any later delivery whose lead window
-  // has already opened. Delivery one is not counted separately, it is ON the checkout order.
-  const live = 1 + rows.slice(1).filter((r) => r.existsToday).length;
+  const flow: FirstDelivery = mode === "autopay" ? "same" : (c.firstDelivery ?? "same");
+  /* Deliveries that get an order of their own. On a single order delivery 1 is ON the
+     checkout order; on a separate order it is the first child. */
+  const children = rows.filter((r) => !r.onParent);
+  const live = 1 + children.filter((r) => r.existsToday).length;
+  const total = 1 + children.length;
   return (
     <div className="hc-modecol pl">
       <div className="hc-modehead">
         <b>{MODE_LABEL[mode]}</b>
         <span>
-          <b>{live} of {c.deliveries}</b> orders exist today.
+          <b>{live} of {total}</b> orders exist today.
           {" "}{money(p.chargedNow)} taken at checkout,{" "}
           {mode === "prepaid" ? "the rest arrive on schedule."
             : mode === "autopay" ? "the rest are debited on the mandate."
@@ -275,18 +339,20 @@ function OrdersColumn({ mode, c, p, rows }: {
               <td><span className="pl-badge ok"><i />Paid</span></td>
               <td>
                 <span className="pl-badge ok"><i />Fulfilled</span>
-                <em>delivery 1 ships from here</em>
+                <em>{flow === "same" ? "delivery 1 ships from here" : "auto-fulfilled, ships nothing"}</em>
               </td>
               <td className="pl-r">{c.deliveries === 1 ? "1 item" : `${c.deliveries} items`}</td>
-              <td className="pl-otags">{ORDER_TAGS[mode].parent.map((t) => <Tag key={t}>{t}</Tag>)}</td>
+              <td className="pl-otags">{parentTags(mode, flow).map((t) => <Tag key={t}>{t}</Tag>)}</td>
             </tr>
-            <tr className="pl-orowsplit"><td colSpan={8}>Child &middot; one order per delivery after the first</td></tr>
-            {rows.slice(1).map((o) => (
+            <tr className="pl-orowsplit"><td colSpan={8}>
+              Child &middot; {flow === "same" ? "one order per delivery after the first" : "one order per delivery, delivery 1 included"}
+            </td></tr>
+            {children.map((o) => (
               <tr key={o.n} className={"pl-orow" + (o.existsToday ? "" : " pl-opending")}>
                 <td>{o.existsToday ? <b>#{base + o.n}</b> : <span className="pl-onone">none yet</span>}</td>
                 <td>
                   {o.existsToday
-                    ? fmtDate(o.createdOn)
+                    ? <>{fmtDate(o.createdOn)}{o.n === 1 && <em>seconds after checkout</em>}</>
                     : <b className={o.paidAtCheckout ? "pl-sched" : "pl-await"}>
                         {o.paidAtCheckout ? `Due ${fmtDate(o.createdOn)}` : "Waits for payment"}
                       </b>}
@@ -312,9 +378,9 @@ function OrdersColumn({ mode, c, p, rows }: {
 
       <p className={"hc-modekey " + (mode === "payg" ? "warn" : "ok")}>
         {mode === "prepaid"
-          ? <>Delivery one is on the order above. Every later delivery is <b>already paid</b>, so its order is created automatically {c.leadDays} days before its delivery, drawing down the store credit. Nothing waits on the customer.</>
+          ? <>{flow === "same" ? "Delivery 1 is on the checkout order." : "Delivery 1 ships from its own order, created at checkout."} Every later delivery is <b>already paid</b>, so its order is created automatically {c.leadDays} days before its delivery, drawing down the store credit. Nothing waits on the customer.</>
           : mode === "payg"
-          ? <>Delivery one is on the order above and is the only one paid. Each later delivery is invoiced {3 + c.leadDays} days ahead, and its order reaches Shopify <b>only once that invoice is paid</b>. An unpaid delivery has no order at all.</>
+          ? <>{flow === "same" ? "Delivery 1 is on the checkout order" : "Delivery 1 ships from its own order"} and is the only one paid. Each later delivery is invoiced {3 + c.leadDays} days ahead, and its order reaches Shopify <b>only once that invoice is paid</b>. An unpaid delivery has no order at all.</>
           : <>The order above was placed by us through Razorpay and carries the real goods already, because the money moved inside the mandate authorisation. Every later delivery is <b>debited on the mandate</b> the day before its order is cut, so nothing waits on the customer and no invoice is sent.</>}
       </p>
     </div>
@@ -349,16 +415,23 @@ function ShopifyOrder({ c, mode }: { c: SimConfig; mode: Mode }) {
 
       <div className="pl-grid">
         <div className="pl-main">
-          <section className="pl-card">
-            <header className="pl-cardh">
-              <b><span className="pl-fico">&#10003;</span>Fulfilled</b>
-              <span className="pl-muted">#{num}-F2</span>
-              <span className="pl-chip">Confirmed</span>
-            </header>
-            <p className="pl-line2">{date}<span className="pl-loc">&#9679; Your 3PL</span></p>
-            <p className="pl-line2">Tracking number: <a>Track package</a></p>
-            <Item l={o.shipping} />
-          </section>
+          {o.shipping ? (
+            <section className="pl-card">
+              <header className="pl-cardh">
+                <b><span className="pl-fico">&#10003;</span>Fulfilled</b>
+                <span className="pl-muted">#{num}-F2</span>
+                <span className="pl-chip">Confirmed</span>
+              </header>
+              <p className="pl-line2">{date}<span className="pl-loc">&#9679; Your 3PL</span></p>
+              <p className="pl-line2">Tracking number: <a>Track package</a></p>
+              <Item l={o.shipping} />
+            </section>
+          ) : (
+            <p className="pl-note">
+              Nothing on this order ships. With <b>Create a separate order</b>, delivery 1&rsquo;s product
+              goes on order #{num + 1}, created seconds after this one. This order only holds the payment.
+            </p>
+          )}
 
           {!o.held ? (
             <p className="pl-note">
@@ -379,7 +452,7 @@ function ShopifyOrder({ c, mode }: { c: SimConfig; mode: Mode }) {
             </section>
           )}
 
-          {o.converted && (
+          {o.converted && o.removed && (
             <section className="pl-card pl-removed">
               <header className="pl-cardh"><b>Removed</b></header>
               <Item l={o.removed} dim />
@@ -391,7 +464,7 @@ function ShopifyOrder({ c, mode }: { c: SimConfig; mode: Mode }) {
             <table className="pl-tot">
               <tbody>
                 <tr><td>Original order</td><td>{date}</td><td className="pl-r">{money(o.total)}</td></tr>
-                <tr><td>Subtotal</td><td>{o.held ? 2 : 1} items</td><td className="pl-r">{money(o.subtotal)}</td></tr>
+                <tr><td>Subtotal</td><td>{o.held && o.shipping ? 2 : 1} items</td><td className="pl-r">{money(o.subtotal)}</td></tr>
                 <tr><td>Discounts</td><td>Subscription</td><td className="pl-r">-{money(o.discount)}</td></tr>
                 <tr><td>Taxes</td><td>Tax details</td><td className="pl-r">Included</td></tr>
                 <tr className="pl-totrow"><td><b>Paid</b></td><td /><td className="pl-r"><b>{money(o.total)}</b></td></tr>
@@ -413,6 +486,8 @@ function ShopifyOrder({ c, mode }: { c: SimConfig; mode: Mode }) {
               {o.converted
                 ? <><code>sb-delivery-1-converted</code> is what stops the job running twice, and the
                     value tag records what delivery one was worth.</>
+                : mode !== "autopay"
+                ? <>No conversion tags: with a separate order nothing is added to this one, so there is nothing to mark.</>
                 : <>No conversion tags: nothing was converted. <code>autopay</code> and{" "}
                     <code>razorpay</code> are written when we place the order, <code>parent</code> once
                     the contract exists.</>}
@@ -615,3 +690,120 @@ function ShopifyChildOrder({ c, mode }: { c: SimConfig; mode: Mode }) {
 }
 
 
+/** What the customer sees, on the same plan.
+ *
+ *  The merchant's question after "what lands in my admin" is "what does my customer see", and
+ *  the answer differs by payment type far more than by the First delivery setting: the
+ *  customer pays once and sees one order either way. Delivery 1 is the only line that reads
+ *  differently in the portal. */
+function CustomerView({ c, mode }: { c: SimConfig; mode: Mode }) {
+  const p = price({ ...c, mode });
+  const rows = schedule(c, mode);
+  const flow: FirstDelivery = mode === "autopay" ? "same" : (c.firstDelivery ?? "same");
+  const product = c.productName || "Your product";
+  const plan = runLabel(c.everyDays, c.deliveries);
+
+  const emails: [string, string][] = [
+    ["At checkout", "Subscription confirmed: plan, deliveries and what was paid"],
+    ...(mode === "prepaid" ? [
+      ["Before each delivery", "Upcoming delivery reminder, then Delivery order confirmed when its order is created"],
+    ] as [string, string][] : mode === "payg" ? [
+      ["Before each delivery", `A payment link for ${money(p.perDelivery)}, then reminders until it is paid`],
+      ["When paid", "Payment success, then Delivery order confirmed"],
+      ["Still unpaid on the date", "The subscription pauses. Paying the link later resumes it"],
+    ] as [string, string][] : [
+      ["Once", "Approve the UPI AutoPay mandate"],
+      ["Before each debit", `Pre-debit notice for ${money(p.perDelivery)}`],
+    ] as [string, string][]),
+    ["Whenever they change something", "A confirmation for each reschedule, swap, pause or cancel request"],
+  ];
+
+  return (
+    <div className="hc-cust">
+      <div className="hc-custgrid">
+        <section className="hc-custcard">
+          <p className="hc-custh">1 · Thank-you page</p>
+          <div className="hc-custthanks">
+            <span className="hc-custok">&#10003;</span>
+            <div>
+              <b>Order #{ORDER_NO} confirmed</b>
+              <span>Thank you, Aarti!</span>
+            </div>
+          </div>
+          <div className="hc-custline">
+            <span className="pl-thumb" />
+            <div><b>{product}</b><em>{plan} · {freqWord(c.everyDays)} · {c.deliveries} deliveries</em></div>
+            <b>{money(p.chargedNow)}</b>
+          </div>
+          <p className="hc-custsmall">
+            {mode === "prepaid" ? `Paid today for all ${c.deliveries} deliveries. Saved ${money(p.savings)}.`
+              : mode === "payg" ? `Paid today for delivery 1 only. Each later delivery is paid by link.`
+              : `Paid today for delivery 1. Later deliveries are debited by UPI AutoPay.`}
+          </p>
+          <p className="hc-custnote">
+            {flow === "separate"
+              ? "The customer checks out and pays once. The separate delivery 1 order is created by StackBack after checkout, not by a second purchase."
+              : "The customer checks out and pays once. Delivery 1 is added to this same order after checkout."}
+          </p>
+        </section>
+
+        <section className="hc-custcard">
+          <p className="hc-custh">2 · Emails from {APP_NAME}</p>
+          <ol className="hc-custmails">
+            {emails.map(([when, what]) => (
+              <li key={when}><em>{when}</em><span>{what}</span></li>
+            ))}
+          </ol>
+          <p className="hc-custnote">All templates can be previewed and edited under Notification Templates.</p>
+        </section>
+      </div>
+
+      <section className="hc-custcard hc-custportal">
+        <p className="hc-custh">3 · Their subscription, in your customer portal</p>
+        <div className="hc-portal">
+          <div className="hc-portalhead">
+            <span className="pl-thumb" />
+            <div>
+              <b>{product}</b>
+              <em>{plan} · {freqWord(c.everyDays)} · {MODE_LABEL[mode]}</em>
+            </div>
+            <span className="hc-pill p-w">Active</span>
+          </div>
+          <ul className="hc-portalrows">
+            {rows.map((r) => {
+              let status: React.ReactNode;
+              if (r.n === 1) {
+                status = flow === "same"
+                  ? <span className="ok">Part of order #{ORDER_NO}</span>
+                  : <span className="ok">Placed as a separate order · #{ORDER_NO + 1}</span>;
+              } else if (mode === "prepaid") {
+                status = <span>Paid · order created {fmtDate(r.createdOn)}</span>;
+              } else if (mode === "payg") {
+                status = <><span className="warn">Pay {money(r.amount)} by {fmtDate(r.deliveryDate)}</span>
+                  {r.n === 2 && <button type="button" className="hc-portalpay">Pay now</button>}</>;
+              } else {
+                status = <span>Auto-debit {money(r.amount)} on {fmtDate(r.invoicedOn ?? r.createdOn)}</span>;
+              }
+              return (
+                <li key={r.n}>
+                  <b>Delivery {r.n}</b>
+                  <em>{fmtDate(r.deliveryDate)}</em>
+                  <span className="hc-portalst">{status}</span>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="hc-portalacts">
+            {["Reschedule", "Swap", "Add a product", "Pause", "Cancel"].map((x) => (
+              <span key={x} className="hc-portalact">{x}</span>
+            ))}
+          </div>
+        </div>
+        <p className="hc-custnote">
+          Reschedule is free. Swap and Add change the next delivery only, and the customer pays any
+          difference first. Cancel is a request: it reaches you in the app, and you approve it.
+        </p>
+      </section>
+    </div>
+  );
+}

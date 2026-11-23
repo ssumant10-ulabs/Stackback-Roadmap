@@ -82,9 +82,9 @@ export const QUESTIONS: Question[] = [
         help: "Pick every frequency you want to offer.",
         options: [
           { value: "7", label: "Every week" },
-          { value: "14", label: "Every 2 weeks" },
           { value: "30", label: "Every month" },
           { value: "60", label: "Every 2 months" },
+          { value: "90", label: "Every 3 months" },
         ],
       },
       { id: "deliveries", kind: "list", span: "half", label: "Run lengths", placeholder: "3, 6, 12", suffix: "deliveries",
@@ -96,12 +96,12 @@ export const QUESTIONS: Question[] = [
     id: "discount",
     topic: "discount",
     title: "Discount",
-    blurb: "What a subscriber saves. Prepaid carries the most, because they have handed over the whole run and taken the risk. Pay as you go carries the least, because nothing is committed and you are wearing the collection cost.",
+    blurb: "What a subscriber saves. Longer prepaid runs earn more, because the customer has paid for the whole run upfront. AutoPay sits just below the longest prepaid run.",
     fields: [
       { id: "discount_min", kind: "number", span: "half", label: "Lowest you would go", suffix: "%",
-        help: "What pay as you go gets." },
+        help: "What the shortest prepaid run gets." },
       { id: "discount_max", kind: "number", span: "half", label: "Most you would give", suffix: "%",
-        help: "What prepaid gets. Pay per delivery lands between the two." },
+        help: "What the longest prepaid run gets. AutoPay lands just below it." },
       {
         id: "tiered", kind: "choice", span: "half", label: "Does a longer run earn more",
         options: [
@@ -110,7 +110,7 @@ export const QUESTIONS: Question[] = [
         ],
       },
       { id: "bands", kind: "bands", label: "Prepaid rate per run length",
-        help: "The prepaid rate for each run you offered, and whether that run carries a freebie. Pay per delivery and pay as you go scale down from the rate.",
+        help: "The prepaid rate for each run you offered, and whether that run carries a freebie. AutoPay takes the second-best rate.",
         showWhen: { field: "tiered", is: ["yes"] }, hideWhenAutopayOnly: true },
     ],
   },
@@ -122,11 +122,10 @@ export const QUESTIONS: Question[] = [
     fields: [
       {
         id: "modes", kind: "multi", label: "Accept",
-        help: "Pay as you go and pay per delivery are alternatives, not a pair: both collect per delivery, one by asking and one automatically. Picking one unticks the other.",
+        help: "Offer both: prepaid for customers who want the best rate, AutoPay for those who would rather not pay upfront.",
         options: [
           { value: "prepaid", label: "Prepaid", hint: "The whole run paid at checkout." },
-          { value: "payg", label: "Pay as you go", hint: "A payment link before every delivery." },
-          { value: "auto_debit", label: "Pay per delivery", hint: "Charged automatically, and it runs until they stop it. Needs Razorpay." },
+          { value: "auto_debit", label: "Pay per delivery (AutoPay)", hint: "Charged automatically each delivery until they stop it. Needs Razorpay." },
         ],
       },
       {
@@ -152,7 +151,7 @@ export const DEFAULT_ANSWERS: Answers = {
   scope_kind: "products", scope_detail: "", variants: "all",
   every_days: ["30"], deliveries: "3, 6",
   tiered: "no", discount_min: "10", discount_max: "20", bands: "", freebies: "",
-  modes: ["prepaid", "payg"], shipping_charged: "no", plan_bands: "",
+  modes: ["prepaid", "auto_debit"], shipping_charged: "no", plan_bands: "", byob_plan: "", product_mix: "",
 };
 
 /** One plan per pack-size band, as the order file worked them out. Carried on the answers as
@@ -282,11 +281,11 @@ export const freebieRuns = (v: string | string[] | undefined): number[] =>
 
 /** Pay as you go and pay per delivery both collect per delivery. Offering both asks a
  *  customer to choose between being invoiced and being charged, which nobody does. */
-export function reconcileModes(next: string[], prev: string[]): string[] {
-  const added = next.find((m) => !prev.includes(m));
-  if (added === "payg") return next.filter((m) => m !== "auto_debit");
-  if (added === "auto_debit") return next.filter((m) => m !== "payg");
-  return next;
+export function reconcileModes(next: string[], _prev: string[] = []): string[] {
+  /* Pay as you go is no longer offered: an old draft's "payg" becomes AutoPay, which is the
+     same per-delivery collection done automatically. */
+  void _prev;
+  return [...new Set(next.map((m) => (m === "payg" ? "auto_debit" : m)))].filter((m) => m === "prepaid" || m === "auto_debit");
 }
 
 /** A prepaid rate for every run length offered, spread across the rates the store's own
@@ -301,11 +300,13 @@ export function ladderFor(runs: number[], rates: number[]): Record<number, numbe
   const r = [...new Set(runs.filter((n) => Number.isFinite(n) && n > 0))].sort((a, b) => a - b);
   if (!r.length || !rates.length) return out;
   const lo = rates[0], hi = rates[rates.length - 1];
-  /* One accepted rate is flat across every run. Inventing a slope from a single number is
-     making the tier up, which is the thing the file was read to avoid. */
-  r.forEach((run, i) => {
-    out[run] = r.length === 1 ? hi : Math.round(lo + ((hi - lo) * i) / (r.length - 1));
-  });
+  /* The Help Centre's own advice ("What discount should we set?"): the shortest plan a
+     little above the store's usual discount (+2), then 3 to 4 points more for each longer
+     plan, reaching for the deepest rate the store runs. A flat 15 / 15 / 15 gave no reason to
+     take the longer run. */
+  const first = Math.min(60, lo + 2);
+  const step = r.length > 1 ? Math.min(4, Math.max(3, Math.round((hi - first) / (r.length - 1)))) : 0;
+  r.forEach((run, i) => { out[run] = Math.min(60, first + step * i); });
   return out;
 }
 

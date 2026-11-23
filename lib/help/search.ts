@@ -178,6 +178,18 @@ for (const d of DOCS) for (const t of d.tf.keys()) DF.set(t, (DF.get(t) || 0) + 
 const N = DOCS.length;
 const idf = (t: string) => Math.log(1 + N / (1 + (DF.get(t) || 0)));
 
+/** Every term in the corpus, most common first. Used to finish a word that is still being
+ *  typed: "canc" is not a word in any answer, and searching as you type means most queries
+ *  end in half a word. */
+const VOCAB = [...DF.entries()].sort((x, y) => y[1] - x[1]).map(([t]) => t);
+
+/** A term the corpus does not hold becomes the most common term that starts with it.
+ *  Two letters is the floor: one letter finishes to "subscription" every time. */
+function complete(t: string): string {
+  if (DF.has(t) || t.length < 2) return t;
+  return VOCAB.find((v) => v.startsWith(t)) ?? t;
+}
+
 const AVG_LEN = DOCS.reduce((s, d) => s + d.len, 0) / N;
 /** B was 0.5, which barely normalises for length, so the longest answers won on volume.
  *  0.6 sits between that and the textbook 0.75, which over-corrected: at 0.75 "Is SMS
@@ -204,7 +216,7 @@ export interface Hit {
 export function search(query: string, limit = 12): Hit[] {
   // Unique: the phrase map appends a canonical term that is often already there, and a
   // duplicate inflates the coverage denominator so a fully matched query scores as partial.
-  const terms = [...new Set(tokenize(query))];
+  const terms = [...new Set(tokenize(query).map(complete))];
   if (!terms.length) return [];
 
   const expanded = new Map<string, number>();
@@ -313,4 +325,18 @@ export function related(art: HelpArticle, limit = 3): HelpArticle[] {
 
 export function byId(id: string): HelpArticle | undefined {
   return ARTICLES.find((a) => a.id === id);
+}
+
+
+/** Wraps the words that matched in <mark>, for the dropdown and the results list. Matches on
+ *  word starts, so "cancel" lights up "cancellation" as well. */
+export function highlight(text: string, query: string): string {
+  const esc = (x: string) => x.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const words = query.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 1 && !STOP.has(w));
+  if (!words.length) return esc(text);
+  /* A short word lights up only itself and its plural ("cod" must not light up "code"); a
+     longer one also lights up the words it starts ("cancel" in "cancellation"). */
+  const part = (w: string) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + (w.length > 3 ? "[a-z]*" : "s?");
+  const re = new RegExp(`\\b(?:${words.map(part).join("|")})\\b`, "gi");
+  return esc(text).replace(re, (m) => `<mark>${m}</mark>`);
 }

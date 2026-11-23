@@ -22,8 +22,8 @@ export interface CategorySuggestion {
 export const CATEGORIES: CategorySuggestion[] = [
   {
     id: "coffee-tea", label: "Coffee and tea",
-    everyDays: [14, 30], deliveries: [3, 6, 12], discounts: [10, 15, 20],
-    why: "A 250g bag lasts a fortnight in a two-person household, so fortnightly is the honest default and monthly is the safe one. Discounts stay modest because the category already reorders.",
+    everyDays: [7, 30], deliveries: [3, 6, 12], discounts: [10, 15, 20],
+    why: "A 250g bag lasts two to four weeks, so monthly is the safe default and weekly suits heavy drinkers. Discounts stay modest because the category already reorders.",
   },
   {
     id: "supplements", label: "Supplements and nutrition",
@@ -42,12 +42,12 @@ export const CATEGORIES: CategorySuggestion[] = [
   },
   {
     id: "food-staples", label: "Food staples and groceries",
-    everyDays: [14, 30], deliveries: [4, 6, 12], discounts: [8, 12, 15],
+    everyDays: [7, 30], deliveries: [3, 6, 12], discounts: [8, 12, 15],
     why: "High frequency, thin margin. The discount matters less here than the convenience, so do not give away more than the category can carry.",
   },
   {
     id: "beverages", label: "Beverages and mixes",
-    everyDays: [14, 30], deliveries: [3, 6], discounts: [10, 15],
+    everyDays: [30, 60], deliveries: [3, 6], discounts: [10, 15],
     why: "Consumption is seasonal, so expect pauses in winter and build the run length to survive them.",
   },
   {
@@ -83,13 +83,13 @@ export interface ScaleBand {
 export const SCALES: ScaleBand[] = [
   {
     id: "early", label: "Under 100 orders a month", hint: "Launching, or early",
-    modes: ["prepaid"],
-    why: "Prepaid only. The money is in the bank on day one and there is nothing to chase, which matters more than conversion while the volume is small. Pay as you go here buys you invoices to follow up and little else.",
+    modes: ["prepaid", "auto_debit"],
+    why: "Prepaid leads: the money is in the bank on day one, which matters most while volume is small. AutoPay sits beside it for customers who will not pay a whole run upfront.",
   },
   {
     id: "small", label: "100 to 500 orders a month", hint: "Finding its feet",
-    modes: ["prepaid", "payg"],
-    why: "Prepaid and pay as you go. The upfront ask starts costing conversions at this size, and the invoice volume is still small enough for one person to chase. AutoPay is deliberately not here: below 500 orders the Razorpay mandate setup and the drop-off at the mandate screen cost more than the collection it saves.",
+    modes: ["prepaid", "auto_debit"],
+    why: "Prepaid and AutoPay. The upfront ask starts costing conversions at this size, and AutoPay catches those customers without anyone chasing payment links.",
   },
   {
     /* 500 is the line AutoPay becomes worth offering. The band used to run 100 to 1,000 with
@@ -102,12 +102,12 @@ export const SCALES: ScaleBand[] = [
        being invoiced and being charged — which nobody does. From 500 the automatic one is
        the right half of that pair, which is the whole reason 500 is the line. */
     modes: ["prepaid", "auto_debit"],
-    why: "Prepaid, and AutoPay in place of pay as you go. 500 is where the Razorpay setup starts paying for itself: below it the mandate screen costs more in drop-off than the chasing costs in time, and above it that reverses. Pay as you go comes off rather than sitting beside AutoPay \u2014 both collect per delivery, so offering the two asks a customer to choose between being invoiced and being charged.",
+    why: "Prepaid and AutoPay. The Razorpay setup pays for itself at this volume, and AutoPay collects every delivery without anyone chasing it.",
   },
   {
     id: "established", label: "1,000 to 5,000 orders a month", hint: "Established",
     modes: ["prepaid", "auto_debit"],
-    why: "Prepaid, and AutoPay in place of pay as you go. Chasing invoices is becoming a job at this volume, and the Razorpay setup pays for itself. Offering both per-delivery options asks a customer to choose between being invoiced and being charged, which nobody does.",
+    why: "Prepaid and AutoPay. Collection by hand is becoming a job at this volume, and AutoPay removes it.",
   },
   {
     id: "large", label: "5,000 to 20,000 orders a month", hint: "Large",

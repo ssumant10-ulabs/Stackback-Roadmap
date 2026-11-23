@@ -72,13 +72,15 @@ export default function HowTo({ internal = false }: {
 
   return (
     <section>
-      <p className="hc-eyebrow">How to</p>
-      <h1 className="hc-h1">Watch someone do it</h1>
-      <p className="hc-blurb">
-        {ALL_CLIPS.length} recordings covering {APP_NAME} end to end, from creating the store to
-        managing a live subscription. They play here, so you keep your place.
-        {watched.length > 0 && ` You have watched ${watched.length}.`}
-      </p>
+      <header className="hc-pagehead">
+        <p className="hc-eyebrow">How to</p>
+        <h1 className="hc-h1">Watch someone do it</h1>
+        <p className="hc-blurb">
+          {ALL_CLIPS.length} recordings covering {APP_NAME} end to end, from creating the store to
+          managing a live subscription. They play here, so you keep your place.
+          {watched.length > 0 && ` You have watched ${watched.length}.`}
+        </p>
+      </header>
 
       <div className="hc-htgrid">
         <div className="hc-htplayer">

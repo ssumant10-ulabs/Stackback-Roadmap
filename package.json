@@ -9,7 +9,8 @@
     "studio": "npm --prefix studio install && npm --prefix studio run dev",
     "studio:deploy": "npm --prefix studio run deploy",
     "help:corpus": "node scripts/gen-help-corpus.js",
-    "refs:snapshot": "tsx scripts/snapshot-references.ts"
+    "refs:snapshot": "tsx scripts/snapshot-references.ts",
+    "lp:design": "node scripts/build-lp-design.mjs"
   },
   "dependencies": {
     "@portabletext/react": "^8.0.1",
@@ -25,6 +26,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "lucide-react": "^0.468.0",
     "typescript": "^5"
   }
 }
