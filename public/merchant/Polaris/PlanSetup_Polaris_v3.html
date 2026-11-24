@@ -863,7 +863,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       var dmSeg=q('.discMode'), unitSel=q('.discType'), flatBits=q('.flatBits'), ladder=q('.ladder'), ladrows=q('.ladrows'),
           addstep=q('.addstep'), ladwarn=q('.ladwarn'), freeBlock=q('.freeBlock'), extrasHint=q('.extrasHint');
       // LD-01 defaults: 5% from delivery 1; 10% from the 3rd with a free gift; a free gift on the 4th (discount stays 10%); 15% from the 6th
-      card._lad=[{n:1,value:5,g:null},{n:3,value:10,g:{pid:'p1',vi:0},gn:3},{n:4,value:null,g:{pid:'p1',vi:0},gn:5},{n:6,value:15,g:null}];   // gn = the delivery the gift goes out on
+      card._lad=[{n:1,value:5,g:null},{n:3,value:10,g:{pid:'p1',vi:0},gn:3,gq:1},{n:4,value:null,g:{pid:'p1',vi:0},gn:5,gq:2},{n:6,value:15,g:null}];   // gn = delivery the gift goes out on, gq = quantity
       var chMin=q('.chMin'), chMax=q('.chMax'), chErr=q('.chErr');
       function minMax(){ return {min:parseInt(chMin.value,10)||0, max:parseInt(chMax.value,10)||0}; }
 
@@ -877,7 +877,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       function ladderLine(){
         var D=card._lad.filter(function(s){ return typeof s.value==='number'; }), G=card._lad.filter(function(s){ return s.g; });
         return D.map(function(s,i){ return fmtVal(card,s.value)+(i===0?' now':' from '+ord(s.n)); }).join(' &rsaquo; ')+
-               (G.length?' &middot; Free gifts: '+G.map(function(s){ return esc(giftLabel(s.g))+' on the '+ord(s.gn||s.n); }).join(', '):'');
+               (G.length?' &middot; Free gifts: '+G.map(function(s){ return ((s.gq||1)>1?(s.gq)+' &times; ':'')+esc(giftLabel(s.g))+' on the '+ord(s.gn||s.n); }).join(', '):'');
       }
       function on(el){ return el.classList.contains('on'); }
       function perDel(){ return on(payAuto) || on(payGo); }
@@ -970,7 +970,8 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
             ? '<span class="rowline" style="gap:5px;flex-wrap:nowrap">'+(amt?'<span class="help">INR</span>':'')+'<input class="field lin lval" type="number" min="0" value="'+s.value+'" aria-label="Discount from this delivery" /><span class="help">'+(amt?'off':'% off')+'</span>'+(lock?'':'<button class="x ldclr" title="Remove discount, keep the previous one">&#10005;</button>')+'</span>'
             : '<span class="rowline" style="gap:8px;flex-wrap:nowrap"><span class="help">Keeps '+(cur===null?'-':fmtVal(card,cur))+'</span><button class="lnk ldadd">&#65291; Change</button></span>';
           var gift = s.g
-            ? '<span style="display:flex;flex-direction:column;gap:5px;align-items:flex-start;min-width:0;max-width:100%"><span class="rowline" style="gap:6px;flex-wrap:nowrap;max-width:100%">'+giftField(s.g,'lgchg')+'<button class="x lgrm" title="Remove gift">&#10005;</button></span>'+giftWhen(i,s)+'</span>'
+            ? '<span style="display:flex;flex-direction:column;gap:5px;align-items:flex-start;min-width:0;max-width:100%"><span class="rowline" style="gap:6px;flex-wrap:nowrap;max-width:100%">'+giftField(s.g,'lgchg')+'<button class="x lgrm" title="Remove gift">&#10005;</button></span>'+
+               '<span class="rowline" style="gap:12px;flex-wrap:nowrap"><span class="rowline" style="gap:6px;flex-wrap:nowrap"><span class="help">Qty</span><input class="field lin lgq" type="number" min="1" value="'+(s.gq||1)+'" aria-label="Gift quantity" style="width:52px" /></span>'+giftWhen(i,s)+'</span></span>'
             : '<button class="lnk lgchg">&#65291; Add gift</button>';
           html+='<div class="ladrow" data-i="'+i+'">'+
             '<span>'+(lock?'<span class="field lfix" title="The first step is always delivery 1">1</span>':'<input class="field lin lfrom" type="number" min="2" value="'+s.n+'" aria-label="Delivery number" />')+'</span>'+
@@ -990,6 +991,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
           if(seen[s.n]) msgs.push('Two steps for delivery '+s.n+'. Put the discount and gift in one row.'); seen[s.n]=1;
           if(s.n<1) msgs.push('Delivery numbers start at 1.');
           if(!hasD && !s.g) msgs.push('Delivery '+s.n+': add a discount, a free gift, or both.');
+          if(s.g && typeof s.gq==='number' && s.gq<1) msgs.push('Delivery '+s.n+': gift quantity must be 1 or more.');
           if(hasD){ nD++; if(!amt && (s.value<0||s.value>100)) msgs.push('Delivery '+s.n+': a percentage must be 0 to 100.'); if(amt && s.value<0) msgs.push('Delivery '+s.n+': an amount can\'t be negative.'); }
         });
         if(nD>5) msgs.push('Up to 5 discount changes. Clear one or keep only its gift.');
@@ -1004,6 +1006,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         if(e.target.classList.contains('lfrom')) s.n=parseInt(e.target.value,10)||0;
         if(e.target.classList.contains('lval')) s.value=parseFloat(e.target.value)||0;
         if(e.target.classList.contains('lgn')) s.gn=parseInt(e.target.value,10)||0;
+        if(e.target.classList.contains('lgq')) s.gq=parseInt(e.target.value,10)||0;
         validateLadder(); renderDeliveryPreview();
       });
       ladrows.addEventListener('change', function(e){ if(e.target.classList.contains('lfrom') || e.target.classList.contains('lval')){ sortLadder(); renderLadder(); } });
@@ -1029,13 +1032,14 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       var freelist=q('.freelist'), addfree=q('.addfree'), giftwarn=q('.giftwarn');
       function giftRows(){ return [].slice.call(freelist.querySelectorAll('.giftrow')); }
       function giftLine(){
-        return giftRows().filter(function(d){ return d._g; }).map(function(d){ return esc(giftLabel(d._g))+' on the '+ord(parseInt(d.querySelector('.gn').value,10)||0)+' paid delivery'; }).join(', ');
+        return giftRows().filter(function(d){ return d._g; }).map(function(d){ var q=parseInt(d.querySelector('.gq').value,10)||1; return (q>1?q+' &times; ':'')+esc(giftLabel(d._g))+' on the '+ord(parseInt(d.querySelector('.gn').value,10)||0)+' paid delivery'; }).join(', ');
       }
       function validateGifts(){
         if(!giftwarn) return;
         var msgs=[], dur=curDur(), mm=minMax(), fixedN=parseInt(schedFixed.querySelector('.field').textContent,10);
         giftRows().forEach(function(d){
           var n=parseInt(d.querySelector('.gn').value,10)||0;
+          if((parseInt(d.querySelector('.gq').value,10)||0)<1) msgs.push('Gift quantity must be 1 or more.');
           if(n<1) msgs.push('A gift needs a delivery number of 1 or more.');
           else if(dur==='fixed' && n>fixedN) msgs.push('Gift on delivery '+n+': this option has '+fixedN+' deliveries, so it never goes out.');
           else if(dur==='choice' && n>mm.max) msgs.push('Gift on delivery '+n+': customers can pick at most '+mm.max+' deliveries, so it never goes out.');
@@ -1046,10 +1050,12 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       function addGift(n, g){
         var d=document.createElement('div'); d.className='rowline giftrow'; d.style.padding='7px 0';
         d.innerHTML='<span>On paid delivery #</span><input class="field lin gn" type="number" min="1" value="'+n+'" aria-label="Gift on paid delivery number" />'+
-          '<span class="gslot">'+(g?giftField(g,'gpick'):'<button type="button" class="giftfld empty gpick">&#65291; Select gift product</button>')+'</span><button class="x" style="margin-left:auto">Remove</button>';
+          '<span class="gslot">'+(g?giftField(g,'gpick'):'<button type="button" class="giftfld empty gpick">&#65291; Select gift product</button>')+'</span>'+
+          '<span class="rowline" style="gap:6px;flex-wrap:nowrap"><span class="help">Qty</span><input class="field lin gq" type="number" min="1" value="1" aria-label="Gift quantity" style="width:52px" /></span><button class="x" style="margin-left:auto">Remove</button>';
         d._g=g||null;
         d.querySelector('.x').addEventListener('click', function(){ d.remove(); validateGifts(); renderDeliveryPreview(); });
         d.querySelector('.gn').addEventListener('input', function(){ validateGifts(); renderDeliveryPreview(); });
+        d.querySelector('.gq').addEventListener('input', function(){ validateGifts(); renderDeliveryPreview(); });
         d.querySelector('.gslot').addEventListener('click', function(){
           openGiftPicker(d._g, function(g2){ d._g=g2; d.querySelector('.gslot').innerHTML=giftField(g2,'gpick'); renderDeliveryPreview(); });
         });
