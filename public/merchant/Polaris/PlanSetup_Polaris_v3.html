@@ -1,0 +1,1129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Create subscription plan (Polaris web components v3)</title>
+<script src="https://cdn.shopify.com/shopifycloud/polaris.js"></script>
+<style>
+  :root{
+    --p-ink:#303030; --p-muted:#616161; --p-faint:#8a8a8a;
+    --p-line:#e3e3e3; --p-line2:#ebebeb; --p-surface:#fff;
+    --p-primary:#303030; --p-success:#29845a; --p-success-bg:#cdfee1;
+    --p-link:#005bd3; --p-attn-bg:#ffefcf; --p-attn:#8a6116;
+  }
+  body{margin:0;background:#f1f1f1;font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--p-ink)}
+
+  /* Shopify admin shell */
+  .admin{display:flex;min-height:100vh}
+  .navL{flex:none;width:232px;background:#ebebeb;border-right:1px solid var(--p-line);
+    padding:10px 8px;display:flex;flex-direction:column;gap:1px;position:sticky;top:0;align-self:flex-start;height:100vh;overflow:auto}
+  .navItem{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;color:var(--p-ink);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
+  .navItem:hover{background:#dedede}
+  .navItem .ico{width:18px;height:18px;flex:none;color:#4a4a4a}
+  .navItem .ct{margin-left:auto;font-size:12px;color:var(--p-muted);background:#e0e0e0;border-radius:8px;padding:0 7px;line-height:18px}
+  .navSec{color:var(--p-muted);font-size:13px;font-weight:500;display:flex;align-items:center;height:30px;padding:0 8px;margin-top:6px}
+  .navSec .chev{margin-left:auto;color:var(--p-faint)}
+  .navApp{display:flex;align-items:center;gap:9px;height:32px;padding:0 8px;border-radius:8px;font-weight:600;background:#fff;box-shadow:0 1px 0 rgba(0,0,0,.04);margin-top:2px}
+  .navApp .logo{width:20px;height:20px;border-radius:5px;background:var(--p-primary);display:grid;place-items:center;color:#fff;font-size:11px;flex:none}
+  .navApp .dot{margin-left:auto;width:6px;height:6px;border-radius:50%;background:#8a8a8a}
+  .navSub{display:flex;align-items:center;height:30px;padding:0 8px 0 34px;border-radius:8px;color:var(--p-muted);font-size:13px;cursor:pointer}
+  .navSub:hover{background:#dedede;color:var(--p-ink)}
+  .navSub.sel{color:var(--p-ink);font-weight:500}
+  .navGap{flex:1}
+  .appmain{flex:1;min-width:0;display:flex;flex-direction:column}
+  .appbar{height:52px;background:#fff;border-bottom:1px solid var(--p-line);display:flex;align-items:center;gap:10px;padding:0 18px}
+  .appbar .logo{width:24px;height:24px;border-radius:6px;background:var(--p-primary);display:grid;place-items:center;color:#fff;font-size:12px}
+  .appbar .name{font-weight:650;font-size:14px}
+  .appbar .more{margin-left:auto;color:var(--p-muted);font-size:20px;cursor:pointer;letter-spacing:1px}
+
+  .savebar{position:sticky;top:0;z-index:60;min-height:52px;background:#1a1a1a;color:#fff;display:flex;align-items:center;gap:12px;padding:8px 16px}
+  .savebar .sbtxt{font-weight:600;font-size:13px}
+  .savebar .sbacts{margin-left:auto;display:flex;gap:8px}
+  .savebar button{font:inherit;font-size:13px;font-weight:600;border-radius:8px;padding:6px 13px;cursor:pointer}
+  .savebar .discard{background:transparent;border:1px solid #4a4a4a;color:#fff}
+  .savebar .discard:hover{background:#2a2a2a}
+  .savebar .save{background:#fff;border:1px solid #fff;color:#1a1a1a}
+
+  /* full-width two-column layout (reduces the base-width side margins) */
+  .pcols{display:flex;gap:16px;align-items:flex-start}
+  .maincol{flex:1;min-width:0}
+  .sidecol{flex:none;width:326px}
+
+  /* card wrapper (used for every step + sidebar block; matches Polaris section chrome) */
+  .card{background:#fff;border:1px solid var(--p-line);border-radius:12px;box-shadow:0 1px 0 rgba(0,0,0,.04);margin-bottom:14px;overflow:hidden}
+  .cardpad{padding:16px 18px}
+
+  /* collapsible step */
+  .step .stephdr{display:flex;gap:12px;align-items:flex-start;padding:15px 18px;cursor:pointer;user-select:none}
+  .step .num{flex:none;width:26px;height:26px;border-radius:50%;background:var(--p-primary);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:600}
+  .step.done .num{background:var(--p-success)}
+  .step .sttl{flex:1;min-width:0}
+  .step h2{margin:0;font-size:15px;font-weight:650}
+  .step .stephdr p{margin:2px 0 0;color:var(--p-muted);font-size:12.5px}
+  .step .stepchev{color:var(--p-faint);font-size:18px;transition:transform .15s;align-self:center}
+  .step.open .stepchev{transform:rotate(90deg)}
+  .stepbody{padding:16px 18px 18px;border-top:1px solid var(--p-line2)}
+  .stepbody.collapsed{display:none}
+  .step .collsum{margin:2px 0 0;color:var(--p-muted);font-size:12.5px}
+  .opt{font-size:10px;font-weight:600;color:var(--p-faint);border:1px solid var(--p-line);border-radius:5px;padding:1px 6px;text-transform:uppercase;letter-spacing:.03em;margin-left:8px;vertical-align:middle}
+
+  /* locked segmented control */
+  .seg{display:inline-flex;border:1px solid var(--p-line);border-radius:8px;overflow:hidden;background:#fff}
+  .seg button{border:0;background:#fff;padding:6px 12px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--p-muted)}
+  .seg button.on{background:var(--p-primary);color:#fff}
+
+  /* payment chips */
+  .chkchip{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border:1px solid var(--p-line);border-radius:20px;font-size:12.5px;font-weight:600;color:var(--p-muted);cursor:pointer;background:#fff}
+  .chkchip::before{content:"";width:14px;height:14px;border-radius:50%;border:1.5px solid var(--p-faint);flex:none}
+  .chkchip.on{border-color:var(--p-success);color:#0f5132;background:var(--p-success-bg)}
+  .chkchip.on::before{content:"\2713";border:0;color:#0f5132;font-size:11px;line-height:14px;text-align:center}
+
+  .disc{display:inline-flex;align-items:center;gap:7px;cursor:pointer;color:var(--p-link);font-weight:600;font-size:12.5px;background:none;border:0;padding:4px 0}
+  .disc .chev{transition:transform .15s}
+  .disc.open .chev{transform:rotate(90deg)}
+
+  .prow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--p-line2)}
+  .prow .x{margin-left:auto;color:var(--p-muted);font-size:12px;cursor:pointer;background:none;border:0}
+  .rowline{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .field{border:1px solid var(--p-line);border-radius:8px;padding:6px 10px;background:#fff;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--p-muted)}
+  .divv{width:1px;height:22px;background:var(--p-line)}
+  .help{font-size:12px;color:var(--p-muted)}
+  .calc{border:1px solid var(--p-line);background:#f7f7f7;border-radius:9px;padding:11px 13px;font-size:12.5px;color:var(--p-muted)}
+  .calc b{color:var(--p-ink)}
+
+  .optlist{margin-bottom:10px}
+  .optcard{border:1px solid var(--p-line);border-radius:10px;margin-bottom:10px;background:#fff}
+  .optcard.dragging{opacity:.45}
+  .optcard.dragover{border-color:var(--p-primary);box-shadow:inset 0 0 0 1px var(--p-primary)}
+  .optsum{display:flex;align-items:center;gap:10px;padding:11px 14px}
+  .draghandle{cursor:grab;color:var(--p-faint);font-size:15px;padding:0 2px;flex:none;line-height:1}
+  .optsum .title{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;min-width:0}
+  .optsum .chips{display:flex;gap:6px;flex-wrap:nowrap;margin-left:6px;flex:none}
+  .optsum .chips .pill,.optsum .chips .tagchip{white-space:nowrap}
+  .optsum .act{flex:none}
+  .optsum .act{margin-left:auto;display:flex;gap:6px}
+  .pill{border:1px solid var(--p-line);border-radius:20px;padding:2px 10px;font-size:12px;color:var(--p-muted);background:#fafafa}
+  .tagchip{display:inline-flex;align-items:center;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600;color:#fff}
+  .opteditor{border-top:1px solid var(--p-line2);padding:15px;background:#fbfbfb}
+  .q{font-weight:600;margin:0 0 8px;font-size:13.5px}
+  .qgroup{margin-bottom:16px}
+  .btnsm{border:1px solid var(--p-line);background:#fff;border-radius:8px;padding:4px 10px;font:inherit;font-size:12px;font-weight:600;color:var(--p-ink);cursor:pointer}
+  .btnsm.ico-x{padding:4px 8px;color:var(--p-muted)}
+  .btnghost{border:1px dashed var(--p-line);background:#fff;border-radius:8px;padding:6px 12px;font:inherit;font-size:12.5px;font-weight:500;color:var(--p-muted);cursor:pointer}
+
+  /* plan summary step checklist */
+  .sumrow{display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--p-line2)}
+  .sumrow:last-child{border-bottom:0}
+  /* plain status lights, not checkboxes: a solid dot, no glyph, so it never reads as checkable */
+  /* status lights: identical solid dots, only the colour differs (green = done, grey = optional-not-set) */
+  .sicon{display:inline-block;box-sizing:border-box;width:10px;height:10px;min-width:10px;border-radius:50%;flex:none;margin-top:6px;background:#c7c7c7}
+  .sicon.ok{background:var(--p-success)}
+  .sicon.opt{background:#c7c7c7}
+  .sicon.req{background:var(--p-attn)}
+  .sname{font-weight:600;font-size:12.5px;display:flex;align-items:center;gap:6px}
+  .sname .optm{font-weight:600;color:var(--p-faint);font-size:10px;border:1px solid var(--p-line);border-radius:5px;padding:0 5px;text-transform:uppercase;letter-spacing:.03em}
+  .sval{color:var(--p-muted);font-size:12px}
+  .req-star{color:#e51c00;font-weight:700}
+
+  /* sidebar detector rows */
+  .drow{padding:11px 0;border-bottom:1px solid var(--p-line2)}
+  .drow:last-child{border-bottom:0}
+  .drow .dtop{display:flex;align-items:center;gap:8px}
+  .drow .dname{font-weight:650;font-size:13px}
+  .drow .dact{margin-left:auto}
+  .lnk{background:none;border:0;color:var(--p-link);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:3px}
+  .statusdot{width:8px;height:8px;border-radius:50%;flex:none}
+  .badge2{display:inline-flex;align-items:center;gap:5px;border-radius:8px;padding:1px 8px;font-size:11.5px;font-weight:600}
+  .badge2.ok{background:var(--p-success-bg);color:#0f5132}
+  .badge2.attn{background:var(--p-attn-bg);color:var(--p-attn)}
+  .badge2.info{background:#d6ecff;color:#00527c}
+  .badge2.sub{background:#ededed;color:#5c5c5c}
+
+  /* v3: product-grouped selection rows */
+  .prow .pname{font-weight:500}
+  .prow .pmeta{color:var(--p-muted);font-size:12px;margin-left:6px}
+  .prow .pacts{margin-left:auto;display:flex;gap:6px;align-items:center}
+  .prow .pacts .x{margin-left:0}
+  .showall{display:block;width:100%;text-align:left;padding:10px 0;border-bottom:1px solid var(--p-line2)}
+  .colhdr{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--p-line);border-radius:10px;background:#fafafa;margin-bottom:6px}
+  .colhdr .cname{font-weight:600}
+  .snapnote{font-size:12px;color:var(--p-muted);margin:0 0 6px}
+
+  /* v3: picker modal */
+  .mback{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:flex-start;justify-content:center;padding:6vh 16px}
+  .modal{background:#fff;border-radius:14px;width:640px;max-width:100%;box-shadow:0 20px 50px rgba(0,0,0,.25);display:flex;flex-direction:column;max-height:84vh}
+  .mhdr{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--p-line2)}
+  .mhdr h3{margin:0;font-size:15px;font-weight:650;flex:1}
+  .mhdr .msub{display:block;font-weight:400;font-size:12px;color:var(--p-muted);margin-top:1px}
+  .mclose{background:none;border:0;font-size:18px;color:var(--p-muted);cursor:pointer;padding:2px 6px;border-radius:6px}
+  .mclose:hover{background:#f1f1f1}
+  .msearch{padding:12px 18px 8px}
+  .msearch input{width:100%;box-sizing:border-box;border:1px solid #8a8a8a;border-radius:8px;padding:7px 10px;font:inherit;font-size:13px}
+  .mtools{display:flex;gap:12px;align-items:center;padding:0 18px 8px;font-size:12px;color:var(--p-muted)}
+  .mbody{overflow:auto;padding:0 18px;flex:1;min-height:120px}
+  .mprod{border-bottom:1px solid var(--p-line2)}
+  .mprow{display:flex;align-items:center;gap:10px;padding:9px 0}
+  .mprow .caret{background:none;border:0;cursor:pointer;color:var(--p-faint);font-size:15px;width:18px;padding:0;transition:transform .15s}
+  .mprod.open .caret{transform:rotate(90deg)}
+  .mprow .mt{font-weight:500}
+  .mprow .mc{margin-left:auto;font-size:12px;color:var(--p-muted)}
+  .mvars{padding:0 0 8px 46px}
+  .mprod:not(.open) .mvars{display:none}
+  .mvrow{display:flex;align-items:center;gap:10px;padding:5px 0;font-size:12.5px}
+  .mvrow .vp{margin-left:auto;color:var(--p-muted);font-family:ui-monospace,Menlo,monospace;font-size:12px}
+  .mprod.focus{background:#f6f9ff;border-radius:8px}
+  .mfoot{display:flex;align-items:center;gap:10px;padding:12px 18px;border-top:1px solid var(--p-line2)}
+  .mfoot .mcount{font-size:12.5px;color:var(--p-muted)}
+  .mfoot .mcount.over{color:#b42318;font-weight:600}
+  .mfoot .macts{margin-left:auto;display:flex;gap:8px}
+  .pbtn{font:inherit;font-size:12.5px;font-weight:600;border-radius:8px;padding:6px 13px;cursor:pointer;border:1px solid var(--p-line);background:#fff;color:var(--p-ink)}
+  .pbtn.primary{background:var(--p-primary);border-color:var(--p-primary);color:#fff}
+  .pbtn[disabled]{opacity:.45;cursor:not-allowed}
+  input[type=checkbox].ck{width:16px;height:16px;margin:0;accent-color:var(--p-primary);cursor:pointer;flex:none}
+
+  /* v3: Adapt product card */
+  .adaptprod{display:flex;gap:12px;align-items:center;border:1px solid var(--p-line);border-radius:10px;padding:12px 14px;margin-top:12px;background:#fafafa}
+  .adaptprod .ap-t{font-weight:600}
+  .adaptprod .ap-m{font-size:12px;color:var(--p-muted)}
+  .adaptprod .ap-a{margin-left:auto;flex:none}
+  .noteline{font-size:12px;color:var(--p-muted);margin-top:10px}
+
+  /* v3: widget template picker + conflict notice */
+  .wsel{width:100%;margin-top:8px;border:1px solid #8a8a8a;border-radius:8px;padding:6px 8px;font:inherit;font-size:13px;background:#fff;color:var(--p-ink)}
+  .wlbl{font-size:12px;font-weight:600;margin-top:8px;display:block}
+  .warnbox{background:var(--p-attn-bg);color:#5e4200;border-radius:8px;padding:9px 11px;font-size:12px;margin-top:8px}
+  .warnbox b{color:#4a3500}
+  /* v3b: collections auto-add toggle */
+  .tgl{appearance:none;-webkit-appearance:none;width:32px;height:18px;border-radius:9px;background:#c7c7c7;position:relative;cursor:pointer;margin:0;flex:none;transition:background .15s}
+  .tgl::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:left .15s}
+  .tgl:checked{background:var(--p-primary)}
+  .tgl:checked::after{left:16px}
+  .tglwrap{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:500;color:var(--p-ink);cursor:pointer;white-space:nowrap}
+  .colblk{border:1px solid var(--p-line);border-radius:10px;background:#fafafa;margin-bottom:8px}
+  .colblk .colhdr{border:0;background:none;margin:0}
+  .colsync{display:flex;align-items:center;gap:12px;padding:8px 12px 10px;border-top:1px solid var(--p-line2)}
+  /* v3b: ladder discount */
+  .ladhead,.ladrow{display:grid;grid-template-columns:96px 112px minmax(0,1fr) 34px;gap:10px;align-items:center}
+  .ladhead{font-size:11px;font-weight:600;color:var(--p-muted);text-transform:uppercase;letter-spacing:.03em;padding:4px 0;border-bottom:1px solid var(--p-line2)}
+  .ladrow{padding:7px 0;border-bottom:1px solid var(--p-line2)}
+  .lin{width:64px;box-sizing:border-box;color:var(--p-ink)}
+  .lfix{display:inline-block;width:64px;box-sizing:border-box;background:#f3f3f3}
+  .chkchip.locked{opacity:.45;cursor:not-allowed}
+  .giftfld{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--p-line);border-radius:8px;background:#fff;padding:3px 10px 3px 4px;font:inherit;font-size:12.5px;cursor:pointer;max-width:100%;min-width:0;color:var(--p-ink);text-align:left}
+  .giftfld .gname{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .giftfld .gchg{color:var(--p-link);font-weight:600;margin-left:4px;flex:none}
+  .giftfld.empty{border-style:dashed;color:var(--p-muted);padding:6px 12px}
+  .cpick{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--p-line);border-radius:8px;padding:3px 9px 3px 4px;cursor:pointer;background:#fff}
+  .cpick input{width:26px;height:22px;border:0;padding:0;background:none;cursor:pointer}
+  .cpHex{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--p-muted);text-transform:uppercase}
+  .ladrow .x{background:none;border:0;color:var(--p-muted);cursor:pointer;font-size:12px;padding:2px 4px}
+  /* v3b: badge colour */
+  .hide{display:none !important}
+</style>
+<!-- bare mode: when embedded in the WIP prototype shell, hide this file's own admin chrome
+so the shell is not drawn twice. Standalone viewing is unaffected. -->
+<script>if(/bare/.test(location.search+location.hash))document.documentElement.classList.add("bare");</script>
+<style>html.bare .navL,html.bare .appbar,html.bare .savebar{display:none!important}html.bare .admin{min-height:0}html.bare,html.bare body{background:#f1f1f1}</style>
+</head>
+<body>
+<div class="admin">
+
+  <aside class="navL">
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8.5 10 3l7 5.5V16a1 1 0 0 1-1 1h-3v-5H7v5H4a1 1 0 0 1-1-1z"/></svg>Home</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="13" rx="2"/><path d="M7 8h6M7 11h6"/></svg>Orders<span class="ct">127</span></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h12v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M7 6V5a3 3 0 0 1 6 0v1"/></svg>Products</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="7" r="3"/><path d="M4 16c0-3 2.7-5 6-5s6 2 6 5"/></svg>Customers</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 15V9m4 6V5m4 10v-4m4 4V7"/></svg>Growth</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="3"/><path d="M12 12l4 4M13.5 6.5 16 4"/></svg>Discounts</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="12" height="12" rx="2"/><path d="M7 8h6M7 11h4"/></svg>Content</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="6"/><path d="M4 10h12M10 4c2 2 2 10 0 12M10 4c-2 2-2 10 0 12"/></svg>Markets</div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 16h12M6 16V9m4 7V5m4 11v-4"/></svg>Analytics</div>
+    <div class="navSec">Sales channels<span class="chev">&#8250;</span></div>
+    <div class="navSec">Apps<span class="chev">&#8250;</span></div>
+    <div class="navApp"><span class="logo">&#9670;</span>StackBack Subscrip&hellip;<span class="dot"></span></div>
+    <div class="navSub sel">Manage Purchase Options</div>
+    <div class="navSub">Purchase Contracts</div>
+    <div class="navSub">One-Time Orders</div>
+    <div class="navSub">Orders</div>
+    <div class="navSub">Payment Reminders</div>
+    <div class="navSub">Customers</div>
+    <div class="navSub">View more</div>
+    <div class="navGap"></div>
+    <div class="navItem"><svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m7-7h-2M5 10H3m12.5-5-1.5 1.5M6 14l-1.5 1.5m11 0L14 14M6 6 4.5 4.5"/></svg>Settings</div>
+  </aside>
+
+  <div class="appmain">
+    <div class="savebar">
+      <span class="sbtxt">Unsaved changes</span>
+      <span class="sbacts"><button class="discard">Discard</button><button class="save">Save</button></span>
+    </div>
+    <div class="appbar"><span class="logo">&#9670;</span><span class="name">StackBack Subscriptions &amp; More</span><span class="more">&ctdot;</span></div>
+
+    <s-page heading="Create subscription plan" inline-size="large">
+      <s-link slot="breadcrumb-actions" href="#">Manage Purchase Options</s-link>
+      <s-button slot="secondary-actions">Save as draft</s-button>
+      <s-button slot="primary-action" variant="primary">Publish</s-button>
+
+      <div class="pcols">
+        <!-- ================= MAIN COLUMN ================= -->
+        <div class="maincol">
+
+          <!-- Plan name (always visible identity) -->
+          <div class="card"><div class="cardpad">
+            <s-text-field label="Plan name" required value="Fresh Juice Subscription" details="Customers see this on the widget and at checkout."></s-text-field>
+          </div></div>
+
+          <!-- STEP 1 -->
+          <div class="card step open" data-step>
+            <div class="stephdr">
+              <div class="num">1</div>
+              <div class="sttl"><h2>What are you selling? <span class="req-star">*</span></h2><p class="collsum">Products &amp; Variants &middot; 1 product, 2 variants</p></div>
+              <span class="stepchev">&#8250;</span>
+            </div>
+            <div class="stepbody">
+              <div class="rowline" style="margin-bottom:12px">
+                <span class="help" style="font-weight:600;text-transform:uppercase;letter-spacing:.04em">Apply to</span>
+                <span class="seg" id="applyseg">
+                  <button data-lvl="pv" class="on">Products &amp; Variants</button>
+                  <button data-lvl="collection">Collections</button>
+                </span>
+              </div>
+              <!-- v3: both levels render the same product-grouped list; variants are edited in the picker popup -->
+              <div id="lvl-pv">
+                <p class="snapnote hide" id="pvNote">Extra products on top of your collections. Both lists apply to this plan.</p>
+                <div id="pvList"></div>
+                <div class="rowline" style="padding-top:9px"><button class="btnghost" id="pvAdd">&#65291; Select products / variants</button><span class="field" id="pvCount"></span></div>
+              </div>
+              <div id="lvl-collection" class="hide">
+                <div id="colEmpty" class="rowline"><button class="btnghost" id="colAdd">&#65291; Select collections</button><span class="help">Then untick any products or variants you don't want.</span></div>
+                <div id="colFilled" class="hide">
+                  <div id="colHdrs"></div>
+                  <div id="colList"></div>
+                  <div class="rowline" style="padding-top:9px"><button class="btnghost" id="colMore">&#65291; Add collections</button><span class="field" id="colCount"></span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 2 -->
+          <div class="card step" data-step>
+            <div class="stephdr">
+              <div class="num">2</div>
+              <div class="sttl"><h2>How can customers buy it? <span class="req-star">*</span></h2><p class="collsum">2 buying options &middot; drag to reorder</p></div>
+              <span class="stepchev">&#8250;</span>
+            </div>
+            <div class="stepbody collapsed">
+              <div class="optlist" id="optlist">
+
+                <div class="optcard" data-opt>
+                  <div class="optsum">
+                    <span class="draghandle" title="Drag to reorder">&#8942;&#8942;</span>
+                    <span class="title">Every 2 weeks &middot; 5 deliveries</span>
+                    <span class="chips"></span>
+                    <span class="act"><button class="btnsm t-edit">Edit</button><button class="btnsm">Duplicate</button><button class="btnsm ico-x" title="Remove">&#10005;</button></span>
+                  </div>
+                  <div class="opteditor hide">
+                    <div class="qgroup">
+                      <p class="q">Payment &amp; pricing</p>
+                      <div class="rowline"><span class="chkchip on pay-prepaid">Prepaid</span><span class="chkchip pay-auto">Pay per delivery (AutoPay)</span><span class="chkchip pay-payg">Pay as you go</span></div>
+                      <div class="methodGroup hide" style="margin-top:10px"><p class="help">Billed pay-as-you-go: the customer gets an invoice and email reminder to pay as each delivery ships.</p></div>
+                    </div>
+                    <div class="qgroup">
+                      <p class="q">Schedule</p>
+                      <div class="rowline">
+                        <span class="seg durSeg">
+                          <button data-dur="fixed" class="on">Fixed length</button>
+                          <button data-dur="choice">Customer decides</button>
+                          <button data-dur="none" class="hide">No end date</button>
+                        </span>
+                        <span class="sched-fixed">for <span class="field">5</span> deliveries</span>
+                        <span class="sched-choice hide rowline" style="gap:6px">customer picks <input class="field lin chMin" type="number" min="1" value="3" aria-label="Minimum deliveries" /> to <input class="field lin chMax" type="number" min="1" value="12" aria-label="Maximum deliveries" /> deliveries <span class="chErr hide" style="color:#b42318;font-size:12px">Minimum can't be more than maximum.</span></span>
+                        <span class="sched-none hide help">Runs continuously until the customer cancels. Available with pay-per-delivery only.</span>
+                      </div>
+                      <div class="rowline" style="margin-top:8px">
+                        <span>Deliver every</span><span class="field">2</span><span class="field">weeks &#9662;</span>
+                      </div>
+                    </div>
+                    <div class="qgroup">
+                      <p class="q">Discount</p>
+                      <div class="rowline">
+                        <span class="seg discMode"><button data-dm="flat" class="on">Flat</button><button data-dm="ladder">Ladder</button></span>
+                        <span class="field" style="padding:0"><select class="discType" style="border:0;background:none;font:inherit;color:inherit;padding:6px 10px;cursor:pointer;font-family:ui-monospace,Menlo,monospace"><option value="pct">Percentage (%)</option><option value="amt">Amount off</option></select></span>
+                        <span class="rowline flatBits" style="gap:6px"><span class="field hide discPrefix">INR</span><span class="field discVal">10</span><span class="discSuffix">%</span></span>
+                      </div>
+                      <div class="ladder hide">
+                        <p class="help" style="margin:10px 0 8px">Rises with each <b>paid</b> delivery. Skipped, paused or unpaid deliveries don't count. The last step holds for every later delivery.</p>
+                        <div class="ladhead"><span>From delivery</span><span>Discount</span><span>Free gift on that delivery</span><span></span></div>
+                        <div class="ladrows"></div>
+                        <div class="rowline" style="margin-top:8px"><button class="btnghost addstep">&#65291; Add step</button><span class="help">Up to 5 steps</span></div>
+                        <div class="warnbox ladwarn hide"></div>
+                        <p class="help" style="margin-top:8px">Prepaid is off for this option: a ladder needs a payment per delivery. For prepaid, add a separate option with a flat discount.</p>
+                      </div>
+                    </div>
+                    <div class="qgroup" style="margin-bottom:12px">
+                      <button class="disc extrasToggle"><span class="chev">&#8250;</span>More options <span class="help extrasHint" style="font-weight:400">(free gifts, badge)</span></button>
+                      <div class="extrasBody hide" style="margin-top:12px">
+                        <p class="q">Badge <span class="help" style="font-weight:400">(optional)</span></p>
+                        <div class="rowline"><input class="field badgeTxt" value="Best Value" maxlength="24" placeholder="e.g. Best Value" style="width:150px;font-family:inherit;color:var(--p-ink)" aria-label="Badge text" /><label class="cpick" title="Badge colour"><input type="color" class="badgeCol" value="#2f7d5b" aria-label="Badge colour" /><span class="cpHex">#2f7d5b</span></label><span class="tagchip badgeChip" style="background:#2f7d5b">Best Value</span></div>
+                        <div class="freeBlock"><p class="q" style="margin-top:14px">Free gifts <span class="help" style="font-weight:400">(optional)</span></p>
+                        <div class="freelist"></div>
+                        <div class="rowline" style="margin-top:2px"><button class="btnghost addfree">&#65291; Add a gift</button><span class="help">Give a free item on a chosen delivery, e.g. a gift on delivery #3.</span></div></div>
+                      </div>
+                    </div>
+                    <div class="calc deliveryPreview"></div>
+                    <div class="rowline" style="margin-top:14px"><s-button variant="primary">Save option</s-button><s-button>Cancel</s-button></div>
+                  </div>
+                </div>
+
+                <div class="optcard" data-opt>
+                  <div class="optsum">
+                    <span class="draghandle" title="Drag to reorder">&#8942;&#8942;</span>
+                    <span class="title">Every month &middot; 6 deliveries</span>
+                    <span class="chips hide"></span>
+                    <span class="act"><button class="btnsm t-edit">Collapse</button><button class="btnsm">Duplicate</button><button class="btnsm ico-x" title="Remove">&#10005;</button></span>
+                  </div>
+                  <div class="opteditor">
+                    <div class="qgroup">
+                      <p class="q">Payment &amp; pricing</p>
+                      <div class="rowline"><span class="chkchip on pay-prepaid">Prepaid</span><span class="chkchip pay-auto">Pay per delivery (AutoPay)</span><span class="chkchip pay-payg">Pay as you go</span></div>
+                      <div class="methodGroup hide" style="margin-top:10px"><p class="help">Billed pay-as-you-go: the customer gets an invoice and email reminder to pay as each delivery ships.</p></div>
+                    </div>
+                    <div class="qgroup">
+                      <p class="q">Schedule</p>
+                      <div class="rowline">
+                        <span class="seg durSeg">
+                          <button data-dur="fixed" class="on">Fixed length</button>
+                          <button data-dur="choice">Customer decides</button>
+                          <button data-dur="none" class="hide">No end date</button>
+                        </span>
+                        <span class="sched-fixed">for <span class="field">6</span> deliveries</span>
+                        <span class="sched-choice hide rowline" style="gap:6px">customer picks <input class="field lin chMin" type="number" min="1" value="3" aria-label="Minimum deliveries" /> to <input class="field lin chMax" type="number" min="1" value="12" aria-label="Maximum deliveries" /> deliveries <span class="chErr hide" style="color:#b42318;font-size:12px">Minimum can't be more than maximum.</span></span>
+                        <span class="sched-none hide help">Runs continuously until the customer cancels. Available with pay-per-delivery only.</span>
+                      </div>
+                      <div class="rowline" style="margin-top:8px">
+                        <span>Deliver every</span><span class="field">1</span><span class="field">month &#9662;</span>
+                      </div>
+                    </div>
+                    <div class="qgroup">
+                      <p class="q">Discount</p>
+                      <div class="rowline">
+                        <span class="seg discMode"><button data-dm="flat" class="on">Flat</button><button data-dm="ladder">Ladder</button></span>
+                        <span class="field" style="padding:0"><select class="discType" style="border:0;background:none;font:inherit;color:inherit;padding:6px 10px;cursor:pointer;font-family:ui-monospace,Menlo,monospace"><option value="pct">Percentage (%)</option><option value="amt">Amount off</option></select></span>
+                        <span class="rowline flatBits" style="gap:6px"><span class="field hide discPrefix">INR</span><span class="field discVal">15</span><span class="discSuffix">%</span></span>
+                      </div>
+                      <div class="ladder hide">
+                        <p class="help" style="margin:10px 0 8px">Rises with each <b>paid</b> delivery. Skipped, paused or unpaid deliveries don't count. The last step holds for every later delivery.</p>
+                        <div class="ladhead"><span>From delivery</span><span>Discount</span><span>Free gift on that delivery</span><span></span></div>
+                        <div class="ladrows"></div>
+                        <div class="rowline" style="margin-top:8px"><button class="btnghost addstep">&#65291; Add step</button><span class="help">Up to 5 steps</span></div>
+                        <div class="warnbox ladwarn hide"></div>
+                        <p class="help" style="margin-top:8px">Prepaid is off for this option: a ladder needs a payment per delivery. For prepaid, add a separate option with a flat discount.</p>
+                      </div>
+                    </div>
+                    <div class="qgroup" style="margin-bottom:12px">
+                      <button class="disc extrasToggle"><span class="chev">&#8250;</span>More options <span class="help extrasHint" style="font-weight:400">(free gifts, badge)</span></button>
+                      <div class="extrasBody hide" style="margin-top:12px">
+                        <p class="q">Badge <span class="help" style="font-weight:400">(optional)</span></p>
+                        <div class="rowline"><input class="field badgeTxt" value="Most Popular" maxlength="24" placeholder="e.g. Best Value" style="width:150px;font-family:inherit;color:var(--p-ink)" aria-label="Badge text" /><label class="cpick" title="Badge colour"><input type="color" class="badgeCol" value="#6B5BD6" aria-label="Badge colour" /><span class="cpHex">#6B5BD6</span></label><span class="tagchip badgeChip" style="background:#6B5BD6">Most Popular</span></div>
+                        <div class="freeBlock"><p class="q" style="margin-top:14px">Free gifts <span class="help" style="font-weight:400">(optional)</span></p>
+                        <div class="freelist"></div>
+                        <div class="rowline" style="margin-top:2px"><button class="btnghost addfree">&#65291; Add a gift</button><span class="help">Give a free item on a chosen delivery, e.g. a gift on delivery #3.</span></div></div>
+                      </div>
+                    </div>
+                    <div class="calc deliveryPreview"></div>
+                    <div class="rowline" style="margin-top:14px"><s-button variant="primary">Save option</s-button><s-button>Cancel</s-button></div>
+                  </div>
+                </div>
+
+              </div>
+              <button class="btnghost" style="margin-top:2px">&#65291; Add another buying option</button>
+            </div>
+          </div>
+
+          <!-- STEP 3 -->
+          <div class="card step" data-step>
+            <div class="stephdr">
+              <div class="num">3</div>
+              <div class="sttl"><h2>Shipping override <span class="opt">Optional</span></h2><p class="collsum">Off, uses your shop shipping</p></div>
+              <span class="stepchev">&#8250;</span>
+            </div>
+            <div class="stepbody collapsed">
+              <div class="rowline" style="justify-content:space-between">
+                <div><b>Override shipping for this plan</b><div class="help">By default this plan uses the shop-wide shipping from Settings, Shipping Zones.</div></div>
+                <s-switch id="shipOvSw"></s-switch>
+              </div>
+              <div id="shipOvCfg" class="hide" style="margin-top:14px">
+                <div class="rowline" style="margin-bottom:12px"><span>Shipping charge per delivery</span><span class="field">INR</span><input class="field" id="shipOvPrice" value="0" style="width:110px" /></div>
+                <p class="help" id="shipOvHint" style="margin:0 0 12px">Set to 0 for free shipping. Any amount above 0 is charged per delivery.</p>
+                <div style="display:flex;gap:12px;margin-bottom:12px">
+                  <div style="flex:1;min-width:0"><s-text-field label="Minimum subscription value" placeholder="Optional"></s-text-field></div>
+                  <div style="flex:1;min-width:0"><s-text-field label="Maximum subscription value" placeholder="Optional"></s-text-field></div>
+                </div>
+                <p class="q" style="margin-bottom:6px">ZIP patterns</p>
+                <span class="seg" id="shipZipMode" style="margin-bottom:12px">
+                  <button data-zip="exact" class="on">Exact</button>
+                  <button data-zip="pattern">Pattern</button>
+                  <button data-zip="range">Range</button>
+                </span>
+                <s-text-field label="ZIPs" placeholder="e.g. 400001, 400002, 400003"></s-text-field>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 4 -->
+          <div class="card step" data-step>
+            <div class="stephdr">
+              <div class="num">4</div>
+              <div class="sttl"><h2>Enhancements <span class="opt">Optional</span></h2><p class="collsum">Custom checkout off</p></div>
+              <span class="stepchev">&#8250;</span>
+            </div>
+            <div class="stepbody collapsed">
+              <div class="rowline" style="justify-content:space-between;flex-wrap:nowrap">
+                <div><b>Custom checkout (Adapt)</b><div class="help">Sell this plan through a custom storefront checkout. StackBack creates an unlisted product for it, plus a discount code for each buying option.</div></div>
+                <s-switch id="adaptSw"></s-switch>
+              </div>
+              <p class="noteline hide" id="adaptOffNote" style="color:var(--p-attn)">Not available: every buying option uses Pay per delivery (AutoPay), which always checks out through Razorpay. Add a Prepaid or Pay as you go option to sell this plan through a custom checkout.</p>
+              <div id="adaptCfg" class="hide">
+                <div class="adaptprod">
+                  <s-thumbnail size="small" id="adaptThumb"></s-thumbnail>
+                  <div style="min-width:0">
+                    <div class="ap-t" id="adaptTitle">Fresh Juice Subscription</div>
+                    <div class="ap-m"><span class="badge2 sub">Unlisted</span> &middot; <span id="adaptVars">2 variants</span> &middot; created when you publish</div>
+                    <div class="ap-m" style="margin-top:2px">Title is the plan name. Image is the first product's image.</div>
+                  </div>
+                  <span class="ap-a"><button class="lnk" id="adaptEdit">Edit in Shopify &#8599;</button></span>
+                </div>
+                <p class="noteline">Covers Prepaid and Pay as you go options. Pay per delivery (AutoPay) always checks out through Razorpay.</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ================= SIDE COLUMN ================= -->
+        <div class="sidecol">
+
+          <!-- Plan summary (moved to top) + status -->
+          <div class="card"><div class="cardpad">
+            <div class="rowline" style="justify-content:space-between;margin-bottom:10px">
+              <b style="font-size:13.5px">Plan summary</b>
+              <span class="badge2 info">Not live yet</span>
+            </div>
+            <div class="sumsteps">
+              <div class="sumrow"><span class="sicon ok"></span><div><div class="sname">Plan name <span class="req-star">*</span></div><div class="sval">What customers see on the widget and at checkout.</div></div></div>
+              <div class="sumrow"><span class="sicon ok"></span><div><div class="sname">Products <span class="req-star">*</span></div><div class="sval">The products this plan applies to.</div></div></div>
+              <div class="sumrow"><span class="sicon ok"></span><div><div class="sname">Buying options <span class="req-star">*</span></div><div class="sval">How customers subscribe: frequency, payment, discount.</div></div></div>
+              <div class="sumrow" id="sumShip"><span class="sicon opt"></span><div><div class="sname">Shipping override</div><div class="sval">Off, uses shop shipping</div></div></div>
+              <div class="sumrow" id="sumEnh"><span class="sicon opt"></span><div><div class="sname">Enhancements</div><div class="sval">Custom checkout off</div></div></div>
+            </div>
+          </div></div>
+
+          <!-- Merged: Checkout + Widget + Landing, each auto-checked with a redirect -->
+          <div class="card"><div class="cardpad">
+            <div class="rowline" style="justify-content:space-between;margin-bottom:4px">
+              <b style="font-size:13.5px">Set up to sell</b>
+              <button class="lnk" id="recheck">Re-check</button>
+            </div>
+            <div class="help" style="margin-bottom:6px">We check these automatically. Set up anything that isn't ready.</div>
+
+            <div class="drow">
+              <div class="dtop">
+                <span class="dname">Checkout</span>
+                <span class="dact"><span class="badge2 ok" id="coBadge">Shopify checkout</span></span>
+              </div>
+              <div class="help" id="coHelp" style="margin-top:4px"></div>
+            </div>
+
+            <div class="drow">
+              <div class="dtop">
+                <span class="dname">Widget</span>
+                <span class="dact"><span class="badge2 info" id="wBadge">Goes live on publish</span></span>
+              </div>
+              <div class="help" style="margin-top:4px">The widget this plan's products show. It goes live on them when you publish.</div>
+              <label class="wlbl" for="wTpl">Widget template</label>
+              <select class="wsel" id="wTpl">
+                <option value="subscription-widget" selected>Subscription Widget (default)</option>
+                <option value="purchase-options">Purchase Options</option>
+                <option value="single-plan">Single Plan</option>
+                <option value="prepaid-only">Prepaid Only</option>
+                <option value="payg-only">PAYG Only</option>
+                <option value="multi-frequency">Multi-Frequency</option>
+                <option value="multi-delivery">Multi-Delivery</option>
+                <option value="international-plan">International Plan</option>
+              </select>
+              <div class="warnbox hide" id="wWarn"></div>
+              <div style="margin-top:8px"><button class="lnk" id="wTokens">Edit widget tokens &#8594;</button></div>
+            </div>
+
+            <div class="drow">
+              <div class="dtop">
+                <span class="dname">Landing page</span>
+                <span class="dact"><span class="badge2 sub">Not created</span></span>
+              </div>
+              <div class="help" style="margin-top:4px">A shareable page for just this plan. <button class="lnk">Create in Portal &#8594;</button></div>
+            </div>
+          </div></div>
+
+        </div>
+      </div>
+    </s-page>
+
+  </div>
+</div>
+
+<script>
+  (function(){
+    var $ = function(id){ return document.getElementById(id); };
+
+    // ---------- accordion steps (only one open at a time) ----------
+    var steps=[].slice.call(document.querySelectorAll('.step[data-step]'));
+    function openStep(idx){
+      steps.forEach(function(s,i){
+        var on=(i===idx);
+        s.classList.toggle('open', on);
+        s.querySelector('.stepbody').classList.toggle('collapsed', !on);
+      });
+    }
+    steps.forEach(function(s,i){
+      s.querySelector('.stephdr').addEventListener('click', function(e){
+        if(e.target.closest('button,select,input,.seg,a')) return; // don't toggle when using controls
+        openStep(i); // one step always open
+      });
+    });
+    openStep(0);
+
+    // ---------- v3: catalog + selection model ----------
+    // w = the widget a product shows today (from another plan); drives the widget-switch notice.
+    var CATALOG=[
+      {id:'p1',t:'Organic Cold-Pressed Juice',w:'multi-frequency',v:[['500ml',180],['1L',320],['2L',590]]},
+      {id:'p2',t:'Green Detox Juice',w:'single-plan',v:[['300ml',150],['500ml',230]]},
+      {id:'p3',t:'Beetroot Ginger Shot',v:[['6 x 60ml',299],['12 x 60ml',549]]},
+      {id:'p4',t:'Orange Carrot Juice',v:[['500ml',190],['1L',340]]},
+      {id:'p5',t:'Watermelon Mint Cooler',v:[['500ml',170]]},
+      {id:'p6',t:'Pineapple Turmeric Juice',v:[['500ml',200],['1L',360]]},
+      {id:'p7',t:'Celery Cleanse',v:[['500ml',240]]},
+      {id:'p8',t:'Amla Shot',v:[['6 x 60ml',249]]},
+      {id:'p9',t:'Pomegranate Juice',v:[['500ml',260],['1L',470]]},
+      {id:'p10',t:'Tender Coconut Water',w:'multi-frequency',v:[['330ml',90],['1L',220]]},
+      {id:'p11',t:'ABC Juice',v:[['500ml',210],['1L',380]]},
+      {id:'p12',t:'Kokum Cooler',v:[['500ml',160]]},
+      {id:'p13',t:'Apple Cinnamon Juice',v:[['500ml',220],['1L',400]]},
+      {id:'p14',t:'Jamun Juice',v:[['500ml',230]]},
+      {id:'p15',t:'Cold Brew Coffee',v:[['250ml',199],['1L',649]]},
+      {id:'p16',t:'Almond Milk',v:[['1L',299]]},
+      {id:'p17',t:'Oat Milk',v:[['1L',279]]},
+      {id:'p18',t:'Glass Bottle',v:[['750ml',249]]},
+      {id:'p19',t:'Travel Sample Kit',v:[['Mini',99],['Regular',199]]}
+    ];
+    var COLLECTIONS=[
+      {id:'c1',t:'Cold-Pressed Range',p:['p1','p2','p3','p4','p5','p6','p7','p8','p9','p10','p11','p12','p13','p14']},
+      {id:'c2',t:'Shots & Boosters',p:['p3','p8']},
+      {id:'c3',t:'Plant Milks',p:['p16','p17']},
+      {id:'c4',t:'Coffee',p:['p15']}
+    ];
+    var ROW_CAP=5;
+    var TPL_NAMES={'subscription-widget':'Subscription Widget','purchase-options':'Purchase Options','single-plan':'Single Plan','prepaid-only':'Prepaid Only','payg-only':'PAYG Only','multi-frequency':'Multi-Frequency','multi-delivery':'Multi-Delivery','international-plan':'International Plan'};
+    function vid(p,i){ return p.id+'-'+i; }
+    function esc(s){ return String(s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+    function prod(id){ return CATALOG.find(function(x){ return x.id===id; }); }
+    function coll(id){ return COLLECTIONS.find(function(x){ return x.id===id; }); }
+    // S.cols = chosen collections; S.sync[cid] = auto-add new products (off = snapshot); S.col = included variants
+    var S={ mode:'pv', pv:new Set(['p1-0','p1-1']), cols:[], sync:{}, col:new Set() };
+    function scopeOf(cids){ var ids={}; cids.forEach(function(c){ coll(c).p.forEach(function(p){ ids[p]=1; }); }); return CATALOG.filter(function(p){ return ids[p.id]; }); }
+    function colScope(){ return scopeOf(S.cols); }
+    // both lists apply: the plan = collection picks + extra single products
+    function activeSet(){ var u=new Set(S.pv); S.col.forEach(function(v){ u.add(v); }); return u; }
+    function activeScope(){ return CATALOG; }
+    function groups(set, scope){
+      return scope.map(function(p){ var n=p.v.filter(function(_,i){ return set.has(vid(p,i)); }).length; return {p:p,n:n}; }).filter(function(g){ return g.n>0; });
+    }
+    function countText(gs){ return {prods:gs.length, vars:gs.reduce(function(a,g){ return a+g.n; },0)}; }
+    function plural(n,w){ return n+' '+w+(n===1?'':'s'); }
+
+    function renderList(box, set, scope, mode){
+      var gs=groups(set, scope), html='';
+      gs.slice(0,ROW_CAP).forEach(function(g){
+        var meta = g.n===g.p.v.length ? (g.p.v.length===1?'1 variant':'all '+g.p.v.length+' variants') : g.n+' of '+g.p.v.length+' variants';
+        html+='<div class="prow"><s-thumbnail size="small"></s-thumbnail><span class="pname">'+esc(g.p.t)+'</span><span class="pmeta">&middot; '+meta+'</span>'+
+              '<span class="pacts"><button class="btnsm" data-edit="'+g.p.id+'">Edit</button><button class="x" data-rm="'+g.p.id+'">Remove &#10005;</button></span></div>';
+      });
+      if(gs.length>ROW_CAP) html+='<button class="lnk showall" data-all="1">Show all '+gs.length+' products &#8594;</button>';
+      if(!gs.length) html='<p class="help" style="margin:4px 0 0">No products selected yet.</p>';
+      box.innerHTML=html;
+      box.onclick=function(e){
+        var b=e.target.closest('button'); if(!b) return;
+        if(b.dataset.rm){ var p=prod(b.dataset.rm); p.v.forEach(function(_,i){ set.delete(vid(p,i)); }); renderAll(); }
+        else if(b.dataset.edit){ openPicker(mode, b.dataset.edit); }
+        else if(b.dataset.all){ openPicker(mode); }
+      };
+      return countText(gs);
+    }
+
+    function renderCollections(){
+      var box=$('colHdrs'), html='';
+      S.cols.forEach(function(cid){
+        var c=coll(cid), inc=groups(S.col, scopeOf([cid])).length, on=!!S.sync[cid];
+        html+='<div class="colblk"><div class="colhdr"><s-thumbnail size="small"></s-thumbnail>'+
+          '<div style="min-width:0;flex:1"><div class="cname">Collection: '+esc(c.t)+'</div><div class="help">'+plural(c.p.length,'product')+' in collection &middot; '+inc+' included</div></div>'+
+          '<button class="btnsm" data-cedit="'+cid+'">Edit products &amp; variants</button><button class="btnsm ico-x" data-crm="'+cid+'" title="Remove collection">&#10005;</button></div>'+
+          '<div class="colsync"><label class="tglwrap"><input type="checkbox" class="tgl" data-sync="'+cid+'"'+(on?' checked':'')+' />Auto-add new products</label>'+
+          '<span class="help">'+(on ? 'New products in this collection join with all their variants. Products you untick stay out.'
+                                    : 'Off: a snapshot of today. New products in this collection won\'t join; add them here.')+'</span></div></div>';
+      });
+      box.innerHTML=html;
+    }
+    $('colHdrs').addEventListener('click', function(e){
+      var b=e.target.closest('button'); if(!b) return;
+      if(b.dataset.cedit) openPicker('collection', null, b.dataset.cedit);
+      else if(b.dataset.crm) removeCollection(b.dataset.crm);
+    });
+    $('colHdrs').addEventListener('change', function(e){ var t=e.target; if(t.dataset.sync){ S.sync[t.dataset.sync]=t.checked; renderAll(); } });
+    function removeCollection(cid){
+      S.cols=S.cols.filter(function(c){ return c!==cid; }); delete S.sync[cid];
+      var keep={}; colScope().forEach(function(p){ keep[p.id]=1; });
+      coll(cid).p.forEach(function(pid){ if(keep[pid]) return; var p=prod(pid); p.v.forEach(function(_,i){ S.col.delete(vid(p,i)); }); });
+      renderAll();
+    }
+
+    function renderSelection(){
+      var pc=renderList($('pvList'), S.pv, CATALOG, 'pv');
+      $('pvCount').textContent=plural(pc.prods,'product')+' · '+plural(pc.vars,'variant');
+      var hasCol=S.cols.length>0;
+      $('colEmpty').classList.toggle('hide', hasCol); $('colFilled').classList.toggle('hide', !hasCol);
+      renderCollections();
+      var cc=renderList($('colList'), S.col, colScope(), 'collection');
+      $('colCount').textContent=plural(cc.prods,'product')+' · '+plural(cc.vars,'variant');
+      var c=countText(groups(activeSet(), CATALOG)), anySync=S.cols.some(function(x){ return S.sync[x]; }), lead=[];
+      if(hasCol) lead.push(plural(S.cols.length,'collection')+(anySync?' (auto-add on)':''));
+      if(pc.prods) lead.push(plural(pc.prods, hasCol?'extra product':'product'));
+      var sum = !lead.length ? 'Nothing selected yet' : !hasCol ? 'Products & Variants · '+plural(c.prods,'product')+', '+plural(c.vars,'variant') : lead.join(' + ')+' · '+plural(c.prods,'product')+', '+plural(c.vars,'variant')+(pc.prods?' in total':'');
+      steps[0].querySelector('.collsum').textContent=sum;
+      $('pvNote').classList.toggle('hide', !hasCol);
+      aseg.querySelector('[data-lvl="pv"]').textContent='Products & Variants'+(pc.prods?' ('+pc.prods+')':'');
+      aseg.querySelector('[data-lvl="collection"]').textContent='Collections'+(hasCol?' ('+S.cols.length+')':'');
+      $('adaptVars').textContent=plural(c.vars,'variant');
+    }
+
+    var aseg=$('applyseg');
+    function setLevel(lvl){
+      S.mode=lvl;
+      $('lvl-pv').classList.toggle('hide', lvl!=='pv');
+      $('lvl-collection').classList.toggle('hide', lvl!=='collection');
+      aseg.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.dataset.lvl===lvl); });
+      renderAll();
+    }
+    aseg.addEventListener('click', function(e){ var lvl=e.target.closest('[data-lvl]'); if(lvl) setLevel(lvl.dataset.lvl); });
+    $('pvAdd').addEventListener('click', function(){ openPicker('pv'); });
+    $('colAdd').addEventListener('click', openColPicker);
+    $('colMore').addEventListener('click', openColPicker);
+
+    // ---------- shared modal shell ----------
+    function modal(title, sub, bodyTools){
+      var back=document.createElement('div'); back.className='mback';
+      back.innerHTML='<div class="modal" role="dialog" aria-modal="true">'+
+        '<div class="mhdr"><h3>'+title+'<span class="msub">'+sub+'</span></h3><button class="mclose" data-close="1" aria-label="Close">&#10005;</button></div>'+
+        '<div class="msearch"><input type="search" placeholder="Search" /></div>'+
+        '<div class="mtools">'+bodyTools+'<span style="margin-left:auto" class="mshown"></span></div>'+
+        '<div class="mbody"></div>'+
+        '<div class="mfoot"><span class="mcount"></span><span class="macts"><button class="pbtn" data-close="1">Cancel</button><button class="pbtn primary" data-done="1">Done</button></span></div></div>';
+      document.body.appendChild(back);
+      function onKey(e){ if(e.key==='Escape') close(); }
+      function close(){ document.removeEventListener('keydown', onKey); back.remove(); }
+      document.addEventListener('keydown', onKey);
+      return { back:back, close:close, body:back.querySelector('.mbody'), input:back.querySelector('input'), cnt:back.querySelector('.mcount'), shown:back.querySelector('.mshown') };
+    }
+
+    // ---------- collection picker (step one of the collection flow) ----------
+    function openColPicker(){
+      var m=modal('Select collections','Choose collections, then untick any products or variants you don\'t want.',''), work=S.cols.slice(), q='';
+      m.input.placeholder='Search collections';
+      function draw(){
+        var vis=COLLECTIONS.filter(function(c){ return !q || c.t.toLowerCase().indexOf(q)>-1; });
+        m.body.innerHTML = vis.map(function(c){
+          return '<label class="mprow mprod" style="cursor:pointer"><input type="checkbox" class="ck" data-cc="'+c.id+'"'+(work.indexOf(c.id)>-1?' checked':'')+' />'+
+                 '<s-thumbnail size="small"></s-thumbnail><span class="mt">'+esc(c.t)+'</span><span class="mc">'+plural(c.p.length,'product')+'</span></label>';
+        }).join('') || '<p class="help" style="padding:16px 0">No collections match "'+esc(q)+'".</p>';
+        m.cnt.textContent=plural(work.length,'collection')+' selected';
+        m.shown.textContent=plural(vis.length,'collection');
+      }
+      m.body.addEventListener('change', function(e){ var id=e.target.dataset.cc; if(!id) return; if(e.target.checked){ if(work.indexOf(id)<0) work.push(id); } else work=work.filter(function(x){ return x!==id; }); draw(); });
+      m.input.addEventListener('input', function(){ q=m.input.value.trim().toLowerCase(); draw(); });
+      m.back.addEventListener('click', function(e){
+        if(e.target===m.back || e.target.closest('[data-close]')) return m.close();
+        if(e.target.closest('[data-done]')){
+          var added=work.filter(function(c){ return S.cols.indexOf(c)<0; }), removed=S.cols.filter(function(c){ return work.indexOf(c)<0; });
+          removed.forEach(function(c){ removeCollection(c); });
+          S.cols=COLLECTIONS.map(function(c){ return c.id; }).filter(function(c){ return work.indexOf(c)>-1; });
+          // a newly added collection comes in fully ticked; the merchant unticks from Edit products & variants
+          added.forEach(function(cid){ coll(cid).p.forEach(function(pid){ var p=prod(pid); p.v.forEach(function(_,i){ S.col.add(vid(p,i)); }); }); });
+          m.close(); renderAll();
+        }
+      });
+      draw(); m.input.focus();
+    }
+
+    // ---------- product / variant picker ----------
+    function openPicker(mode, focusId, onlyCid){
+      var scope = mode==='pv' ? CATALOG : (onlyCid ? scopeOf([onlyCid]) : colScope());
+      var work=new Set(mode==='pv' ? S.pv : S.col), q='', openSet=new Set();
+      scope.forEach(function(p){ var n=p.v.filter(function(_,i){ return work.has(vid(p,i)); }).length; if((n>0 && n<p.v.length) || p.id===focusId) openSet.add(p.id); });
+      var sub;
+      if(mode==='pv') sub='Tick a product to include all its variants, or open it to pick variants.';
+      else if(onlyCid) sub='Collection: '+esc(coll(onlyCid).t)+' &middot; '+(S.sync[onlyCid]?'auto-add on, unticked products stay out':'snapshot, new products are not added later');
+      else sub='All selected collections';
+      var m=modal(mode==='pv'?'Select products and variants':'Edit products &amp; variants', sub, '<button class="lnk" data-selall="1">Select all</button><button class="lnk" data-clear="1">Clear</button>');
+      m.input.placeholder='Search products or variants';
+      function visible(){
+        if(!q) return scope;
+        return scope.filter(function(p){ return p.t.toLowerCase().indexOf(q)>-1 || p.v.some(function(v){ return v[0].toLowerCase().indexOf(q)>-1; }); });
+      }
+      function draw(){
+        var vis=visible(), html='';
+        vis.forEach(function(p){
+          var n=p.v.filter(function(_,i){ return work.has(vid(p,i)); }).length, open=openSet.has(p.id)||!!q;
+          html+='<div class="mprod'+(open?' open':'')+(p.id===focusId?' focus':'')+'" data-p="'+p.id+'">'+
+            '<div class="mprow"><button class="caret" data-caret="'+p.id+'" aria-label="Show variants">&#8250;</button>'+
+            '<input type="checkbox" class="ck" data-pck="'+p.id+'"'+(n===p.v.length?' checked':'')+' />'+
+            '<s-thumbnail size="small"></s-thumbnail><span class="mt">'+esc(p.t)+'</span>'+(mode==='pv' && p.v.some(function(_,i){ return S.col.has(vid(p,i)); }) ? '<span class="pill" style="margin-left:6px;font-size:11px">in a collection</span>' : '')+'<span class="mc">'+n+' / '+plural(p.v.length,'variant')+'</span></div>'+
+            '<div class="mvars">'+p.v.map(function(v,i){ return '<label class="mvrow"><input type="checkbox" class="ck" data-v="'+vid(p,i)+'"'+(work.has(vid(p,i))?' checked':'')+' /><span>'+esc(v[0])+'</span><span class="vp">INR '+v[1]+'</span></label>'; }).join('')+'</div></div>';
+        });
+        m.body.innerHTML = html || '<p class="help" style="padding:16px 0">No products match "'+esc(q)+'".</p>';
+        m.body.querySelectorAll('[data-pck]').forEach(function(cb){ var p=prod(cb.dataset.pck), n=p.v.filter(function(_,i){ return work.has(vid(p,i)); }).length; cb.indeterminate = n>0 && n<p.v.length; });
+        var c=countText(groups(work, scope));
+        m.cnt.textContent=plural(c.prods,'product')+' · '+plural(c.vars,'variant')+' selected';
+        m.shown.textContent = q ? vis.length+' of '+plural(scope.length,'product') : plural(scope.length,'product');
+      }
+      m.back.addEventListener('click', function(e){
+        if(e.target===m.back || e.target.closest('[data-close]')) return m.close();
+        if(e.target.closest('[data-done]')){ if(mode==='pv') S.pv=work; else S.col=work; m.close(); renderAll(); return; }
+        var c=e.target.closest('[data-caret]'); if(c){ var id=c.dataset.caret; openSet.has(id)?openSet.delete(id):openSet.add(id); draw(); return; }
+        if(e.target.closest('[data-selall]')){ visible().forEach(function(p){ p.v.forEach(function(_,i){ work.add(vid(p,i)); }); }); draw(); return; }
+        if(e.target.closest('[data-clear]')){ visible().forEach(function(p){ p.v.forEach(function(_,i){ work.delete(vid(p,i)); }); }); draw(); return; }
+      });
+      m.body.addEventListener('change', function(e){
+        var t=e.target;
+        if(t.dataset.pck){ var p=prod(t.dataset.pck); p.v.forEach(function(_,i){ t.checked?work.add(vid(p,i)):work.delete(vid(p,i)); }); }
+        else if(t.dataset.v){ t.checked?work.add(t.dataset.v):work.delete(t.dataset.v); }
+        draw();
+      });
+      m.input.addEventListener('input', function(){ q=m.input.value.trim().toLowerCase(); draw(); });
+      draw();
+      var f=focusId && m.body.querySelector('[data-p="'+focusId+'"]'); if(f) f.scrollIntoView({block:'center'}); else m.input.focus();
+    }
+
+    // ---------- gift product picker (single product or variant, any store product) ----------
+    function giftLabel(g){ var p=prod(g.pid); return p.t+(p.v.length>1?' · '+p.v[g.vi][0]:''); }
+    function giftField(g, cls){ return '<button type="button" class="giftfld '+cls+'"><s-thumbnail size="small-200"></s-thumbnail><span class="gname">'+esc(giftLabel(g))+'</span><span class="gchg">Change</span></button>'; }
+    function openGiftPicker(cur, cb){
+      var m=modal('Select a gift product','Free on that delivery. Any product in your store, not only this plan\'s.',''), q='', sel=cur?cur.pid+':'+cur.vi:'';
+      m.input.placeholder='Search products or variants';
+      function parse(k){ var a=k.split(':'); return {pid:a[0], vi:+a[1]}; }
+      function foot(){ m.cnt.textContent = sel ? 'Gift: '+giftLabel(parse(sel)) : 'No gift selected'; m.back.querySelector('[data-done]').disabled=!sel; }
+      function radio(k){ return '<input type="radio" name="giftpick" class="ck" data-g="'+k+'"'+(sel===k?' checked':'')+' />'; }
+      function draw(){
+        var vis=CATALOG.filter(function(p){ return !q || p.t.toLowerCase().indexOf(q)>-1 || p.v.some(function(v){ return v[0].toLowerCase().indexOf(q)>-1; }); });
+        m.body.innerHTML = vis.map(function(p){
+          return '<div class="mprod open"><div class="mprow"><span style="width:16px;flex:none"></span><s-thumbnail size="small"></s-thumbnail><span class="mt">'+esc(p.t)+'</span><span class="mc">'+plural(p.v.length,'variant')+'</span></div>'+
+                 '<div class="mvars">'+p.v.map(function(v,i){ return '<label class="mvrow">'+radio(p.id+':'+i)+'<span>'+esc(v[0])+'</span><span class="vp">INR '+v[1]+'</span></label>'; }).join('')+'</div></div>';
+        }).join('') || '<p class="help" style="padding:16px 0">No products match "'+esc(q)+'".</p>';
+        m.shown.textContent=plural(vis.length,'product'); foot();
+      }
+      m.body.addEventListener('change', function(e){ if(e.target.dataset.g){ sel=e.target.dataset.g; foot(); } });
+      m.input.addEventListener('input', function(){ q=m.input.value.trim().toLowerCase(); draw(); });
+      m.back.addEventListener('click', function(e){
+        if(e.target===m.back || e.target.closest('[data-close]')) return m.close();
+        if(e.target.closest('[data-done]') && sel){ m.close(); cb(parse(sel)); }
+      });
+      draw(); m.input.focus();
+    }
+
+    // ---------- per-card buying-option editor (scoped) ----------
+    var PAYG_LABEL='by invoice and email reminder (pay-as-you-go)', LAD_MAX=5;
+    function ord(n){ var s=['th','st','nd','rd'], v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); }
+    function discMode(card){ var b=card.querySelector('.discMode button.on'); return b?b.dataset.dm:'flat'; }
+    function fmtVal(card, v){ return card.querySelector('.discType').value==='amt' ? 'INR '+v : v+'%'; }
+    function initEditor(card){
+      var q=function(s){ return card.querySelector(s); };
+      var durSeg=q('.durSeg'), payPre=q('.pay-prepaid'), payAuto=q('.pay-auto'), payGo=q('.pay-payg'),
+          methodGroup=q('.methodGroup'), durNoneBtn=durSeg.querySelector('[data-dur="none"]'),
+          deliveryPreview=q('.deliveryPreview'),
+          schedFixed=q('.sched-fixed'), schedChoice=q('.sched-choice'), schedNone=q('.sched-none');
+      var dmSeg=q('.discMode'), unitSel=q('.discType'), flatBits=q('.flatBits'), ladder=q('.ladder'), ladrows=q('.ladrows'),
+          addstep=q('.addstep'), ladwarn=q('.ladwarn'), freeBlock=q('.freeBlock'), extrasHint=q('.extrasHint');
+      // LD-01 defaults: 5% from delivery 1, 10% from 3rd, 15% from 6th; g = free gift on the delivery the step starts (null = none)
+      card._lad=[{from:1,value:5,g:null},{from:3,value:10,g:null},{from:6,value:15,g:{pid:'p18',vi:0}}];
+      var chMin=q('.chMin'), chMax=q('.chMax'), chErr=q('.chErr');
+      function minMax(){ return {min:parseInt(chMin.value,10)||0, max:parseInt(chMax.value,10)||0}; }
+
+      function curDur(){ var b=durSeg.querySelector('button.on'); return b?b.dataset.dur:'fixed'; }
+      function setDuration(mode){
+        durSeg.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.dataset.dur===mode); });
+        schedFixed.classList.toggle('hide', mode!=='fixed');
+        schedChoice.classList.toggle('hide', mode!=='choice');
+        schedNone.classList.toggle('hide', mode!=='none');
+      }
+      function ladderLine(){
+        return card._lad.map(function(s,i){ return fmtVal(card,s.value)+(i===0?' now':' from '+ord(s.from))+(s.g?' + '+esc(giftLabel(s.g)):''); }).join(' &rsaquo; ');
+      }
+      function on(el){ return el.classList.contains('on'); }
+      function perDel(){ return on(payAuto) || on(payGo); }
+      function renderDeliveryPreview(){
+        var mode=curDur(), mm=minMax();
+        var count = mode==='fixed' ? 'for the set number of deliveries' : mode==='choice' ? 'for the '+mm.min+' to '+mm.max+' deliveries the customer picks' : 'with no end date';
+        var parts=[];
+        if(on(payPre)) parts.push('prepay '+count+', then the plan ends');
+        if(on(payAuto)) parts.push('pay per delivery '+count+' by AutoPay, charged automatically before each delivery');
+        if(on(payGo)) parts.push('pay as you go '+count+', billed by invoice and email reminder as each delivery ships');
+        var body = !parts.length ? 'no payment option is selected yet' : parts.length===1 ? 'the customer will '+parts[0] : 'the customer chooses to '+parts.join('; or to ');
+        var html='<b>When delivery happens:</b> '+body+'.';
+        if(discMode(card)==='ladder') html+='<br><b>Ladder on the widget:</b> '+ladderLine();
+        deliveryPreview.innerHTML=html;
+      }
+      function syncPay(){
+        var prepaid=on(payPre), pd=perDel(), lines=[];
+        if(prepaid) lines.push('<b>Prepaid:</b> pays for every delivery upfront.');
+        if(on(payAuto)) lines.push('<b>Pay per delivery (AutoPay):</b> a Razorpay mandate charges each delivery automatically. Always checks out through Razorpay.');
+        if(on(payGo)) lines.push('<b>Pay as you go:</b> an invoice and email reminder to pay as each delivery ships.');
+        methodGroup.innerHTML='<p class="help" style="margin:0">'+lines.join('<br>')+'</p>'; methodGroup.classList.toggle('hide', !lines.length);
+        var noEndOk = pd && !prepaid;
+        durNoneBtn.classList.toggle('hide', !noEndOk);
+        if(!noEndOk && durNoneBtn.classList.contains('on')) setDuration('fixed');
+        renderDeliveryPreview(); validateLadder();
+        document.dispatchEvent(new Event('sb:pay'));
+      }
+      durSeg.addEventListener('click', function(e){ if(!e.target.dataset.dur) return; setDuration(e.target.dataset.dur); renderDeliveryPreview(); validateLadder(); });
+      [payPre, payAuto, payGo].forEach(function(chip){
+        chip.addEventListener('click', function(){
+          if(chip.classList.contains('locked')) return;
+          // a ladder needs at least one per-delivery payment type left on
+          if(chip!==payPre && on(chip) && discMode(card)==='ladder' && (on(payAuto)+on(payGo))===1) return;
+          var wasPdOnly = !on(payPre) && perDel();
+          chip.classList.toggle('on');
+          if(!wasPdOnly && !on(payPre) && perDel()) setDuration('none');
+          syncPay();
+        });
+      });
+
+      // flat discount (unchanged behaviour)
+      var discPrefix=q('.discPrefix'), discSuffix=q('.discSuffix'), discVal=q('.discVal'), baseVal=discVal.textContent;
+      function renderDisc(){ var amt=unitSel.value==='amt'; discPrefix.classList.toggle('hide', !amt); discSuffix.classList.toggle('hide', amt); discVal.textContent = amt ? '100' : baseVal; }
+      unitSel.addEventListener('change', function(){ renderDisc(); renderLadder(); });
+
+      // discount type: Flat / Ladder (LD-01); no 'None', a merchant wanting none sets Flat 0
+      function setDiscMode(m){
+        dmSeg.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.dataset.dm===m); });
+        unitSel.parentNode.classList.toggle('hide', m==='none');
+        flatBits.classList.toggle('hide', m!=='flat');
+        ladder.classList.toggle('hide', m!=='ladder');
+        freeBlock.classList.toggle('hide', m==='ladder');           // gifts live in the ladder steps instead
+        extrasHint.textContent = m==='ladder' ? '(badge)' : '(free gifts, badge)';
+        if(m==='ladder'){                                         // R3: ladder turns Prepaid off and locks it
+          payPre.classList.remove('on'); payPre.classList.add('locked'); payPre.title='Not available with a ladder discount';
+          if(!perDel()) payGo.classList.add('on');
+        } else { payPre.classList.remove('locked'); payPre.title=''; }
+        syncPay(); renderLadder();
+      }
+      dmSeg.addEventListener('click', function(e){ var m=e.target.dataset.dm; if(m) setDiscMode(m); });
+
+      function renderLadder(){
+        var amt=unitSel.value==='amt', L=card._lad, html='';
+        L.forEach(function(s,i){
+          html+='<div class="ladrow" data-i="'+i+'">'+
+            '<span>'+(i===0?'<span class="field lfix" title="The first step always starts at delivery 1">1</span>':'<input class="field lin lfrom" type="number" min="2" value="'+s.from+'" aria-label="From delivery" />')+'</span>'+
+            '<span class="rowline" style="gap:5px;flex-wrap:nowrap">'+(amt?'<span class="help">INR</span>':'')+'<input class="field lin lval" type="number" min="0" value="'+s.value+'" aria-label="Discount" />'+(amt?'':'<span class="help">%</span>')+'</span>'+
+            '<span style="min-width:0">'+(s.g===null ? '<button class="lnk lgadd">&#65291; Add gift</button>'
+                     : '<span class="rowline" style="gap:6px;flex-wrap:nowrap">'+giftField(s.g,'lgchg')+'<button class="x lgrm" title="Remove gift">&#10005;</button></span>')+'</span>'+
+            '<span>'+(i===0?'':'<button class="btnsm ico-x lrm" title="Remove step">&#10005;</button>')+'</span></div>';
+        });
+        ladrows.innerHTML=html;
+        addstep.classList.toggle('hide', L.length>=LAD_MAX);
+        validateLadder(); renderDeliveryPreview();
+      }
+      function validateLadder(){
+        if(!ladwarn || discMode(card)!=='ladder'){ if(ladwarn) ladwarn.classList.add('hide'); return; }
+        var L=card._lad, msgs=[], amt=unitSel.value==='amt';
+        for(var i=1;i<L.length;i++){ if(!(L[i].from>L[i-1].from)) msgs.push('Step '+(i+1)+' must start after delivery '+L[i-1].from+'.'); }
+        L.forEach(function(s,i){ if(!amt && (s.value<0||s.value>100)) msgs.push('Step '+(i+1)+': a percentage must be 0 to 100.'); if(amt && s.value<0) msgs.push('Step '+(i+1)+': amount can\'t be negative.'); });
+        var last=L[L.length-1].from, dur=curDur();
+        if(dur==='fixed'){ var n=parseInt(schedFixed.querySelector('.field').textContent,10); if(last>n) msgs.push('This option has '+n+' deliveries, so the step from the '+ord(last)+' is never reached.'); }
+        if(dur==='choice'){ var mm=minMax(); if(last>mm.max) msgs.push('Customers can pick at most '+mm.max+' deliveries, so the step from the '+ord(last)+' is never reached.'); else if(last>mm.min) msgs.push('Customers who pick fewer than '+last+' deliveries never reach the last step.'); }
+        ladwarn.innerHTML=msgs.map(esc).join('<br>'); ladwarn.classList.toggle('hide', !msgs.length);
+      }
+      ladrows.addEventListener('input', function(e){
+        var row=e.target.closest('.ladrow'); if(!row) return; var s=card._lad[+row.dataset.i];
+        if(e.target.classList.contains('lfrom')) s.from=parseInt(e.target.value,10)||0;
+        if(e.target.classList.contains('lval')) s.value=parseFloat(e.target.value)||0;
+        validateLadder(); renderDeliveryPreview();
+      });
+      ladrows.addEventListener('click', function(e){
+        var row=e.target.closest('.ladrow'); if(!row) return; var i=+row.dataset.i, s=card._lad[i];
+        if(e.target.closest('.lgadd') || e.target.closest('.lgchg')){ openGiftPicker(s.g, function(g){ s.g=g; renderLadder(); }); }
+        else if(e.target.closest('.lgrm')){ s.g=null; renderLadder(); }
+        else if(e.target.closest('.lrm')){ card._lad.splice(i,1); renderLadder(); }
+      });
+      [chMin, chMax].forEach(function(el){ el.addEventListener('input', function(){ var mm=minMax(); chErr.classList.toggle('hide', !(mm.min>mm.max)); validateLadder(); renderDeliveryPreview(); }); });
+      addstep.addEventListener('click', function(){
+        var L=card._lad, last=L[L.length-1]; if(L.length>=LAD_MAX) return;
+        L.push({from:last.from+3, value:unitSel.value==='amt'?last.value+20:Math.min(100,last.value+5), g:null}); renderLadder();
+      });
+
+      var extrasToggle=q('.extrasToggle'), extrasBody=q('.extrasBody');
+      extrasToggle.addEventListener('click', function(){ var open=extrasBody.classList.toggle('hide')===false; extrasToggle.classList.toggle('open', open); });
+
+      var freelist=q('.freelist'), addfree=q('.addfree');
+      addfree.addEventListener('click', function(){
+        var d=document.createElement('div'); d.className='rowline'; d.style.padding='9px 0';
+        d.innerHTML='<span>Delivery #</span><input class="field lin" type="number" min="1" value="3" aria-label="Gift on delivery number" />'+
+          '<span class="gslot"><button type="button" class="giftfld empty gpick">&#65291; Select gift product</button></span><button class="x" style="margin-left:auto">Remove</button>';
+        d.querySelector('.x').addEventListener('click', function(){ d.remove(); });
+        d.querySelector('.gslot').addEventListener('click', function(){
+          openGiftPicker(d._g, function(g){ d._g=g; d.querySelector('.gslot').innerHTML=giftField(g,'gpick'); });
+        });
+        freelist.appendChild(d);
+      });
+
+      // badge: free text + one colour picker
+      var bTxt=q('.badgeTxt'), bChip=q('.badgeChip'), bCol=q('.badgeCol'), bHex=q('.cpHex');
+      function setCol(c){ bChip.style.background=c; bHex.textContent=c; }
+      bCol.addEventListener('input', function(){ setCol(bCol.value); });
+      bTxt.addEventListener('input', function(){ bChip.textContent=bTxt.value; bChip.classList.toggle('hide', !bTxt.value.trim()); });
+      setCol(bCol.value);
+
+      syncPay(); renderDisc(); renderLadder();
+    }
+
+    // ---------- collapsed summary chips = purchase type + discount only ----------
+    function summarize(card){
+      var pre=card.querySelector('.pay-prepaid').classList.contains('on');
+      var payg=card.querySelector('.pay-payg').classList.contains('on');
+      var pt=[]; if(pre) pt.push('Prepaid'); if(card.querySelector('.pay-auto').classList.contains('on')) pt.push('AutoPay'); if(payg) pt.push('Pay as you go'); var ptype=pt.join(' + ');
+      var dm=discMode(card), disc;
+      if(dm==='none') disc='No discount';
+      else if(dm==='ladder'){ var L=card._lad, best=Math.max.apply(null, L.map(function(s){ return s.value; })); disc='Ladder '+fmtVal(card,L[0].value)+' to '+fmtVal(card,best); }
+      else { var dt=card.querySelector('.discType').value, dv=card.querySelector('.discVal').textContent; disc = dt==='amt' ? ('INR '+dv+' off') : (dv+'% off'); }
+      var chips=card.querySelector('.chips'); chips.innerHTML='';
+      if(ptype){ var a=document.createElement('span'); a.className='pill'; a.textContent=ptype; chips.appendChild(a); }
+      var b=document.createElement('span'); b.className='pill'; b.textContent=disc; chips.appendChild(b);
+    }
+
+    // ---------- unified Edit / Collapse toggle + init each option editor ----------
+    [].slice.call(document.querySelectorAll('.optcard[data-opt]')).forEach(function(card){
+      initEditor(card);
+      var ed=card.querySelector('.opteditor'), btn=card.querySelector('.t-edit'), chips=card.querySelector('.chips');
+      function setOpen(open){ if(!open) summarize(card); ed.classList.toggle('hide', !open); btn.textContent = open ? 'Collapse' : 'Edit'; if(chips) chips.classList.toggle('hide', open); }
+      btn.addEventListener('click', function(){ setOpen(ed.classList.contains('hide')); });
+      if(ed.classList.contains('hide')) summarize(card);
+    });
+
+    // ---------- drag to reorder plans ----------
+    var optlist=$('optlist'), dragEl=null;
+    function bindDrag(card){
+      var h=card.querySelector('.draghandle'); if(!h) return;
+      h.addEventListener('mousedown', function(){ card.setAttribute('draggable','true'); });
+      h.addEventListener('mouseup', function(){ card.removeAttribute('draggable'); });
+      card.addEventListener('dragstart', function(){ dragEl=card; setTimeout(function(){ card.classList.add('dragging'); },0); });
+      card.addEventListener('dragend', function(){ card.classList.remove('dragging'); card.removeAttribute('draggable'); dragEl=null; });
+    }
+    optlist.querySelectorAll('.optcard').forEach(bindDrag);
+    optlist.addEventListener('dragover', function(e){
+      e.preventDefault(); if(!dragEl) return;
+      var els=[].slice.call(optlist.querySelectorAll('.optcard:not(.dragging)'));
+      var after=els.find(function(c){ var r=c.getBoundingClientRect(); return e.clientY < r.top + r.height/2; });
+      if(after) optlist.insertBefore(dragEl, after); else optlist.appendChild(dragEl);
+    });
+
+    // ---------- shipping override ----------
+    var shipOvSw=$('shipOvSw'), shipOvCfg=$('shipOvCfg'), shipOvPrice=$('shipOvPrice'), shipOvHint=$('shipOvHint'),
+        stepEls=[].slice.call(document.querySelectorAll('.step[data-step]'));
+    function setSumRow(row, filled, valText){
+      if(!row) return;
+      var icon=row.querySelector('.sicon'); icon.className='sicon '+(filled?'ok':'opt');
+      row.querySelector('.sval').textContent = valText;
+    }
+    function renderShipHint(){ var v=parseFloat(shipOvPrice.value); if(isNaN(v)||v<0) v=0; shipOvHint.textContent = v===0 ? 'Free shipping for this plan.' : 'Charged INR '+v+' per delivery.'; }
+    function updateShipSummary(){
+      var on=shipOvSw.checked, v=parseFloat(shipOvPrice.value); if(isNaN(v)||v<0) v=0;
+      var txt = !on ? 'Off, uses shop shipping' : (v===0 ? 'Override on, free shipping' : 'Override on, INR '+v+' per delivery');
+      setSumRow($('sumShip'), on, txt);
+      stepEls[2].querySelector('.collsum').textContent = txt;
+    }
+    shipOvSw.addEventListener('change', function(){ shipOvCfg.classList.toggle('hide', !shipOvSw.checked); renderShipHint(); updateShipSummary(); });
+    shipOvPrice.addEventListener('input', function(){ renderShipHint(); updateShipSummary(); });
+    renderShipHint(); updateShipSummary();
+    var shipZipMode=$('shipZipMode');
+    shipZipMode.addEventListener('click', function(e){ var z=e.target.dataset.zip; if(!z) return; shipZipMode.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.dataset.zip===z); }); });
+
+    // ---------- v3: custom checkout Adapt (replaces the widget marquee) ----------
+    var adaptSw=$('adaptSw'), adaptCfg=$('adaptCfg'), planName=document.querySelector('s-text-field[label="Plan name"]');
+    function adaptOn(){ return !!adaptSw.checked; }
+    function renderAdapt(){
+      var on=adaptOn(), txt = on ? 'Custom checkout on' : 'Custom checkout off';
+      adaptCfg.classList.toggle('hide', !on);
+      setSumRow($('sumEnh'), on, txt);
+      steps[3].querySelector('.collsum').textContent = txt;
+      $('adaptTitle').textContent = (planName && planName.value) || 'Untitled plan';
+      renderCheckout();
+    }
+    adaptSw.addEventListener('change', renderAdapt);
+    if(planName) planName.addEventListener('input', function(){ $('adaptTitle').textContent = planName.value || 'Untitled plan'; });
+
+    // ---------- checkout row: reflects Adapt ----------
+    var coBadge=$('coBadge'), coHelp=$('coHelp'), recheck=$('recheck');
+    function renderCheckout(){
+      if(autoOnly()){
+        coBadge.textContent='Razorpay (AutoPay)'; coBadge.className='badge2 sub';
+        coHelp.innerHTML='Every buying option uses Pay per delivery (AutoPay), so checkout always goes through Razorpay. Custom checkout isn\'t available.';
+        return;
+      }
+      if(adaptOn()){
+        coBadge.textContent='Custom checkout'; coBadge.className='badge2 info';
+        coHelp.innerHTML='Adapt is on: this plan sells through your custom checkout (Prepaid and Pay as you go). <button class="lnk" data-goto="3">Manage in Enhancements &#8594;</button>';
+      } else {
+        coBadge.textContent='Shopify checkout'; coBadge.className='badge2 ok';
+        coHelp.innerHTML='Detected on your store (best-effort). <button class="lnk" data-goto="3">Using a custom checkout? Turn on Adapt &#8594;</button>';
+      }
+    }
+    coHelp.addEventListener('click', function(e){
+      var b=e.target.closest('[data-goto]'); if(!b) return;
+      openStep(+b.dataset.goto); steps[+b.dataset.goto].scrollIntoView({behavior:'smooth', block:'start'});
+    });
+    function planPay(){ var t={pre:false,auto:false,payg:false}; document.querySelectorAll('.optcard').forEach(function(c){ if(c.querySelector('.pay-prepaid.on')) t.pre=true; if(c.querySelector('.pay-auto.on')) t.auto=true; if(c.querySelector('.pay-payg.on')) t.payg=true; }); return t; }
+    function autoOnly(){ var t=planPay(); return t.auto && !t.pre && !t.payg; }
+    function renderAdaptAvail(){
+      var ao=autoOnly();
+      if(ao){ adaptSw.checked=false; adaptSw.setAttribute('disabled',''); } else adaptSw.removeAttribute('disabled');
+      adaptSw.disabled=ao;
+      $('adaptOffNote').classList.toggle('hide', !ao);
+      renderAdapt();
+    }
+    document.addEventListener('sb:pay', renderAdaptAvail);
+    recheck.addEventListener('click', function(){ recheck.textContent='Checking…'; setTimeout(function(){ recheck.textContent='Re-check'; },700); });
+
+    // ---------- widget template: one pick, with a switch notice ----------
+    // Picking a template makes it live on this plan's products at publish. A product that shows a
+    // different widget today is switched over and turned off in that widget; activation from Widgets is unchanged.
+    var wTpl=$('wTpl'), wWarn=$('wWarn'), wBadge=$('wBadge');
+    function renderWidget(){
+      var chosen=wTpl.value, name=TPL_NAMES[chosen];
+      var gs=groups(activeSet(), activeScope());
+      var moves=gs.filter(function(g){ return g.p.w && g.p.w!==chosen; });
+      if(!gs.length){ wBadge.textContent='No products yet'; wBadge.className='badge2 sub'; }
+      else if(moves.length){ wBadge.textContent=plural(moves.length,'product')+' will switch'; wBadge.className='badge2 attn'; }
+      else { wBadge.textContent='Goes live on publish'; wBadge.className='badge2 info'; }
+      if(moves.length){
+        var lines=moves.slice(0,3).map(function(g){ return '<div>&middot; <b>'+esc(g.p.t)+'</b>: turned off in '+esc(TPL_NAMES[g.p.w])+'</div>'; }).join('');
+        if(moves.length>3) lines+='<div>&middot; and '+(moves.length-3)+' more</div>';
+        wWarn.innerHTML=(moves.length===1?'This product shows another widget today. On publish it switches':'These products show another widget today. On publish they switch')+' to <b>'+esc(name)+'</b>:'+lines;
+        wWarn.classList.remove('hide');
+      } else wWarn.classList.add('hide');
+      $('wTokens').title='Opens Widgets: '+name;
+    }
+    wTpl.addEventListener('change', renderWidget);
+
+    function renderAll(){ renderSelection(); renderWidget(); }
+    setLevel(S.cols.length && !S.pv.size ? 'collection' : 'pv'); renderAdaptAvail();
+  })();
+</script>
+</body>
+</html>
