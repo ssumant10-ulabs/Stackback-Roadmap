@@ -291,6 +291,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
               </div>
               <!-- v3: both levels render the same product-grouped list; variants are edited in the picker popup -->
               <div id="lvl-pv">
+                <p class="snapnote hide" id="pvNote">Extra products on top of your collections. Both lists apply to this plan.</p>
                 <div id="pvList"></div>
                 <div class="rowline" style="padding-top:9px"><button class="btnghost" id="pvAdd">&#65291; Select products / variants</button><span class="field" id="pvCount"></span></div>
               </div>
@@ -325,7 +326,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                   <div class="opteditor hide">
                     <div class="qgroup">
                       <p class="q">Payment &amp; pricing</p>
-                      <div class="rowline"><span class="chkchip on pay-prepaid">Prepaid</span><span class="chkchip pay-payg">Pay per delivery</span></div>
+                      <div class="rowline"><span class="chkchip on pay-prepaid">Prepaid</span><span class="chkchip pay-auto">Pay per delivery (AutoPay)</span><span class="chkchip pay-payg">Pay as you go</span></div>
                       <div class="methodGroup hide" style="margin-top:10px"><p class="help">Billed pay-as-you-go: the customer gets an invoice and email reminder to pay as each delivery ships.</p></div>
                     </div>
                     <div class="qgroup">
@@ -385,7 +386,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                   <div class="opteditor">
                     <div class="qgroup">
                       <p class="q">Payment &amp; pricing</p>
-                      <div class="rowline"><span class="chkchip on pay-prepaid">Prepaid</span><span class="chkchip pay-payg">Pay per delivery</span></div>
+                      <div class="rowline"><span class="chkchip on pay-prepaid">Prepaid</span><span class="chkchip pay-auto">Pay per delivery (AutoPay)</span><span class="chkchip pay-payg">Pay as you go</span></div>
                       <div class="methodGroup hide" style="margin-top:10px"><p class="help">Billed pay-as-you-go: the customer gets an invoice and email reminder to pay as each delivery ships.</p></div>
                     </div>
                     <div class="qgroup">
@@ -482,6 +483,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                 <div><b>Custom checkout (Adapt)</b><div class="help">Sell this plan through a custom storefront checkout. StackBack creates an unlisted product for it, plus a discount code for each buying option.</div></div>
                 <s-switch id="adaptSw"></s-switch>
               </div>
+              <p class="noteline hide" id="adaptOffNote" style="color:var(--p-attn)">Not available: every buying option uses Pay per delivery (AutoPay), which always checks out through Razorpay. Add a Prepaid or Pay as you go option to sell this plan through a custom checkout.</p>
               <div id="adaptCfg" class="hide">
                 <div class="adaptprod">
                   <s-thumbnail size="small" id="adaptThumb"></s-thumbnail>
@@ -492,7 +494,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                   </div>
                   <span class="ap-a"><button class="lnk" id="adaptEdit">Edit in Shopify &#8599;</button></span>
                 </div>
-                <p class="noteline">Works for Prepaid and Pay per delivery options only. AutoPay always checks out through Razorpay.</p>
+                <p class="noteline">Covers Prepaid and Pay as you go options. Pay per delivery (AutoPay) always checks out through Razorpay.</p>
               </div>
             </div>
           </div>
@@ -630,8 +632,9 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     var S={ mode:'pv', pv:new Set(['p1-0','p1-1']), cols:[], sync:{}, col:new Set() };
     function scopeOf(cids){ var ids={}; cids.forEach(function(c){ coll(c).p.forEach(function(p){ ids[p]=1; }); }); return CATALOG.filter(function(p){ return ids[p.id]; }); }
     function colScope(){ return scopeOf(S.cols); }
-    function activeSet(){ return S.mode==='pv' ? S.pv : S.col; }
-    function activeScope(){ return S.mode==='pv' ? CATALOG : colScope(); }
+    // both lists apply: the plan = collection picks + extra single products
+    function activeSet(){ var u=new Set(S.pv); S.col.forEach(function(v){ u.add(v); }); return u; }
+    function activeScope(){ return CATALOG; }
     function groups(set, scope){
       return scope.map(function(p){ var n=p.v.filter(function(_,i){ return set.has(vid(p,i)); }).length; return {p:p,n:n}; }).filter(function(g){ return g.n>0; });
     }
@@ -691,22 +694,26 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       renderCollections();
       var cc=renderList($('colList'), S.col, colScope(), 'collection');
       $('colCount').textContent=plural(cc.prods,'product')+' · '+plural(cc.vars,'variant');
-      var c = S.mode==='pv' ? pc : cc, anySync=S.cols.some(function(x){ return S.sync[x]; });
-      var sum = S.mode==='pv' ? 'Products & Variants · '+plural(c.prods,'product')+', '+plural(c.vars,'variant')
-              : (hasCol ? plural(S.cols.length,'collection')+(anySync?' (auto-add on)':' (snapshot)')+' · '+plural(c.prods,'product')+', '+plural(c.vars,'variant') : 'Collections · none selected');
+      var c=countText(groups(activeSet(), CATALOG)), anySync=S.cols.some(function(x){ return S.sync[x]; }), lead=[];
+      if(hasCol) lead.push(plural(S.cols.length,'collection')+(anySync?' (auto-add on)':''));
+      if(pc.prods) lead.push(plural(pc.prods, hasCol?'extra product':'product'));
+      var sum = !lead.length ? 'Nothing selected yet' : !hasCol ? 'Products & Variants · '+plural(c.prods,'product')+', '+plural(c.vars,'variant') : lead.join(' + ')+' · '+plural(c.prods,'product')+', '+plural(c.vars,'variant')+(pc.prods?' in total':'');
       steps[0].querySelector('.collsum').textContent=sum;
+      $('pvNote').classList.toggle('hide', !hasCol);
+      aseg.querySelector('[data-lvl="pv"]').textContent='Products & Variants'+(pc.prods?' ('+pc.prods+')':'');
+      aseg.querySelector('[data-lvl="collection"]').textContent='Collections'+(hasCol?' ('+S.cols.length+')':'');
       $('adaptVars').textContent=plural(c.vars,'variant');
     }
 
     var aseg=$('applyseg');
-    aseg.addEventListener('click', function(e){
-      var lvl=e.target.dataset.lvl; if(!lvl) return;
+    function setLevel(lvl){
       S.mode=lvl;
       $('lvl-pv').classList.toggle('hide', lvl!=='pv');
       $('lvl-collection').classList.toggle('hide', lvl!=='collection');
       aseg.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.dataset.lvl===lvl); });
       renderAll();
-    });
+    }
+    aseg.addEventListener('click', function(e){ var lvl=e.target.closest('[data-lvl]'); if(lvl) setLevel(lvl.dataset.lvl); });
     $('pvAdd').addEventListener('click', function(){ openPicker('pv'); });
     $('colAdd').addEventListener('click', openColPicker);
     $('colMore').addEventListener('click', openColPicker);
@@ -778,7 +785,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
           html+='<div class="mprod'+(open?' open':'')+(p.id===focusId?' focus':'')+'" data-p="'+p.id+'">'+
             '<div class="mprow"><button class="caret" data-caret="'+p.id+'" aria-label="Show variants">&#8250;</button>'+
             '<input type="checkbox" class="ck" data-pck="'+p.id+'"'+(n===p.v.length?' checked':'')+' />'+
-            '<s-thumbnail size="small"></s-thumbnail><span class="mt">'+esc(p.t)+'</span><span class="mc">'+n+' / '+plural(p.v.length,'variant')+'</span></div>'+
+            '<s-thumbnail size="small"></s-thumbnail><span class="mt">'+esc(p.t)+'</span>'+(mode==='pv' && p.v.some(function(_,i){ return S.col.has(vid(p,i)); }) ? '<span class="pill" style="margin-left:6px;font-size:11px">in a collection</span>' : '')+'<span class="mc">'+n+' / '+plural(p.v.length,'variant')+'</span></div>'+
             '<div class="mvars">'+p.v.map(function(v,i){ return '<label class="mvrow"><input type="checkbox" class="ck" data-v="'+vid(p,i)+'"'+(work.has(vid(p,i))?' checked':'')+' /><span>'+esc(v[0])+'</span><span class="vp">INR '+v[1]+'</span></label>'; }).join('')+'</div></div>';
         });
         m.body.innerHTML = html || '<p class="help" style="padding:16px 0">No products match "'+esc(q)+'".</p>';
@@ -838,7 +845,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     function fmtVal(card, v){ return card.querySelector('.discType').value==='amt' ? 'INR '+v : v+'%'; }
     function initEditor(card){
       var q=function(s){ return card.querySelector(s); };
-      var durSeg=q('.durSeg'), payPre=q('.pay-prepaid'), payGo=q('.pay-payg'),
+      var durSeg=q('.durSeg'), payPre=q('.pay-prepaid'), payAuto=q('.pay-auto'), payGo=q('.pay-payg'),
           methodGroup=q('.methodGroup'), durNoneBtn=durSeg.querySelector('[data-dur="none"]'),
           deliveryPreview=q('.deliveryPreview'),
           schedFixed=q('.sched-fixed'), schedChoice=q('.sched-choice'), schedNone=q('.sched-none');
@@ -859,32 +866,43 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       function ladderLine(){
         return card._lad.map(function(s,i){ return fmtVal(card,s.value)+(i===0?' now':' from '+ord(s.from))+(s.g?' + '+esc(giftLabel(s.g)):''); }).join(' &rsaquo; ');
       }
+      function on(el){ return el.classList.contains('on'); }
+      function perDel(){ return on(payAuto) || on(payGo); }
       function renderDeliveryPreview(){
-        var prepaid=payPre.classList.contains('on'), perDeliveryChip=payGo.classList.contains('on'),
-            mode=curDur(), ml=PAYG_LABEL;
-        var mm=minMax(), count = mode==='fixed' ? 'for the set number of deliveries' : mode==='choice' ? 'for the '+mm.min+' to '+mm.max+' deliveries the customer picks' : 'with no end date';
-        var body;
-        if(prepaid && perDeliveryChip) body='the customer chooses how to pay: prepay '+count+'; or pay per delivery, charged '+ml;
-        else if(prepaid) body='the customer prepays '+count+', then the plan ends';
-        else if(perDeliveryChip) body='the plan runs '+count+'; each delivery is charged '+ml;
-        else body='no payment option is selected yet';
+        var mode=curDur(), mm=minMax();
+        var count = mode==='fixed' ? 'for the set number of deliveries' : mode==='choice' ? 'for the '+mm.min+' to '+mm.max+' deliveries the customer picks' : 'with no end date';
+        var parts=[];
+        if(on(payPre)) parts.push('prepay '+count+', then the plan ends');
+        if(on(payAuto)) parts.push('pay per delivery '+count+' by AutoPay, charged automatically before each delivery');
+        if(on(payGo)) parts.push('pay as you go '+count+', billed by invoice and email reminder as each delivery ships');
+        var body = !parts.length ? 'no payment option is selected yet' : parts.length===1 ? 'the customer will '+parts[0] : 'the customer chooses to '+parts.join('; or to ');
         var html='<b>When delivery happens:</b> '+body+'.';
         if(discMode(card)==='ladder') html+='<br><b>Ladder on the widget:</b> '+ladderLine();
         deliveryPreview.innerHTML=html;
       }
       function syncPay(){
-        var prepaid=payPre.classList.contains('on'), perDelivery=payGo.classList.contains('on');
-        methodGroup.classList.toggle('hide', !perDelivery);
-        var noEndOk = perDelivery && !prepaid;
+        var prepaid=on(payPre), pd=perDel(), lines=[];
+        if(prepaid) lines.push('<b>Prepaid:</b> pays for every delivery upfront.');
+        if(on(payAuto)) lines.push('<b>Pay per delivery (AutoPay):</b> a Razorpay mandate charges each delivery automatically. Always checks out through Razorpay.');
+        if(on(payGo)) lines.push('<b>Pay as you go:</b> an invoice and email reminder to pay as each delivery ships.');
+        methodGroup.innerHTML='<p class="help" style="margin:0">'+lines.join('<br>')+'</p>'; methodGroup.classList.toggle('hide', !lines.length);
+        var noEndOk = pd && !prepaid;
         durNoneBtn.classList.toggle('hide', !noEndOk);
         if(!noEndOk && durNoneBtn.classList.contains('on')) setDuration('fixed');
         renderDeliveryPreview(); validateLadder();
+        document.dispatchEvent(new Event('sb:pay'));
       }
       durSeg.addEventListener('click', function(e){ if(!e.target.dataset.dur) return; setDuration(e.target.dataset.dur); renderDeliveryPreview(); validateLadder(); });
-      payPre.addEventListener('click', function(){ if(payPre.classList.contains('locked')) return; payPre.classList.toggle('on'); if(!payPre.classList.contains('on') && payGo.classList.contains('on')) setDuration('none'); syncPay(); });
-      payGo.addEventListener('click', function(){
-        if(payGo.classList.contains('on') && discMode(card)==='ladder') return; // ladder needs a per-delivery payment
-        payGo.classList.toggle('on'); if(payGo.classList.contains('on') && !payPre.classList.contains('on')) setDuration('none'); syncPay();
+      [payPre, payAuto, payGo].forEach(function(chip){
+        chip.addEventListener('click', function(){
+          if(chip.classList.contains('locked')) return;
+          // a ladder needs at least one per-delivery payment type left on
+          if(chip!==payPre && on(chip) && discMode(card)==='ladder' && (on(payAuto)+on(payGo))===1) return;
+          var wasPdOnly = !on(payPre) && perDel();
+          chip.classList.toggle('on');
+          if(!wasPdOnly && !on(payPre) && perDel()) setDuration('none');
+          syncPay();
+        });
       });
 
       // flat discount (unchanged behaviour)
@@ -902,7 +920,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         extrasHint.textContent = m==='ladder' ? '(badge)' : '(free gifts, badge)';
         if(m==='ladder'){                                         // R3: ladder turns Prepaid off and locks it
           payPre.classList.remove('on'); payPre.classList.add('locked'); payPre.title='Not available with a ladder discount';
-          if(!payGo.classList.contains('on')) payGo.classList.add('on');
+          if(!perDel()) payGo.classList.add('on');
         } else { payPre.classList.remove('locked'); payPre.title=''; }
         syncPay(); renderLadder();
       }
@@ -979,7 +997,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     function summarize(card){
       var pre=card.querySelector('.pay-prepaid').classList.contains('on');
       var payg=card.querySelector('.pay-payg').classList.contains('on');
-      var ptype = pre&&payg ? 'Both' : pre ? 'Prepaid' : payg ? 'Pay per delivery' : '';
+      var pt=[]; if(pre) pt.push('Prepaid'); if(card.querySelector('.pay-auto').classList.contains('on')) pt.push('AutoPay'); if(payg) pt.push('Pay as you go'); var ptype=pt.join(' + ');
       var dm=discMode(card), disc;
       if(dm==='none') disc='No discount';
       else if(dm==='ladder'){ var L=card._lad, best=Math.max.apply(null, L.map(function(s){ return s.value; })); disc='Ladder '+fmtVal(card,L[0].value)+' to '+fmtVal(card,best); }
@@ -1053,9 +1071,14 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     // ---------- checkout row: reflects Adapt ----------
     var coBadge=$('coBadge'), coHelp=$('coHelp'), recheck=$('recheck');
     function renderCheckout(){
+      if(autoOnly()){
+        coBadge.textContent='Razorpay (AutoPay)'; coBadge.className='badge2 sub';
+        coHelp.innerHTML='Every buying option uses Pay per delivery (AutoPay), so checkout always goes through Razorpay. Custom checkout isn\'t available.';
+        return;
+      }
       if(adaptOn()){
         coBadge.textContent='Custom checkout'; coBadge.className='badge2 info';
-        coHelp.innerHTML='Adapt is on: this plan sells through your custom checkout (Prepaid and Pay per delivery). <button class="lnk" data-goto="3">Manage in Enhancements &#8594;</button>';
+        coHelp.innerHTML='Adapt is on: this plan sells through your custom checkout (Prepaid and Pay as you go). <button class="lnk" data-goto="3">Manage in Enhancements &#8594;</button>';
       } else {
         coBadge.textContent='Shopify checkout'; coBadge.className='badge2 ok';
         coHelp.innerHTML='Detected on your store (best-effort). <button class="lnk" data-goto="3">Using a custom checkout? Turn on Adapt &#8594;</button>';
@@ -1065,6 +1088,16 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       var b=e.target.closest('[data-goto]'); if(!b) return;
       openStep(+b.dataset.goto); steps[+b.dataset.goto].scrollIntoView({behavior:'smooth', block:'start'});
     });
+    function planPay(){ var t={pre:false,auto:false,payg:false}; document.querySelectorAll('.optcard').forEach(function(c){ if(c.querySelector('.pay-prepaid.on')) t.pre=true; if(c.querySelector('.pay-auto.on')) t.auto=true; if(c.querySelector('.pay-payg.on')) t.payg=true; }); return t; }
+    function autoOnly(){ var t=planPay(); return t.auto && !t.pre && !t.payg; }
+    function renderAdaptAvail(){
+      var ao=autoOnly();
+      if(ao){ adaptSw.checked=false; adaptSw.setAttribute('disabled',''); } else adaptSw.removeAttribute('disabled');
+      adaptSw.disabled=ao;
+      $('adaptOffNote').classList.toggle('hide', !ao);
+      renderAdapt();
+    }
+    document.addEventListener('sb:pay', renderAdaptAvail);
     recheck.addEventListener('click', function(){ recheck.textContent='Checking…'; setTimeout(function(){ recheck.textContent='Re-check'; },700); });
 
     // ---------- widget template: one pick, with a switch notice ----------
@@ -1089,7 +1122,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     wTpl.addEventListener('change', renderWidget);
 
     function renderAll(){ renderSelection(); renderWidget(); }
-    renderAll(); renderAdapt();
+    setLevel(S.cols.length && !S.pv.size ? 'collection' : 'pv'); renderAdaptAvail();
   })();
 </script>
 </body>
