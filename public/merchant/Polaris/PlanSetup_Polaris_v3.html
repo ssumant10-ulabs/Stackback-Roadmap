@@ -206,6 +206,14 @@
   /* v3b: ladder discount */
   .ladhead,.ladrow{display:grid;grid-template-columns:130px 150px 34px;gap:10px;align-items:center}
   .prow.clk{cursor:pointer;border-radius:8px}
+  .ladGiftSlot .freeBlock{margin:16px 0 0}
+  .ladtl{display:flex;flex-wrap:wrap;gap:6px}
+  .tlc{min-width:52px;box-sizing:border-box;border:1px solid var(--p-line);border-radius:8px;padding:5px 6px;text-align:center;background:#fff;font-size:12px}
+  .tlc.step{border-color:var(--p-primary);box-shadow:inset 0 0 0 1px var(--p-primary)}
+  .tld{display:block;color:var(--p-muted);font-size:10.5px}
+  .tlv{display:block;font-weight:650}
+  .tlg{display:block;margin-top:3px;font-size:10px;font-weight:600;color:#0f5132;background:var(--p-success-bg);border-radius:6px;padding:1px 4px}
+  .tlc.more{border-style:dashed;color:var(--p-muted);display:grid;place-items:center}
   .prow.clk:hover{background:#f7f7f7}
   .wtpl{display:grid;grid-template-columns:auto auto;justify-content:start;align-items:center;column-gap:8px;row-gap:3px;margin-top:10px}
   .wtpl .wlbl{grid-column:1/-1;font-size:12px;color:var(--p-muted);font-weight:600}
@@ -364,12 +372,14 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                         <div class="ladrows"></div>
                         <div class="rowline" style="margin-top:8px"><button class="btnghost addstep">&#65291; Add step</button><span class="help">Up to 5 steps</span></div>
                         <div class="warnbox ladwarn hide"></div>
-                        <p class="help" style="margin-top:8px">Prepaid is off for this option: a ladder needs a payment per delivery. For prepaid, add a separate option with a flat discount.</p>
+                        <div class="ladGiftSlot"></div>
+                        <p class="q" style="margin:14px 0 2px">Delivery timeline</p><p class="help" style="margin:0 0 6px">What each paid delivery gets. Outlined = a new step starts.</p><div class="ladtl"></div>
+                        <p class="help" style="margin-top:10px">Prepaid is off for this option: a ladder needs a payment per delivery. For prepaid, add a separate option with a flat discount.</p>
                       </div>
                     </div>
                     <div class="qgroup freeBlock">
-                      <p class="q">Free gifts <span class="help" style="font-weight:400">(optional)</span></p>
-                      <p class="help" style="margin:-4px 0 6px">Each gift goes out once, on the exact paid delivery you pick. Works with Flat and Ladder.</p>
+                      <p class="q"><span class="fgTitle">Free gifts</span> <span class="help" style="font-weight:400">(optional)</span></p>
+                      <p class="help" style="margin:-4px 0 6px">Each gift goes out once, on the exact paid delivery you pick.</p>
                       <div class="freelist"></div>
                       <div class="warnbox giftwarn hide"></div>
                       <div class="rowline" style="margin-top:4px"><button class="btnghost addfree">&#65291; Add a gift</button></div>
@@ -428,12 +438,14 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                         <div class="ladrows"></div>
                         <div class="rowline" style="margin-top:8px"><button class="btnghost addstep">&#65291; Add step</button><span class="help">Up to 5 steps</span></div>
                         <div class="warnbox ladwarn hide"></div>
-                        <p class="help" style="margin-top:8px">Prepaid is off for this option: a ladder needs a payment per delivery. For prepaid, add a separate option with a flat discount.</p>
+                        <div class="ladGiftSlot"></div>
+                        <p class="q" style="margin:14px 0 2px">Delivery timeline</p><p class="help" style="margin:0 0 6px">What each paid delivery gets. Outlined = a new step starts.</p><div class="ladtl"></div>
+                        <p class="help" style="margin-top:10px">Prepaid is off for this option: a ladder needs a payment per delivery. For prepaid, add a separate option with a flat discount.</p>
                       </div>
                     </div>
                     <div class="qgroup freeBlock">
-                      <p class="q">Free gifts <span class="help" style="font-weight:400">(optional)</span></p>
-                      <p class="help" style="margin:-4px 0 6px">Each gift goes out once, on the exact paid delivery you pick. Works with Flat and Ladder.</p>
+                      <p class="q"><span class="fgTitle">Free gifts</span> <span class="help" style="font-weight:400">(optional)</span></p>
+                      <p class="help" style="margin:-4px 0 6px">Each gift goes out once, on the exact paid delivery you pick.</p>
                       <div class="freelist"></div>
                       <div class="warnbox giftwarn hide"></div>
                       <div class="rowline" style="margin-top:4px"><button class="btnghost addfree">&#65291; Add a gift</button></div>
@@ -557,7 +569,6 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
               </div>
               <div class="help" style="margin-top:4px">The widget this plan's products show. It goes live on them when you publish.</div>
               <div class="wtpl"><span class="wlbl" style="margin:0">Widget template</span><span class="wname" id="wName">Subscription Widget</span><span class="badge2 sub">Default</span></div>
-              <div class="warnbox hide" id="wWarn"></div>
               <div style="margin-top:8px"><button class="lnk" id="wSelect">Select widget &#8594;</button></div>
             </div>
 
@@ -858,6 +869,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       // LD-01 defaults: 5% from paid delivery 1, 10% from 3rd, 15% from 6th. Gifts are not on steps (a step is a range); they sit in Free gifts on exact deliveries (LD-01 R7).
       card._lad=[{from:1,value:5},{from:3,value:10},{from:6,value:15}];
       var chMin=q('.chMin'), chMax=q('.chMax'), chErr=q('.chErr');
+      var freeAnchor=freeBlock.nextElementSibling, ladGiftSlot=q('.ladGiftSlot'), ladtl=q('.ladtl'), fgTitle=q('.fgTitle');
       function minMax(){ return {min:parseInt(chMin.value,10)||0, max:parseInt(chMax.value,10)||0}; }
 
       function curDur(){ var b=durSeg.querySelector('button.on'); return b?b.dataset.dur:'fixed'; }
@@ -869,6 +881,23 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       }
       function ladderLine(){
         return card._lad.map(function(s,i){ return fmtVal(card,s.value)+(i===0?' now':' from '+ord(s.from)); }).join(' &rsaquo; ');
+      }
+      function renderTimeline(){
+        if(!ladtl || discMode(card)!=='ladder') return;
+        var L=card._lad, dur=curDur(), mm=minMax(), last=L[L.length-1].from, N, more=false;
+        if(dur==='fixed') N=parseInt(schedFixed.querySelector('.field').textContent,10)||last;
+        else if(dur==='choice') N=mm.max||last;
+        else { N=last+2; more=true; }
+        if(N>12){ N=12; more=true; }
+        var gifts={}; giftRows().forEach(function(d){ var n=parseInt(d.querySelector('.gn').value,10); if(d._g && n>0) (gifts[n]=gifts[n]||[]).push(giftLabel(d._g)); });
+        var starts={}; L.forEach(function(s){ starts[s.from]=1; });
+        var html='';
+        for(var d=1; d<=N; d++){
+          var v=null; L.forEach(function(s){ if(s.from<=d) v=s.value; });
+          html+='<div class="tlc'+(starts[d]?' step':'')+'"'+(gifts[d]?' title="'+esc('Gift: '+gifts[d].join(', '))+'"':'')+'><span class="tld">#'+d+'</span><span class="tlv">'+(v===null?'-':fmtVal(card,v))+'</span>'+(gifts[d]?'<span class="tlg">+ Gift</span>':'')+'</div>';
+        }
+        if(more) html+='<div class="tlc more">&hellip;</div>';
+        ladtl.innerHTML=html;
       }
       function on(el){ return el.classList.contains('on'); }
       function perDel(){ return on(payAuto) || on(payGo); }
@@ -884,6 +913,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         if(discMode(card)==='ladder') html+='<br><b>Ladder on the widget:</b> '+ladderLine();
         var gl=giftLine(); if(gl) html+='<br><b>Free gifts:</b> '+gl;
         deliveryPreview.innerHTML=html;
+        renderTimeline();
       }
       function syncPay(){
         var prepaid=on(payPre), pd=perDel(), lines=[];
@@ -921,6 +951,9 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         unitSel.parentNode.classList.toggle('hide', m==='none');
         flatBits.classList.toggle('hide', m!=='flat');
         ladder.classList.toggle('hide', m!=='ladder');
+        // Ladder: gifts sit inside the ladder so they read together; still one exact delivery each (a step is a range)
+        if(m==='ladder'){ ladGiftSlot.appendChild(freeBlock); fgTitle.textContent='Free gifts in this ladder'; }
+        else { freeAnchor.parentNode.insertBefore(freeBlock, freeAnchor); fgTitle.textContent='Free gifts'; }
         if(m==='ladder'){                                         // R3: ladder turns Prepaid off and locks it
           payPre.classList.remove('on'); payPre.classList.add('locked'); payPre.title='Not available with a ladder discount';
           if(!perDel()) payGo.classList.add('on');
@@ -1123,20 +1156,10 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     // ---------- widget template: one pick, with a switch notice ----------
     // Picking a template makes it live on this plan's products at publish. A product that shows a
     // different widget today is switched over and turned off in that widget; activation from Widgets is unchanged.
-    var wTpl={value:'subscription-widget'}, wWarn=$('wWarn'), wBadge=$('wBadge');   // chosen in Widgets; this screen only shows it
+    var wTpl={value:'subscription-widget'}, wBadge=$('wBadge');   // chosen in Widgets; this screen only shows it
     function renderWidget(){
-      var chosen=wTpl.value, name=TPL_NAMES[chosen];
-      var gs=groups(activeSet(), activeScope());
-      var moves=gs.filter(function(g){ return g.p.w && g.p.w!==chosen; });
-      if(!gs.length){ wBadge.textContent='No products yet'; wBadge.className='badge2 sub'; }
-      else if(moves.length){ wBadge.textContent=plural(moves.length,'product')+' will switch'; wBadge.className='badge2 attn'; }
-      else { wBadge.textContent='Goes live on publish'; wBadge.className='badge2 info'; }
-      if(moves.length){
-        var lines=moves.slice(0,3).map(function(g){ return '<div>&middot; <b>'+esc(g.p.t)+'</b>: turned off in '+esc(TPL_NAMES[g.p.w])+'</div>'; }).join('');
-        if(moves.length>3) lines+='<div>&middot; and '+(moves.length-3)+' more</div>';
-        wWarn.innerHTML=(moves.length===1?'This product shows another widget today. On publish it switches':'These products show another widget today. On publish they switch')+' to <b>'+esc(name)+'</b>:'+lines;
-        wWarn.classList.remove('hide');
-      } else wWarn.classList.add('hide');
+      var name=TPL_NAMES[wTpl.value], has=groups(activeSet(), activeScope()).length>0;
+      wBadge.textContent = has ? 'Goes live on publish' : 'No products yet'; wBadge.className = has ? 'badge2 info' : 'badge2 sub';
       $('wName').textContent=name; $('wSelect').title='Opens Widgets to pick a different template';
     }
 
