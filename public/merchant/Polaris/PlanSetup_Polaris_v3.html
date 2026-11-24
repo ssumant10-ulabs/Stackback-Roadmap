@@ -204,16 +204,9 @@
   .colblk .colhdr{border:0;background:none;margin:0}
   .colsync{display:flex;align-items:center;gap:12px;padding:8px 12px 10px;border-top:1px solid var(--p-line2)}
   /* v3b: ladder discount */
-  .ladhead,.ladrow{display:grid;grid-template-columns:130px 150px 34px;gap:10px;align-items:center}
+  .ladhead,.ladrow{display:grid;grid-template-columns:110px 120px minmax(0,1fr) 34px;gap:10px;align-items:center}
+  .lnk{text-align:left}
   .prow.clk{cursor:pointer;border-radius:8px}
-  .ladGiftSlot .freeBlock{margin:16px 0 0}
-  .ladtl{display:flex;flex-wrap:wrap;gap:6px}
-  .tlc{min-width:52px;box-sizing:border-box;border:1px solid var(--p-line);border-radius:8px;padding:5px 6px;text-align:center;background:#fff;font-size:12px}
-  .tlc.step{border-color:var(--p-primary);box-shadow:inset 0 0 0 1px var(--p-primary)}
-  .tld{display:block;color:var(--p-muted);font-size:10.5px}
-  .tlv{display:block;font-weight:650}
-  .tlg{display:block;margin-top:3px;font-size:10px;font-weight:600;color:#0f5132;background:var(--p-success-bg);border-radius:6px;padding:1px 4px}
-  .tlc.more{border-style:dashed;color:var(--p-muted);display:grid;place-items:center}
   .prow.clk:hover{background:#f7f7f7}
   .wtpl{display:grid;grid-template-columns:auto auto;justify-content:start;align-items:center;column-gap:8px;row-gap:3px;margin-top:10px}
   .wtpl .wlbl{grid-column:1/-1;font-size:12px;color:var(--p-muted);font-weight:600}
@@ -367,13 +360,11 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                         <span class="rowline flatBits" style="gap:6px"><span class="field hide discPrefix">INR</span><span class="field discVal">10</span><span class="discSuffix">%</span></span>
                       </div>
                       <div class="ladder hide">
-                        <p class="help" style="margin:10px 0 8px">Rises with each <b>paid</b> delivery. Skipped, paused or unpaid deliveries don't count. The last step holds for every later delivery.</p>
-                        <div class="ladhead"><span>From paid delivery</span><span>Discount</span><span></span></div>
+                        <p class="help" style="margin:10px 0 8px">Rises with each <b>paid</b> delivery. Skipped, paused or unpaid deliveries don't count. The last step holds for every later delivery. A step's free gift goes with every delivery in that step.</p>
+                        <div class="ladhead"><span>From delivery</span><span>Discount</span><span>Free gift (optional)</span><span></span></div>
                         <div class="ladrows"></div>
                         <div class="rowline" style="margin-top:8px"><button class="btnghost addstep">&#65291; Add step</button><span class="help">Up to 5 steps</span></div>
                         <div class="warnbox ladwarn hide"></div>
-                        <div class="ladGiftSlot"></div>
-                        <p class="q" style="margin:14px 0 2px">Delivery timeline</p><p class="help" style="margin:0 0 6px">What each paid delivery gets. Outlined = a new step starts.</p><div class="ladtl"></div>
                         <p class="help" style="margin-top:10px">Prepaid is off for this option: a ladder needs a payment per delivery. For prepaid, add a separate option with a flat discount.</p>
                       </div>
                     </div>
@@ -433,13 +424,11 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                         <span class="rowline flatBits" style="gap:6px"><span class="field hide discPrefix">INR</span><span class="field discVal">15</span><span class="discSuffix">%</span></span>
                       </div>
                       <div class="ladder hide">
-                        <p class="help" style="margin:10px 0 8px">Rises with each <b>paid</b> delivery. Skipped, paused or unpaid deliveries don't count. The last step holds for every later delivery.</p>
-                        <div class="ladhead"><span>From paid delivery</span><span>Discount</span><span></span></div>
+                        <p class="help" style="margin:10px 0 8px">Rises with each <b>paid</b> delivery. Skipped, paused or unpaid deliveries don't count. The last step holds for every later delivery. A step's free gift goes with every delivery in that step.</p>
+                        <div class="ladhead"><span>From delivery</span><span>Discount</span><span>Free gift (optional)</span><span></span></div>
                         <div class="ladrows"></div>
                         <div class="rowline" style="margin-top:8px"><button class="btnghost addstep">&#65291; Add step</button><span class="help">Up to 5 steps</span></div>
                         <div class="warnbox ladwarn hide"></div>
-                        <div class="ladGiftSlot"></div>
-                        <p class="q" style="margin:14px 0 2px">Delivery timeline</p><p class="help" style="margin:0 0 6px">What each paid delivery gets. Outlined = a new step starts.</p><div class="ladtl"></div>
                         <p class="help" style="margin-top:10px">Prepaid is off for this option: a ladder needs a payment per delivery. For prepaid, add a separate option with a flat discount.</p>
                       </div>
                     </div>
@@ -866,10 +855,9 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
           schedFixed=q('.sched-fixed'), schedChoice=q('.sched-choice'), schedNone=q('.sched-none');
       var dmSeg=q('.discMode'), unitSel=q('.discType'), flatBits=q('.flatBits'), ladder=q('.ladder'), ladrows=q('.ladrows'),
           addstep=q('.addstep'), ladwarn=q('.ladwarn'), freeBlock=q('.freeBlock'), extrasHint=q('.extrasHint');
-      // LD-01 defaults: 5% from paid delivery 1, 10% from 3rd, 15% from 6th. Gifts are not on steps (a step is a range); they sit in Free gifts on exact deliveries (LD-01 R7).
-      card._lad=[{from:1,value:5},{from:3,value:10},{from:6,value:15}];
+      // LD-01 defaults: 5% from paid delivery 1, 10% from 3rd, 15% from 6th. A step's gift (g) goes with every delivery in that step.
+      card._lad=[{from:1,value:5,g:null},{from:3,value:10,g:null},{from:6,value:15,g:{pid:'p18',vi:0}}];
       var chMin=q('.chMin'), chMax=q('.chMax'), chErr=q('.chErr');
-      var freeAnchor=freeBlock.nextElementSibling, ladGiftSlot=q('.ladGiftSlot'), ladtl=q('.ladtl'), fgTitle=q('.fgTitle');
       function minMax(){ return {min:parseInt(chMin.value,10)||0, max:parseInt(chMax.value,10)||0}; }
 
       function curDur(){ var b=durSeg.querySelector('button.on'); return b?b.dataset.dur:'fixed'; }
@@ -880,24 +868,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         schedNone.classList.toggle('hide', mode!=='none');
       }
       function ladderLine(){
-        return card._lad.map(function(s,i){ return fmtVal(card,s.value)+(i===0?' now':' from '+ord(s.from)); }).join(' &rsaquo; ');
-      }
-      function renderTimeline(){
-        if(!ladtl || discMode(card)!=='ladder') return;
-        var L=card._lad, dur=curDur(), mm=minMax(), last=L[L.length-1].from, N, more=false;
-        if(dur==='fixed') N=parseInt(schedFixed.querySelector('.field').textContent,10)||last;
-        else if(dur==='choice') N=mm.max||last;
-        else { N=last+2; more=true; }
-        if(N>12){ N=12; more=true; }
-        var gifts={}; giftRows().forEach(function(d){ var n=parseInt(d.querySelector('.gn').value,10); if(d._g && n>0) (gifts[n]=gifts[n]||[]).push(giftLabel(d._g)); });
-        var starts={}; L.forEach(function(s){ starts[s.from]=1; });
-        var html='';
-        for(var d=1; d<=N; d++){
-          var v=null; L.forEach(function(s){ if(s.from<=d) v=s.value; });
-          html+='<div class="tlc'+(starts[d]?' step':'')+'"'+(gifts[d]?' title="'+esc('Gift: '+gifts[d].join(', '))+'"':'')+'><span class="tld">#'+d+'</span><span class="tlv">'+(v===null?'-':fmtVal(card,v))+'</span>'+(gifts[d]?'<span class="tlg">+ Gift</span>':'')+'</div>';
-        }
-        if(more) html+='<div class="tlc more">&hellip;</div>';
-        ladtl.innerHTML=html;
+        return card._lad.map(function(s,i){ return fmtVal(card,s.value)+(s.g?' + '+esc(giftLabel(s.g)):'')+(i===0?' now':' from '+ord(s.from)); }).join(' &rsaquo; ');
       }
       function on(el){ return el.classList.contains('on'); }
       function perDel(){ return on(payAuto) || on(payGo); }
@@ -911,9 +882,8 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         var body = !parts.length ? 'no payment option is selected yet' : parts.length===1 ? 'the customer will '+parts[0] : 'the customer chooses to '+parts.join('; or to ');
         var html='<b>When delivery happens:</b> '+body+'.';
         if(discMode(card)==='ladder') html+='<br><b>Ladder on the widget:</b> '+ladderLine();
-        var gl=giftLine(); if(gl) html+='<br><b>Free gifts:</b> '+gl;
+        var gl=discMode(card)==='flat'?giftLine():''; if(gl) html+='<br><b>Free gifts:</b> '+gl;
         deliveryPreview.innerHTML=html;
-        renderTimeline();
       }
       function syncPay(){
         var prepaid=on(payPre), pd=perDel(), lines=[];
@@ -951,9 +921,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         unitSel.parentNode.classList.toggle('hide', m==='none');
         flatBits.classList.toggle('hide', m!=='flat');
         ladder.classList.toggle('hide', m!=='ladder');
-        // Ladder: gifts sit inside the ladder so they read together; still one exact delivery each (a step is a range)
-        if(m==='ladder'){ ladGiftSlot.appendChild(freeBlock); fgTitle.textContent='Free gifts in this ladder'; }
-        else { freeAnchor.parentNode.insertBefore(freeBlock, freeAnchor); fgTitle.textContent='Free gifts'; }
+        freeBlock.classList.toggle('hide', m==='ladder');   // Ladder: gifts ride on the steps instead
         if(m==='ladder'){                                         // R3: ladder turns Prepaid off and locks it
           payPre.classList.remove('on'); payPre.classList.add('locked'); payPre.title='Not available with a ladder discount';
           if(!perDel()) payGo.classList.add('on');
@@ -968,6 +936,8 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
           html+='<div class="ladrow" data-i="'+i+'">'+
             '<span>'+(i===0?'<span class="field lfix" title="The first step always starts at delivery 1">1</span>':'<input class="field lin lfrom" type="number" min="2" value="'+s.from+'" aria-label="From delivery" />')+'</span>'+
             '<span class="rowline" style="gap:5px;flex-wrap:nowrap">'+(amt?'<span class="help">INR</span>':'')+'<input class="field lin lval" type="number" min="0" value="'+s.value+'" aria-label="Discount" />'+(amt?'':'<span class="help">%</span>')+'</span>'+
+            '<span style="min-width:0">'+(s.g===null ? '<button class="lnk lgadd">&#65291; Add gift</button>'
+                     : '<span class="rowline" style="gap:6px;flex-wrap:nowrap">'+giftField(s.g,'lgchg')+'<button class="x lgrm" title="Remove gift">&#10005;</button></span>')+'</span>'+
             '<span>'+(i===0?'':'<button class="btnsm ico-x lrm" title="Remove step">&#10005;</button>')+'</span></div>';
         });
         ladrows.innerHTML=html;
@@ -992,12 +962,14 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       });
       ladrows.addEventListener('click', function(e){
         var row=e.target.closest('.ladrow'); if(!row) return; var i=+row.dataset.i, s=card._lad[i];
-        if(e.target.closest('.lrm')){ card._lad.splice(i,1); renderLadder(); }
+        if(e.target.closest('.lgadd') || e.target.closest('.lgchg')){ openGiftPicker(s.g, function(g){ s.g=g; renderLadder(); }); }
+        else if(e.target.closest('.lgrm')){ s.g=null; renderLadder(); }
+        else if(e.target.closest('.lrm')){ card._lad.splice(i,1); renderLadder(); }
       });
       [chMin, chMax].forEach(function(el){ el.addEventListener('input', function(){ var mm=minMax(); chErr.classList.toggle('hide', !(mm.min>mm.max)); validateLadder(); validateGifts(); renderDeliveryPreview(); }); });
       addstep.addEventListener('click', function(){
         var L=card._lad, last=L[L.length-1]; if(L.length>=LAD_MAX) return;
-        L.push({from:last.from+3, value:unitSel.value==='amt'?last.value+20:Math.min(100,last.value+5)}); renderLadder();
+        L.push({from:last.from+3, value:unitSel.value==='amt'?last.value+20:Math.min(100,last.value+5), g:null}); renderLadder();
       });
 
       var extrasToggle=q('.extrasToggle'), extrasBody=q('.extrasBody');
@@ -1134,7 +1106,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         coHelp.innerHTML='On: this plan\'s Prepaid and Pay as you go subscriptions sell through your third-party checkout. <button class="lnk" data-goto="3">Manage in Enhancements &#8594;</button>';
       } else {
         coBadge.textContent='Shopify checkout'; coBadge.className='badge2 ok';
-        coHelp.innerHTML='Detected on your store (best-effort). <button class="lnk" data-goto="3">On GoKwik, Shopflo or another checkout? Turn on third-party checkout &#8594;</button>';
+        coHelp.innerHTML='Detected on your store (best-effort). Selling through GoKwik, Shopflo or another non-Shopify checkout?<div style="margin-top:4px"><button class="lnk" data-goto="3">Set up third-party checkout &#8594;</button></div>';
       }
     }
     coHelp.addEventListener('click', function(e){
