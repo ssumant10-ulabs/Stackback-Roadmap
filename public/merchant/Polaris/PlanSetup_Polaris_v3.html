@@ -206,6 +206,8 @@
   /* v3b: ladder discount */
   .ladhead,.ladrow{display:grid;grid-template-columns:96px 110px minmax(0,1fr) 34px;gap:10px;align-items:center}
   .lnk{text-align:left}
+  .lgsel{font:inherit;font-size:12.5px;border:1px solid var(--p-line);border-radius:8px;padding:4px 8px;background:#fff;color:var(--p-ink);cursor:pointer}
+  .lgsel[disabled]{background:#f3f3f3;cursor:default;appearance:none;-webkit-appearance:none}
   .prow.clk{cursor:pointer;border-radius:8px}
   .prow.clk:hover{background:#f7f7f7}
   .wtpl{display:grid;grid-template-columns:auto auto;justify-content:start;align-items:center;column-gap:8px;row-gap:3px;margin-top:10px}
@@ -897,7 +899,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         renderDeliveryPreview(); validateLadder(); validateGifts();
         document.dispatchEvent(new Event('sb:pay'));
       }
-      durSeg.addEventListener('click', function(e){ if(!e.target.dataset.dur) return; setDuration(e.target.dataset.dur); renderDeliveryPreview(); validateLadder(); validateGifts(); });
+      durSeg.addEventListener('click', function(e){ if(!e.target.dataset.dur) return; setDuration(e.target.dataset.dur); renderLadder(); validateGifts(); });
       [payPre, payAuto, payGo].forEach(function(chip){
         chip.addEventListener('click', function(){
           if(chip.classList.contains('locked')) return;
@@ -930,6 +932,22 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       }
       dmSeg.addEventListener('click', function(e){ var m=e.target.dataset.dm; if(m) setDiscMode(m); });
 
+      // deliveries a step covers: from its start to the next step's start minus 1; the last step runs to the plan's end
+      function stepRange(i){
+        var L=card._lad, lo=L[i].from, hi, dur=curDur();
+        if(i<L.length-1) hi=L[i+1].from-1;
+        else if(dur==='fixed') hi=parseInt(schedFixed.querySelector('.field').textContent,10)||lo;
+        else if(dur==='choice') hi=minMax().max||lo;
+        else hi=lo+11;
+        return {lo:lo, hi:Math.max(lo,hi), open:(i===L.length-1 && dur==='none')};
+      }
+      function giftWhen(i,s){
+        var r=stepRange(i);
+        if(!(s.gn>=r.lo && s.gn<=r.hi)) s.gn=r.lo;   // locked inside the step
+        var opts=''; for(var d=r.lo; d<=r.hi; d++) opts+='<option value="'+d+'"'+(d===s.gn?' selected':'')+'>Delivery '+d+'</option>';
+        // only this step's deliveries are offered, so the gift can't land outside the step
+        return '<span class="rowline" style="gap:6px;flex-wrap:nowrap"><span class="help" style="white-space:nowrap">Goes out on</span><select class="lgsel lgn" aria-label="Delivery the gift goes out on" title="'+(r.lo===r.hi?'This step is delivery '+r.lo:'This step covers deliveries '+r.lo+' to '+r.hi+(r.open?' and on':''))+'"'+(r.lo===r.hi?' disabled':'')+'>'+opts+'</select></span>';
+      }
       function renderLadder(){
         var amt=unitSel.value==='amt', L=card._lad, html='';
         L.forEach(function(s,i){
@@ -938,7 +956,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
             '<span class="rowline" style="gap:5px;flex-wrap:nowrap">'+(amt?'<span class="help">INR</span>':'')+'<input class="field lin lval" type="number" min="0" value="'+s.value+'" aria-label="Discount" />'+(amt?'':'<span class="help">%</span>')+'</span>'+
             '<span style="min-width:0">'+(s.g===null ? '<button class="lnk lgadd">&#65291; Add gift</button>'
                      : '<span style="display:flex;flex-direction:column;gap:5px;align-items:flex-start"><span class="rowline" style="gap:6px;flex-wrap:nowrap;max-width:100%">'+giftField(s.g,'lgchg')+'<button class="x lgrm" title="Remove gift">&#10005;</button></span>'+
-                       '<span class="rowline" style="gap:6px;flex-wrap:nowrap"><span class="help" style="white-space:nowrap">Goes out on delivery #</span><input class="field lin lgn" type="number" min="1" value="'+s.gn+'" aria-label="Gift goes out on delivery number" style="width:52px" /></span></span>')+'</span>'+
+                       giftWhen(i,s)+'</span>')+'</span>'+
             '<span>'+(i===0?'':'<button class="btnsm ico-x lrm" title="Remove step">&#10005;</button>')+'</span></div>';
         });
         ladrows.innerHTML=html;
@@ -953,8 +971,6 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         var last=L[L.length-1].from, dur=curDur();
         if(dur==='fixed'){ var n=parseInt(schedFixed.querySelector('.field').textContent,10); if(last>n) msgs.push('This option has '+n+' deliveries, so the step from the '+ord(last)+' is never reached.'); }
         if(dur==='choice'){ var mm=minMax(); if(last>mm.max) msgs.push('Customers can pick at most '+mm.max+' deliveries, so the step from the '+ord(last)+' is never reached.'); else if(last>mm.min) msgs.push('Customers who pick fewer than '+last+' deliveries never reach the last step.'); }
-        L.forEach(function(s,i){ if(!s.g) return; var hi=i<L.length-1 ? L[i+1].from-1 : null;
-          if(s.gn<s.from || (hi!==null && s.gn>hi)) msgs.push('Step '+(i+1)+' gift: delivery '+s.gn+' is outside this step ('+s.from+(hi!==null?' to '+hi:' onwards')+').'); });
         ladwarn.innerHTML=msgs.map(esc).join('<br>'); ladwarn.classList.toggle('hide', !msgs.length);
       }
       ladrows.addEventListener('input', function(e){
@@ -964,13 +980,14 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         if(e.target.classList.contains('lval')) s.value=parseFloat(e.target.value)||0;
         validateLadder(); renderDeliveryPreview();
       });
+      ladrows.addEventListener('change', function(e){ if(e.target.classList.contains('lfrom')) renderLadder(); });
       ladrows.addEventListener('click', function(e){
         var row=e.target.closest('.ladrow'); if(!row) return; var i=+row.dataset.i, s=card._lad[i];
         if(e.target.closest('.lgadd') || e.target.closest('.lgchg')){ openGiftPicker(s.g, function(g){ if(!s.g) s.gn=s.from; s.g=g; renderLadder(); }); }
         else if(e.target.closest('.lgrm')){ s.g=null; renderLadder(); }
         else if(e.target.closest('.lrm')){ card._lad.splice(i,1); renderLadder(); }
       });
-      [chMin, chMax].forEach(function(el){ el.addEventListener('input', function(){ var mm=minMax(); chErr.classList.toggle('hide', !(mm.min>mm.max)); validateLadder(); validateGifts(); renderDeliveryPreview(); }); });
+      [chMin, chMax].forEach(function(el){ el.addEventListener('input', function(){ var mm=minMax(); chErr.classList.toggle('hide', !(mm.min>mm.max)); renderLadder(); validateGifts(); }); });
       addstep.addEventListener('click', function(){
         var L=card._lad, last=L[L.length-1]; if(L.length>=LAD_MAX) return;
         L.push({from:last.from+3, value:unitSel.value==='amt'?last.value+20:Math.min(100,last.value+5), g:null}); renderLadder();
@@ -1107,7 +1124,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       }
       if(adaptOn()){
         coBadge.textContent='Non-Shopify checkout'; coBadge.className='badge2 info';
-        coHelp.innerHTML='On: this plan\'s Prepaid and Pay as you go subscriptions sell through your non-Shopify checkout. <button class="lnk" data-goto="3">Manage in Enhancements &#8594;</button>';
+        coHelp.innerHTML='On: this plan\'s Prepaid and Pay as you go subscriptions sell through your non-Shopify checkout.<div style="margin-top:4px"><button class="lnk" data-goto="3">Manage in Enhancements &#8594;</button></div>';
       } else {
         coBadge.textContent='Shopify checkout'; coBadge.className='badge2 ok';
         coHelp.innerHTML='Detected on your store (best-effort). Selling through GoKwik, Shopflo or another non-Shopify checkout?<div style="margin-top:4px"><button class="lnk" data-goto="3">Set up non-Shopify checkout &#8594;</button></div>';
