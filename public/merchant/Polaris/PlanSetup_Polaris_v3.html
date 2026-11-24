@@ -194,6 +194,30 @@
   .wlbl{font-size:12px;font-weight:600;margin-top:8px;display:block}
   .warnbox{background:var(--p-attn-bg);color:#5e4200;border-radius:8px;padding:9px 11px;font-size:12px;margin-top:8px}
   .warnbox b{color:#4a3500}
+  /* v3b: collections auto-add toggle */
+  .tgl{appearance:none;-webkit-appearance:none;width:32px;height:18px;border-radius:9px;background:#c7c7c7;position:relative;cursor:pointer;margin:0;flex:none;transition:background .15s}
+  .tgl::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:left .15s}
+  .tgl:checked{background:var(--p-primary)}
+  .tgl:checked::after{left:16px}
+  .tglwrap{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:500;color:var(--p-ink);cursor:pointer;white-space:nowrap}
+  .colblk{border:1px solid var(--p-line);border-radius:10px;background:#fafafa;margin-bottom:8px}
+  .colblk .colhdr{border:0;background:none;margin:0}
+  .colsync{display:flex;align-items:center;gap:12px;padding:8px 12px 10px;border-top:1px solid var(--p-line2)}
+  /* v3b: ladder discount */
+  .ladhead,.ladrow{display:grid;grid-template-columns:110px 130px 1fr 34px;gap:10px;align-items:center}
+  .ladhead{font-size:11px;font-weight:600;color:var(--p-muted);text-transform:uppercase;letter-spacing:.03em;padding:4px 0;border-bottom:1px solid var(--p-line2)}
+  .ladrow{padding:7px 0;border-bottom:1px solid var(--p-line2)}
+  .lin{width:64px;box-sizing:border-box;color:var(--p-ink)}
+  .lfix{display:inline-block;width:64px;box-sizing:border-box;background:#f3f3f3}
+  .lgin{width:100%;box-sizing:border-box;font-family:inherit;color:var(--p-ink)}
+  .chkchip.locked{opacity:.45;cursor:not-allowed}
+  .ladrow .x{background:none;border:0;color:var(--p-muted);cursor:pointer;font-size:12px;padding:2px 4px}
+  /* v3b: badge colour */
+  .swatches{display:inline-flex;gap:6px;align-items:center}
+  .sw{width:20px;height:20px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--p-line);cursor:pointer;padding:0;display:inline-block;box-sizing:border-box}
+  .sw.on{box-shadow:0 0 0 2px var(--p-ink)}
+  .sw.custom{position:relative;overflow:hidden;background:conic-gradient(#e23,#fc0,#3c5,#0bd,#36f,#c3c,#e23)}
+  .sw.custom input{position:absolute;inset:-6px;width:40px;height:40px;opacity:0;cursor:pointer}
   .hide{display:none !important}
 </style>
 <!-- bare mode: when embedded in the WIP prototype shell, hide this file's own admin chrome
@@ -270,16 +294,11 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                 <div class="rowline" style="padding-top:9px"><button class="btnghost" id="pvAdd">&#65291; Select products / variants</button><span class="field" id="pvCount"></span></div>
               </div>
               <div id="lvl-collection" class="hide">
-                <div id="colEmpty" class="rowline"><button class="btnghost" id="colAdd">&#65291; Select collection</button><span class="help">You'll pick which of its products and variants to include.</span></div>
+                <div id="colEmpty" class="rowline"><button class="btnghost" id="colAdd">&#65291; Select collections</button><span class="help">Then untick any products or variants you don't want.</span></div>
                 <div id="colFilled" class="hide">
-                  <div class="colhdr">
-                    <s-thumbnail size="small"></s-thumbnail>
-                    <div><div class="cname">Collection: Cold-Pressed Range</div><div class="help" id="colMeta"></div></div>
-                    <span class="pacts" style="margin-left:auto;display:flex;gap:6px"><button class="btnsm" id="colEdit">Edit products &amp; variants</button><button class="btnsm ico-x" id="colRemove" title="Remove collection">&#10005;</button></span>
-                  </div>
-                  <p class="snapnote">Snapshot of this collection today. Products added to it later won't join this plan; add them here.</p>
+                  <div id="colHdrs"></div>
                   <div id="colList"></div>
-                  <div class="rowline" style="padding-top:9px"><span class="field" id="colCount"></span></div>
+                  <div class="rowline" style="padding-top:9px"><button class="btnghost" id="colMore">&#65291; Add collections</button><span class="field" id="colCount"></span></div>
                 </div>
               </div>
             </div>
@@ -322,22 +341,32 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                       </div>
                       <div class="rowline" style="margin-top:8px">
                         <span>Deliver every</span><span class="field">2</span><span class="field">weeks &#9662;</span>
-                        <span class="divv"></span>
-                        <span>Discount</span>
+                      </div>
+                    </div>
+                    <div class="qgroup">
+                      <p class="q">Discount</p>
+                      <div class="rowline">
+                        <span class="seg discMode"><button data-dm="none">None</button><button data-dm="flat" class="on">Flat</button><button data-dm="ladder">Ladder</button></span>
                         <span class="field" style="padding:0"><select class="discType" style="border:0;background:none;font:inherit;color:inherit;padding:6px 10px;cursor:pointer;font-family:ui-monospace,Menlo,monospace"><option value="pct">Percentage (%)</option><option value="amt">Amount off</option></select></span>
-                        <span class="field hide discPrefix">INR</span>
-                        <span class="field discVal">10</span>
-                        <span class="discSuffix">%</span>
+                        <span class="rowline flatBits" style="gap:6px"><span class="field hide discPrefix">INR</span><span class="field discVal">10</span><span class="discSuffix">%</span></span>
+                      </div>
+                      <div class="ladder hide">
+                        <p class="help" style="margin:10px 0 8px">Rises with each <b>paid</b> delivery. Skipped, paused or unpaid deliveries don't count. The last step holds for every later delivery.</p>
+                        <div class="ladhead"><span>From delivery</span><span>Discount</span><span>Free gift on that delivery</span><span></span></div>
+                        <div class="ladrows"></div>
+                        <div class="rowline" style="margin-top:8px"><button class="btnghost addstep">&#65291; Add step</button><span class="help">Up to 5 steps</span></div>
+                        <div class="warnbox ladwarn hide"></div>
+                        <p class="help" style="margin-top:8px">Prepaid is off for this option: a ladder needs a payment per delivery. For prepaid, add a separate option with a flat discount.</p>
                       </div>
                     </div>
                     <div class="qgroup" style="margin-bottom:12px">
-                      <button class="disc extrasToggle"><span class="chev">&#8250;</span>More options <span class="help" style="font-weight:400">(free gifts, badge)</span></button>
+                      <button class="disc extrasToggle"><span class="chev">&#8250;</span>More options <span class="help extrasHint" style="font-weight:400">(free gifts, badge)</span></button>
                       <div class="extrasBody hide" style="margin-top:12px">
                         <p class="q">Badge <span class="help" style="font-weight:400">(optional)</span></p>
-                        <div class="rowline"><span class="field">Best Value &#9662;</span><span class="tagchip" style="background:#2f7d5b">Best Value</span></div>
-                        <p class="q" style="margin-top:14px">Free gifts <span class="help" style="font-weight:400">(optional)</span></p>
+                        <div class="rowline"><input class="field badgeTxt" value="Best Value" maxlength="24" placeholder="e.g. Best Value" style="width:150px;font-family:inherit;color:var(--p-ink)" aria-label="Badge text" /><span class="swatches"><button class="sw" data-c="#2f7d5b" style="background:#2f7d5b" title="Green"></button><button class="sw" data-c="#6B5BD6" style="background:#6B5BD6" title="Purple"></button><button class="sw" data-c="#1f6feb" style="background:#1f6feb" title="Blue"></button><button class="sw" data-c="#d14343" style="background:#d14343" title="Red"></button><button class="sw" data-c="#e08a00" style="background:#e08a00" title="Amber"></button><button class="sw" data-c="#303030" style="background:#303030" title="Black"></button><label class="sw custom" title="Custom colour"><input type="color" class="badgeCol" value="#2f7d5b" aria-label="Custom badge colour" /></label></span><span class="tagchip badgeChip" style="background:#2f7d5b">Best Value</span></div>
+                        <div class="freeBlock"><p class="q" style="margin-top:14px">Free gifts <span class="help" style="font-weight:400">(optional)</span></p>
                         <div class="freelist"></div>
-                        <div class="rowline" style="margin-top:2px"><button class="btnghost addfree">&#65291; Add a gift</button><span class="help">Give a free item on a chosen delivery, e.g. a gift on delivery #3.</span></div>
+                        <div class="rowline" style="margin-top:2px"><button class="btnghost addfree">&#65291; Add a gift</button><span class="help">Give a free item on a chosen delivery, e.g. a gift on delivery #3.</span></div></div>
                       </div>
                     </div>
                     <div class="calc deliveryPreview"></div>
@@ -372,22 +401,32 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                       </div>
                       <div class="rowline" style="margin-top:8px">
                         <span>Deliver every</span><span class="field">1</span><span class="field">month &#9662;</span>
-                        <span class="divv"></span>
-                        <span>Discount</span>
+                      </div>
+                    </div>
+                    <div class="qgroup">
+                      <p class="q">Discount</p>
+                      <div class="rowline">
+                        <span class="seg discMode"><button data-dm="none">None</button><button data-dm="flat" class="on">Flat</button><button data-dm="ladder">Ladder</button></span>
                         <span class="field" style="padding:0"><select class="discType" style="border:0;background:none;font:inherit;color:inherit;padding:6px 10px;cursor:pointer;font-family:ui-monospace,Menlo,monospace"><option value="pct">Percentage (%)</option><option value="amt">Amount off</option></select></span>
-                        <span class="field hide discPrefix">INR</span>
-                        <span class="field discVal">15</span>
-                        <span class="discSuffix">%</span>
+                        <span class="rowline flatBits" style="gap:6px"><span class="field hide discPrefix">INR</span><span class="field discVal">15</span><span class="discSuffix">%</span></span>
+                      </div>
+                      <div class="ladder hide">
+                        <p class="help" style="margin:10px 0 8px">Rises with each <b>paid</b> delivery. Skipped, paused or unpaid deliveries don't count. The last step holds for every later delivery.</p>
+                        <div class="ladhead"><span>From delivery</span><span>Discount</span><span>Free gift on that delivery</span><span></span></div>
+                        <div class="ladrows"></div>
+                        <div class="rowline" style="margin-top:8px"><button class="btnghost addstep">&#65291; Add step</button><span class="help">Up to 5 steps</span></div>
+                        <div class="warnbox ladwarn hide"></div>
+                        <p class="help" style="margin-top:8px">Prepaid is off for this option: a ladder needs a payment per delivery. For prepaid, add a separate option with a flat discount.</p>
                       </div>
                     </div>
                     <div class="qgroup" style="margin-bottom:12px">
-                      <button class="disc extrasToggle"><span class="chev">&#8250;</span>More options <span class="help" style="font-weight:400">(free gifts, badge)</span></button>
+                      <button class="disc extrasToggle"><span class="chev">&#8250;</span>More options <span class="help extrasHint" style="font-weight:400">(free gifts, badge)</span></button>
                       <div class="extrasBody hide" style="margin-top:12px">
                         <p class="q">Badge <span class="help" style="font-weight:400">(optional)</span></p>
-                        <div class="rowline"><span class="field">Most Popular &#9662;</span><span class="tagchip" style="background:#6B5BD6">Most Popular</span></div>
-                        <p class="q" style="margin-top:14px">Free gifts <span class="help" style="font-weight:400">(optional)</span></p>
+                        <div class="rowline"><input class="field badgeTxt" value="Most Popular" maxlength="24" placeholder="e.g. Best Value" style="width:150px;font-family:inherit;color:var(--p-ink)" aria-label="Badge text" /><span class="swatches"><button class="sw" data-c="#2f7d5b" style="background:#2f7d5b" title="Green"></button><button class="sw" data-c="#6B5BD6" style="background:#6B5BD6" title="Purple"></button><button class="sw" data-c="#1f6feb" style="background:#1f6feb" title="Blue"></button><button class="sw" data-c="#d14343" style="background:#d14343" title="Red"></button><button class="sw" data-c="#e08a00" style="background:#e08a00" title="Amber"></button><button class="sw" data-c="#303030" style="background:#303030" title="Black"></button><label class="sw custom" title="Custom colour"><input type="color" class="badgeCol" value="#6B5BD6" aria-label="Custom badge colour" /></label></span><span class="tagchip badgeChip" style="background:#6B5BD6">Most Popular</span></div>
+                        <div class="freeBlock"><p class="q" style="margin-top:14px">Free gifts <span class="help" style="font-weight:400">(optional)</span></p>
                         <div class="freelist"></div>
-                        <div class="rowline" style="margin-top:2px"><button class="btnghost addfree">&#65291; Add a gift</button><span class="help">Give a free item on a chosen delivery, e.g. a gift on delivery #3.</span></div>
+                        <div class="rowline" style="margin-top:2px"><button class="btnghost addfree">&#65291; Add a gift</button><span class="help">Give a free item on a chosen delivery, e.g. a gift on delivery #3.</span></div></div>
                       </div>
                     </div>
                     <div class="calc deliveryPreview"></div>
@@ -554,35 +593,46 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     // ---------- v3: catalog + selection model ----------
     // w = the widget a product shows today (from another plan); drives the widget-switch notice.
     var CATALOG=[
-      {id:'p1',t:'Organic Cold-Pressed Juice',col:1,w:'multi-frequency',v:[['500ml',180],['1L',320],['2L',590]]},
-      {id:'p2',t:'Green Detox Juice',col:1,w:'single-plan',v:[['300ml',150],['500ml',230]]},
-      {id:'p3',t:'Beetroot Ginger Shot',col:1,v:[['6 x 60ml',299],['12 x 60ml',549]]},
-      {id:'p4',t:'Orange Carrot Juice',col:1,v:[['500ml',190],['1L',340]]},
-      {id:'p5',t:'Watermelon Mint Cooler',col:1,v:[['500ml',170]]},
-      {id:'p6',t:'Pineapple Turmeric Juice',col:1,v:[['500ml',200],['1L',360]]},
-      {id:'p7',t:'Celery Cleanse',col:1,v:[['500ml',240]]},
-      {id:'p8',t:'Amla Shot',col:1,v:[['6 x 60ml',249]]},
-      {id:'p9',t:'Pomegranate Juice',col:1,v:[['500ml',260],['1L',470]]},
-      {id:'p10',t:'Tender Coconut Water',col:1,w:'multi-frequency',v:[['330ml',90],['1L',220]]},
-      {id:'p11',t:'ABC Juice',col:1,v:[['500ml',210],['1L',380]]},
-      {id:'p12',t:'Kokum Cooler',col:1,v:[['500ml',160]]},
-      {id:'p13',t:'Apple Cinnamon Juice',col:1,v:[['500ml',220],['1L',400]]},
-      {id:'p14',t:'Jamun Juice',col:1,v:[['500ml',230]]},
+      {id:'p1',t:'Organic Cold-Pressed Juice',w:'multi-frequency',v:[['500ml',180],['1L',320],['2L',590]]},
+      {id:'p2',t:'Green Detox Juice',w:'single-plan',v:[['300ml',150],['500ml',230]]},
+      {id:'p3',t:'Beetroot Ginger Shot',v:[['6 x 60ml',299],['12 x 60ml',549]]},
+      {id:'p4',t:'Orange Carrot Juice',v:[['500ml',190],['1L',340]]},
+      {id:'p5',t:'Watermelon Mint Cooler',v:[['500ml',170]]},
+      {id:'p6',t:'Pineapple Turmeric Juice',v:[['500ml',200],['1L',360]]},
+      {id:'p7',t:'Celery Cleanse',v:[['500ml',240]]},
+      {id:'p8',t:'Amla Shot',v:[['6 x 60ml',249]]},
+      {id:'p9',t:'Pomegranate Juice',v:[['500ml',260],['1L',470]]},
+      {id:'p10',t:'Tender Coconut Water',w:'multi-frequency',v:[['330ml',90],['1L',220]]},
+      {id:'p11',t:'ABC Juice',v:[['500ml',210],['1L',380]]},
+      {id:'p12',t:'Kokum Cooler',v:[['500ml',160]]},
+      {id:'p13',t:'Apple Cinnamon Juice',v:[['500ml',220],['1L',400]]},
+      {id:'p14',t:'Jamun Juice',v:[['500ml',230]]},
       {id:'p15',t:'Cold Brew Coffee',v:[['250ml',199],['1L',649]]},
       {id:'p16',t:'Almond Milk',v:[['1L',299]]},
       {id:'p17',t:'Oat Milk',v:[['1L',279]]}
     ];
-    var VAR_CAP=120, ROW_CAP=5;
+    var COLLECTIONS=[
+      {id:'c1',t:'Cold-Pressed Range',p:['p1','p2','p3','p4','p5','p6','p7','p8','p9','p10','p11','p12','p13','p14']},
+      {id:'c2',t:'Shots & Boosters',p:['p3','p8']},
+      {id:'c3',t:'Plant Milks',p:['p16','p17']},
+      {id:'c4',t:'Coffee',p:['p15']}
+    ];
+    var ROW_CAP=5;
     var TPL_NAMES={'subscription-widget':'Subscription Widget','purchase-options':'Purchase Options','single-plan':'Single Plan','prepaid-only':'Prepaid Only','payg-only':'PAYG Only','multi-frequency':'Multi-Frequency','multi-delivery':'Multi-Delivery','international-plan':'International Plan'};
-    var COL_SCOPE=CATALOG.filter(function(p){ return p.col; });
     function vid(p,i){ return p.id+'-'+i; }
     function esc(s){ return String(s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
-    var S={ mode:'pv', pv:new Set(['p1-0','p1-1']), colOn:false, col:new Set() };
+    function prod(id){ return CATALOG.find(function(x){ return x.id===id; }); }
+    function coll(id){ return COLLECTIONS.find(function(x){ return x.id===id; }); }
+    // S.cols = chosen collections; S.sync[cid] = auto-add new products (off = snapshot); S.col = included variants
+    var S={ mode:'pv', pv:new Set(['p1-0','p1-1']), cols:[], sync:{}, col:new Set() };
+    function scopeOf(cids){ var ids={}; cids.forEach(function(c){ coll(c).p.forEach(function(p){ ids[p]=1; }); }); return CATALOG.filter(function(p){ return ids[p.id]; }); }
+    function colScope(){ return scopeOf(S.cols); }
     function activeSet(){ return S.mode==='pv' ? S.pv : S.col; }
+    function activeScope(){ return S.mode==='pv' ? CATALOG : colScope(); }
     function groups(set, scope){
       return scope.map(function(p){ var n=p.v.filter(function(_,i){ return set.has(vid(p,i)); }).length; return {p:p,n:n}; }).filter(function(g){ return g.n>0; });
     }
-    function countText(gs){ var v=gs.reduce(function(a,g){ return a+g.n; },0); return {prods:gs.length, vars:v}; }
+    function countText(gs){ return {prods:gs.length, vars:gs.reduce(function(a,g){ return a+g.n; },0)}; }
     function plural(n,w){ return n+' '+w+(n===1?'':'s'); }
 
     function renderList(box, set, scope, mode){
@@ -597,23 +647,50 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       box.innerHTML=html;
       box.onclick=function(e){
         var b=e.target.closest('button'); if(!b) return;
-        if(b.dataset.rm){ var p=CATALOG.find(function(x){ return x.id===b.dataset.rm; }); p.v.forEach(function(_,i){ set.delete(vid(p,i)); }); renderAll(); }
+        if(b.dataset.rm){ var p=prod(b.dataset.rm); p.v.forEach(function(_,i){ set.delete(vid(p,i)); }); renderAll(); }
         else if(b.dataset.edit){ openPicker(mode, b.dataset.edit); }
         else if(b.dataset.all){ openPicker(mode); }
       };
       return countText(gs);
     }
 
+    function renderCollections(){
+      var box=$('colHdrs'), html='';
+      S.cols.forEach(function(cid){
+        var c=coll(cid), inc=groups(S.col, scopeOf([cid])).length, on=!!S.sync[cid];
+        html+='<div class="colblk"><div class="colhdr"><s-thumbnail size="small"></s-thumbnail>'+
+          '<div style="min-width:0;flex:1"><div class="cname">Collection: '+esc(c.t)+'</div><div class="help">'+plural(c.p.length,'product')+' in collection &middot; '+inc+' included</div></div>'+
+          '<button class="btnsm" data-cedit="'+cid+'">Edit products &amp; variants</button><button class="btnsm ico-x" data-crm="'+cid+'" title="Remove collection">&#10005;</button></div>'+
+          '<div class="colsync"><label class="tglwrap"><input type="checkbox" class="tgl" data-sync="'+cid+'"'+(on?' checked':'')+' />Auto-add new products</label>'+
+          '<span class="help">'+(on ? 'New products in this collection join with all their variants. Products you untick stay out.'
+                                    : 'Off: a snapshot of today. New products in this collection won\'t join; add them here.')+'</span></div></div>';
+      });
+      box.innerHTML=html;
+    }
+    $('colHdrs').addEventListener('click', function(e){
+      var b=e.target.closest('button'); if(!b) return;
+      if(b.dataset.cedit) openPicker('collection', null, b.dataset.cedit);
+      else if(b.dataset.crm) removeCollection(b.dataset.crm);
+    });
+    $('colHdrs').addEventListener('change', function(e){ var t=e.target; if(t.dataset.sync){ S.sync[t.dataset.sync]=t.checked; renderAll(); } });
+    function removeCollection(cid){
+      S.cols=S.cols.filter(function(c){ return c!==cid; }); delete S.sync[cid];
+      var keep={}; colScope().forEach(function(p){ keep[p.id]=1; });
+      coll(cid).p.forEach(function(pid){ if(keep[pid]) return; var p=prod(pid); p.v.forEach(function(_,i){ S.col.delete(vid(p,i)); }); });
+      renderAll();
+    }
+
     function renderSelection(){
       var pc=renderList($('pvList'), S.pv, CATALOG, 'pv');
-      $('pvCount').textContent=plural(pc.prods,'product')+' · '+plural(pc.vars,'variant')+' · up to '+VAR_CAP;
-      $('colEmpty').classList.toggle('hide', S.colOn); $('colFilled').classList.toggle('hide', !S.colOn);
-      var cc=renderList($('colList'), S.col, COL_SCOPE, 'collection');
-      $('colMeta').textContent=COL_SCOPE.length+' products in collection · '+cc.prods+' included';
-      $('colCount').textContent=plural(cc.prods,'product')+' · '+plural(cc.vars,'variant')+' · up to '+VAR_CAP;
-      var c = S.mode==='pv' ? pc : cc;
+      $('pvCount').textContent=plural(pc.prods,'product')+' · '+plural(pc.vars,'variant');
+      var hasCol=S.cols.length>0;
+      $('colEmpty').classList.toggle('hide', hasCol); $('colFilled').classList.toggle('hide', !hasCol);
+      renderCollections();
+      var cc=renderList($('colList'), S.col, colScope(), 'collection');
+      $('colCount').textContent=plural(cc.prods,'product')+' · '+plural(cc.vars,'variant');
+      var c = S.mode==='pv' ? pc : cc, anySync=S.cols.some(function(x){ return S.sync[x]; });
       var sum = S.mode==='pv' ? 'Products & Variants · '+plural(c.prods,'product')+', '+plural(c.vars,'variant')
-              : (S.colOn ? 'Collection snapshot · '+plural(c.prods,'product')+', '+plural(c.vars,'variant') : 'Collections · none selected');
+              : (hasCol ? plural(S.cols.length,'collection')+(anySync?' (auto-add on)':' (snapshot)')+' · '+plural(c.prods,'product')+', '+plural(c.vars,'variant') : 'Collections · none selected');
       steps[0].querySelector('.collsum').textContent=sum;
       $('adaptVars').textContent=plural(c.vars,'variant');
     }
@@ -628,31 +705,65 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       renderAll();
     });
     $('pvAdd').addEventListener('click', function(){ openPicker('pv'); });
-    $('colAdd').addEventListener('click', function(){
-      // picking a collection ticks everything in it, then opens the picker to untick
-      S.colOn=true; S.col=new Set(); COL_SCOPE.forEach(function(p){ p.v.forEach(function(_,i){ S.col.add(vid(p,i)); }); });
-      renderAll(); openPicker('collection');
-    });
-    $('colEdit').addEventListener('click', function(){ openPicker('collection'); });
-    $('colRemove').addEventListener('click', function(){ S.colOn=false; S.col=new Set(); renderAll(); });
+    $('colAdd').addEventListener('click', openColPicker);
+    $('colMore').addEventListener('click', openColPicker);
 
-    // ---------- v3: product / variant picker popup ----------
-    function openPicker(mode, focusId){
-      var scope = mode==='pv' ? CATALOG : COL_SCOPE;
-      var target = mode==='pv' ? S.pv : S.col;
-      var work=new Set(target), q='', openSet=new Set();
-      scope.forEach(function(p){ var n=p.v.filter(function(_,i){ return work.has(vid(p,i)); }).length; if((n>0 && n<p.v.length) || p.id===focusId) openSet.add(p.id); });
+    // ---------- shared modal shell ----------
+    function modal(title, sub, bodyTools){
       var back=document.createElement('div'); back.className='mback';
-      var title = mode==='pv' ? 'Select products and variants' : 'Edit products &amp; variants';
-      var sub = mode==='pv' ? 'Tick a product to include all its variants, or open it to pick variants.' : 'Collection: Cold-Pressed Range &middot; snapshot, new products are not added later';
       back.innerHTML='<div class="modal" role="dialog" aria-modal="true">'+
         '<div class="mhdr"><h3>'+title+'<span class="msub">'+sub+'</span></h3><button class="mclose" data-close="1" aria-label="Close">&#10005;</button></div>'+
-        '<div class="msearch"><input type="search" placeholder="Search products or variants" /></div>'+
-        '<div class="mtools"><button class="lnk" data-selall="1">Select all</button><button class="lnk" data-clear="1">Clear</button><span style="margin-left:auto" class="mshown"></span></div>'+
+        '<div class="msearch"><input type="search" placeholder="Search" /></div>'+
+        '<div class="mtools">'+bodyTools+'<span style="margin-left:auto" class="mshown"></span></div>'+
         '<div class="mbody"></div>'+
         '<div class="mfoot"><span class="mcount"></span><span class="macts"><button class="pbtn" data-close="1">Cancel</button><button class="pbtn primary" data-done="1">Done</button></span></div></div>';
       document.body.appendChild(back);
-      var body=back.querySelector('.mbody'), input=back.querySelector('input'), cnt=back.querySelector('.mcount'), done=back.querySelector('[data-done]'), shown=back.querySelector('.mshown');
+      function onKey(e){ if(e.key==='Escape') close(); }
+      function close(){ document.removeEventListener('keydown', onKey); back.remove(); }
+      document.addEventListener('keydown', onKey);
+      return { back:back, close:close, body:back.querySelector('.mbody'), input:back.querySelector('input'), cnt:back.querySelector('.mcount'), shown:back.querySelector('.mshown') };
+    }
+
+    // ---------- collection picker (step one of the collection flow) ----------
+    function openColPicker(){
+      var m=modal('Select collections','Choose collections, then untick any products or variants you don\'t want.',''), work=S.cols.slice(), q='';
+      m.input.placeholder='Search collections';
+      function draw(){
+        var vis=COLLECTIONS.filter(function(c){ return !q || c.t.toLowerCase().indexOf(q)>-1; });
+        m.body.innerHTML = vis.map(function(c){
+          return '<label class="mprow mprod" style="cursor:pointer"><input type="checkbox" class="ck" data-cc="'+c.id+'"'+(work.indexOf(c.id)>-1?' checked':'')+' />'+
+                 '<s-thumbnail size="small"></s-thumbnail><span class="mt">'+esc(c.t)+'</span><span class="mc">'+plural(c.p.length,'product')+'</span></label>';
+        }).join('') || '<p class="help" style="padding:16px 0">No collections match "'+esc(q)+'".</p>';
+        m.cnt.textContent=plural(work.length,'collection')+' selected';
+        m.shown.textContent=plural(vis.length,'collection');
+      }
+      m.body.addEventListener('change', function(e){ var id=e.target.dataset.cc; if(!id) return; if(e.target.checked){ if(work.indexOf(id)<0) work.push(id); } else work=work.filter(function(x){ return x!==id; }); draw(); });
+      m.input.addEventListener('input', function(){ q=m.input.value.trim().toLowerCase(); draw(); });
+      m.back.addEventListener('click', function(e){
+        if(e.target===m.back || e.target.closest('[data-close]')) return m.close();
+        if(e.target.closest('[data-done]')){
+          var added=work.filter(function(c){ return S.cols.indexOf(c)<0; }), removed=S.cols.filter(function(c){ return work.indexOf(c)<0; });
+          removed.forEach(function(c){ removeCollection(c); });
+          S.cols=COLLECTIONS.map(function(c){ return c.id; }).filter(function(c){ return work.indexOf(c)>-1; });
+          // a newly added collection comes in fully ticked; the merchant unticks from Edit products & variants
+          added.forEach(function(cid){ coll(cid).p.forEach(function(pid){ var p=prod(pid); p.v.forEach(function(_,i){ S.col.add(vid(p,i)); }); }); });
+          m.close(); renderAll();
+        }
+      });
+      draw(); m.input.focus();
+    }
+
+    // ---------- product / variant picker ----------
+    function openPicker(mode, focusId, onlyCid){
+      var scope = mode==='pv' ? CATALOG : (onlyCid ? scopeOf([onlyCid]) : colScope());
+      var work=new Set(mode==='pv' ? S.pv : S.col), q='', openSet=new Set();
+      scope.forEach(function(p){ var n=p.v.filter(function(_,i){ return work.has(vid(p,i)); }).length; if((n>0 && n<p.v.length) || p.id===focusId) openSet.add(p.id); });
+      var sub;
+      if(mode==='pv') sub='Tick a product to include all its variants, or open it to pick variants.';
+      else if(onlyCid) sub='Collection: '+esc(coll(onlyCid).t)+' &middot; '+(S.sync[onlyCid]?'auto-add on, unticked products stay out':'snapshot, new products are not added later');
+      else sub='All selected collections';
+      var m=modal(mode==='pv'?'Select products and variants':'Edit products &amp; variants', sub, '<button class="lnk" data-selall="1">Select all</button><button class="lnk" data-clear="1">Clear</button>');
+      m.input.placeholder='Search products or variants';
       function visible(){
         if(!q) return scope;
         return scope.filter(function(p){ return p.t.toLowerCase().indexOf(q)>-1 || p.v.some(function(v){ return v[0].toLowerCase().indexOf(q)>-1; }); });
@@ -664,61 +775,71 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
           html+='<div class="mprod'+(open?' open':'')+(p.id===focusId?' focus':'')+'" data-p="'+p.id+'">'+
             '<div class="mprow"><button class="caret" data-caret="'+p.id+'" aria-label="Show variants">&#8250;</button>'+
             '<input type="checkbox" class="ck" data-pck="'+p.id+'"'+(n===p.v.length?' checked':'')+' />'+
-            '<s-thumbnail size="small"></s-thumbnail><span class="mt">'+esc(p.t)+'</span><span class="mc">'+n+' / '+p.v.length+' variants</span></div>'+
+            '<s-thumbnail size="small"></s-thumbnail><span class="mt">'+esc(p.t)+'</span><span class="mc">'+n+' / '+plural(p.v.length,'variant')+'</span></div>'+
             '<div class="mvars">'+p.v.map(function(v,i){ return '<label class="mvrow"><input type="checkbox" class="ck" data-v="'+vid(p,i)+'"'+(work.has(vid(p,i))?' checked':'')+' /><span>'+esc(v[0])+'</span><span class="vp">INR '+v[1]+'</span></label>'; }).join('')+'</div></div>';
         });
-        body.innerHTML = html || '<p class="help" style="padding:16px 0">No products match "'+esc(q)+'".</p>';
-        body.querySelectorAll('[data-pck]').forEach(function(cb){ var p=CATALOG.find(function(x){ return x.id===cb.dataset.pck; }); var n=p.v.filter(function(_,i){ return work.has(vid(p,i)); }).length; cb.indeterminate = n>0 && n<p.v.length; });
-        var gs=groups(work, scope), c=countText(gs), over=c.vars>VAR_CAP;
-        cnt.textContent=plural(c.prods,'product')+' · '+plural(c.vars,'variant')+' selected · up to '+VAR_CAP+(over?' (over the limit)':'');
-        cnt.classList.toggle('over', over); done.disabled=over;
-        shown.textContent = q ? vis.length+' of '+scope.length+' products' : scope.length+' products';
+        m.body.innerHTML = html || '<p class="help" style="padding:16px 0">No products match "'+esc(q)+'".</p>';
+        m.body.querySelectorAll('[data-pck]').forEach(function(cb){ var p=prod(cb.dataset.pck), n=p.v.filter(function(_,i){ return work.has(vid(p,i)); }).length; cb.indeterminate = n>0 && n<p.v.length; });
+        var c=countText(groups(work, scope));
+        m.cnt.textContent=plural(c.prods,'product')+' · '+plural(c.vars,'variant')+' selected';
+        m.shown.textContent = q ? vis.length+' of '+plural(scope.length,'product') : plural(scope.length,'product');
       }
-      function close(){ document.removeEventListener('keydown', onKey); back.remove(); }
-      function onKey(e){ if(e.key==='Escape') close(); }
-      document.addEventListener('keydown', onKey);
-      back.addEventListener('click', function(e){
-        if(e.target===back || e.target.closest('[data-close]')) return close();
-        if(e.target.closest('[data-done]')){ if(mode==='pv') S.pv=work; else S.col=work; close(); renderAll(); return; }
+      m.back.addEventListener('click', function(e){
+        if(e.target===m.back || e.target.closest('[data-close]')) return m.close();
+        if(e.target.closest('[data-done]')){ if(mode==='pv') S.pv=work; else S.col=work; m.close(); renderAll(); return; }
         var c=e.target.closest('[data-caret]'); if(c){ var id=c.dataset.caret; openSet.has(id)?openSet.delete(id):openSet.add(id); draw(); return; }
         if(e.target.closest('[data-selall]')){ visible().forEach(function(p){ p.v.forEach(function(_,i){ work.add(vid(p,i)); }); }); draw(); return; }
         if(e.target.closest('[data-clear]')){ visible().forEach(function(p){ p.v.forEach(function(_,i){ work.delete(vid(p,i)); }); }); draw(); return; }
       });
-      body.addEventListener('change', function(e){
+      m.body.addEventListener('change', function(e){
         var t=e.target;
-        if(t.dataset.pck){ var p=CATALOG.find(function(x){ return x.id===t.dataset.pck; }); p.v.forEach(function(_,i){ t.checked?work.add(vid(p,i)):work.delete(vid(p,i)); }); }
+        if(t.dataset.pck){ var p=prod(t.dataset.pck); p.v.forEach(function(_,i){ t.checked?work.add(vid(p,i)):work.delete(vid(p,i)); }); }
         else if(t.dataset.v){ t.checked?work.add(t.dataset.v):work.delete(t.dataset.v); }
         draw();
       });
-      input.addEventListener('input', function(){ q=input.value.trim().toLowerCase(); draw(); });
+      m.input.addEventListener('input', function(){ q=m.input.value.trim().toLowerCase(); draw(); });
       draw();
-      var f=focusId && body.querySelector('[data-p="'+focusId+'"]'); if(f) f.scrollIntoView({block:'center'}); else input.focus();
+      var f=focusId && m.body.querySelector('[data-p="'+focusId+'"]'); if(f) f.scrollIntoView({block:'center'}); else m.input.focus();
     }
 
     // ---------- per-card buying-option editor (scoped) ----------
-    var PAYG_LABEL='by invoice and email reminder (pay-as-you-go)';
+    var PAYG_LABEL='by invoice and email reminder (pay-as-you-go)', LAD_MAX=5;
+    function ord(n){ var s=['th','st','nd','rd'], v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); }
+    function discMode(card){ var b=card.querySelector('.discMode button.on'); return b?b.dataset.dm:'flat'; }
+    function fmtVal(card, v){ return card.querySelector('.discType').value==='amt' ? 'INR '+v : v+'%'; }
     function initEditor(card){
       var q=function(s){ return card.querySelector(s); };
       var durSeg=q('.durSeg'), payPre=q('.pay-prepaid'), payGo=q('.pay-payg'),
           methodGroup=q('.methodGroup'), durNoneBtn=durSeg.querySelector('[data-dur="none"]'),
           deliveryPreview=q('.deliveryPreview'),
           schedFixed=q('.sched-fixed'), schedChoice=q('.sched-choice'), schedNone=q('.sched-none');
+      var dmSeg=q('.discMode'), unitSel=q('.discType'), flatBits=q('.flatBits'), ladder=q('.ladder'), ladrows=q('.ladrows'),
+          addstep=q('.addstep'), ladwarn=q('.ladwarn'), freeBlock=q('.freeBlock'), extrasHint=q('.extrasHint');
+      // LD-01 defaults: 5% from delivery 1, 10% from 3rd, 15% from 6th; g = free gift on the delivery the step starts (null = none)
+      card._lad=[{from:1,value:5,g:null},{from:3,value:10,g:null},{from:6,value:15,g:'Free glass bottle'}];
+
+      function curDur(){ var b=durSeg.querySelector('button.on'); return b?b.dataset.dur:'fixed'; }
       function setDuration(mode){
         durSeg.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.dataset.dur===mode); });
         schedFixed.classList.toggle('hide', mode!=='fixed');
         schedChoice.classList.toggle('hide', mode!=='choice');
         schedNone.classList.toggle('hide', mode!=='none');
       }
+      function ladderLine(){
+        return card._lad.map(function(s,i){ return fmtVal(card,s.value)+(i===0?' now':' from '+ord(s.from))+(s.g?' + '+esc(s.g):''); }).join(' &rsaquo; ');
+      }
       function renderDeliveryPreview(){
         var prepaid=payPre.classList.contains('on'), perDeliveryChip=payGo.classList.contains('on'),
-            onBtn=durSeg.querySelector('button.on'), mode=onBtn?onBtn.dataset.dur:'fixed', ml=PAYG_LABEL;
+            mode=curDur(), ml=PAYG_LABEL;
         var count = mode==='fixed' ? 'for the set number of deliveries' : mode==='choice' ? 'for the number of deliveries the customer picks' : 'with no end date';
         var body;
         if(prepaid && perDeliveryChip) body='the customer chooses how to pay: prepay '+count+'; or pay per delivery, charged '+ml;
         else if(prepaid) body='the customer prepays '+count+', then the plan ends';
         else if(perDeliveryChip) body='the plan runs '+count+'; each delivery is charged '+ml;
         else body='no payment option is selected yet';
-        deliveryPreview.innerHTML='<b>When delivery happens:</b> '+body+'.';
+        var html='<b>When delivery happens:</b> '+body+'.';
+        if(discMode(card)==='ladder') html+='<br><b>Ladder on the widget:</b> '+ladderLine();
+        deliveryPreview.innerHTML=html;
       }
       function syncPay(){
         var prepaid=payPre.classList.contains('on'), perDelivery=payGo.classList.contains('on');
@@ -726,15 +847,77 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         var noEndOk = perDelivery && !prepaid;
         durNoneBtn.classList.toggle('hide', !noEndOk);
         if(!noEndOk && durNoneBtn.classList.contains('on')) setDuration('fixed');
-        renderDeliveryPreview();
+        renderDeliveryPreview(); validateLadder();
       }
-      durSeg.addEventListener('click', function(e){ if(!e.target.dataset.dur) return; setDuration(e.target.dataset.dur); renderDeliveryPreview(); });
-      payPre.addEventListener('click', function(){ payPre.classList.toggle('on'); if(!payPre.classList.contains('on') && payGo.classList.contains('on')) setDuration('none'); syncPay(); });
-      payGo.addEventListener('click', function(){ payGo.classList.toggle('on'); if(payGo.classList.contains('on') && !payPre.classList.contains('on')) setDuration('none'); syncPay(); });
+      durSeg.addEventListener('click', function(e){ if(!e.target.dataset.dur) return; setDuration(e.target.dataset.dur); renderDeliveryPreview(); validateLadder(); });
+      payPre.addEventListener('click', function(){ if(payPre.classList.contains('locked')) return; payPre.classList.toggle('on'); if(!payPre.classList.contains('on') && payGo.classList.contains('on')) setDuration('none'); syncPay(); });
+      payGo.addEventListener('click', function(){
+        if(payGo.classList.contains('on') && discMode(card)==='ladder') return; // ladder needs a per-delivery payment
+        payGo.classList.toggle('on'); if(payGo.classList.contains('on') && !payPre.classList.contains('on')) setDuration('none'); syncPay();
+      });
 
-      var discType=q('.discType'), discPrefix=q('.discPrefix'), discSuffix=q('.discSuffix'), discVal=q('.discVal'), baseVal=discVal.textContent;
-      function renderDisc(){ var amt=discType.value==='amt'; discPrefix.classList.toggle('hide', !amt); discSuffix.classList.toggle('hide', amt); discVal.textContent = amt ? '100' : baseVal; }
-      discType.addEventListener('change', renderDisc);
+      // flat discount (unchanged behaviour)
+      var discPrefix=q('.discPrefix'), discSuffix=q('.discSuffix'), discVal=q('.discVal'), baseVal=discVal.textContent;
+      function renderDisc(){ var amt=unitSel.value==='amt'; discPrefix.classList.toggle('hide', !amt); discSuffix.classList.toggle('hide', amt); discVal.textContent = amt ? '100' : baseVal; }
+      unitSel.addEventListener('change', function(){ renderDisc(); renderLadder(); });
+
+      // discount type: None / Flat / Ladder (LD-01)
+      function setDiscMode(m){
+        dmSeg.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.dataset.dm===m); });
+        unitSel.parentNode.classList.toggle('hide', m==='none');
+        flatBits.classList.toggle('hide', m!=='flat');
+        ladder.classList.toggle('hide', m!=='ladder');
+        freeBlock.classList.toggle('hide', m==='ladder');           // gifts live in the ladder steps instead
+        extrasHint.textContent = m==='ladder' ? '(badge)' : '(free gifts, badge)';
+        if(m==='ladder'){                                         // R3: ladder turns Prepaid off and locks it
+          payPre.classList.remove('on'); payPre.classList.add('locked'); payPre.title='Not available with a ladder discount';
+          if(!payGo.classList.contains('on')) payGo.classList.add('on');
+        } else { payPre.classList.remove('locked'); payPre.title=''; }
+        syncPay(); renderLadder();
+      }
+      dmSeg.addEventListener('click', function(e){ var m=e.target.dataset.dm; if(m) setDiscMode(m); });
+
+      function renderLadder(){
+        var amt=unitSel.value==='amt', L=card._lad, html='';
+        L.forEach(function(s,i){
+          html+='<div class="ladrow" data-i="'+i+'">'+
+            '<span>'+(i===0?'<span class="field lfix" title="The first step always starts at delivery 1">1</span>':'<input class="field lin lfrom" type="number" min="2" value="'+s.from+'" aria-label="From delivery" />')+'</span>'+
+            '<span class="rowline" style="gap:5px;flex-wrap:nowrap">'+(amt?'<span class="help">INR</span>':'')+'<input class="field lin lval" type="number" min="0" value="'+s.value+'" aria-label="Discount" />'+(amt?'':'<span class="help">%</span>')+'</span>'+
+            '<span>'+(s.g===null ? '<button class="lnk lgadd">&#65291; Add gift</button>'
+                     : '<span class="rowline" style="gap:6px;flex-wrap:nowrap"><input class="field lgin" placeholder="Gift product" value="'+esc(s.g)+'" aria-label="Free gift" /><button class="x lgrm" title="Remove gift">&#10005;</button></span>')+'</span>'+
+            '<span>'+(i===0?'':'<button class="btnsm ico-x lrm" title="Remove step">&#10005;</button>')+'</span></div>';
+        });
+        ladrows.innerHTML=html;
+        addstep.classList.toggle('hide', L.length>=LAD_MAX);
+        validateLadder(); renderDeliveryPreview();
+      }
+      function validateLadder(){
+        if(!ladwarn || discMode(card)!=='ladder'){ if(ladwarn) ladwarn.classList.add('hide'); return; }
+        var L=card._lad, msgs=[], amt=unitSel.value==='amt';
+        for(var i=1;i<L.length;i++){ if(!(L[i].from>L[i-1].from)) msgs.push('Step '+(i+1)+' must start after delivery '+L[i-1].from+'.'); }
+        L.forEach(function(s,i){ if(!amt && (s.value<0||s.value>100)) msgs.push('Step '+(i+1)+': a percentage must be 0 to 100.'); if(amt && s.value<0) msgs.push('Step '+(i+1)+': amount can\'t be negative.'); });
+        var last=L[L.length-1].from, dur=curDur();
+        if(dur==='fixed'){ var n=parseInt(schedFixed.querySelector('.field').textContent,10); if(last>n) msgs.push('This option has '+n+' deliveries, so the step from the '+ord(last)+' is never reached.'); }
+        if(dur==='choice') msgs.push('Customers who pick fewer than '+last+' deliveries never reach the last step.');
+        ladwarn.innerHTML=msgs.map(esc).join('<br>'); ladwarn.classList.toggle('hide', !msgs.length);
+      }
+      ladrows.addEventListener('input', function(e){
+        var row=e.target.closest('.ladrow'); if(!row) return; var s=card._lad[+row.dataset.i];
+        if(e.target.classList.contains('lfrom')) s.from=parseInt(e.target.value,10)||0;
+        if(e.target.classList.contains('lval')) s.value=parseFloat(e.target.value)||0;
+        if(e.target.classList.contains('lgin')) s.g=e.target.value;
+        validateLadder(); renderDeliveryPreview();
+      });
+      ladrows.addEventListener('click', function(e){
+        var row=e.target.closest('.ladrow'); if(!row) return; var i=+row.dataset.i, s=card._lad[i];
+        if(e.target.closest('.lgadd')){ s.g=''; renderLadder(); var f=ladrows.querySelector('.ladrow[data-i="'+i+'"] .lgin'); if(f) f.focus(); }
+        else if(e.target.closest('.lgrm')){ s.g=null; renderLadder(); }
+        else if(e.target.closest('.lrm')){ card._lad.splice(i,1); renderLadder(); }
+      });
+      addstep.addEventListener('click', function(){
+        var L=card._lad, last=L[L.length-1]; if(L.length>=LAD_MAX) return;
+        L.push({from:last.from+3, value:unitSel.value==='amt'?last.value+20:Math.min(100,last.value+5), g:null}); renderLadder();
+      });
 
       var extrasToggle=q('.extrasToggle'), extrasBody=q('.extrasBody');
       extrasToggle.addEventListener('click', function(){ var open=extrasBody.classList.toggle('hide')===false; extrasToggle.classList.toggle('open', open); });
@@ -748,7 +931,15 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         freelist.appendChild(d);
       });
 
-      syncPay(); renderDisc();
+      // badge: free text + colour (6 presets + custom)
+      var bTxt=q('.badgeTxt'), bChip=q('.badgeChip'), bCol=q('.badgeCol'), sws=q('.swatches');
+      function setCol(c){ bChip.style.background=c; bCol.value=c; sws.querySelectorAll('.sw[data-c]').forEach(function(s){ s.classList.toggle('on', s.dataset.c.toLowerCase()===c.toLowerCase()); }); }
+      sws.addEventListener('click', function(e){ var s=e.target.closest('.sw[data-c]'); if(s) setCol(s.dataset.c); });
+      bCol.addEventListener('input', function(){ setCol(bCol.value); });
+      bTxt.addEventListener('input', function(){ bChip.textContent=bTxt.value; bChip.classList.toggle('hide', !bTxt.value.trim()); });
+      setCol(bCol.value);
+
+      syncPay(); renderDisc(); renderLadder();
     }
 
     // ---------- collapsed summary chips = purchase type + discount only ----------
@@ -756,8 +947,10 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       var pre=card.querySelector('.pay-prepaid').classList.contains('on');
       var payg=card.querySelector('.pay-payg').classList.contains('on');
       var ptype = pre&&payg ? 'Both' : pre ? 'Prepaid' : payg ? 'Pay per delivery' : '';
-      var dt=card.querySelector('.discType').value, dv=card.querySelector('.discVal').textContent;
-      var disc = dt==='amt' ? ('INR '+dv+' off') : (dv+'% off');
+      var dm=discMode(card), disc;
+      if(dm==='none') disc='No discount';
+      else if(dm==='ladder'){ var L=card._lad, best=Math.max.apply(null, L.map(function(s){ return s.value; })); disc='Ladder '+fmtVal(card,L[0].value)+' to '+fmtVal(card,best); }
+      else { var dt=card.querySelector('.discType').value, dv=card.querySelector('.discVal').textContent; disc = dt==='amt' ? ('INR '+dv+' off') : (dv+'% off'); }
       var chips=card.querySelector('.chips'); chips.innerHTML='';
       if(ptype){ var a=document.createElement('span'); a.className='pill'; a.textContent=ptype; chips.appendChild(a); }
       var b=document.createElement('span'); b.className='pill'; b.textContent=disc; chips.appendChild(b);
@@ -847,7 +1040,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     var wTpl=$('wTpl'), wWarn=$('wWarn'), wBadge=$('wBadge');
     function renderWidget(){
       var chosen=wTpl.value, name=TPL_NAMES[chosen];
-      var gs=groups(activeSet(), S.mode==='pv' ? CATALOG : COL_SCOPE);
+      var gs=groups(activeSet(), activeScope());
       var moves=gs.filter(function(g){ return g.p.w && g.p.w!==chosen; });
       if(!gs.length){ wBadge.textContent='No products yet'; wBadge.className='badge2 sub'; }
       else if(moves.length){ wBadge.textContent=plural(moves.length,'product')+' will switch'; wBadge.className='badge2 attn'; }
