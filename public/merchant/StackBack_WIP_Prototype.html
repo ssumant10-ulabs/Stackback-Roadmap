@@ -61,6 +61,8 @@
   .subbar .lbl{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--p-faint);margin-right:3px}
   .subbar button{appearance:none;height:28px;padding:0 11px;border-radius:8px;border:1px solid var(--p-line);background:#fff;font:inherit;font-size:12.5px;font-weight:600;color:var(--p-muted);cursor:pointer}
   .subbar button.on{background:var(--p-primary);color:#fff;border-color:var(--p-primary)}
+  .subbar .dl{margin-left:auto;display:inline-flex;align-items:center;gap:6px;color:var(--p-primary)}
+  .subbar .dl:disabled{opacity:.6;cursor:progress}
 
   .stage{flex:1;min-height:0;position:relative;overflow:hidden;display:flex;flex-direction:column}
   .stage iframe{width:100%;flex:1;min-height:0;border:0;display:block;background:#f1f1f1}
@@ -322,11 +324,16 @@ function renderNav(){
 }
 
 function renderSubbar(m){
-  if(m.screens.length<2){ $('subbar').style.display='none'; $('subbar').innerHTML=''; return; }
+  /* Shown whenever the module has a screen: the switcher only when there are 2+,
+     the Download button always. */
+  if(!m.screens.length){ $('subbar').style.display='none'; $('subbar').innerHTML=''; return; }
   $('subbar').style.display='flex';
-  $('subbar').innerHTML = '<span class="lbl">Screen</span>' + m.screens.map(function(s,i){
+  $('subbar').innerHTML = (m.screens.length<2 ? '' : '<span class="lbl">Screen</span>' + m.screens.map(function(s,i){
     return '<button data-ix="'+i+'"'+(i===screenIx?' class="on"':'')+'>'+s.label+'</button>';
-  }).join('');
+  }).join(''))
+  + '<button class="dl" id="dlBtn" title="Download this screen as one self-contained HTML file that opens offline">'
+  + '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Download HTML</button>';
+  $('dlBtn').onclick = function(){ downloadScreen(m.screens[screenIx], this); };
   var b=$('subbar').querySelectorAll('[data-ix]');
   for(var i=0;i<b.length;i++){
     b[i].onclick = (function(el){ return function(){ go(sel, parseInt(el.getAttribute('data-ix'),10)); }; })(b[i]);
@@ -388,6 +395,64 @@ function go(id, ix){
     }catch(e){ /* cross-origin, nothing to do */ }
   };
   fr.src = src;
+}
+
+/* ---- Download: one self-contained HTML of the screen on stage ----
+   Inlines polaris.js, the Inter font (latin + latin-ext, base64) and every Polaris icon the
+   iframe has fetched so far, served through a fetch shim. Forces bare mode so the file looks
+   like it does here. Icons for states never opened fall back to the CDN when online.
+   Links to other screens stay relative and do not resolve inside the downloaded file. */
+var CDN_POLARIS='https://cdn.shopify.com/shopifycloud/polaris.js',
+    CDN_INTER='https://cdn.shopify.com/static/fonts/inter/v4/';
+function txt(u){ return fetch(u).then(function(r){ if(!r.ok) throw Error(r.status+' '+u); return r.text(); }); }
+function b64(u){ return fetch(u).then(function(r){ if(!r.ok) throw Error(r.status+' '+u); return r.blob(); })
+  .then(function(b){ return new Promise(function(ok){ var f=new FileReader(); f.onload=function(){ ok(f.result); }; f.readAsDataURL(b); }); }); }
+function interCss(){
+  return txt(CDN_INTER+'styles.css').then(function(css){
+    var faces=(css.match(/@font-face\s*{[^}]+}/g)||[]).filter(function(f){ return /-latin(-ext)?-\d/.test(f); });
+    return Promise.all(faces.map(function(f){
+      var m=f.match(/url\('([^']+)'\)/); if(!m) return f;
+      return b64(CDN_INTER+m[1]).then(function(d){ return f.replace(m[0],'url('+d.replace('application/octet-stream','font/woff2')+')'); });
+    })).then(function(a){ return a.join('\n'); });
+  });
+}
+function usedIcons(){
+  try{
+    return $('fr').contentWindow.performance.getEntriesByType('resource')
+      .map(function(e){ return e.name; })
+      .filter(function(u,i,a){ return u.indexOf('/shopifycloud/admin-ui-foundations/')>-1 && /\.svg$/.test(u) && a.indexOf(u)===i; });
+  }catch(e){ return []; }
+}
+function downloadScreen(s, btn){
+  var label=btn.innerHTML; btn.disabled=true; btn.lastChild.textContent='Building…';
+  var SC='<'+'/script>', polarisTag='<script src="'+CDN_POLARIS+'">'+SC;
+  txt(s.path).then(function(html){
+    var needsPolaris=html.indexOf(polarisTag)>-1, icons=usedIcons();
+    return Promise.all([
+      needsPolaris ? txt(CDN_POLARIS) : '',
+      needsPolaris ? interCss() : '',
+      Promise.all(icons.map(function(u){ return txt(u).then(function(t){ return [u,t]; }); }))
+    ]).then(function(r){
+      var bare='<script>document.documentElement.classList.add("bare");'+SC
+        + '<style>html.bare .navL,html.bare .appbar,html.bare .savebar{display:none!important}html.bare .admin{min-height:0}html.bare,html.bare body{background:#f1f1f1}</style>';
+      html=html.replace(/<script>if\(\/bare\/\.test\(location\.search\+location\.hash\)\)document\.documentElement\.classList\.add\("bare"\);<\/script>/,'');
+      html=html.replace(/<head([^>]*)>/i, function(t){ return t+'\n'+bare; });
+      if(needsPolaris){
+        var map={}; r[2].forEach(function(p){ map[p[0]]=p[1]; });
+        var shim='<script>(function(){var M='+JSON.stringify(map).replace(/<\//g,'<\\/')+',f=window.fetch.bind(window);'
+          + 'window.fetch=function(u,o){var k=typeof u==="string"?u:(u&&u.url);'
+          + 'if(k&&M[k])return Promise.resolve(new Response(M[k],{status:200,headers:{"content-type":"image/svg+xml"}}));return f(u,o);};})();'+SC;
+        var js=r[0].replace('const Tg=["'+CDN_INTER+'styles.css"]','const Tg=[]').replace(/<\/script/gi,'<\\/script');
+        html=html.replace(polarisTag, function(){ return '<style>'+r[1]+'</style>\n'+shim+'\n<script>'+js+SC; });
+      }
+      var name=s.path.split('/').pop().replace(/\.html$/,'')+'_standalone.html';
+      var a=document.createElement('a');
+      a.href=URL.createObjectURL(new Blob([html],{type:'text/html'})); a.download=name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
+    });
+  }).catch(function(e){ alert('Download failed: '+e.message); })
+    .then(function(){ btn.disabled=false; btn.innerHTML=label; });
 }
 
 $('bellBtn').onclick = function(){ go('notif',0); };
