@@ -204,20 +204,21 @@
   .colblk .colhdr{border:0;background:none;margin:0}
   .colsync{display:flex;align-items:center;gap:12px;padding:8px 12px 10px;border-top:1px solid var(--p-line2)}
   /* v3b: ladder discount */
-  .ladhead,.ladrow{display:grid;grid-template-columns:110px 130px 1fr 34px;gap:10px;align-items:center}
+  .ladhead,.ladrow{display:grid;grid-template-columns:96px 112px minmax(0,1fr) 34px;gap:10px;align-items:center}
   .ladhead{font-size:11px;font-weight:600;color:var(--p-muted);text-transform:uppercase;letter-spacing:.03em;padding:4px 0;border-bottom:1px solid var(--p-line2)}
   .ladrow{padding:7px 0;border-bottom:1px solid var(--p-line2)}
   .lin{width:64px;box-sizing:border-box;color:var(--p-ink)}
   .lfix{display:inline-block;width:64px;box-sizing:border-box;background:#f3f3f3}
-  .lgin{width:100%;box-sizing:border-box;font-family:inherit;color:var(--p-ink)}
   .chkchip.locked{opacity:.45;cursor:not-allowed}
+  .giftfld{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--p-line);border-radius:8px;background:#fff;padding:3px 10px 3px 4px;font:inherit;font-size:12.5px;cursor:pointer;max-width:100%;min-width:0;color:var(--p-ink);text-align:left}
+  .giftfld .gname{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .giftfld .gchg{color:var(--p-link);font-weight:600;margin-left:4px;flex:none}
+  .giftfld.empty{border-style:dashed;color:var(--p-muted);padding:6px 12px}
+  .cpick{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--p-line);border-radius:8px;padding:3px 9px 3px 4px;cursor:pointer;background:#fff}
+  .cpick input{width:26px;height:22px;border:0;padding:0;background:none;cursor:pointer}
+  .cpHex{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--p-muted);text-transform:uppercase}
   .ladrow .x{background:none;border:0;color:var(--p-muted);cursor:pointer;font-size:12px;padding:2px 4px}
   /* v3b: badge colour */
-  .swatches{display:inline-flex;gap:6px;align-items:center}
-  .sw{width:20px;height:20px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--p-line);cursor:pointer;padding:0;display:inline-block;box-sizing:border-box}
-  .sw.on{box-shadow:0 0 0 2px var(--p-ink)}
-  .sw.custom{position:relative;overflow:hidden;background:conic-gradient(#e23,#fc0,#3c5,#0bd,#36f,#c3c,#e23)}
-  .sw.custom input{position:absolute;inset:-6px;width:40px;height:40px;opacity:0;cursor:pointer}
   .hide{display:none !important}
 </style>
 <!-- bare mode: when embedded in the WIP prototype shell, hide this file's own admin chrome
@@ -336,7 +337,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                           <button data-dur="none" class="hide">No end date</button>
                         </span>
                         <span class="sched-fixed">for <span class="field">5</span> deliveries</span>
-                        <span class="sched-choice hide help">Customer chooses how many deliveries in the widget.</span>
+                        <span class="sched-choice hide rowline" style="gap:6px">customer picks <input class="field lin chMin" type="number" min="1" value="3" aria-label="Minimum deliveries" /> to <input class="field lin chMax" type="number" min="1" value="12" aria-label="Maximum deliveries" /> deliveries <span class="chErr hide" style="color:#b42318;font-size:12px">Minimum can't be more than maximum.</span></span>
                         <span class="sched-none hide help">Runs continuously until the customer cancels. Available with pay-per-delivery only.</span>
                       </div>
                       <div class="rowline" style="margin-top:8px">
@@ -346,7 +347,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                     <div class="qgroup">
                       <p class="q">Discount</p>
                       <div class="rowline">
-                        <span class="seg discMode"><button data-dm="none">None</button><button data-dm="flat" class="on">Flat</button><button data-dm="ladder">Ladder</button></span>
+                        <span class="seg discMode"><button data-dm="flat" class="on">Flat</button><button data-dm="ladder">Ladder</button></span>
                         <span class="field" style="padding:0"><select class="discType" style="border:0;background:none;font:inherit;color:inherit;padding:6px 10px;cursor:pointer;font-family:ui-monospace,Menlo,monospace"><option value="pct">Percentage (%)</option><option value="amt">Amount off</option></select></span>
                         <span class="rowline flatBits" style="gap:6px"><span class="field hide discPrefix">INR</span><span class="field discVal">10</span><span class="discSuffix">%</span></span>
                       </div>
@@ -363,7 +364,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                       <button class="disc extrasToggle"><span class="chev">&#8250;</span>More options <span class="help extrasHint" style="font-weight:400">(free gifts, badge)</span></button>
                       <div class="extrasBody hide" style="margin-top:12px">
                         <p class="q">Badge <span class="help" style="font-weight:400">(optional)</span></p>
-                        <div class="rowline"><input class="field badgeTxt" value="Best Value" maxlength="24" placeholder="e.g. Best Value" style="width:150px;font-family:inherit;color:var(--p-ink)" aria-label="Badge text" /><span class="swatches"><button class="sw" data-c="#2f7d5b" style="background:#2f7d5b" title="Green"></button><button class="sw" data-c="#6B5BD6" style="background:#6B5BD6" title="Purple"></button><button class="sw" data-c="#1f6feb" style="background:#1f6feb" title="Blue"></button><button class="sw" data-c="#d14343" style="background:#d14343" title="Red"></button><button class="sw" data-c="#e08a00" style="background:#e08a00" title="Amber"></button><button class="sw" data-c="#303030" style="background:#303030" title="Black"></button><label class="sw custom" title="Custom colour"><input type="color" class="badgeCol" value="#2f7d5b" aria-label="Custom badge colour" /></label></span><span class="tagchip badgeChip" style="background:#2f7d5b">Best Value</span></div>
+                        <div class="rowline"><input class="field badgeTxt" value="Best Value" maxlength="24" placeholder="e.g. Best Value" style="width:150px;font-family:inherit;color:var(--p-ink)" aria-label="Badge text" /><label class="cpick" title="Badge colour"><input type="color" class="badgeCol" value="#2f7d5b" aria-label="Badge colour" /><span class="cpHex">#2f7d5b</span></label><span class="tagchip badgeChip" style="background:#2f7d5b">Best Value</span></div>
                         <div class="freeBlock"><p class="q" style="margin-top:14px">Free gifts <span class="help" style="font-weight:400">(optional)</span></p>
                         <div class="freelist"></div>
                         <div class="rowline" style="margin-top:2px"><button class="btnghost addfree">&#65291; Add a gift</button><span class="help">Give a free item on a chosen delivery, e.g. a gift on delivery #3.</span></div></div>
@@ -396,7 +397,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                           <button data-dur="none" class="hide">No end date</button>
                         </span>
                         <span class="sched-fixed">for <span class="field">6</span> deliveries</span>
-                        <span class="sched-choice hide help">Customer chooses how many deliveries in the widget.</span>
+                        <span class="sched-choice hide rowline" style="gap:6px">customer picks <input class="field lin chMin" type="number" min="1" value="3" aria-label="Minimum deliveries" /> to <input class="field lin chMax" type="number" min="1" value="12" aria-label="Maximum deliveries" /> deliveries <span class="chErr hide" style="color:#b42318;font-size:12px">Minimum can't be more than maximum.</span></span>
                         <span class="sched-none hide help">Runs continuously until the customer cancels. Available with pay-per-delivery only.</span>
                       </div>
                       <div class="rowline" style="margin-top:8px">
@@ -406,7 +407,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                     <div class="qgroup">
                       <p class="q">Discount</p>
                       <div class="rowline">
-                        <span class="seg discMode"><button data-dm="none">None</button><button data-dm="flat" class="on">Flat</button><button data-dm="ladder">Ladder</button></span>
+                        <span class="seg discMode"><button data-dm="flat" class="on">Flat</button><button data-dm="ladder">Ladder</button></span>
                         <span class="field" style="padding:0"><select class="discType" style="border:0;background:none;font:inherit;color:inherit;padding:6px 10px;cursor:pointer;font-family:ui-monospace,Menlo,monospace"><option value="pct">Percentage (%)</option><option value="amt">Amount off</option></select></span>
                         <span class="rowline flatBits" style="gap:6px"><span class="field hide discPrefix">INR</span><span class="field discVal">15</span><span class="discSuffix">%</span></span>
                       </div>
@@ -423,7 +424,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                       <button class="disc extrasToggle"><span class="chev">&#8250;</span>More options <span class="help extrasHint" style="font-weight:400">(free gifts, badge)</span></button>
                       <div class="extrasBody hide" style="margin-top:12px">
                         <p class="q">Badge <span class="help" style="font-weight:400">(optional)</span></p>
-                        <div class="rowline"><input class="field badgeTxt" value="Most Popular" maxlength="24" placeholder="e.g. Best Value" style="width:150px;font-family:inherit;color:var(--p-ink)" aria-label="Badge text" /><span class="swatches"><button class="sw" data-c="#2f7d5b" style="background:#2f7d5b" title="Green"></button><button class="sw" data-c="#6B5BD6" style="background:#6B5BD6" title="Purple"></button><button class="sw" data-c="#1f6feb" style="background:#1f6feb" title="Blue"></button><button class="sw" data-c="#d14343" style="background:#d14343" title="Red"></button><button class="sw" data-c="#e08a00" style="background:#e08a00" title="Amber"></button><button class="sw" data-c="#303030" style="background:#303030" title="Black"></button><label class="sw custom" title="Custom colour"><input type="color" class="badgeCol" value="#6B5BD6" aria-label="Custom badge colour" /></label></span><span class="tagchip badgeChip" style="background:#6B5BD6">Most Popular</span></div>
+                        <div class="rowline"><input class="field badgeTxt" value="Most Popular" maxlength="24" placeholder="e.g. Best Value" style="width:150px;font-family:inherit;color:var(--p-ink)" aria-label="Badge text" /><label class="cpick" title="Badge colour"><input type="color" class="badgeCol" value="#6B5BD6" aria-label="Badge colour" /><span class="cpHex">#6B5BD6</span></label><span class="tagchip badgeChip" style="background:#6B5BD6">Most Popular</span></div>
                         <div class="freeBlock"><p class="q" style="margin-top:14px">Free gifts <span class="help" style="font-weight:400">(optional)</span></p>
                         <div class="freelist"></div>
                         <div class="rowline" style="margin-top:2px"><button class="btnghost addfree">&#65291; Add a gift</button><span class="help">Give a free item on a chosen delivery, e.g. a gift on delivery #3.</span></div></div>
@@ -609,7 +610,9 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       {id:'p14',t:'Jamun Juice',v:[['500ml',230]]},
       {id:'p15',t:'Cold Brew Coffee',v:[['250ml',199],['1L',649]]},
       {id:'p16',t:'Almond Milk',v:[['1L',299]]},
-      {id:'p17',t:'Oat Milk',v:[['1L',279]]}
+      {id:'p17',t:'Oat Milk',v:[['1L',279]]},
+      {id:'p18',t:'Glass Bottle',v:[['750ml',249]]},
+      {id:'p19',t:'Travel Sample Kit',v:[['Mini',99],['Regular',199]]}
     ];
     var COLLECTIONS=[
       {id:'c1',t:'Cold-Pressed Range',p:['p1','p2','p3','p4','p5','p6','p7','p8','p9','p10','p11','p12','p13','p14']},
@@ -802,6 +805,32 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       var f=focusId && m.body.querySelector('[data-p="'+focusId+'"]'); if(f) f.scrollIntoView({block:'center'}); else m.input.focus();
     }
 
+    // ---------- gift product picker (single product or variant, any store product) ----------
+    function giftLabel(g){ var p=prod(g.pid); return p.t+(p.v.length>1?' · '+p.v[g.vi][0]:''); }
+    function giftField(g, cls){ return '<button type="button" class="giftfld '+cls+'"><s-thumbnail size="small-200"></s-thumbnail><span class="gname">'+esc(giftLabel(g))+'</span><span class="gchg">Change</span></button>'; }
+    function openGiftPicker(cur, cb){
+      var m=modal('Select a gift product','Free on that delivery. Any product in your store, not only this plan\'s.',''), q='', sel=cur?cur.pid+':'+cur.vi:'';
+      m.input.placeholder='Search products or variants';
+      function parse(k){ var a=k.split(':'); return {pid:a[0], vi:+a[1]}; }
+      function foot(){ m.cnt.textContent = sel ? 'Gift: '+giftLabel(parse(sel)) : 'No gift selected'; m.back.querySelector('[data-done]').disabled=!sel; }
+      function radio(k){ return '<input type="radio" name="giftpick" class="ck" data-g="'+k+'"'+(sel===k?' checked':'')+' />'; }
+      function draw(){
+        var vis=CATALOG.filter(function(p){ return !q || p.t.toLowerCase().indexOf(q)>-1 || p.v.some(function(v){ return v[0].toLowerCase().indexOf(q)>-1; }); });
+        m.body.innerHTML = vis.map(function(p){
+          return '<div class="mprod open"><div class="mprow"><span style="width:16px;flex:none"></span><s-thumbnail size="small"></s-thumbnail><span class="mt">'+esc(p.t)+'</span><span class="mc">'+plural(p.v.length,'variant')+'</span></div>'+
+                 '<div class="mvars">'+p.v.map(function(v,i){ return '<label class="mvrow">'+radio(p.id+':'+i)+'<span>'+esc(v[0])+'</span><span class="vp">INR '+v[1]+'</span></label>'; }).join('')+'</div></div>';
+        }).join('') || '<p class="help" style="padding:16px 0">No products match "'+esc(q)+'".</p>';
+        m.shown.textContent=plural(vis.length,'product'); foot();
+      }
+      m.body.addEventListener('change', function(e){ if(e.target.dataset.g){ sel=e.target.dataset.g; foot(); } });
+      m.input.addEventListener('input', function(){ q=m.input.value.trim().toLowerCase(); draw(); });
+      m.back.addEventListener('click', function(e){
+        if(e.target===m.back || e.target.closest('[data-close]')) return m.close();
+        if(e.target.closest('[data-done]') && sel){ m.close(); cb(parse(sel)); }
+      });
+      draw(); m.input.focus();
+    }
+
     // ---------- per-card buying-option editor (scoped) ----------
     var PAYG_LABEL='by invoice and email reminder (pay-as-you-go)', LAD_MAX=5;
     function ord(n){ var s=['th','st','nd','rd'], v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); }
@@ -816,7 +845,9 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       var dmSeg=q('.discMode'), unitSel=q('.discType'), flatBits=q('.flatBits'), ladder=q('.ladder'), ladrows=q('.ladrows'),
           addstep=q('.addstep'), ladwarn=q('.ladwarn'), freeBlock=q('.freeBlock'), extrasHint=q('.extrasHint');
       // LD-01 defaults: 5% from delivery 1, 10% from 3rd, 15% from 6th; g = free gift on the delivery the step starts (null = none)
-      card._lad=[{from:1,value:5,g:null},{from:3,value:10,g:null},{from:6,value:15,g:'Free glass bottle'}];
+      card._lad=[{from:1,value:5,g:null},{from:3,value:10,g:null},{from:6,value:15,g:{pid:'p18',vi:0}}];
+      var chMin=q('.chMin'), chMax=q('.chMax'), chErr=q('.chErr');
+      function minMax(){ return {min:parseInt(chMin.value,10)||0, max:parseInt(chMax.value,10)||0}; }
 
       function curDur(){ var b=durSeg.querySelector('button.on'); return b?b.dataset.dur:'fixed'; }
       function setDuration(mode){
@@ -826,12 +857,12 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         schedNone.classList.toggle('hide', mode!=='none');
       }
       function ladderLine(){
-        return card._lad.map(function(s,i){ return fmtVal(card,s.value)+(i===0?' now':' from '+ord(s.from))+(s.g?' + '+esc(s.g):''); }).join(' &rsaquo; ');
+        return card._lad.map(function(s,i){ return fmtVal(card,s.value)+(i===0?' now':' from '+ord(s.from))+(s.g?' + '+esc(giftLabel(s.g)):''); }).join(' &rsaquo; ');
       }
       function renderDeliveryPreview(){
         var prepaid=payPre.classList.contains('on'), perDeliveryChip=payGo.classList.contains('on'),
             mode=curDur(), ml=PAYG_LABEL;
-        var count = mode==='fixed' ? 'for the set number of deliveries' : mode==='choice' ? 'for the number of deliveries the customer picks' : 'with no end date';
+        var mm=minMax(), count = mode==='fixed' ? 'for the set number of deliveries' : mode==='choice' ? 'for the '+mm.min+' to '+mm.max+' deliveries the customer picks' : 'with no end date';
         var body;
         if(prepaid && perDeliveryChip) body='the customer chooses how to pay: prepay '+count+'; or pay per delivery, charged '+ml;
         else if(prepaid) body='the customer prepays '+count+', then the plan ends';
@@ -861,7 +892,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       function renderDisc(){ var amt=unitSel.value==='amt'; discPrefix.classList.toggle('hide', !amt); discSuffix.classList.toggle('hide', amt); discVal.textContent = amt ? '100' : baseVal; }
       unitSel.addEventListener('change', function(){ renderDisc(); renderLadder(); });
 
-      // discount type: None / Flat / Ladder (LD-01)
+      // discount type: Flat / Ladder (LD-01); no 'None', a merchant wanting none sets Flat 0
       function setDiscMode(m){
         dmSeg.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.dataset.dm===m); });
         unitSel.parentNode.classList.toggle('hide', m==='none');
@@ -883,8 +914,8 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
           html+='<div class="ladrow" data-i="'+i+'">'+
             '<span>'+(i===0?'<span class="field lfix" title="The first step always starts at delivery 1">1</span>':'<input class="field lin lfrom" type="number" min="2" value="'+s.from+'" aria-label="From delivery" />')+'</span>'+
             '<span class="rowline" style="gap:5px;flex-wrap:nowrap">'+(amt?'<span class="help">INR</span>':'')+'<input class="field lin lval" type="number" min="0" value="'+s.value+'" aria-label="Discount" />'+(amt?'':'<span class="help">%</span>')+'</span>'+
-            '<span>'+(s.g===null ? '<button class="lnk lgadd">&#65291; Add gift</button>'
-                     : '<span class="rowline" style="gap:6px;flex-wrap:nowrap"><input class="field lgin" placeholder="Gift product" value="'+esc(s.g)+'" aria-label="Free gift" /><button class="x lgrm" title="Remove gift">&#10005;</button></span>')+'</span>'+
+            '<span style="min-width:0">'+(s.g===null ? '<button class="lnk lgadd">&#65291; Add gift</button>'
+                     : '<span class="rowline" style="gap:6px;flex-wrap:nowrap">'+giftField(s.g,'lgchg')+'<button class="x lgrm" title="Remove gift">&#10005;</button></span>')+'</span>'+
             '<span>'+(i===0?'':'<button class="btnsm ico-x lrm" title="Remove step">&#10005;</button>')+'</span></div>';
         });
         ladrows.innerHTML=html;
@@ -898,22 +929,22 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         L.forEach(function(s,i){ if(!amt && (s.value<0||s.value>100)) msgs.push('Step '+(i+1)+': a percentage must be 0 to 100.'); if(amt && s.value<0) msgs.push('Step '+(i+1)+': amount can\'t be negative.'); });
         var last=L[L.length-1].from, dur=curDur();
         if(dur==='fixed'){ var n=parseInt(schedFixed.querySelector('.field').textContent,10); if(last>n) msgs.push('This option has '+n+' deliveries, so the step from the '+ord(last)+' is never reached.'); }
-        if(dur==='choice') msgs.push('Customers who pick fewer than '+last+' deliveries never reach the last step.');
+        if(dur==='choice'){ var mm=minMax(); if(last>mm.max) msgs.push('Customers can pick at most '+mm.max+' deliveries, so the step from the '+ord(last)+' is never reached.'); else if(last>mm.min) msgs.push('Customers who pick fewer than '+last+' deliveries never reach the last step.'); }
         ladwarn.innerHTML=msgs.map(esc).join('<br>'); ladwarn.classList.toggle('hide', !msgs.length);
       }
       ladrows.addEventListener('input', function(e){
         var row=e.target.closest('.ladrow'); if(!row) return; var s=card._lad[+row.dataset.i];
         if(e.target.classList.contains('lfrom')) s.from=parseInt(e.target.value,10)||0;
         if(e.target.classList.contains('lval')) s.value=parseFloat(e.target.value)||0;
-        if(e.target.classList.contains('lgin')) s.g=e.target.value;
         validateLadder(); renderDeliveryPreview();
       });
       ladrows.addEventListener('click', function(e){
         var row=e.target.closest('.ladrow'); if(!row) return; var i=+row.dataset.i, s=card._lad[i];
-        if(e.target.closest('.lgadd')){ s.g=''; renderLadder(); var f=ladrows.querySelector('.ladrow[data-i="'+i+'"] .lgin'); if(f) f.focus(); }
+        if(e.target.closest('.lgadd') || e.target.closest('.lgchg')){ openGiftPicker(s.g, function(g){ s.g=g; renderLadder(); }); }
         else if(e.target.closest('.lgrm')){ s.g=null; renderLadder(); }
         else if(e.target.closest('.lrm')){ card._lad.splice(i,1); renderLadder(); }
       });
+      [chMin, chMax].forEach(function(el){ el.addEventListener('input', function(){ var mm=minMax(); chErr.classList.toggle('hide', !(mm.min>mm.max)); validateLadder(); renderDeliveryPreview(); }); });
       addstep.addEventListener('click', function(){
         var L=card._lad, last=L[L.length-1]; if(L.length>=LAD_MAX) return;
         L.push({from:last.from+3, value:unitSel.value==='amt'?last.value+20:Math.min(100,last.value+5), g:null}); renderLadder();
@@ -925,16 +956,18 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       var freelist=q('.freelist'), addfree=q('.addfree');
       addfree.addEventListener('click', function(){
         var d=document.createElement('div'); d.className='rowline'; d.style.padding='9px 0';
-        d.innerHTML='<span>Delivery #</span><span class="field">3</span><s-thumbnail size="small"></s-thumbnail>'+
-          '<input class="field" style="width:220px" placeholder="e.g. Free travel-size sample" /><button class="x" style="margin-left:auto">Remove</button>';
+        d.innerHTML='<span>Delivery #</span><input class="field lin" type="number" min="1" value="3" aria-label="Gift on delivery number" />'+
+          '<span class="gslot"><button type="button" class="giftfld empty gpick">&#65291; Select gift product</button></span><button class="x" style="margin-left:auto">Remove</button>';
         d.querySelector('.x').addEventListener('click', function(){ d.remove(); });
+        d.querySelector('.gslot').addEventListener('click', function(){
+          openGiftPicker(d._g, function(g){ d._g=g; d.querySelector('.gslot').innerHTML=giftField(g,'gpick'); });
+        });
         freelist.appendChild(d);
       });
 
-      // badge: free text + colour (6 presets + custom)
-      var bTxt=q('.badgeTxt'), bChip=q('.badgeChip'), bCol=q('.badgeCol'), sws=q('.swatches');
-      function setCol(c){ bChip.style.background=c; bCol.value=c; sws.querySelectorAll('.sw[data-c]').forEach(function(s){ s.classList.toggle('on', s.dataset.c.toLowerCase()===c.toLowerCase()); }); }
-      sws.addEventListener('click', function(e){ var s=e.target.closest('.sw[data-c]'); if(s) setCol(s.dataset.c); });
+      // badge: free text + one colour picker
+      var bTxt=q('.badgeTxt'), bChip=q('.badgeChip'), bCol=q('.badgeCol'), bHex=q('.cpHex');
+      function setCol(c){ bChip.style.background=c; bHex.textContent=c; }
       bCol.addEventListener('input', function(){ setCol(bCol.value); });
       bTxt.addEventListener('input', function(){ bChip.textContent=bTxt.value; bChip.classList.toggle('hide', !bTxt.value.trim()); });
       setCol(bCol.value);
