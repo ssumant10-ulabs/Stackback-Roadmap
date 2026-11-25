@@ -367,7 +367,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                 </div>
               </div>
               <div id="lvl-course" class="hide">
-                <div class="crsintro"><b>Course plan</b><span>Customers subscribe on a starter product's page, then later deliveries ship what you set here, like a refill after the starter. Each delivery is charged its own product's price. While Course is selected, only these course products apply to this plan.</span></div>
+                <div class="crsintro"><b>Course plan</b><span>Customers subscribe on a starter product's page, then later deliveries ship what you set here, like a refill after the starter. Steps count paid deliveries (for prepaid, each scheduled delivery). Buying 2 of the starter means 2 of the whole course. Each delivery is charged its own product's price. While Course is selected, only these course products apply to this plan.</span></div>
                 <p class="help hide" id="courseEmpty" style="margin:0 0 8px">No course yet. Pick the product customers start with.</p>
                 <div id="courseList"></div>
                 <div class="rowline" style="padding-top:9px"><button class="btnghost" id="courseAdd">&#65291; Select starter product</button></div>
@@ -596,6 +596,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
               <div class="sumrow" id="sumShip"><span class="sicon opt"></span><div><div class="sname">Shipping override</div><div class="sval">Off, uses shop shipping</div></div></div>
               <div class="sumrow" id="sumEnh"><span class="sicon opt"></span><div><div class="sname">Enhancements</div><div class="sval">Non-Shopify checkout off</div></div></div>
             </div>
+            <p class="help" style="margin:10px 0 0;padding-top:10px;border-top:1px solid var(--p-line2)">After you publish, edits apply to new subscriptions only. Existing subscriptions keep the plan they started on.</p>
           </div></div>
 
           <!-- Merged: Checkout + Widget + Landing, each auto-checked with a redirect -->
@@ -945,7 +946,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       return hit===null ? '' : prod(pid).t+' '+prod(pid).v[hit][0]+' already has a course. A variant can be in one course only.';
     }
     function openStarterPicker(cur, cb){
-      var m=modal('Select the starter product','Tick one size for a size-specific course, or several to share the same later deliveries.',''), q='',
+      var m=modal('Select the starter product','Tick one size for a size-specific course, or several that suit the same later deliveries.',''), q='',
           sel={pid:cur?cur.pid:'', svs:cur?cur.svs.slice():[]};
       m.input.placeholder='Search products or variants';
       function foot(){ m.cnt.textContent = sel.svs.length ? prod(sel.pid).t+' · '+sel.svs.map(function(i){ return prod(sel.pid).v[i][0]; }).join(', ') : 'No starter selected'; m.back.querySelector('[data-done]').disabled=!sel.svs.length; }
@@ -989,7 +990,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         var html='<div class="crow"><span class="cdl">Delivery 1'+(n?'':' onwards')+'</span><span class="cprod"><span class="rowline" style="gap:8px;flex-wrap:nowrap"><s-thumbnail size="small-200"></s-thumbnail><b>'+esc(p.t)+'</b><span class="pill" style="font-size:11px">Starter</span><button type="button" class="lnk cstart">Change</button></span>'+
           '<span class="rowline" style="gap:8px"><span class="help">Variants</span><span class="svwrap"><button type="button" class="lgsel svbtn" aria-haspopup="true">'+vlabel+' &#9662;</button>'+
           '<span class="svpop hide">'+p.v.map(function(v,i){ return '<label class="mvrow"><input type="checkbox" class="ck svck" data-i="'+i+'"'+(c.svs.indexOf(i)>-1?' checked':'')+' /><span>'+esc(v[0])+'</span><span class="vp">INR '+v[1]+'</span></label>'; }).join('')+'</span></span>'+
-          '<span class="help">'+(c.svs.length>1?'share the same later deliveries':'INR '+p.v[c.svs[0]][1])+'</span></span></span><span></span></div>';
+          '<span class="help">'+(c.svs.length>1?'All ticked sizes get the same later deliveries. Tick only the sizes they suit.':'INR '+p.v[c.svs[0]][1])+'</span></span></span><span></span></div>';
         c.rows.forEach(function(r,k){
           var prevN = k===0 ? 1 : c.rows[k-1].n;
           if(r.n>prevN+1){ var a=prevN+1, b=r.n-1; html+='<div class="lgap">'+(a===b?'Delivery '+a:'Deliveries '+a+' to '+b)+': same as delivery '+prevN+'</div>'; }
@@ -1066,6 +1067,8 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         if(dur==='choice' && mx<Lmax){ warn.push('Customers can pick at most '+mx+' deliveries, but the course runs to delivery '+Lmax+'.'); hardAll.push(title); }
         else if(dur==='choice' && mn<Lmax) warn.push('Customers who pick fewer than '+Lmax+' deliveries never reach the later course items.');
         if(dur==='none') info.push('No end date: the course\'s last delivery repeats until the customer cancels.');
+        if(card.querySelector('.discType').value==='amt'){ var cheap=Infinity; S.courses.forEach(function(c){ c.rows.forEach(function(r){ r.items.forEach(function(x){ cheap=Math.min(cheap, prod(x.pid).v[x.vi][1]); }); }); });
+          if(cheap<Infinity) info.push('Amount-off discounts apply per delivery. Check them against your cheapest course item (INR '+cheap+').'); }
         if(card.querySelector('.pay-prepaid.on')){
           if(dur==='fixed') S.courses.forEach(function(c){ if(!c.rows.length) return; var vi=c.svs[0], tot=0; for(var d=1; d<=n; d++) tot+=deliveryPrice(c,vi,d);
             info.push('Prepaid course total for '+n+' deliveries ('+esc(prod(c.pid).t)+' '+esc(prod(c.pid).v[vi][0])+'): INR '+tot+', before discount.'); });
@@ -1081,6 +1084,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     }
     document.addEventListener('click', function(e){ if(e.target.closest('.optcard .durSeg') || e.target.closest('.optcard .chkchip') || e.target.closest('.optcard .discMode')) setTimeout(function(){ renderOptionChecks(!!e.target.closest('.durSeg')); }, 0); });
     document.addEventListener('input', function(e){ if(e.target.closest('.optcard .chMin, .optcard .chMax')) renderOptionChecks(true); });
+    document.addEventListener('change', function(e){ if(e.target.closest('.optcard .discType')) renderOptionChecks(false); });
 
     // ---------- per-card buying-option editor (scoped) ----------
     var PAYG_LABEL='by invoice and email reminder (pay-as-you-go)', LAD_MAX=10;   // rows in all; discount steps cap at 5 (LD-01)
