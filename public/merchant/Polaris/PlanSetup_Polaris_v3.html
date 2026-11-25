@@ -220,6 +220,10 @@
   .lsd{font-size:11.5px;color:var(--p-muted)}
   .lsv{font-weight:650;font-size:13.5px}
   .lsg{font-size:11.5px;color:#1c4fae;font-weight:500}
+  .qstep{display:inline-flex;align-items:center;border:1px solid var(--p-line);border-radius:8px;overflow:hidden;background:#fff;flex:none}
+  .qstep button{border:0;background:#fff;width:28px;height:30px;cursor:pointer;font-size:15px;color:var(--p-ink);padding:0}
+  .qstep button:hover{background:#f3f3f3}
+  .qstep .qv{width:28px;border:0;text-align:center;font:inherit;font-size:13px;font-weight:600;color:var(--p-ink);background:#fff;padding:0;pointer-events:none}
   .ladrow .x{background:none;border:0;color:var(--p-muted);cursor:pointer;font-size:12px;padding:2px 4px}
   .ladrow.gift{background:#f6fbf8}
   .ladrow .dlab{width:30px;flex:none}
@@ -843,6 +847,8 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
 
     // ---------- gift product picker (single product or variant, any store product) ----------
     function giftLabel(g){ var p=prod(g.pid); return p.t+(p.v.length>1?' · '+p.v[g.vi][0]:''); }
+    // quantity selector: - [n] +, value held in a read-only input so readers use .value
+    function qtyStep(cls, v){ return '<span class="qstep" title="Quantity"><button type="button" class="qm" aria-label="Fewer">&minus;</button><input class="qv '+cls+'" value="'+v+'" readonly aria-label="Gift quantity" /><button type="button" class="qp" aria-label="More">+</button></span>'; }
     function giftField(g, cls){ return '<button type="button" class="giftfld '+cls+'"><s-thumbnail size="small-200"></s-thumbnail><span class="gname">'+esc(giftLabel(g))+'</span><span class="gchg">Change</span></button>'; }
     function openGiftPicker(cur, cb, qty){
       var m=modal('Select a gift product','Free on that delivery. Any product in your store, not only this plan\'s.',''), q='', sel=cur?cur.pid+':'+cur.vi:'';
@@ -972,7 +978,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         var amt=unitSel.value==='amt', L=card._lad, html='', last=L.length-1;
         L.forEach(function(s,i){
           var gift = s.g
-            ? '<button type="button" class="gcard lgchg" title="Change gift">'+GIFT_ICON+'<span class="gtx"><span class="gt">'+((s.gq||1)>1?s.gq+' &times; ':'')+esc(giftLabel(s.g))+'</span><span class="gs">Sent once, with this delivery</span></span><span class="gx lgrm" title="Remove gift" role="button" aria-label="Remove gift">&#10005;</span></button>'
+            ? '<span style="display:flex;flex-direction:column;gap:6px;align-items:flex-start;max-width:100%"><button type="button" class="gcard lgchg" title="Change gift">'+GIFT_ICON+'<span class="gtx"><span class="gt">'+esc(giftLabel(s.g))+'</span><span class="gs">Sent once, with this delivery</span></span><span class="gx lgrm" title="Remove gift" role="button" aria-label="Remove gift">&#10005;</span></button><span class="rowline" style="gap:6px;flex-wrap:nowrap"><span class="help">Qty</span>'+qtyStep('lgq', s.gq||1)+'</span></span>'
             : '<button type="button" class="btnghost lgchg">&#65291; Add gift</button>';
           html+='<div class="ladrow" data-i="'+i+'">'+
             '<span class="dname">'+dLabel(i)+'</span>'+
@@ -987,7 +993,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       function renderSummary(){
         var L=card._lad, last=L.length-1;
         ladsum.innerHTML='<p class="lsh">What the customer gets</p><div class="lsgrid" style="grid-template-columns:repeat('+Math.min(L.length,6)+',minmax(0,1fr))">'+L.map(function(s,i){
-          return '<div class="lst"><span class="lsd">Delivery '+(i+1)+(i===last?'+':'')+'</span><span class="lsv">'+fmtVal(card,s.value)+' off</span>'+(s.g?'<span class="lsg">+ free gift</span>':'')+'</div>';
+          return '<div class="lst"><span class="lsd">Delivery '+(i+1)+(i===last?'+':'')+'</span><span class="lsv">'+fmtVal(card,s.value)+' off</span>'+(s.g?'<span class="lsg">+ '+((s.gq||1)>1?s.gq+' free gifts':'free gift')+'</span>':'')+'</div>';
         }).join('')+'</div>';
       }
       function validateLadder(){
@@ -1007,7 +1013,8 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       ladrows.addEventListener('click', function(e){
         var row=e.target.closest('.ladrow'); if(!row) return; var i=+row.dataset.i, s=card._lad[i];
         if(e.target.closest('.lgrm')){ e.stopPropagation(); s.g=null; s.gq=1; renderLadder(); return; }
-        if(e.target.closest('.lgchg')){ openGiftPicker(s.g, function(g,qty){ s.g=g; s.gq=qty; renderLadder(); }, s.gq||1); return; }
+        if(e.target.closest('.qm')||e.target.closest('.qp')){ s.gq=Math.max(1,(s.gq||1)+(e.target.closest('.qp')?1:-1)); renderLadder(); return; }
+        if(e.target.closest('.lgchg')){ openGiftPicker(s.g, function(g){ s.g=g; s.gq=s.gq||1; renderLadder(); }); return; }
         if(e.target.closest('.lrm')){ card._lad.splice(i,1); renderLadder(); }
       });
       [chMin, chMax].forEach(function(el){ el.addEventListener('input', function(){ var mm=minMax(); chErr.classList.toggle('hide', !(mm.min>mm.max)); renderLadder(); validateGifts(); }); });
@@ -1042,11 +1049,11 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         var d=document.createElement('div'); d.className='rowline giftrow'; d.style.padding='7px 0';
         d.innerHTML='<span>On paid delivery #</span><input class="field lin gn" type="number" min="1" value="'+n+'" aria-label="Gift on paid delivery number" />'+
           '<span class="gslot">'+(g?giftField(g,'gpick'):'<button type="button" class="giftfld empty gpick">&#65291; Select gift product</button>')+'</span>'+
-          '<span class="rowline" style="gap:6px;flex-wrap:nowrap"><span class="help">Qty</span><input class="field lin gq" type="number" min="1" value="1" aria-label="Gift quantity" style="width:52px" /></span><button class="x" style="margin-left:auto">Remove</button>';
+          '<span class="rowline" style="gap:6px;flex-wrap:nowrap"><span class="help">Qty</span>'+qtyStep('gq',1)+'</span><button class="x" style="margin-left:auto">Remove</button>';
         d._g=g||null;
         d.querySelector('.x').addEventListener('click', function(){ d.remove(); validateGifts(); renderDeliveryPreview(); });
         d.querySelector('.gn').addEventListener('input', function(){ validateGifts(); renderDeliveryPreview(); });
-        d.querySelector('.gq').addEventListener('input', function(){ validateGifts(); renderDeliveryPreview(); });
+        d.querySelector('.qstep').addEventListener('click', function(e){ var b=e.target.closest('.qm,.qp'); if(!b) return; var qi=d.querySelector('.gq'); qi.value=Math.max(1,(parseInt(qi.value,10)||1)+(b.classList.contains('qp')?1:-1)); validateGifts(); renderDeliveryPreview(); });
         d.querySelector('.gslot').addEventListener('click', function(){
           openGiftPicker(d._g, function(g2){ d._g=g2; d.querySelector('.gslot').innerHTML=giftField(g2,'gpick'); renderDeliveryPreview(); });
         });
