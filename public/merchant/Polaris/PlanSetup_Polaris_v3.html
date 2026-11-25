@@ -234,10 +234,21 @@
   .lgsel[disabled]{background:#f3f3f3;cursor:default;appearance:none;-webkit-appearance:none}
   .prow.clk{cursor:pointer;border-radius:8px}
   .prow.clk:hover{background:#f7f7f7}
-  .pinfo{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1;align-items:flex-start}
-  .pcourse{max-width:100%;font-size:12px;color:var(--p-link);font-weight:600;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .pcourse-unused{max-width:100%;font-size:12px;color:var(--p-link);font-weight:600;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
   .pcourse.on{background:#eef4ff;border:1px solid #bcd3fb;border-radius:20px;padding:2px 10px;color:#1c4fae;font-weight:500}
   .crs{display:flex;flex-direction:column}
+  .seg .crsTab{color:#1c4fae}
+  .seg .crsTab.on{background:#1c4fae;color:#fff}
+  .newpill{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;background:#e0ebff;color:#1c4fae;border-radius:6px;padding:1px 5px;margin-left:4px;vertical-align:1px}
+  .seg .crsTab.on .newpill{background:rgba(255,255,255,.22);color:#fff}
+  .crsintro{display:flex;flex-direction:column;gap:3px;border:1px solid #bcd3fb;background:#eef4ff;color:#1c4fae;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12.5px}
+  .crsintro b{font-size:13px}
+  .cblk{border:1px solid var(--p-line);border-radius:12px;padding:12px 14px;margin-bottom:10px;background:#fff}
+  .cblkhdr{display:flex;align-items:center;gap:10px;padding-bottom:6px;border-bottom:1px solid var(--p-line2)}
+  .cblkhdr .cname{font-weight:600}
+  .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:400;background:#1a1a1a;color:#fff;border-radius:10px;padding:10px 12px 10px 16px;font-size:13px;display:flex;gap:12px;align-items:center;max-width:560px;box-shadow:0 8px 24px rgba(0,0,0,.25);transition:opacity .3s}
+  .toast.out{opacity:0}
+  .toast button{background:none;border:0;color:#bbb;cursor:pointer;font-size:13px}
   .crow{display:grid;grid-template-columns:130px minmax(0,1fr) 34px;gap:10px;align-items:start;padding:12px 0;border-bottom:1px solid var(--p-line2)}
   .cdl{font-weight:600;padding-top:5px;white-space:nowrap}
   .cprod{display:flex;flex-direction:column;gap:8px;min-width:0;align-items:flex-start}
@@ -330,6 +341,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                 <span class="seg" id="applyseg">
                   <button data-lvl="pv" class="on">Products &amp; Variants</button>
                   <button data-lvl="collection">Collections</button>
+                  <button data-lvl="course" class="crsTab">Course <span class="newpill">New</span></button>
                 </span>
               </div>
               <!-- v3: both levels render the same product-grouped list; variants are edited in the picker popup -->
@@ -345,6 +357,12 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                   <div id="colList"></div>
                   <div class="rowline" style="padding-top:9px"><button class="btnghost" id="colMore">&#65291; Add collections</button><span class="field" id="colCount"></span></div>
                 </div>
+              </div>
+              <div id="lvl-course" class="hide">
+                <div class="crsintro"><b>Course plan</b><span>Customers subscribe on a starter product's page, then later deliveries ship what you set here, like a refill after the starter. Each delivery is charged its own product's price. While Course is selected, only these course products apply to this plan.</span></div>
+                <p class="help hide" id="courseEmpty" style="margin:0 0 8px">No course yet. Pick the product customers start with.</p>
+                <div id="courseList"></div>
+                <div class="rowline" style="padding-top:9px"><button class="btnghost" id="courseAdd">&#65291; Select starter product</button></div>
               </div>
             </div>
           </div>
@@ -676,7 +694,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     function scopeOf(cids){ var ids={}; cids.forEach(function(c){ coll(c).p.forEach(function(p){ ids[p]=1; }); }); return CATALOG.filter(function(p){ return ids[p.id]; }); }
     function colScope(){ return scopeOf(S.cols); }
     // both lists apply: the plan = collection picks + extra single products
-    function activeSet(){ var u=new Set(S.pv); S.col.forEach(function(v){ u.add(v); }); return u; }
+    function activeSet(){ if(S.mode==='course') return courseSet(); var u=new Set(S.pv); S.col.forEach(function(v){ u.add(v); }); return u; }
     function activeScope(){ return CATALOG; }
     function groups(set, scope){
       return scope.map(function(p){ var n=p.v.filter(function(_,i){ return set.has(vid(p,i)); }).length; return {p:p,n:n}; }).filter(function(g){ return g.n>0; });
@@ -688,17 +706,13 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       var gs=groups(set, scope), html='';
       gs.slice(0,ROW_CAP).forEach(function(g){
         var meta = g.n===g.p.v.length ? (g.p.v.length===1?'1 variant':'all '+g.p.v.length+' variants') : g.n+' of '+g.p.v.length+' variants';
-        var crs = mode==='pv' ? (S.course[g.p.id]
-              ? '<span class="pcourse on" data-course="'+g.p.id+'" title="Edit course">Course: '+courseSummary(g.p.id)+' &middot; <b>Edit</b></span>'
-              : '<span class="pcourse" data-course="'+g.p.id+'" title="Ship a different product on later deliveries">&#65291; Set up a course</span>') : '';
-        html+='<div class="prow clk" data-edit="'+g.p.id+'" title="Click to edit variants"><s-thumbnail size="small"></s-thumbnail><span class="pinfo"><span><span class="pname">'+esc(g.p.t)+'</span><span class="pmeta">&middot; '+meta+'</span></span>'+crs+'</span>'+
+        html+='<div class="prow clk" data-edit="'+g.p.id+'" title="Click to edit variants"><s-thumbnail size="small"></s-thumbnail><span class="pname">'+esc(g.p.t)+'</span><span class="pmeta">&middot; '+meta+'</span>'+
               '<span class="pacts"><button class="x" data-rm="'+g.p.id+'">Remove &#10005;</button></span></div>';
       });
       if(gs.length>ROW_CAP) html+='<button class="lnk showall" data-all="1">Show all '+gs.length+' products &#8594;</button>';
       if(!gs.length) html='<p class="help" style="margin:4px 0 0">No products selected yet.</p>';
       box.innerHTML=html;
       box.onclick=function(e){
-        var cr=e.target.closest('[data-course]'); if(cr){ openCourse(cr.dataset.course); return; }
         var rm=e.target.closest('[data-rm]'); if(rm){ var p=prod(rm.dataset.rm); p.v.forEach(function(_,i){ set.delete(vid(p,i)); }); renderAll(); return; }
         if(e.target.closest('[data-all]')){ openPicker(mode); return; }
         var row=e.target.closest('[data-edit]'); if(row) openPicker(mode, row.dataset.edit);
@@ -744,8 +758,10 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       if(hasCol) lead.push(plural(S.cols.length,'collection')+(anySync?' (auto-add on)':''));
       if(pc.prods) lead.push(plural(pc.prods, hasCol?'extra product':'product'));
       var sum = !lead.length ? 'Nothing selected yet' : !hasCol ? 'Products & Variants · '+plural(c.prods,'product')+', '+plural(c.vars,'variant') : lead.join(' + ')+' · '+plural(c.prods,'product')+', '+plural(c.vars,'variant')+(pc.prods?' in total':'');
-      var nc=Object.keys(S.course).length;
-      steps[0].querySelector('.collsum').textContent=sum+(nc?' \u00b7 '+plural(nc,'course'):'');
+      if(S.mode==='course'){ var cs=countText(groups(courseSet(), CATALOG)); sum = S.courses.length ? 'Course \u00b7 '+plural(S.courses.length,'starter product')+', '+plural(cs.vars,'variant') : 'Course \u00b7 no starter product yet'; c=cs; }
+      steps[0].querySelector('.collsum').textContent=sum;
+      renderCourses();
+      aseg.querySelector('[data-lvl="course"]').innerHTML='Course'+(S.courses.length?' ('+S.courses.length+')':'')+' <span class="newpill">New</span>';
       $('pvNote').classList.toggle('hide', !hasCol);
       aseg.querySelector('[data-lvl="pv"]').textContent='Products & Variants'+(pc.prods?' ('+pc.prods+')':'');
       aseg.querySelector('[data-lvl="collection"]').textContent='Collections'+(hasCol?' ('+S.cols.length+')':'');
@@ -757,8 +773,9 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       S.mode=lvl;
       $('lvl-pv').classList.toggle('hide', lvl!=='pv');
       $('lvl-collection').classList.toggle('hide', lvl!=='collection');
+      $('lvl-course').classList.toggle('hide', lvl!=='course');
       aseg.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.dataset.lvl===lvl); });
-      renderAll();
+      renderAll(); if(lvl==='course') checkCourseLengths(true);
     }
     aseg.addEventListener('click', function(e){ var lvl=e.target.closest('[data-lvl]'); if(lvl) setLevel(lvl.dataset.lvl); });
     $('pvAdd').addEventListener('click', function(){ openPicker('pv'); });
@@ -890,22 +907,19 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       draw(); m.input.focus();
     }
 
-    // ---------- courses (per product): a different product on later deliveries, e.g. a refill. The last row repeats. ----------
-    // S.course[pid] = { rows:[{pid, map:{starterVariantIndex: courseVariantIndex}}], swap:true }. rows[k] = delivery k+2.
-    S.course={};
-    function selVariants(pid){ var p=prod(pid); return p.v.map(function(_,i){ return i; }).filter(function(i){ return S.pv.has(vid(p,i)); }); }
+    // ---------- Course plan (Apply to = Course): a subscription type of its own ----------
+    // S.courses = [{pid, rows:[{pid, map:{starterVi: courseVi}}], swap}]: Delivery 1 ships the starter, rows[k] ships on delivery k+2,
+    // the last row repeats. Customers subscribe on the starter's product page; each delivery is charged its own product's price.
+    S.courses=[];
+    function allVariants(pid){ return prod(pid).v.map(function(_,i){ return i; }); }
     function autoMap(starterPid, coursePid){
       var a=prod(starterPid), b=prod(coursePid), m={};
-      selVariants(starterPid).forEach(function(i){ var t=a.v[i][0].toLowerCase(), j=-1; b.v.forEach(function(v,k){ if(j<0 && v[0].toLowerCase()===t) j=k; }); m[i]= j>-1 ? j : 0; });
+      allVariants(starterPid).forEach(function(i){ var t=a.v[i][0].toLowerCase(), j=-1; b.v.forEach(function(v,k){ if(j<0 && v[0].toLowerCase()===t) j=k; }); m[i]= j>-1 ? j : 0; });
       return m;
     }
-    function courseSummary(pid){
-      var c=S.course[pid]; if(!c || !c.rows.length) return '';
-      var n=c.rows.length;
-      return c.rows.map(function(r,k){ return esc(prod(r.pid).t)+(k===n-1 ? ' from delivery '+(k+2) : ' on delivery '+(k+2)); }).join(', ');
-    }
+    function courseSet(){ var u=new Set(); S.courses.forEach(function(c){ allVariants(c.pid).forEach(function(i){ u.add(vid(prod(c.pid),i)); }); }); return u; }
     function openProductPicker(curPid, title, cb){
-      var m=modal(title,'Any product in your store. You map its variants next.',''), q='', sel=curPid||'';
+      var m=modal(title,'Any product in your store.',''), q='', sel=curPid||'';
       m.input.placeholder='Search products';
       function foot(){ m.cnt.textContent = sel ? prod(sel).t : 'No product selected'; m.back.querySelector('[data-done]').disabled=!sel; }
       function draw(){
@@ -923,51 +937,90 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       });
       draw(); m.input.focus();
     }
-    function openCourse(pid){
-      var p=prod(pid), sv=selVariants(pid), c=S.course[pid] ? JSON.parse(JSON.stringify(S.course[pid])) : {rows:[], swap:true};
-      var m=modal('Course for '+esc(p.t), 'Ship a different product on later deliveries, like a refill after the starter. The last row repeats for every delivery after it.', '');
-      m.back.querySelector('.msearch').classList.add('hide'); m.back.querySelector('.mtools').classList.add('hide');
-      m.back.querySelector('[data-done]').textContent='Save course';
-      function price(pp,i){ return 'INR '+pp.v[i][1]; }
-      function draw(){
-        var n=c.rows.length, html='<div class="crs">';
-        html+='<div class="crow"><span class="cdl">Delivery 1'+(n?'':' onwards')+'</span><span class="cprod"><span class="rowline" style="gap:8px"><s-thumbnail size="small-200"></s-thumbnail><b>'+esc(p.t)+'</b><span class="pill" style="font-size:11px">This product</span></span>'+
-              '<span class="cmap">'+sv.map(function(i){ return '<span class="cmrow"><span class="cmv">'+esc(p.v[i][0])+'</span><span class="help">'+price(p,i)+'</span></span>'; }).join('')+'</span></span><span></span></div>';
+
+    // buying options that end before a course does
+    function optionLengths(){
+      return [].slice.call(document.querySelectorAll('.optcard[data-opt]')).map(function(card){
+        var b=card.querySelector('.durSeg button.on'), dur=b?b.dataset.dur:'fixed';
+        return { title:card.querySelector('.optsum .title').textContent, dur:dur,
+                 n:parseInt(card.querySelector('.sched-fixed .field').textContent,10)||0,
+                 min:parseInt((card.querySelector('.chMin')||{}).value,10)||0, max:parseInt((card.querySelector('.chMax')||{}).value,10)||0 };
+      });
+    }
+    function courseConflicts(c){
+      var L=c.rows.length+1, out=[]; if(L<2) return out;
+      optionLengths().forEach(function(o){
+        if(o.dur==='fixed' && o.n<L) out.push({hard:true, t:'"'+o.title+'" ends after '+o.n+' deliveries, so delivery '+(o.n+1)+' onwards of this course never ships.'});
+        if(o.dur==='choice' && o.max<L) out.push({hard:true, t:'"'+o.title+'" lets customers pick at most '+o.max+' deliveries, so delivery '+(o.max+1)+' onwards never ships.'});
+        else if(o.dur==='choice' && o.min<L) out.push({hard:false, t:'"'+o.title+'": customers who pick fewer than '+L+' deliveries miss the later course items.'});
+      });
+      return out;
+    }
+    var lastToastKey='';
+    function checkCourseLengths(toastIt){
+      if(S.mode!=='course') return;
+      var hard=[];
+      S.courses.forEach(function(c){ var cf=courseConflicts(c); cf.forEach(function(x){ if(x.hard) hard.push(prod(c.pid).t+': '+x.t); }); });
+      var key=hard.join('|');
+      if(toastIt && hard.length && key!==lastToastKey) toast(hard.length===1 ? hard[0] : hard.length+' buying options end before the course does. See the course for details.');
+      lastToastKey=key;
+    }
+    function toast(msg){
+      document.querySelectorAll('.toast').forEach(function(x){ x.remove(); });
+      var t=document.createElement('div'); t.className='toast'; t.setAttribute('role','status');
+      t.innerHTML='<span>'+esc(msg)+'</span><button type="button" aria-label="Dismiss">&#10005;</button>';
+      document.body.appendChild(t); t.querySelector('button').onclick=function(){ t.remove(); };
+      setTimeout(function(){ t.classList.add('out'); setTimeout(function(){ t.remove(); }, 300); }, 5000);
+    }
+    // re-check when an option's length changes
+    document.addEventListener('click', function(e){ if(e.target.closest('.optcard .durSeg')) setTimeout(function(){ renderCourses(); checkCourseLengths(true); }, 0); });
+    document.addEventListener('input', function(e){ if(e.target.closest('.optcard .chMin, .optcard .chMax')) { renderCourses(); checkCourseLengths(true); } });
+
+    function renderCourses(){
+      var box=$('courseList'); if(!box) return;
+      box.innerHTML = S.courses.map(function(c,ci){
+        var p=prod(c.pid), sv=allVariants(c.pid), n=c.rows.length;
+        var rows='<div class="crow"><span class="cdl">Delivery 1'+(n?'':' onwards')+'</span><span class="cprod"><span class="rowline" style="gap:8px"><s-thumbnail size="small-200"></s-thumbnail><b>'+esc(p.t)+'</b><span class="pill" style="font-size:11px">Starter</span></span>'+
+          '<span class="cmap">'+sv.map(function(i){ return '<span class="cmrow"><span class="cmv">'+esc(p.v[i][0])+'</span><span class="help">INR '+p.v[i][1]+'</span></span>'; }).join('')+'</span></span><span></span></div>';
         c.rows.forEach(function(r,k){
           var cp=prod(r.pid);
-          html+='<div class="crow" data-k="'+k+'"><span class="cdl">Delivery '+(k+2)+(k===n-1?' onwards':'')+'</span><span class="cprod">'+
+          rows+='<div class="crow" data-k="'+k+'"><span class="cdl">Delivery '+(k+2)+(k===n-1?' onwards':'')+'</span><span class="cprod">'+
             '<button type="button" class="giftfld cpick"><s-thumbnail size="small-200"></s-thumbnail><span class="gname">'+esc(cp.t)+'</span><span class="gchg">Change</span></button>'+
             '<span class="cmap">'+sv.map(function(i){
               return '<span class="cmrow"><span class="cmv">'+esc(p.v[i][0])+' &rarr;</span><select class="lgsel cmapsel" data-i="'+i+'" aria-label="Variant shipped for '+esc(p.v[i][0])+'">'+
                 cp.v.map(function(v,j){ return '<option value="'+j+'"'+(r.map[i]===j?' selected':'')+'>'+esc(v[0])+' &middot; INR '+v[1]+'</option>'; }).join('')+'</select></span>';
             }).join('')+'</span></span><span><button class="btnsm ico-x crm" title="Remove this delivery">&#10005;</button></span></div>';
         });
-        html+='</div>';
-        if(!n) html+='<p class="help" style="margin:10px 0 0">No course yet: every delivery ships '+esc(p.t)+'. Add a delivery to change what ships later.</p>';
-        html+='<div class="rowline" style="margin-top:10px"><button class="btnghost cadd">&#65291; Add delivery</button></div>';
-        html+='<label class="tglwrap" style="margin-top:14px"><input type="checkbox" class="tgl cswap"'+(c.swap?' checked':'')+' />Customers can swap a course item in their portal</label>';
-        if(n && sv.length){ var i0=sv[0], r0=c.rows[0], cp0=prod(r0.pid);
-          html+='<div class="calc" style="margin-top:12px"><b>On the widget ('+esc(p.v[i0][0])+'):</b> '+price(p,i0)+' today, then '+esc(cp0.t)+' '+esc(cp0.v[r0.map[i0]][0])+' at '+price(cp0, r0.map[i0])+(n===1?' from delivery 2':' on delivery 2')+'. Each delivery is charged its own price; the plan discount applies on top.</div>'; }
-        m.body.innerHTML=html;
-        m.cnt.textContent = n ? (n+1)+' deliveries in the course, the last repeats' : 'No course';
-      }
-      m.body.addEventListener('change', function(e){
-        var row=e.target.closest('.crow');
-        if(e.target.classList.contains('cmapsel') && row){ c.rows[+row.dataset.k].map[+e.target.dataset.i]=+e.target.value; draw(); }
-        if(e.target.classList.contains('cswap')) c.swap=e.target.checked;
-      });
-      m.body.addEventListener('click', function(e){
-        var row=e.target.closest('.crow');
-        if(e.target.closest('.cadd')){ openProductPicker(null, 'Ships on delivery '+(c.rows.length+2), function(id){ c.rows.push({pid:id, map:autoMap(pid,id)}); draw(); }); return; }
-        if(row && e.target.closest('.cpick')){ var r=c.rows[+row.dataset.k]; openProductPicker(r.pid, 'Ships on delivery '+(+row.dataset.k+2), function(id){ r.pid=id; r.map=autoMap(pid,id); draw(); }); return; }
-        if(row && e.target.closest('.crm')){ c.rows.splice(+row.dataset.k,1); draw(); }
-      });
-      m.back.addEventListener('click', function(e){
-        if(e.target===m.back || e.target.closest('[data-close]')) return m.close();
-        if(e.target.closest('[data-done]')){ if(c.rows.length) S.course[pid]=c; else delete S.course[pid]; m.close(); renderAll(); }
-      });
-      draw();
+        var cf=courseConflicts(c), i0=sv[0], wl='';
+        if(n){ var r0=c.rows[0], cp0=prod(r0.pid); wl='<div class="calc" style="margin-top:10px"><b>On the widget ('+esc(p.v[i0][0])+'):</b> INR '+p.v[i0][1]+' today, then '+esc(cp0.t)+' '+esc(cp0.v[r0.map[i0]][0])+' at INR '+cp0.v[r0.map[i0]][1]+(n===1?' from delivery 2':' on delivery 2')+'. Each delivery is charged its own price; the plan discount applies on top.</div>'; }
+        return '<div class="cblk" data-ci="'+ci+'">'+
+          '<div class="cblkhdr"><s-thumbnail size="small"></s-thumbnail><div style="flex:1;min-width:0"><div class="cname">Course: '+esc(p.t)+'</div><div class="help">'+plural(n+1,'step')+(n?', the last repeats':'')+' &middot; customers subscribe on this product\'s page</div></div><button class="btnsm ico-x cdel" title="Remove this course">&#10005;</button></div>'+
+          '<div class="crs">'+rows+'</div>'+
+          (n?'':'<p class="help" style="margin:8px 0 0">Add a delivery to ship something else later, like a refill.</p>')+
+          '<div class="rowline" style="margin-top:10px;justify-content:space-between"><button class="btnghost cadd">&#65291; Add delivery</button><label class="tglwrap"><input type="checkbox" class="tgl cswap"'+(c.swap?' checked':'')+' />Customers can swap a course item in their portal</label></div>'+
+          (cf.length?'<div class="warnbox" style="margin-top:10px">'+cf.map(function(x){ return esc(x.t); }).join('<br>')+'</div>':'')+wl+
+        '</div>';
+      }).join('');
+      $('courseEmpty').classList.toggle('hide', S.courses.length>0);
     }
+    $('courseList').addEventListener('click', function(e){
+      var blk=e.target.closest('.cblk'); if(!blk) return; var c=S.courses[+blk.dataset.ci], row=e.target.closest('.crow');
+      if(e.target.closest('.cdel')){ S.courses.splice(+blk.dataset.ci,1); renderAll(); return; }
+      if(e.target.closest('.cadd')){ openProductPicker(null, 'Ships on delivery '+(c.rows.length+2), function(id){ c.rows.push({pid:id, map:autoMap(c.pid,id)}); renderAll(); checkCourseLengths(true); }); return; }
+      if(row && e.target.closest('.cpick')){ var r=c.rows[+row.dataset.k]; openProductPicker(r.pid, 'Ships on delivery '+(+row.dataset.k+2), function(id){ r.pid=id; r.map=autoMap(c.pid,id); renderAll(); }); return; }
+      if(row && e.target.closest('.crm')){ c.rows.splice(+row.dataset.k,1); renderAll(); checkCourseLengths(true); }
+    });
+    $('courseList').addEventListener('change', function(e){
+      var blk=e.target.closest('.cblk'); if(!blk) return; var c=S.courses[+blk.dataset.ci], row=e.target.closest('.crow');
+      if(e.target.classList.contains('cmapsel') && row){ c.rows[+row.dataset.k].map[+e.target.dataset.i]=+e.target.value; renderCourses(); }
+      if(e.target.classList.contains('cswap')) c.swap=e.target.checked;
+    });
+    $('courseAdd').addEventListener('click', function(){
+      openProductPicker(null, 'Select the starter product', function(id){
+        if(S.courses.some(function(c){ return c.pid===id; })) return toast(prod(id).t+' already has a course.');
+        S.courses.push({pid:id, rows:[], swap:true}); renderAll();
+      });
+    });
 
     // ---------- per-card buying-option editor (scoped) ----------
     var PAYG_LABEL='by invoice and email reminder (pay-as-you-go)', LAD_MAX=10;   // rows in all; discount steps cap at 5 (LD-01)
