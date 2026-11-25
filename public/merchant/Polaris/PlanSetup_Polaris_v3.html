@@ -220,13 +220,6 @@
   .gcard .gt{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .gcard .gs{font-size:11.5px;white-space:nowrap}
   .gcard .gx{background:none;border:0;color:#1c4fae;cursor:pointer;padding:2px 4px;font-size:13px;flex:none}
-  .ladsum{border:1px solid var(--p-line);border-radius:12px;background:#fff;padding:12px 14px;margin-top:12px}
-  .ladsum .lsh{margin:0 0 8px;font-size:11px;font-weight:600;color:var(--p-muted);text-transform:uppercase;letter-spacing:.04em}
-  .lsgrid{display:grid;gap:8px}
-  .lst{background:#f3f3f3;border-radius:10px;padding:8px 10px;display:flex;flex-direction:column}
-  .lsd{font-size:11.5px;color:var(--p-muted)}
-  .lsv{font-weight:650;font-size:13.5px}
-  .lsg{font-size:11.5px;color:#1c4fae;font-weight:500}
   .qstep{display:inline-flex;align-items:center;border:1px solid var(--p-line);border-radius:8px;overflow:hidden;background:#fff;flex:none}
   .qstep button{border:0;background:#fff;width:28px;height:30px;cursor:pointer;font-size:15px;color:var(--p-ink);padding:0}
   .qstep button:hover{background:#f3f3f3}
@@ -398,7 +391,6 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                         <div class="ladrows"></div>
                         <div class="rowline" style="margin-top:10px"><button class="btnghost addstep">&#65291; Add delivery</button><span class="help ladcount"></span></div>
                         <div class="warnbox ladwarn hide" style="margin-top:8px"></div>
-                        <div class="ladsum"></div>
                         <p class="help" style="margin-top:10px">Prepaid is off for this option: a ladder needs a payment per delivery. For prepaid, add a separate option with a flat discount.</p>
                       </div>
                     </div>
@@ -463,7 +455,6 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                         <div class="ladrows"></div>
                         <div class="rowline" style="margin-top:10px"><button class="btnghost addstep">&#65291; Add delivery</button><span class="help ladcount"></span></div>
                         <div class="warnbox ladwarn hide" style="margin-top:8px"></div>
-                        <div class="ladsum"></div>
                         <p class="help" style="margin-top:10px">Prepaid is off for this option: a ladder needs a payment per delivery. For prepaid, add a separate option with a flat discount.</p>
                       </div>
                     </div>
@@ -898,7 +889,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
           addstep=q('.addstep'), ladwarn=q('.ladwarn'), freeBlock=q('.freeBlock'), extrasHint=q('.extrasHint');
       // LD-01 defaults (row i = delivery i+1; the last row covers every delivery after it)
       card._lad=[{value:10,g:null,gq:1},{value:20,g:null,gq:1},{value:15,g:{pid:'p20',vi:0},gq:1},{value:15,g:{pid:'p18',vi:0},gq:1},{value:20,g:null,gq:1}];
-      var ladcount=q('.ladcount'), ladsum=q('.ladsum');
+      var ladcount=q('.ladcount');
       var chMin=q('.chMin'), chMax=q('.chMax'), chErr=q('.chErr');
       function minMax(){ return {min:parseInt(chMin.value,10)||0, max:parseInt(chMax.value,10)||0}; }
 
@@ -995,13 +986,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         });
         ladrows.innerHTML=html;
         ladcount.textContent=levels()+' of 5 discount levels used';
-        renderSummary(); validateLadder(); renderDeliveryPreview();
-      }
-      function renderSummary(){
-        var L=card._lad, last=L.length-1;
-        ladsum.innerHTML='<p class="lsh">What the customer gets</p><div class="lsgrid" style="grid-template-columns:repeat('+Math.min(L.length,6)+',minmax(0,1fr))">'+L.map(function(s,i){
-          return '<div class="lst"><span class="lsd">Delivery '+(i+1)+(i===last?'+':'')+'</span><span class="lsv">'+fmtVal(card,s.value)+' off</span>'+(s.g?'<span class="lsg">+ '+((s.gq||1)>1?s.gq+' free gifts':'free gift')+'</span>':'')+'</div>';
-        }).join('')+'</div>';
+        validateLadder(); renderDeliveryPreview();
       }
       function validateLadder(){
         if(!ladwarn || discMode(card)!=='ladder'){ if(ladwarn) ladwarn.classList.add('hide'); return; }
@@ -1015,7 +1000,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       ladrows.addEventListener('input', function(e){
         var row=e.target.closest('.ladrow'); if(!row) return; var s=card._lad[+row.dataset.i];
         if(e.target.classList.contains('lval')) s.value=parseFloat(e.target.value)||0;
-        ladcount.textContent=levels()+' of 5 discount levels used'; renderSummary(); validateLadder(); renderDeliveryPreview();
+        ladcount.textContent=levels()+' of 5 discount levels used'; validateLadder(); renderDeliveryPreview();
       });
       ladrows.addEventListener('click', function(e){
         var row=e.target.closest('.ladrow'); if(!row) return; var i=+row.dataset.i, s=card._lad[i];
