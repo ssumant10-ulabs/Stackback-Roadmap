@@ -207,12 +207,19 @@
   .ladhead,.ladrow{display:grid;grid-template-columns:130px 130px minmax(0,1fr) 36px;gap:12px;align-items:center}
   .ladrow{padding:9px 0}
   .dname{font-weight:500;font-size:13px;white-space:nowrap}
-  .gcard{display:inline-flex;align-items:center;gap:10px;border:1px solid #bcd3fb;background:#eef4ff;color:#1c4fae;border-radius:10px;padding:6px 10px 6px 12px;cursor:pointer;max-width:100%;min-width:0;text-align:left;font:inherit}
+  .gcard{display:flex;align-items:center;gap:10px;border:1px solid #bcd3fb;background:#eef4ff;color:#1c4fae;border-radius:10px;padding:6px 8px 6px 12px;width:100%;box-sizing:border-box;min-width:0}
   .gcard svg{flex:none}
-  .gcard .gtx{display:flex;flex-direction:column;min-width:0}
+  .gcard .gtx{display:flex;flex-direction:column;min-width:0;flex:1;background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}
+  .gcard{align-items:flex-start}
+  .gcard svg{margin-top:2px}
+  .gcard .gmain{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+  .gcard .gsub{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+  .gcard .qstep{border-color:#bcd3fb}
+  .gcard .qstep button{width:24px;height:24px;font-size:14px}
+  .gcard .qstep .qv{width:24px;font-size:12.5px}
   .gcard .gt{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .gcard .gs{font-size:11.5px;white-space:nowrap}
-  .gcard .gx{margin-left:auto;padding:2px 4px;font-size:13px;flex:none}
+  .gcard .gx{background:none;border:0;color:#1c4fae;cursor:pointer;padding:2px 4px;font-size:13px;flex:none}
   .ladsum{border:1px solid var(--p-line);border-radius:12px;background:#fff;padding:12px 14px;margin-top:12px}
   .ladsum .lsh{margin:0 0 8px;font-size:11px;font-weight:600;color:var(--p-muted);text-transform:uppercase;letter-spacing:.04em}
   .lsgrid{display:grid;gap:8px}
@@ -978,13 +985,13 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         var amt=unitSel.value==='amt', L=card._lad, html='', last=L.length-1;
         L.forEach(function(s,i){
           var gift = s.g
-            ? '<span style="display:flex;flex-direction:column;gap:6px;align-items:flex-start;max-width:100%"><button type="button" class="gcard lgchg" title="Change gift">'+GIFT_ICON+'<span class="gtx"><span class="gt">'+esc(giftLabel(s.g))+'</span><span class="gs">Sent once, with this delivery</span></span><span class="gx lgrm" title="Remove gift" role="button" aria-label="Remove gift">&#10005;</span></button><span class="rowline" style="gap:6px;flex-wrap:nowrap"><span class="help">Qty</span>'+qtyStep('lgq', s.gq||1)+'</span></span>'
+            ? '<div class="gcard">'+GIFT_ICON+'<div class="gmain"><button type="button" class="gtx lgchg" title="Change gift"><span class="gt">'+esc(giftLabel(s.g))+'</span></button><span class="gsub"><span class="gs">Sent once, with this delivery</span><span class="rowline" style="gap:5px;flex-wrap:nowrap"><span class="gs">Qty</span>'+qtyStep('lgq', s.gq||1)+'</span></span></div><button type="button" class="gx lgrm" title="Remove gift" aria-label="Remove gift">&#10005;</button></div>'
             : '<button type="button" class="btnghost lgchg">&#65291; Add gift</button>';
           html+='<div class="ladrow" data-i="'+i+'">'+
             '<span class="dname">'+dLabel(i)+'</span>'+
             '<span class="rowline" style="gap:6px;flex-wrap:nowrap">'+(amt?'<span class="help">INR</span>':'')+'<input class="field lin lval" type="number" min="0" value="'+s.value+'" aria-label="Discount on '+dLabel(i)+'" /><span class="help">'+(amt?'off':'% off')+'</span></span>'+
             '<span style="min-width:0">'+gift+'</span>'+
-            '<span>'+(i===last||L.length===1?'':'<button class="btnsm ico-x lrm" title="Remove this delivery">&#10005;</button>')+'</span></div>';
+            '<span>'+(i===0?'':'<button class="btnsm ico-x lrm" title="Remove this delivery">&#10005;</button>')+'</span></div>';
         });
         ladrows.innerHTML=html;
         ladcount.textContent=levels()+' of 5 discount levels used';
