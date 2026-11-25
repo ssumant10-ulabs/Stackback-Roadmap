@@ -239,12 +239,10 @@
   .pcourse-unused{max-width:100%;font-size:12px;color:var(--p-link);font-weight:600;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
   .pcourse.on{background:#eef4ff;border:1px solid #bcd3fb;border-radius:20px;padding:2px 10px;color:#1c4fae;font-weight:500}
   .crs{display:flex;flex-direction:column}
-  .seg .crsTab{color:#1c4fae}
-  .seg .crsTab.on{background:#1c4fae;color:#fff}
-  .newpill{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;background:#e0ebff;color:#1c4fae;border-radius:6px;padding:1px 5px;margin-left:4px;vertical-align:1px}
-  .seg .crsTab.on .newpill{background:rgba(255,255,255,.22);color:#fff}
-  .crsintro{display:flex;flex-direction:column;gap:3px;border:1px solid #bcd3fb;background:#eef4ff;color:#1c4fae;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12.5px}
-  .crsintro b{font-size:13px}
+  .newpill{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;background:#ededed;color:#5c5c5c;border-radius:6px;padding:1px 5px;margin-left:4px;vertical-align:1px}
+  .seg button.on .newpill{background:rgba(255,255,255,.2);color:#fff}
+  .crsintro{display:flex;flex-direction:column;gap:3px;border:1px solid var(--p-line);background:#f7f7f7;color:var(--p-muted);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12.5px}
+  .crsintro b{font-size:13px;color:var(--p-ink)}
   .cblk{border:1px solid var(--p-line);border-radius:12px;padding:12px 14px;margin-bottom:10px;background:#fff}
   .cblkhdr{display:flex;align-items:center;gap:10px;padding-bottom:6px;border-bottom:1px solid var(--p-line2)}
   .cblkhdr .cname{font-weight:600}
@@ -892,28 +890,36 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     // quantity selector: - [n] +, value held in a read-only input so readers use .value
     function qtyStep(cls, v){ return '<span class="qstep" title="Quantity"><button type="button" class="qm" aria-label="Fewer">&minus;</button><input class="qv '+cls+'" value="'+v+'" readonly aria-label="Gift quantity" /><button type="button" class="qp" aria-label="More">+</button></span>'; }
     function giftField(g, cls){ return '<button type="button" class="giftfld '+cls+'"><s-thumbnail size="small-200"></s-thumbnail><span class="gname">'+esc(giftLabel(g))+'</span><span class="gchg">Change</span></button>'; }
-    function openGiftPicker(cur, cb, qty, title, sub){
-      var m=modal(title||'Select a gift product', sub||'Free on that delivery. Any product in your store, not only this plan\'s.',''), q='', sel=cur?cur.pid+':'+cur.vi:'';
+    // multi-select picker: tick a product (all its variants) or single variants; returns [{pid, vi}] in catalog order
+    function openMultiPicker(title, sub, pre, cb){
+      var m=modal(title, sub, '<button class="lnk" data-clr="1">Clear</button>'), q='', sel=new Set((pre||[]).map(function(x){ return x.pid+':'+x.vi; }));
       m.input.placeholder='Search products or variants';
-      var qIn=null;
-      if(qty!==undefined){ var mf=m.back.querySelector('.mfoot'), qs=document.createElement('span'); qs.className='rowline'; qs.style.gap='6px'; qs.style.marginLeft='auto';
-        qs.innerHTML='<span class="help">Qty</span><input type="number" min="1" class="field lin" value="'+qty+'" style="width:56px" aria-label="Gift quantity" />'; mf.insertBefore(qs, mf.querySelector('.macts')); qIn=qs.querySelector('input'); mf.querySelector('.macts').style.marginLeft='12px'; }
-      function parse(k){ var a=k.split(':'); return {pid:a[0], vi:+a[1]}; }
-      function foot(){ m.cnt.textContent = sel ? 'Gift: '+giftLabel(parse(sel)) : 'No gift selected'; m.back.querySelector('[data-done]').disabled=!sel; }
-      function radio(k){ return '<input type="radio" name="giftpick" class="ck" data-g="'+k+'"'+(sel===k?' checked':'')+' />'; }
+      var done=m.back.querySelector('[data-done]');
+      function foot(){ m.cnt.textContent = sel.size ? plural(sel.size,'item')+' selected' : 'Nothing selected'; done.disabled=!sel.size; }
       function draw(){
         var vis=CATALOG.filter(function(p){ return !q || p.t.toLowerCase().indexOf(q)>-1 || p.v.some(function(v){ return v[0].toLowerCase().indexOf(q)>-1; }); });
         m.body.innerHTML = vis.map(function(p){
-          return '<div class="mprod open"><div class="mprow"><span style="width:16px;flex:none"></span><s-thumbnail size="small"></s-thumbnail><span class="mt">'+esc(p.t)+'</span><span class="mc">'+plural(p.v.length,'variant')+'</span></div>'+
-                 '<div class="mvars">'+p.v.map(function(v,i){ return '<label class="mvrow">'+radio(p.id+':'+i)+'<span>'+esc(v[0])+'</span><span class="vp">INR '+v[1]+'</span></label>'; }).join('')+'</div></div>';
+          var n=p.v.filter(function(_,i){ return sel.has(p.id+':'+i); }).length;
+          return '<div class="mprod open"><label class="mprow" style="cursor:pointer"><input type="checkbox" class="ck" data-mp="'+p.id+'"'+(n===p.v.length?' checked':'')+' /><s-thumbnail size="small"></s-thumbnail><span class="mt">'+esc(p.t)+'</span><span class="mc">'+n+' / '+plural(p.v.length,'variant')+'</span></label>'+
+                 '<div class="mvars">'+p.v.map(function(v,i){ return '<label class="mvrow"><input type="checkbox" class="ck" data-mv="'+p.id+':'+i+'"'+(sel.has(p.id+':'+i)?' checked':'')+' /><span>'+esc(v[0])+'</span><span class="vp">INR '+v[1]+'</span></label>'; }).join('')+'</div></div>';
         }).join('') || '<p class="help" style="padding:16px 0">No products match "'+esc(q)+'".</p>';
+        m.body.querySelectorAll('[data-mp]').forEach(function(cb2){ var p=prod(cb2.dataset.mp), n=p.v.filter(function(_,i){ return sel.has(p.id+':'+i); }).length; cb2.indeterminate=n>0 && n<p.v.length; });
         m.shown.textContent=plural(vis.length,'product'); foot();
       }
-      m.body.addEventListener('change', function(e){ if(e.target.dataset.g){ sel=e.target.dataset.g; foot(); } });
+      m.body.addEventListener('change', function(e){
+        var t=e.target;
+        if(t.dataset.mp){ var p=prod(t.dataset.mp); p.v.forEach(function(_,i){ t.checked ? sel.add(p.id+':'+i) : sel.delete(p.id+':'+i); }); }
+        else if(t.dataset.mv){ t.checked ? sel.add(t.dataset.mv) : sel.delete(t.dataset.mv); }
+        draw();
+      });
       m.input.addEventListener('input', function(){ q=m.input.value.trim().toLowerCase(); draw(); });
       m.back.addEventListener('click', function(e){
         if(e.target===m.back || e.target.closest('[data-close]')) return m.close();
-        if(e.target.closest('[data-done]') && sel){ var qv=qIn?Math.max(1,parseInt(qIn.value,10)||1):undefined; m.close(); cb(parse(sel), qv); }
+        if(e.target.closest('[data-clr]')){ sel.clear(); draw(); return; }
+        if(e.target.closest('[data-done]') && sel.size){
+          var out=[]; CATALOG.forEach(function(p){ p.v.forEach(function(_,i){ if(sel.has(p.id+':'+i)) out.push({pid:p.id, vi:i}); }); });
+          m.close(); cb(out);
+        }
       });
       draw(); m.input.focus();
     }
@@ -946,13 +952,17 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       function draw(){
         var vis=CATALOG.filter(function(p){ return !q || p.t.toLowerCase().indexOf(q)>-1 || p.v.some(function(v){ return v[0].toLowerCase().indexOf(q)>-1; }); });
         m.body.innerHTML = vis.map(function(p){
-          return '<div class="mprod open"><div class="mprow"><span style="width:16px;flex:none"></span><s-thumbnail size="small"></s-thumbnail><span class="mt">'+esc(p.t)+'</span><span class="mc">'+plural(p.v.length,'variant')+'</span></div>'+
+          var nOn = sel.pid===p.id ? sel.svs.length : 0;
+          return '<div class="mprod open"><label class="mprow" style="cursor:pointer"><input type="checkbox" class="ck" data-spp="'+p.id+'"'+(nOn===p.v.length?' checked':'')+(nOn>0&&nOn<p.v.length?' data-ind="1"':'')+' /><s-thumbnail size="small"></s-thumbnail><span class="mt">'+esc(p.t)+'</span><span class="mc">'+nOn+' / '+plural(p.v.length,'variant')+'</span></label>'+
                  '<div class="mvars">'+p.v.map(function(v,i){ var on=sel.pid===p.id && sel.svs.indexOf(i)>-1; return '<label class="mvrow"><input type="checkbox" class="ck" data-sp="'+p.id+'" data-i="'+i+'"'+(on?' checked':'')+' /><span>'+esc(v[0])+'</span><span class="vp">INR '+v[1]+'</span></label>'; }).join('')+'</div></div>';
         }).join('') || '<p class="help" style="padding:16px 0">No products match "'+esc(q)+'".</p>';
+        m.body.querySelectorAll('[data-ind]').forEach(function(x){ x.indeterminate=true; });
         m.shown.textContent=plural(vis.length,'product'); foot();
       }
       m.body.addEventListener('change', function(e){
-        var t=e.target; if(!t.dataset.sp) return; var i=+t.dataset.i;
+        var t=e.target;
+        if(t.dataset.spp){ sel = t.checked ? {pid:t.dataset.spp, svs:prod(t.dataset.spp).v.map(function(_,i){ return i; })} : (sel.pid===t.dataset.spp ? {pid:'', svs:[]} : sel); draw(); return; }
+        if(!t.dataset.sp) return; var i=+t.dataset.i;
         if(t.dataset.sp!==sel.pid){ sel={pid:t.dataset.sp, svs:[]}; }   // one starter product per course
         if(t.checked){ if(sel.svs.indexOf(i)<0) sel.svs.push(i); } else sel.svs=sel.svs.filter(function(v){ return v!==i; });
         sel.svs.sort(); draw();
@@ -1006,9 +1016,9 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       if(e.target.closest('.svpop')) return;
       if(e.target.closest('.cstart')){ openStarterPicker({pid:c.pid, svs:c.svs}, function(pid, svs){ var msg=overlapMsg(pid, svs, c); if(msg) return toast(msg); c.pid=pid; c.svs=svs; renderAll(); renderOptionChecks(true); }); return; }
       if(e.target.closest('.cdel')){ S.courses.splice(S.courses.indexOf(c),1); renderAll(); return; }
-      if(e.target.closest('.cadd')){ var nn=courseLen(c)+1; openGiftPicker(null, function(g){ c.rows.push({n:nn, items:[{pid:g.pid, vi:g.vi, q:1}]}); renderAll(); renderOptionChecks(true); }, undefined, 'Ships on delivery '+nn, 'Pick the product and the variant that ships.'); return; }
-      if(r && e.target.closest('.ciadd')){ openGiftPicker(null, function(g){ r.items.push({pid:g.pid, vi:g.vi, q:1}); renderCourses(); }, undefined, 'Also ships on delivery '+r.n, 'Pick the product and the variant that ships.'); return; }
-      if(x && e.target.closest('.cpick')){ openGiftPicker({pid:x.pid, vi:x.vi}, function(g){ x.pid=g.pid; x.vi=g.vi; renderCourses(); }, undefined, 'Ships on delivery '+r.n, 'Pick the product and the variant that ships.'); return; }
+      if(e.target.closest('.cadd')){ var nn=courseLen(c)+1; openMultiPicker('Ships on delivery '+nn, 'Tick one or more products or variants.', [], function(list){ c.rows.push({n:nn, items:list.map(function(g){ return {pid:g.pid, vi:g.vi, q:1}; })}); renderAll(); renderOptionChecks(true); }); return; }
+      if(r && e.target.closest('.ciadd')){ openMultiPicker('Also ships on delivery '+r.n, 'Tick one or more products or variants.', [], function(list){ list.forEach(function(g){ r.items.push({pid:g.pid, vi:g.vi, q:1}); }); renderCourses(); }); return; }
+      if(x && e.target.closest('.cpick')){ openMultiPicker('Ships on delivery '+r.n, 'Whatever you tick replaces this product.', [{pid:x.pid, vi:x.vi}], function(list){ var ii=+it.dataset.ii; r.items.splice.apply(r.items, [ii,1].concat(list.map(function(g){ return {pid:g.pid, vi:g.vi, q:x.q||1}; }))); renderCourses(); }); return; }
       if(x && (e.target.closest('.qm')||e.target.closest('.qp'))){ x.q=Math.max(1,(x.q||1)+(e.target.closest('.qp')?1:-1)); renderCourses(); return; }
       if(x && e.target.closest('.cirm')){ r.items.splice(+it.dataset.ii,1); if(!r.items.length) c.rows.splice(+row.dataset.k,1); renderAll(); renderOptionChecks(true); return; }
       if(r && e.target.closest('.crm')){ c.rows.splice(+row.dataset.k,1); renderAll(); renderOptionChecks(true); }
@@ -1218,8 +1228,8 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         var gc=e.target.closest('[data-gi]'), x=gc ? s.gifts[+gc.dataset.gi] : null;
         if(x && e.target.closest('.lgrm')){ s.gifts.splice(+gc.dataset.gi,1); renderLadder(); return; }
         if(x && (e.target.closest('.qm')||e.target.closest('.qp'))){ x.q=Math.max(1,(x.q||1)+(e.target.closest('.qp')?1:-1)); renderLadder(); return; }
-        if(x && e.target.closest('.lgchg')){ openGiftPicker(x.g, function(g){ x.g=g; renderLadder(); }); return; }
-        if(e.target.closest('.lgadd')){ openGiftPicker(null, function(g){ s.gifts.push({g:g, q:1}); renderLadder(); }); return; }
+        if(x && e.target.closest('.lgchg')){ var gi=+gc.dataset.gi; openMultiPicker('Change gift', 'Whatever you tick replaces this gift.', [x.g], function(list){ s.gifts.splice.apply(s.gifts, [gi,1].concat(list.map(function(g){ return {g:g, q:x.q||1}; }))); renderLadder(); }); return; }
+        if(e.target.closest('.lgadd')){ openMultiPicker('Add free gifts to delivery '+s.n, 'Any product in your store. Each goes out once with this delivery.', [], function(list){ list.forEach(function(g){ s.gifts.push({g:g, q:1}); }); renderLadder(); }); return; }
         if(e.target.closest('.lrm')){ card._lad.splice(i,1); renderLadder(); }
       });
       [chMin, chMax].forEach(function(el){ el.addEventListener('input', function(){ var mm=minMax(); chErr.classList.toggle('hide', !(mm.min>mm.max)); renderLadder(); validateGifts(); }); });
@@ -1260,7 +1270,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         d.querySelector('.gn').addEventListener('input', function(){ validateGifts(); renderDeliveryPreview(); });
         d.querySelector('.qstep').addEventListener('click', function(e){ var b=e.target.closest('.qm,.qp'); if(!b) return; var qi=d.querySelector('.gq'); qi.value=Math.max(1,(parseInt(qi.value,10)||1)+(b.classList.contains('qp')?1:-1)); validateGifts(); renderDeliveryPreview(); });
         d.querySelector('.gslot').addEventListener('click', function(){
-          openGiftPicker(d._g, function(g2){ d._g=g2; d.querySelector('.gslot').innerHTML=giftField(g2,'gpick'); renderDeliveryPreview(); });
+          openMultiPicker('Free gifts', 'Any product in your store. Each goes out once with this delivery.', d._g?[d._g]:[], function(list){ var n2=parseInt(d.querySelector('.gn').value,10)||1; d._g=list[0]; d.querySelector('.gslot').innerHTML=giftField(list[0],'gpick'); list.slice(1).forEach(function(g3){ addGift(n2, g3); }); renderDeliveryPreview(); });
         });
         freelist.appendChild(d); validateGifts(); renderDeliveryPreview();
       }
