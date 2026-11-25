@@ -119,7 +119,7 @@
   /* status lights: identical solid dots, only the colour differs (green = done, grey = optional-not-set) */
   .sicon{display:inline-block;box-sizing:border-box;width:10px;height:10px;min-width:10px;border-radius:50%;flex:none;margin-top:6px;background:#c7c7c7}
   .sicon.ok{background:var(--p-success)}
-  .sicon.opt{background:#c7c7c7}
+  .sicon.opt{background:#c7c7c7;padding:0;margin-left:0;border:0;font-size:0;letter-spacing:0;text-transform:none;vertical-align:baseline;border-radius:50%}
   .sicon.req{background:var(--p-attn)}
   .sname{font-weight:600;font-size:12.5px;display:flex;align-items:center;gap:6px}
   .sname .optm{font-weight:600;color:var(--p-faint);font-size:10px;border:1px solid var(--p-line);border-radius:5px;padding:0 5px;text-transform:uppercase;letter-spacing:.03em}
@@ -253,6 +253,8 @@
   .finsel{min-width:96px;justify-content:space-between}
   .finro{color:var(--p-muted);background:#f6f6f6}
   .ladrow .field{box-sizing:border-box;height:32px;display:inline-flex;align-items:center;font-family:inherit;font-size:13px;color:var(--p-ink);padding:0 10px}
+  .fsel{appearance:none;-webkit-appearance:none;padding:0 30px 0 10px;cursor:pointer;width:auto;
+    background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23616161' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 11px center}
   .qhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
   .lgsel{font:inherit;font-size:12.5px;border:1px solid var(--p-line);border-radius:8px;padding:4px 8px;background:#fff;color:var(--p-ink);cursor:pointer}
   .lgsel[disabled]{background:#f3f3f3;cursor:default;appearance:none;-webkit-appearance:none}
@@ -436,12 +438,12 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                       <p class="help chErr hide" style="color:#b42318;margin:6px 0 0">Minimum can't be more than maximum.</p>
                     </div>
                     <div class="qgroup">
-                      <div class="qhead"><p class="q" style="margin:0">Discount</p><span class="field fin finsel" style="padding:0"><select class="discType" style="border:0;background:none;font:inherit;color:inherit;padding:0 8px;cursor:pointer;height:30px"><option value="pct">Percentage (%)</option><option value="amt">Amount off</option></select></span></div>
+                      <div class="qhead"><p class="q" style="margin:0">Discount</p><select class="discType fin fsel" aria-label="Discount unit"><option value="pct">Percentage (%)</option><option value="amt">Amount off</option></select></div>
                       <div class="ladder">
                         <p class="help" style="margin:10px 0 8px">Same discount on every delivery. Add deliveries to change it later or to add free gifts; the last row covers every delivery after it. Only <b>paid</b> deliveries count.</p>
                         <div class="ladhead"><span>Delivery</span><span>Discount</span><span>Free gift</span><span></span></div>
                         <div class="ladrows"></div>
-                        <div class="rowline" style="margin-top:10px"><button class="btnghost addstep">&#65291; Add delivery</button><span class="help ladcount"></span></div>
+                        <div class="rowline" style="margin-top:10px"><button class="btnghost addstep">&#65291; Add discount or gift</button><span class="help ladcount"></span></div>
                         <div class="warnbox ladwarn hide" style="margin-top:8px"></div>
                         <p class="help ladPre hide" style="margin-top:10px">Prepaid is off for this option: with more than one discount level, each delivery is charged separately. Keep one discount level, or add a separate prepaid option.</p>
                       </div>
@@ -487,12 +489,12 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                       <p class="help chErr hide" style="color:#b42318;margin:6px 0 0">Minimum can't be more than maximum.</p>
                     </div>
                     <div class="qgroup">
-                      <div class="qhead"><p class="q" style="margin:0">Discount</p><span class="field fin finsel" style="padding:0"><select class="discType" style="border:0;background:none;font:inherit;color:inherit;padding:0 8px;cursor:pointer;height:30px"><option value="pct">Percentage (%)</option><option value="amt">Amount off</option></select></span></div>
+                      <div class="qhead"><p class="q" style="margin:0">Discount</p><select class="discType fin fsel" aria-label="Discount unit"><option value="pct">Percentage (%)</option><option value="amt">Amount off</option></select></div>
                       <div class="ladder">
                         <p class="help" style="margin:10px 0 8px">Same discount on every delivery. Add deliveries to change it later or to add free gifts; the last row covers every delivery after it. Only <b>paid</b> deliveries count.</p>
                         <div class="ladhead"><span>Delivery</span><span>Discount</span><span>Free gift</span><span></span></div>
                         <div class="ladrows"></div>
-                        <div class="rowline" style="margin-top:10px"><button class="btnghost addstep">&#65291; Add delivery</button><span class="help ladcount"></span></div>
+                        <div class="rowline" style="margin-top:10px"><button class="btnghost addstep">&#65291; Add discount or gift</button><span class="help ladcount"></span></div>
                         <div class="warnbox ladwarn hide" style="margin-top:8px"></div>
                         <p class="help ladPre hide" style="margin-top:10px">Prepaid is off for this option: with more than one discount level, each delivery is charged separately. Keep one discount level, or add a separate prepaid option.</p>
                       </div>
@@ -1190,7 +1192,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
             '<span>'+(i===0?'':'<button class="btnsm ico-x lrm" title="Remove this delivery">&#10005;</button>')+'</span></div>';
         });
         ladrows.innerHTML=html;
-        ladcount.textContent=levels()+' of 5 discount levels used';
+        ladcount.textContent='Up to 5 different discounts \u00b7 '+levels()+' in use';
         applyPrepaidRule(); validateLadder(); renderDeliveryPreview();
       }
       function validateLadder(){
@@ -1210,7 +1212,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         var row=e.target.closest('.ladrow'); if(!row) return; var s=card._lad[+row.dataset.i];
         if(e.target.classList.contains('lval')) s.value=parseFloat(e.target.value)||0;
         if(e.target.classList.contains('lfrom')) s.n=parseInt(e.target.value,10)||0;
-        ladcount.textContent=levels()+' of 5 discount levels used'; applyPrepaidRule(); validateLadder(); renderDeliveryPreview();
+        ladcount.textContent='Up to 5 different discounts \u00b7 '+levels()+' in use'; applyPrepaidRule(); validateLadder(); renderDeliveryPreview();
       });
       ladrows.addEventListener('change', function(e){ if(e.target.classList.contains('lfrom')){ sortLadder(); renderLadder(); } });
       ladrows.addEventListener('click', function(e){
