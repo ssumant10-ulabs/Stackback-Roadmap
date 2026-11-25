@@ -234,6 +234,16 @@
   .lgsel[disabled]{background:#f3f3f3;cursor:default;appearance:none;-webkit-appearance:none}
   .prow.clk{cursor:pointer;border-radius:8px}
   .prow.clk:hover{background:#f7f7f7}
+  .pinfo{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1;align-items:flex-start}
+  .pcourse{max-width:100%;font-size:12px;color:var(--p-link);font-weight:600;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .pcourse.on{background:#eef4ff;border:1px solid #bcd3fb;border-radius:20px;padding:2px 10px;color:#1c4fae;font-weight:500}
+  .crs{display:flex;flex-direction:column}
+  .crow{display:grid;grid-template-columns:130px minmax(0,1fr) 34px;gap:10px;align-items:start;padding:12px 0;border-bottom:1px solid var(--p-line2)}
+  .cdl{font-weight:600;padding-top:5px;white-space:nowrap}
+  .cprod{display:flex;flex-direction:column;gap:8px;min-width:0;align-items:flex-start}
+  .cmap{display:flex;flex-direction:column;gap:5px}
+  .cmrow{display:flex;align-items:center;gap:8px;font-size:12.5px}
+  .cmv{min-width:64px;color:var(--p-muted)}
   .wtpl{display:grid;grid-template-columns:auto auto;justify-content:start;align-items:center;column-gap:8px;row-gap:3px;margin-top:10px}
   .wtpl .wlbl{grid-column:1/-1;font-size:12px;color:var(--p-muted);font-weight:600}
   .giftrow .x{background:none;border:0;color:var(--p-muted);cursor:pointer;font-size:12px}
@@ -646,7 +656,8 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       {id:'p17',t:'Oat Milk',v:[['1L',279]]},
       {id:'p18',t:'Glass Bottle',v:[['750ml',249]]},
       {id:'p19',t:'Travel Sample Kit',v:[['Mini',99],['Regular',199]]},
-      {id:'p20',t:'Shaker',v:[['Standard',199]]}
+      {id:'p20',t:'Shaker',v:[['Standard',199]]},
+      {id:'p21',t:'Cold-Pressed Juice Refill Pouch',v:[['500ml',150],['1L',280],['2L',520]]}
     ];
     var COLLECTIONS=[
       {id:'c1',t:'Cold-Pressed Range',p:['p1','p2','p3','p4','p5','p6','p7','p8','p9','p10','p11','p12','p13','p14']},
@@ -677,13 +688,17 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       var gs=groups(set, scope), html='';
       gs.slice(0,ROW_CAP).forEach(function(g){
         var meta = g.n===g.p.v.length ? (g.p.v.length===1?'1 variant':'all '+g.p.v.length+' variants') : g.n+' of '+g.p.v.length+' variants';
-        html+='<div class="prow clk" data-edit="'+g.p.id+'" title="Click to edit variants"><s-thumbnail size="small"></s-thumbnail><span class="pname">'+esc(g.p.t)+'</span><span class="pmeta">&middot; '+meta+'</span>'+
+        var crs = mode==='pv' ? (S.course[g.p.id]
+              ? '<span class="pcourse on" data-course="'+g.p.id+'" title="Edit course">Course: '+courseSummary(g.p.id)+' &middot; <b>Edit</b></span>'
+              : '<span class="pcourse" data-course="'+g.p.id+'" title="Ship a different product on later deliveries">&#65291; Set up a course</span>') : '';
+        html+='<div class="prow clk" data-edit="'+g.p.id+'" title="Click to edit variants"><s-thumbnail size="small"></s-thumbnail><span class="pinfo"><span><span class="pname">'+esc(g.p.t)+'</span><span class="pmeta">&middot; '+meta+'</span></span>'+crs+'</span>'+
               '<span class="pacts"><button class="x" data-rm="'+g.p.id+'">Remove &#10005;</button></span></div>';
       });
       if(gs.length>ROW_CAP) html+='<button class="lnk showall" data-all="1">Show all '+gs.length+' products &#8594;</button>';
       if(!gs.length) html='<p class="help" style="margin:4px 0 0">No products selected yet.</p>';
       box.innerHTML=html;
       box.onclick=function(e){
+        var cr=e.target.closest('[data-course]'); if(cr){ openCourse(cr.dataset.course); return; }
         var rm=e.target.closest('[data-rm]'); if(rm){ var p=prod(rm.dataset.rm); p.v.forEach(function(_,i){ set.delete(vid(p,i)); }); renderAll(); return; }
         if(e.target.closest('[data-all]')){ openPicker(mode); return; }
         var row=e.target.closest('[data-edit]'); if(row) openPicker(mode, row.dataset.edit);
@@ -729,7 +744,8 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       if(hasCol) lead.push(plural(S.cols.length,'collection')+(anySync?' (auto-add on)':''));
       if(pc.prods) lead.push(plural(pc.prods, hasCol?'extra product':'product'));
       var sum = !lead.length ? 'Nothing selected yet' : !hasCol ? 'Products & Variants · '+plural(c.prods,'product')+', '+plural(c.vars,'variant') : lead.join(' + ')+' · '+plural(c.prods,'product')+', '+plural(c.vars,'variant')+(pc.prods?' in total':'');
-      steps[0].querySelector('.collsum').textContent=sum;
+      var nc=Object.keys(S.course).length;
+      steps[0].querySelector('.collsum').textContent=sum+(nc?' \u00b7 '+plural(nc,'course'):'');
       $('pvNote').classList.toggle('hide', !hasCol);
       aseg.querySelector('[data-lvl="pv"]').textContent='Products & Variants'+(pc.prods?' ('+pc.prods+')':'');
       aseg.querySelector('[data-lvl="collection"]').textContent='Collections'+(hasCol?' ('+S.cols.length+')':'');
@@ -872,6 +888,85 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         if(e.target.closest('[data-done]') && sel){ var qv=qIn?Math.max(1,parseInt(qIn.value,10)||1):undefined; m.close(); cb(parse(sel), qv); }
       });
       draw(); m.input.focus();
+    }
+
+    // ---------- courses (per product): a different product on later deliveries, e.g. a refill. The last row repeats. ----------
+    // S.course[pid] = { rows:[{pid, map:{starterVariantIndex: courseVariantIndex}}], swap:true }. rows[k] = delivery k+2.
+    S.course={};
+    function selVariants(pid){ var p=prod(pid); return p.v.map(function(_,i){ return i; }).filter(function(i){ return S.pv.has(vid(p,i)); }); }
+    function autoMap(starterPid, coursePid){
+      var a=prod(starterPid), b=prod(coursePid), m={};
+      selVariants(starterPid).forEach(function(i){ var t=a.v[i][0].toLowerCase(), j=-1; b.v.forEach(function(v,k){ if(j<0 && v[0].toLowerCase()===t) j=k; }); m[i]= j>-1 ? j : 0; });
+      return m;
+    }
+    function courseSummary(pid){
+      var c=S.course[pid]; if(!c || !c.rows.length) return '';
+      var n=c.rows.length;
+      return c.rows.map(function(r,k){ return esc(prod(r.pid).t)+(k===n-1 ? ' from delivery '+(k+2) : ' on delivery '+(k+2)); }).join(', ');
+    }
+    function openProductPicker(curPid, title, cb){
+      var m=modal(title,'Any product in your store. You map its variants next.',''), q='', sel=curPid||'';
+      m.input.placeholder='Search products';
+      function foot(){ m.cnt.textContent = sel ? prod(sel).t : 'No product selected'; m.back.querySelector('[data-done]').disabled=!sel; }
+      function draw(){
+        var vis=CATALOG.filter(function(p){ return !q || p.t.toLowerCase().indexOf(q)>-1; });
+        m.body.innerHTML = vis.map(function(p){
+          return '<label class="mprow mprod" style="cursor:pointer"><input type="radio" name="cpick" class="ck" data-p="'+p.id+'"'+(sel===p.id?' checked':'')+' /><s-thumbnail size="small"></s-thumbnail><span class="mt">'+esc(p.t)+'</span><span class="mc">'+p.v.map(function(v){ return esc(v[0]); }).join(' / ')+'</span></label>';
+        }).join('') || '<p class="help" style="padding:16px 0">No products match "'+esc(q)+'".</p>';
+        m.shown.textContent=plural(vis.length,'product'); foot();
+      }
+      m.body.addEventListener('change', function(e){ if(e.target.dataset.p){ sel=e.target.dataset.p; foot(); } });
+      m.input.addEventListener('input', function(){ q=m.input.value.trim().toLowerCase(); draw(); });
+      m.back.addEventListener('click', function(e){
+        if(e.target===m.back || e.target.closest('[data-close]')) return m.close();
+        if(e.target.closest('[data-done]') && sel){ m.close(); cb(sel); }
+      });
+      draw(); m.input.focus();
+    }
+    function openCourse(pid){
+      var p=prod(pid), sv=selVariants(pid), c=S.course[pid] ? JSON.parse(JSON.stringify(S.course[pid])) : {rows:[], swap:true};
+      var m=modal('Course for '+esc(p.t), 'Ship a different product on later deliveries, like a refill after the starter. The last row repeats for every delivery after it.', '');
+      m.back.querySelector('.msearch').classList.add('hide'); m.back.querySelector('.mtools').classList.add('hide');
+      m.back.querySelector('[data-done]').textContent='Save course';
+      function price(pp,i){ return 'INR '+pp.v[i][1]; }
+      function draw(){
+        var n=c.rows.length, html='<div class="crs">';
+        html+='<div class="crow"><span class="cdl">Delivery 1'+(n?'':' onwards')+'</span><span class="cprod"><span class="rowline" style="gap:8px"><s-thumbnail size="small-200"></s-thumbnail><b>'+esc(p.t)+'</b><span class="pill" style="font-size:11px">This product</span></span>'+
+              '<span class="cmap">'+sv.map(function(i){ return '<span class="cmrow"><span class="cmv">'+esc(p.v[i][0])+'</span><span class="help">'+price(p,i)+'</span></span>'; }).join('')+'</span></span><span></span></div>';
+        c.rows.forEach(function(r,k){
+          var cp=prod(r.pid);
+          html+='<div class="crow" data-k="'+k+'"><span class="cdl">Delivery '+(k+2)+(k===n-1?' onwards':'')+'</span><span class="cprod">'+
+            '<button type="button" class="giftfld cpick"><s-thumbnail size="small-200"></s-thumbnail><span class="gname">'+esc(cp.t)+'</span><span class="gchg">Change</span></button>'+
+            '<span class="cmap">'+sv.map(function(i){
+              return '<span class="cmrow"><span class="cmv">'+esc(p.v[i][0])+' &rarr;</span><select class="lgsel cmapsel" data-i="'+i+'" aria-label="Variant shipped for '+esc(p.v[i][0])+'">'+
+                cp.v.map(function(v,j){ return '<option value="'+j+'"'+(r.map[i]===j?' selected':'')+'>'+esc(v[0])+' &middot; INR '+v[1]+'</option>'; }).join('')+'</select></span>';
+            }).join('')+'</span></span><span><button class="btnsm ico-x crm" title="Remove this delivery">&#10005;</button></span></div>';
+        });
+        html+='</div>';
+        if(!n) html+='<p class="help" style="margin:10px 0 0">No course yet: every delivery ships '+esc(p.t)+'. Add a delivery to change what ships later.</p>';
+        html+='<div class="rowline" style="margin-top:10px"><button class="btnghost cadd">&#65291; Add delivery</button></div>';
+        html+='<label class="tglwrap" style="margin-top:14px"><input type="checkbox" class="tgl cswap"'+(c.swap?' checked':'')+' />Customers can swap a course item in their portal</label>';
+        if(n && sv.length){ var i0=sv[0], r0=c.rows[0], cp0=prod(r0.pid);
+          html+='<div class="calc" style="margin-top:12px"><b>On the widget ('+esc(p.v[i0][0])+'):</b> '+price(p,i0)+' today, then '+esc(cp0.t)+' '+esc(cp0.v[r0.map[i0]][0])+' at '+price(cp0, r0.map[i0])+(n===1?' from delivery 2':' on delivery 2')+'. Each delivery is charged its own price; the plan discount applies on top.</div>'; }
+        m.body.innerHTML=html;
+        m.cnt.textContent = n ? (n+1)+' deliveries in the course, the last repeats' : 'No course';
+      }
+      m.body.addEventListener('change', function(e){
+        var row=e.target.closest('.crow');
+        if(e.target.classList.contains('cmapsel') && row){ c.rows[+row.dataset.k].map[+e.target.dataset.i]=+e.target.value; draw(); }
+        if(e.target.classList.contains('cswap')) c.swap=e.target.checked;
+      });
+      m.body.addEventListener('click', function(e){
+        var row=e.target.closest('.crow');
+        if(e.target.closest('.cadd')){ openProductPicker(null, 'Ships on delivery '+(c.rows.length+2), function(id){ c.rows.push({pid:id, map:autoMap(pid,id)}); draw(); }); return; }
+        if(row && e.target.closest('.cpick')){ var r=c.rows[+row.dataset.k]; openProductPicker(r.pid, 'Ships on delivery '+(+row.dataset.k+2), function(id){ r.pid=id; r.map=autoMap(pid,id); draw(); }); return; }
+        if(row && e.target.closest('.crm')){ c.rows.splice(+row.dataset.k,1); draw(); }
+      });
+      m.back.addEventListener('click', function(e){
+        if(e.target===m.back || e.target.closest('[data-close]')) return m.close();
+        if(e.target.closest('[data-done]')){ if(c.rows.length) S.course[pid]=c; else delete S.course[pid]; m.close(); renderAll(); }
+      });
+      draw();
     }
 
     // ---------- per-card buying-option editor (scoped) ----------
