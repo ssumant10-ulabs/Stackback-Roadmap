@@ -204,8 +204,10 @@
   .colblk .colhdr{border:0;background:none;margin:0}
   .colsync{display:flex;align-items:center;gap:12px;padding:8px 12px 10px;border-top:1px solid var(--p-line2)}
   /* v3b: ladder discount */
-  .ladhead,.ladrow{display:grid;grid-template-columns:130px 130px minmax(0,1fr) 36px;gap:12px;align-items:center}
+  .ladhead,.ladrow{display:grid;grid-template-columns:176px 112px minmax(0,1fr) 36px;gap:12px;align-items:center}
   .ladrow{padding:9px 0}
+  .ladrow .gcol{display:flex;flex-direction:column;gap:6px;align-items:flex-start;min-width:0}
+  .lgap{font-size:12px;color:var(--p-muted);padding:7px 2px;border-bottom:1px dashed var(--p-line2);background:repeating-linear-gradient(90deg,transparent 0 6px,#fafafa 6px 12px)}
   .dname{font-weight:500;font-size:13px;white-space:nowrap}
   .gcard{display:flex;align-items:center;gap:10px;border:1px solid #bcd3fb;background:#eef4ff;color:#1c4fae;border-radius:10px;padding:6px 8px 6px 12px;width:100%;box-sizing:border-box;min-width:0}
   .gcard svg{flex:none}
@@ -249,12 +251,20 @@
   .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:400;background:#1a1a1a;color:#fff;border-radius:10px;padding:10px 12px 10px 16px;font-size:13px;display:flex;gap:12px;align-items:center;max-width:560px;box-shadow:0 8px 24px rgba(0,0,0,.25);transition:opacity .3s}
   .toast.out{opacity:0}
   .toast button{background:none;border:0;color:#bbb;cursor:pointer;font-size:13px}
-  .crow{display:grid;grid-template-columns:130px minmax(0,1fr) 34px;gap:10px;align-items:start;padding:12px 0;border-bottom:1px solid var(--p-line2)}
+  .crow{display:grid;grid-template-columns:172px minmax(0,1fr) 34px;gap:10px;align-items:start;padding:12px 0;border-bottom:1px solid var(--p-line2)}
   .cdl{font-weight:600;padding-top:5px;white-space:nowrap}
   .cprod{display:flex;flex-direction:column;gap:8px;min-width:0;align-items:flex-start}
   .cmap{display:flex;flex-direction:column;gap:5px}
   .cmrow{display:flex;align-items:center;gap:8px;font-size:12.5px}
   .cmv{min-width:64px;color:var(--p-muted)}
+  .citem{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;border:1px solid var(--p-line2);border-radius:10px;padding:8px 10px;width:100%;box-sizing:border-box;background:#fcfcfc}
+  .citem .giftfld{max-width:100%;justify-self:start}
+  .citem .cirm{background:none;border:0;color:var(--p-muted);cursor:pointer;font-size:13px;padding:2px 4px}
+  .citem .ci2{grid-column:1 / -1;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .svwrap{position:relative;display:inline-block}
+  .svbtn{min-width:120px;text-align:left}
+  .svpop{position:absolute;top:calc(100% + 4px);left:0;z-index:50;background:#fff;border:1px solid var(--p-line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:6px 12px;min-width:220px}
+  .crsChk:empty{display:none}
   .wtpl{display:grid;grid-template-columns:auto auto;justify-content:start;align-items:center;column-gap:8px;row-gap:3px;margin-top:10px}
   .wtpl .wlbl{grid-column:1/-1;font-size:12px;color:var(--p-muted);font-weight:600}
   .giftrow .x{background:none;border:0;color:var(--p-muted);cursor:pointer;font-size:12px}
@@ -565,6 +575,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                   <span class="ap-a"><button class="lnk" id="adaptEdit">Edit in Shopify &#8599;</button></span>
                 </div>
                 <p class="noteline">Covers Prepaid and Pay as you go options. Pay per delivery (AutoPay) always checks out through Razorpay.</p>
+                <p class="noteline hide" id="adaptCourseNote">Course plan: the product made for your checkout must carry each delivery's own price, and the full course total for prepaid. Dev to confirm before launch.</p>
               </div>
             </div>
           </div>
@@ -775,7 +786,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       $('lvl-collection').classList.toggle('hide', lvl!=='collection');
       $('lvl-course').classList.toggle('hide', lvl!=='course');
       aseg.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.dataset.lvl===lvl); });
-      renderAll(); if(lvl==='course') checkCourseLengths(true);
+      renderAll(); renderOptionChecks(lvl==='course');
     }
     aseg.addEventListener('click', function(e){ var lvl=e.target.closest('[data-lvl]'); if(lvl) setLevel(lvl.dataset.lvl); });
     $('pvAdd').addEventListener('click', function(){ openPicker('pv'); });
@@ -908,18 +919,24 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     }
 
     // ---------- Course plan (Apply to = Course): a subscription type of its own ----------
-    // S.courses = [{pid, rows:[{pid, map:{starterVi: courseVi}}], swap}]: Delivery 1 ships the starter, rows[k] ships on delivery k+2,
-    // the last row repeats. Customers subscribe on the starter's product page; each delivery is charged its own product's price.
+    // S.courses = [{pid, svs:[starter variant indices], rows:[{n, items:[{pid, vi, q}]}], swap}]
+    // Delivery 1 ships the starter (the variant the customer picks on its page). rows are keyed by delivery number n (>= 2,
+    // editable); skipped deliveries repeat the row before; the last row repeats for every later delivery. Every starter
+    // variant ticked here gets the same later deliveries; size-specific refills = one course per variant.
     S.courses=[];
-    function allVariants(pid){ return prod(pid).v.map(function(_,i){ return i; }); }
-    function autoMap(starterPid, coursePid){
-      var a=prod(starterPid), b=prod(coursePid), m={};
-      allVariants(starterPid).forEach(function(i){ var t=a.v[i][0].toLowerCase(), j=-1; b.v.forEach(function(v,k){ if(j<0 && v[0].toLowerCase()===t) j=k; }); m[i]= j>-1 ? j : 0; });
-      return m;
+    function courseSet(){ var u=new Set(); S.courses.forEach(function(c){ c.svs.forEach(function(i){ u.add(vid(prod(c.pid),i)); }); }); return u; }
+    function bestVariant(starterPid, vi, pid){ var t=prod(starterPid).v[vi][0].toLowerCase(), b=prod(pid), j=0; b.v.forEach(function(v,k){ if(v[0].toLowerCase()===t) j=k; }); return j; }
+    function courseLen(c){ return c.rows.length ? c.rows[c.rows.length-1].n : 1; }
+    function sortCourse(c){ c.rows.sort(function(a,b){ return a.n-b.n; }); }
+    // price of delivery d for starter variant vi: starter on 1, else the row covering d
+    function deliveryPrice(c, vi, d){
+      if(d===1 || !c.rows.length || d<c.rows[0].n) return prod(c.pid).v[vi][1];
+      var row=null; c.rows.forEach(function(r){ if(r.n<=d) row=r; });
+      return row.items.reduce(function(a,x){ return a+prod(x.pid).v[x.vi][1]*(x.q||1); },0);
     }
-    function courseSet(){ var u=new Set(); S.courses.forEach(function(c){ allVariants(c.pid).forEach(function(i){ u.add(vid(prod(c.pid),i)); }); }); return u; }
+    function itemsText(items){ return items.map(function(x){ var p=prod(x.pid); return ((x.q||1)>1?x.q+' &times; ':'')+esc(p.t)+(p.v.length>1?' '+esc(p.v[x.vi][0]):''); }).join(' + '); }
     function openProductPicker(curPid, title, cb){
-      var m=modal(title,'Any product in your store.',''), q='', sel=curPid||'';
+      var m=modal(title,'Any product in your store. Pick the variant next.',''), q='', sel=curPid||'';
       m.input.placeholder='Search products';
       function foot(){ m.cnt.textContent = sel ? prod(sel).t : 'No product selected'; m.back.querySelector('[data-done]').disabled=!sel; }
       function draw(){
@@ -937,34 +954,74 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       });
       draw(); m.input.focus();
     }
+    function itemLine(c, k, ii, x){
+      var p=prod(x.pid);
+      return '<div class="citem" data-ii="'+ii+'"><button type="button" class="giftfld cpick"><s-thumbnail size="small-200"></s-thumbnail><span class="gname">'+esc(p.t)+'</span><span class="gchg">Change</span></button>'+
+        '<button type="button" class="cirm" title="Remove product" aria-label="Remove product">&#10005;</button>'+
+        '<span class="ci2"><select class="lgsel cvar" aria-label="Variant">'+p.v.map(function(v,j){ return '<option value="'+j+'"'+(x.vi===j?' selected':'')+'>'+esc(v[0])+' &middot; INR '+v[1]+'</option>'; }).join('')+'</select>'+
+        '<span class="rowline" style="gap:5px;flex-wrap:nowrap"><span class="help">Qty</span>'+qtyStep('cq', x.q||1)+'</span></span></div>';
+    }
+    function renderCourses(){
+      var box=$('courseList'); if(!box) return;
+      box.innerHTML = S.courses.map(function(c,ci){
+        var p=prod(c.pid), n=c.rows.length, last=n-1, L=courseLen(c);
+        var vlabel=c.svs.map(function(i){ return esc(p.v[i][0]); }).join(', ');
+        var html='<div class="crow"><span class="cdl">Delivery 1'+(n?'':' onwards')+'</span><span class="cprod"><span class="rowline" style="gap:8px;flex-wrap:nowrap"><s-thumbnail size="small-200"></s-thumbnail><b>'+esc(p.t)+'</b><span class="pill" style="font-size:11px">Starter</span></span>'+
+          '<span class="rowline" style="gap:8px"><span class="help">Variants</span><span class="svwrap"><button type="button" class="lgsel svbtn" aria-haspopup="true">'+vlabel+' &#9662;</button>'+
+          '<span class="svpop hide">'+p.v.map(function(v,i){ return '<label class="mvrow"><input type="checkbox" class="ck svck" data-i="'+i+'"'+(c.svs.indexOf(i)>-1?' checked':'')+' /><span>'+esc(v[0])+'</span><span class="vp">INR '+v[1]+'</span></label>'; }).join('')+'</span></span>'+
+          '<span class="help">'+(c.svs.length>1?'share the same later deliveries':'INR '+p.v[c.svs[0]][1])+'</span></span></span><span></span></div>';
+        c.rows.forEach(function(r,k){
+          var prevN = k===0 ? 1 : c.rows[k-1].n;
+          if(r.n>prevN+1){ var a=prevN+1, b=r.n-1; html+='<div class="lgap">'+(a===b?'Delivery '+a:'Deliveries '+a+' to '+b)+': same as delivery '+prevN+'</div>'; }
+          html+='<div class="crow" data-k="'+k+'"><span class="cdl"><span class="rowline" style="gap:6px;flex-wrap:nowrap">Delivery<input class="field lin cn" type="number" min="2" value="'+r.n+'" style="width:56px" aria-label="Delivery number" />'+(k===last?'<span class="help" style="font-weight:400">onwards</span>':'')+'</span></span>'+
+            '<span class="cprod">'+r.items.map(function(x,ii){ return itemLine(c,k,ii,x); }).join('')+'<button type="button" class="lnk ciadd">&#65291; Add product</button></span>'+
+            '<span><button class="btnsm ico-x crm" title="Remove this delivery">&#10005;</button></span></div>';
+        });
+        var i0=c.svs[0], wl='';
+        if(n){ wl='<div class="calc" style="margin-top:10px"><b>On the widget ('+esc(p.v[i0][0])+'):</b> INR '+p.v[i0][1]+' today, then '+itemsText(c.rows[0].items)+' (INR '+deliveryPrice(c,i0,c.rows[0].n)+')'+(n===1?' from':' on')+' delivery '+c.rows[0].n+'. Each delivery is charged its own price; the plan discount applies on top.</div>'; }
+        return '<div class="cblk" data-ci="'+ci+'">'+
+          '<div class="cblkhdr"><s-thumbnail size="small"></s-thumbnail><div style="flex:1;min-width:0"><div class="cname">Course: '+esc(p.t)+' &middot; '+vlabel+'</div><div class="help">'+(n?'Runs to delivery '+L+', which repeats after':'Starter only so far')+' &middot; buying options in Step 2 are checked against it</div></div><button class="btnsm ico-x cdel" title="Remove this course">&#10005;</button></div>'+
+          '<div class="crs">'+html+'</div>'+
+          (n?'':'<p class="help" style="margin:8px 0 0">Add a delivery to ship something else later, like a refill.</p>')+
+          '<div class="rowline" style="margin-top:10px;justify-content:space-between"><button class="btnghost cadd">&#65291; Add delivery</button><label class="tglwrap"><input type="checkbox" class="tgl cswap"'+(c.swap?' checked':'')+' />Customers can swap a course item in their portal</label></div>'+wl+
+        '</div>';
+      }).join('');
+      $('courseEmpty').classList.toggle('hide', S.courses.length>0);
+      renderOptionChecks(false);
+    }
+    function courseOf(e){ var blk=e.target.closest('.cblk'); return blk ? S.courses[+blk.dataset.ci] : null; }
+    $('courseList').addEventListener('click', function(e){
+      var c=courseOf(e); if(!c) return; var row=e.target.closest('.crow[data-k]'), r=row?c.rows[+row.dataset.k]:null, it=e.target.closest('.citem'), x=(r&&it)?r.items[+it.dataset.ii]:null;
+      if(e.target.closest('.svbtn')){ var pop=e.target.closest('.svwrap').querySelector('.svpop'); pop.classList.toggle('hide'); e.stopPropagation(); return; }
+      if(e.target.closest('.svpop')) return;
+      if(e.target.closest('.cdel')){ S.courses.splice(S.courses.indexOf(c),1); renderAll(); return; }
+      if(e.target.closest('.cadd')){ var nn=courseLen(c)+1; openProductPicker(null, 'Ships on delivery '+nn, function(id){ c.rows.push({n:nn, items:[{pid:id, vi:bestVariant(c.pid,c.svs[0],id), q:1}]}); renderAll(); renderOptionChecks(true); }); return; }
+      if(r && e.target.closest('.ciadd')){ openProductPicker(null, 'Also ships on delivery '+r.n, function(id){ r.items.push({pid:id, vi:bestVariant(c.pid,c.svs[0],id), q:1}); renderCourses(); }); return; }
+      if(x && e.target.closest('.cpick')){ openProductPicker(x.pid, 'Ships on delivery '+r.n, function(id){ x.pid=id; x.vi=bestVariant(c.pid,c.svs[0],id); renderCourses(); }); return; }
+      if(x && (e.target.closest('.qm')||e.target.closest('.qp'))){ x.q=Math.max(1,(x.q||1)+(e.target.closest('.qp')?1:-1)); renderCourses(); return; }
+      if(x && e.target.closest('.cirm')){ r.items.splice(+it.dataset.ii,1); if(!r.items.length) c.rows.splice(+row.dataset.k,1); renderAll(); renderOptionChecks(true); return; }
+      if(r && e.target.closest('.crm')){ c.rows.splice(+row.dataset.k,1); renderAll(); renderOptionChecks(true); }
+    });
+    $('courseList').addEventListener('change', function(e){
+      var c=courseOf(e); if(!c) return; var row=e.target.closest('.crow[data-k]'), r=row?c.rows[+row.dataset.k]:null, it=e.target.closest('.citem');
+      if(e.target.classList.contains('svck')){ var i=+e.target.dataset.i, on=e.target.checked;
+        if(on){ if(c.svs.indexOf(i)<0) c.svs.push(i); c.svs.sort(); } else if(c.svs.length>1){ c.svs=c.svs.filter(function(v){ return v!==i; }); } else { e.target.checked=true; toast('A course needs at least one starter variant.'); return; }
+        renderAll(); return; }
+      if(r && it && e.target.classList.contains('cvar')){ r.items[+it.dataset.ii].vi=+e.target.value; renderCourses(); return; }
+      if(r && e.target.classList.contains('cn')){ var v=parseInt(e.target.value,10)||2;
+        if(v<2){ v=2; toast('Delivery 1 is the starter; later deliveries start at 2.'); }
+        if(c.rows.some(function(o){ return o!==r && o.n===v; })){ toast('Delivery '+v+' is already in this course. Add products to that delivery instead.'); renderCourses(); return; }
+        r.n=v; sortCourse(c); renderAll(); renderOptionChecks(true); return; }
+      if(e.target.classList.contains('cswap')) c.swap=e.target.checked;
+    });
+    document.addEventListener('click', function(e){ if(!e.target.closest('.svwrap')) document.querySelectorAll('.svpop').forEach(function(pp){ pp.classList.add('hide'); }); });
+    $('courseAdd').addEventListener('click', function(){
+      openProductPicker(null, 'Select the starter product', function(id){
+        S.courses.push({pid:id, svs:[0], rows:[], swap:true}); renderAll();
+      });
+    });
 
-    // buying options that end before a course does
-    function optionLengths(){
-      return [].slice.call(document.querySelectorAll('.optcard[data-opt]')).map(function(card){
-        var b=card.querySelector('.durSeg button.on'), dur=b?b.dataset.dur:'fixed';
-        return { title:card.querySelector('.optsum .title').textContent, dur:dur,
-                 n:parseInt(card.querySelector('.sched-fixed .field').textContent,10)||0,
-                 min:parseInt((card.querySelector('.chMin')||{}).value,10)||0, max:parseInt((card.querySelector('.chMax')||{}).value,10)||0 };
-      });
-    }
-    function courseConflicts(c){
-      var L=c.rows.length+1, out=[]; if(L<2) return out;
-      optionLengths().forEach(function(o){
-        if(o.dur==='fixed' && o.n<L) out.push({hard:true, t:'"'+o.title+'" ends after '+o.n+' deliveries, so delivery '+(o.n+1)+' onwards of this course never ships.'});
-        if(o.dur==='choice' && o.max<L) out.push({hard:true, t:'"'+o.title+'" lets customers pick at most '+o.max+' deliveries, so delivery '+(o.max+1)+' onwards never ships.'});
-        else if(o.dur==='choice' && o.min<L) out.push({hard:false, t:'"'+o.title+'": customers who pick fewer than '+L+' deliveries miss the later course items.'});
-      });
-      return out;
-    }
-    var lastToastKey='';
-    function checkCourseLengths(toastIt){
-      if(S.mode!=='course') return;
-      var hard=[];
-      S.courses.forEach(function(c){ var cf=courseConflicts(c); cf.forEach(function(x){ if(x.hard) hard.push(prod(c.pid).t+': '+x.t); }); });
-      var key=hard.join('|');
-      if(toastIt && hard.length && key!==lastToastKey) toast(hard.length===1 ? hard[0] : hard.length+' buying options end before the course does. See the course for details.');
-      lastToastKey=key;
-    }
+    // ---------- checks live on each buying option (options are set after the course) ----------
     function toast(msg){
       document.querySelectorAll('.toast').forEach(function(x){ x.remove(); });
       var t=document.createElement('div'); t.className='toast'; t.setAttribute('role','status');
@@ -972,55 +1029,37 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       document.body.appendChild(t); t.querySelector('button').onclick=function(){ t.remove(); };
       setTimeout(function(){ t.classList.add('out'); setTimeout(function(){ t.remove(); }, 300); }, 5000);
     }
-    // re-check when an option's length changes
-    document.addEventListener('click', function(e){ if(e.target.closest('.optcard .durSeg')) setTimeout(function(){ renderCourses(); checkCourseLengths(true); }, 0); });
-    document.addEventListener('input', function(e){ if(e.target.closest('.optcard .chMin, .optcard .chMax')) { renderCourses(); checkCourseLengths(true); } });
-
-    function renderCourses(){
-      var box=$('courseList'); if(!box) return;
-      box.innerHTML = S.courses.map(function(c,ci){
-        var p=prod(c.pid), sv=allVariants(c.pid), n=c.rows.length;
-        var rows='<div class="crow"><span class="cdl">Delivery 1'+(n?'':' onwards')+'</span><span class="cprod"><span class="rowline" style="gap:8px"><s-thumbnail size="small-200"></s-thumbnail><b>'+esc(p.t)+'</b><span class="pill" style="font-size:11px">Starter</span></span>'+
-          '<span class="cmap">'+sv.map(function(i){ return '<span class="cmrow"><span class="cmv">'+esc(p.v[i][0])+'</span><span class="help">INR '+p.v[i][1]+'</span></span>'; }).join('')+'</span></span><span></span></div>';
-        c.rows.forEach(function(r,k){
-          var cp=prod(r.pid);
-          rows+='<div class="crow" data-k="'+k+'"><span class="cdl">Delivery '+(k+2)+(k===n-1?' onwards':'')+'</span><span class="cprod">'+
-            '<button type="button" class="giftfld cpick"><s-thumbnail size="small-200"></s-thumbnail><span class="gname">'+esc(cp.t)+'</span><span class="gchg">Change</span></button>'+
-            '<span class="cmap">'+sv.map(function(i){
-              return '<span class="cmrow"><span class="cmv">'+esc(p.v[i][0])+' &rarr;</span><select class="lgsel cmapsel" data-i="'+i+'" aria-label="Variant shipped for '+esc(p.v[i][0])+'">'+
-                cp.v.map(function(v,j){ return '<option value="'+j+'"'+(r.map[i]===j?' selected':'')+'>'+esc(v[0])+' &middot; INR '+v[1]+'</option>'; }).join('')+'</select></span>';
-            }).join('')+'</span></span><span><button class="btnsm ico-x crm" title="Remove this delivery">&#10005;</button></span></div>';
-        });
-        var cf=courseConflicts(c), i0=sv[0], wl='';
-        if(n){ var r0=c.rows[0], cp0=prod(r0.pid); wl='<div class="calc" style="margin-top:10px"><b>On the widget ('+esc(p.v[i0][0])+'):</b> INR '+p.v[i0][1]+' today, then '+esc(cp0.t)+' '+esc(cp0.v[r0.map[i0]][0])+' at INR '+cp0.v[r0.map[i0]][1]+(n===1?' from delivery 2':' on delivery 2')+'. Each delivery is charged its own price; the plan discount applies on top.</div>'; }
-        return '<div class="cblk" data-ci="'+ci+'">'+
-          '<div class="cblkhdr"><s-thumbnail size="small"></s-thumbnail><div style="flex:1;min-width:0"><div class="cname">Course: '+esc(p.t)+'</div><div class="help">'+plural(n+1,'step')+(n?', the last repeats':'')+' &middot; customers subscribe on this product\'s page</div></div><button class="btnsm ico-x cdel" title="Remove this course">&#10005;</button></div>'+
-          '<div class="crs">'+rows+'</div>'+
-          (n?'':'<p class="help" style="margin:8px 0 0">Add a delivery to ship something else later, like a refill.</p>')+
-          '<div class="rowline" style="margin-top:10px;justify-content:space-between"><button class="btnghost cadd">&#65291; Add delivery</button><label class="tglwrap"><input type="checkbox" class="tgl cswap"'+(c.swap?' checked':'')+' />Customers can swap a course item in their portal</label></div>'+
-          (cf.length?'<div class="warnbox" style="margin-top:10px">'+cf.map(function(x){ return esc(x.t); }).join('<br>')+'</div>':'')+wl+
-        '</div>';
-      }).join('');
-      $('courseEmpty').classList.toggle('hide', S.courses.length>0);
-    }
-    $('courseList').addEventListener('click', function(e){
-      var blk=e.target.closest('.cblk'); if(!blk) return; var c=S.courses[+blk.dataset.ci], row=e.target.closest('.crow');
-      if(e.target.closest('.cdel')){ S.courses.splice(+blk.dataset.ci,1); renderAll(); return; }
-      if(e.target.closest('.cadd')){ openProductPicker(null, 'Ships on delivery '+(c.rows.length+2), function(id){ c.rows.push({pid:id, map:autoMap(c.pid,id)}); renderAll(); checkCourseLengths(true); }); return; }
-      if(row && e.target.closest('.cpick')){ var r=c.rows[+row.dataset.k]; openProductPicker(r.pid, 'Ships on delivery '+(+row.dataset.k+2), function(id){ r.pid=id; r.map=autoMap(c.pid,id); renderAll(); }); return; }
-      if(row && e.target.closest('.crm')){ c.rows.splice(+row.dataset.k,1); renderAll(); checkCourseLengths(true); }
-    });
-    $('courseList').addEventListener('change', function(e){
-      var blk=e.target.closest('.cblk'); if(!blk) return; var c=S.courses[+blk.dataset.ci], row=e.target.closest('.crow');
-      if(e.target.classList.contains('cmapsel') && row){ c.rows[+row.dataset.k].map[+e.target.dataset.i]=+e.target.value; renderCourses(); }
-      if(e.target.classList.contains('cswap')) c.swap=e.target.checked;
-    });
-    $('courseAdd').addEventListener('click', function(){
-      openProductPicker(null, 'Select the starter product', function(id){
-        if(S.courses.some(function(c){ return c.pid===id; })) return toast(prod(id).t+' already has a course.');
-        S.courses.push({pid:id, rows:[], swap:true}); renderAll();
+    var lastHard='';
+    function renderOptionChecks(toastIt){
+      var on=S.mode==='course' && S.courses.some(function(c){ return c.rows.length; });
+      var Lmax=0; S.courses.forEach(function(c){ Lmax=Math.max(Lmax, courseLen(c)); });
+      var hardAll=[];
+      [].slice.call(document.querySelectorAll('.optcard[data-opt]')).forEach(function(card){
+        var box=card.querySelector('.crsChk');
+        if(!box){ box=document.createElement('div'); box.className='crsChk'; card.querySelector('.deliveryPreview').before(box); }
+        if(!on){ box.innerHTML=''; box.classList.add('hide'); return; }
+        var b=card.querySelector('.durSeg button.on'), dur=b?b.dataset.dur:'fixed', n=parseInt(card.querySelector('.sched-fixed .field').textContent,10)||0,
+            mn=parseInt((card.querySelector('.chMin')||{}).value,10)||0, mx=parseInt((card.querySelector('.chMax')||{}).value,10)||0,
+            title=card.querySelector('.optsum .title').textContent, warn=[], info=[];
+        if(dur==='fixed' && n<Lmax){ warn.push('This option ends after '+n+' deliveries, but the course runs to delivery '+Lmax+'. Delivery '+(n+1)+' onwards never ships.'); hardAll.push(title); }
+        if(dur==='choice' && mx<Lmax){ warn.push('Customers can pick at most '+mx+' deliveries, but the course runs to delivery '+Lmax+'.'); hardAll.push(title); }
+        else if(dur==='choice' && mn<Lmax) warn.push('Customers who pick fewer than '+Lmax+' deliveries never reach the later course items.');
+        if(dur==='none') info.push('No end date: the course\'s last delivery repeats until the customer cancels.');
+        if(card.querySelector('.pay-prepaid.on')){
+          if(dur==='fixed') S.courses.forEach(function(c){ if(!c.rows.length) return; var vi=c.svs[0], tot=0; for(var d=1; d<=n; d++) tot+=deliveryPrice(c,vi,d);
+            info.push('Prepaid course total for '+n+' deliveries ('+esc(prod(c.pid).t)+' '+esc(prod(c.pid).v[vi][0])+'): INR '+tot+', before discount.'); });
+          else if(dur==='choice') info.push('Prepaid: the upfront price is the sum of each picked delivery\'s course price.');
+        }
+        box.innerHTML=(warn.length?'<div class="warnbox" style="margin:0 0 10px">'+warn.map(esc).join('<br>')+'</div>':'')+(info.length?'<p class="help" style="margin:0 0 10px">'+info.join('<br>')+'</p>':'');
+        box.classList.toggle('hide', !warn.length && !info.length);
       });
-    });
+      var key=hardAll.join('|');
+      if(toastIt){ if(key && key!==lastHard) toast(hardAll.length===1 ? '"'+hardAll[0]+'" ends before the course does. Lengthen it in Step 2.' : hardAll.length+' buying options end before the course does. See Step 2.'); lastHard=key; }
+      else if(!key) lastHard='';
+      var an=$('adaptCourseNote'); if(an) an.classList.toggle('hide', !on);
+    }
+    document.addEventListener('click', function(e){ if(e.target.closest('.optcard .durSeg') || e.target.closest('.optcard .chkchip') || e.target.closest('.optcard .discMode')) setTimeout(function(){ renderOptionChecks(!!e.target.closest('.durSeg')); }, 0); });
+    document.addEventListener('input', function(e){ if(e.target.closest('.optcard .chMin, .optcard .chMax')) renderOptionChecks(true); });
 
     // ---------- per-card buying-option editor (scoped) ----------
     var PAYG_LABEL='by invoice and email reminder (pay-as-you-go)', LAD_MAX=10;   // rows in all; discount steps cap at 5 (LD-01)
@@ -1035,8 +1074,8 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
           schedFixed=q('.sched-fixed'), schedChoice=q('.sched-choice'), schedNone=q('.sched-none');
       var dmSeg=q('.discMode'), unitSel=q('.discType'), flatBits=q('.flatBits'), ladder=q('.ladder'), ladrows=q('.ladrows'),
           addstep=q('.addstep'), ladwarn=q('.ladwarn'), freeBlock=q('.freeBlock'), extrasHint=q('.extrasHint');
-      // LD-01 defaults (row i = delivery i+1; the last row covers every delivery after it)
-      card._lad=[{value:10,g:null,gq:1},{value:20,g:null,gq:1},{value:15,g:{pid:'p20',vi:0},gq:1},{value:15,g:{pid:'p18',vi:0},gq:1},{value:20,g:null,gq:1}];
+      // LD-01 defaults: rows keyed by delivery n; gifts = [{g, q}]
+      card._lad=[{n:1,value:10,gifts:[]},{n:2,value:20,gifts:[]},{n:3,value:15,gifts:[{g:{pid:'p20',vi:0},q:1}]},{n:4,value:15,gifts:[{g:{pid:'p18',vi:0},q:1}]},{n:5,value:20,gifts:[]}];
       var ladcount=q('.ladcount');
       var chMin=q('.chMin'), chMax=q('.chMax'), chErr=q('.chErr');
       function minMax(){ return {min:parseInt(chMin.value,10)||0, max:parseInt(chMax.value,10)||0}; }
@@ -1050,8 +1089,8 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       }
       function ladderLine(){
         var L=card._lad, parts=[], prev=null;
-        L.forEach(function(s,i){ if(s.value!==prev) parts.push(fmtVal(card,s.value)+(i===0?' now':' from '+ord(i+1))); prev=s.value; });
-        var G=[]; L.forEach(function(s,i){ if(s.g) G.push(((s.gq||1)>1?s.gq+' &times; ':'')+esc(giftLabel(s.g))+' on the '+ord(i+1)); });
+        L.forEach(function(s,i){ if(s.value!==prev) parts.push(fmtVal(card,s.value)+(i===0?' now':' from '+ord(s.n))); prev=s.value; });
+        var G=[]; L.forEach(function(s){ s.gifts.forEach(function(x){ G.push(((x.q||1)>1?x.q+' &times; ':'')+esc(giftLabel(x.g))+' on the '+ord(s.n)); }); });
         return parts.join(' &rsaquo; ')+(G.length?' &middot; Free gifts: '+G.join(', '):'');
       }
       function on(el){ return el.classList.contains('on'); }
@@ -1114,22 +1153,29 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       }
       dmSeg.addEventListener('click', function(e){ var m=e.target.dataset.dm; if(m) setDiscMode(m); });
 
-      // Ladder: one row per delivery (Delivery 1, 2, 3 ...). The last row covers every delivery after it.
-      // Each row sets a discount and, optionally, a free gift sent once with that delivery. A "discount level" is a row whose
-      // discount differs from the row before; LD-01 caps them at 5.
+      // Ladder: rows keyed by delivery number n (Delivery 1 fixed, later numbers editable). Each row sets the discount from
+      // that delivery on, plus any number of free gifts sent once with it. Skipped deliveries keep the row before's discount,
+      // with no gift, and show as one summary line. The last row covers every delivery after it. Max 5 discount levels (LD-01).
       var GIFT_ICON='<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="8" width="14" height="9" rx="1.5"/><path d="M2.5 5.5h15v2.5h-15zM10 5.5V17M10 5.5C8.5 3 6 2.6 6 4.2 6 5.5 10 5.5 10 5.5zM10 5.5c1.5-2.5 4-2.9 4-1.3 0 1.3-4 1.3-4 1.3z"/></svg>';
       function levels(){ var c=0, prev=null; card._lad.forEach(function(s){ if(s.value!==prev) c++; prev=s.value; }); return c; }
-      function dLabel(i){ return 'Delivery '+(i+1)+(i===card._lad.length-1?' onwards':''); }
+      function sortLadder(){ var L=card._lad; card._lad=[L[0]].concat(L.slice(1).sort(function(a,b){ return a.n-b.n; })); }
+      function giftCard(x, gi){
+        return '<div class="gcard" data-gi="'+gi+'">'+GIFT_ICON+'<div class="gmain"><button type="button" class="gtx lgchg" title="Change gift"><span class="gt">'+esc(giftLabel(x.g))+'</span></button>'+
+               '<span class="gsub"><span class="gs">Sent once, with this delivery</span><span class="rowline" style="gap:5px;flex-wrap:nowrap"><span class="gs">Qty</span>'+qtyStep('lgq', x.q||1)+'</span></span></div>'+
+               '<button type="button" class="gx lgrm" title="Remove gift" aria-label="Remove gift">&#10005;</button></div>';
+      }
       function renderLadder(){
         var amt=unitSel.value==='amt', L=card._lad, html='', last=L.length-1;
         L.forEach(function(s,i){
-          var gift = s.g
-            ? '<div class="gcard">'+GIFT_ICON+'<div class="gmain"><button type="button" class="gtx lgchg" title="Change gift"><span class="gt">'+esc(giftLabel(s.g))+'</span></button><span class="gsub"><span class="gs">Sent once, with this delivery</span><span class="rowline" style="gap:5px;flex-wrap:nowrap"><span class="gs">Qty</span>'+qtyStep('lgq', s.gq||1)+'</span></span></div><button type="button" class="gx lgrm" title="Remove gift" aria-label="Remove gift">&#10005;</button></div>'
-            : '<button type="button" class="btnghost lgchg">&#65291; Add gift</button>';
-          html+='<div class="ladrow" data-i="'+i+'">'+
-            '<span class="dname">'+dLabel(i)+'</span>'+
-            '<span class="rowline" style="gap:6px;flex-wrap:nowrap">'+(amt?'<span class="help">INR</span>':'')+'<input class="field lin lval" type="number" min="0" value="'+s.value+'" aria-label="Discount on '+dLabel(i)+'" /><span class="help">'+(amt?'off':'% off')+'</span></span>'+
-            '<span style="min-width:0">'+gift+'</span>'+
+          if(i>0 && s.n>L[i-1].n+1){ var a=L[i-1].n+1, b=s.n-1;
+            html+='<div class="lgap">'+(a===b?'Delivery '+a:'Deliveries '+a+' to '+b)+': '+fmtVal(card,L[i-1].value)+' off, no gift (same as delivery '+L[i-1].n+')</div>'; }
+          var dl = i===0 ? '<span class="dname">Delivery 1'+(last===0?' onwards':'')+'</span>'
+                         : '<span class="rowline" style="gap:6px;flex-wrap:nowrap"><span class="dname">Delivery</span><input class="field lin lfrom" type="number" min="2" value="'+s.n+'" style="width:56px" aria-label="Delivery number" />'+(i===last?'<span class="help">onwards</span>':'')+'</span>';
+          var gifts = s.gifts.map(function(x,gi){ return giftCard(x,gi); }).join('')+
+                      (s.gifts.length ? '<button type="button" class="lnk lgadd">&#65291; Add another gift</button>' : '<button type="button" class="btnghost lgadd">&#65291; Add gift</button>');
+          html+='<div class="ladrow" data-i="'+i+'">'+dl+
+            '<span class="rowline" style="gap:6px;flex-wrap:nowrap">'+(amt?'<span class="help">INR</span>':'')+'<input class="field lin lval" type="number" min="0" value="'+s.value+'" aria-label="Discount" /><span class="help">'+(amt?'off':'% off')+'</span></span>'+
+            '<span class="gcol">'+gifts+'</span>'+
             '<span>'+(i===0?'':'<button class="btnsm ico-x lrm" title="Remove this delivery">&#10005;</button>')+'</span></div>';
         });
         ladrows.innerHTML=html;
@@ -1138,29 +1184,37 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       }
       function validateLadder(){
         if(!ladwarn || discMode(card)!=='ladder'){ if(ladwarn) ladwarn.classList.add('hide'); return; }
-        var L=card._lad, msgs=[], amt=unitSel.value==='amt', n=L.length, dur=curDur();
+        var L=card._lad, msgs=[], amt=unitSel.value==='amt', dur=curDur(), seen={}, top=L[L.length-1].n;
         if(levels()>5) msgs.push('Up to 5 discount levels. Make neighbouring deliveries share a discount.');
-        L.forEach(function(s,i){ if(!amt && (s.value<0||s.value>100)) msgs.push(dLabel(i)+': a percentage must be 0 to 100.'); if(amt && s.value<0) msgs.push(dLabel(i)+': an amount can\'t be negative.'); });
-        if(dur==='fixed'){ var f=parseInt(schedFixed.querySelector('.field').textContent,10); if(n>f) msgs.push('This option has '+f+' deliveries, so Delivery '+(f+1)+' and later never happen.'); }
-        if(dur==='choice'){ var mm=minMax(); if(n>mm.max) msgs.push('Customers can pick at most '+mm.max+' deliveries, so Delivery '+(mm.max+1)+' and later never happen.'); else if(n>mm.min) msgs.push('Customers who pick fewer than '+n+' deliveries miss the later rows.'); }
+        L.forEach(function(s,i){
+          if(i>0 && s.n<2) msgs.push('Delivery numbers after the first start at 2.');
+          if(seen[s.n]) msgs.push('Delivery '+s.n+' is listed twice. Keep one row and add its gifts there.'); seen[s.n]=1;
+          if(!amt && (s.value<0||s.value>100)) msgs.push('Delivery '+s.n+': a percentage must be 0 to 100.'); if(amt && s.value<0) msgs.push('Delivery '+s.n+': an amount can\'t be negative.');
+        });
+        if(dur==='fixed'){ var f=parseInt(schedFixed.querySelector('.field').textContent,10); if(top>f) msgs.push('This option has '+f+' deliveries, so delivery '+top+' never happens.'); }
+        if(dur==='choice'){ var mm=minMax(); if(top>mm.max) msgs.push('Customers can pick at most '+mm.max+' deliveries, so delivery '+top+' never happens.'); else if(top>mm.min) msgs.push('Customers who pick fewer than '+top+' deliveries miss the later rows.'); }
         ladwarn.innerHTML=msgs.map(esc).join('<br>'); ladwarn.classList.toggle('hide', !msgs.length);
       }
       ladrows.addEventListener('input', function(e){
         var row=e.target.closest('.ladrow'); if(!row) return; var s=card._lad[+row.dataset.i];
         if(e.target.classList.contains('lval')) s.value=parseFloat(e.target.value)||0;
+        if(e.target.classList.contains('lfrom')) s.n=parseInt(e.target.value,10)||0;
         ladcount.textContent=levels()+' of 5 discount levels used'; validateLadder(); renderDeliveryPreview();
       });
+      ladrows.addEventListener('change', function(e){ if(e.target.classList.contains('lfrom')){ sortLadder(); renderLadder(); } });
       ladrows.addEventListener('click', function(e){
         var row=e.target.closest('.ladrow'); if(!row) return; var i=+row.dataset.i, s=card._lad[i];
-        if(e.target.closest('.lgrm')){ e.stopPropagation(); s.g=null; s.gq=1; renderLadder(); return; }
-        if(e.target.closest('.qm')||e.target.closest('.qp')){ s.gq=Math.max(1,(s.gq||1)+(e.target.closest('.qp')?1:-1)); renderLadder(); return; }
-        if(e.target.closest('.lgchg')){ openGiftPicker(s.g, function(g){ s.g=g; s.gq=s.gq||1; renderLadder(); }); return; }
+        var gc=e.target.closest('[data-gi]'), x=gc ? s.gifts[+gc.dataset.gi] : null;
+        if(x && e.target.closest('.lgrm')){ s.gifts.splice(+gc.dataset.gi,1); renderLadder(); return; }
+        if(x && (e.target.closest('.qm')||e.target.closest('.qp'))){ x.q=Math.max(1,(x.q||1)+(e.target.closest('.qp')?1:-1)); renderLadder(); return; }
+        if(x && e.target.closest('.lgchg')){ openGiftPicker(x.g, function(g){ x.g=g; renderLadder(); }); return; }
+        if(e.target.closest('.lgadd')){ openGiftPicker(null, function(g){ s.gifts.push({g:g, q:1}); renderLadder(); }); return; }
         if(e.target.closest('.lrm')){ card._lad.splice(i,1); renderLadder(); }
       });
       [chMin, chMax].forEach(function(el){ el.addEventListener('input', function(){ var mm=minMax(); chErr.classList.toggle('hide', !(mm.min>mm.max)); renderLadder(); validateGifts(); }); });
       addstep.addEventListener('click', function(){
-        var L=card._lad; if(L.length>=LAD_MAX) return;
-        L.push({value:L[L.length-1].value, g:null, gq:1}); renderLadder();
+        var L=card._lad; if(L.length>=LAD_MAX) return; var lastRow=L[L.length-1];
+        L.push({n:lastRow.n+1, value:lastRow.value, gifts:[]}); renderLadder();
       });
 
       var extrasToggle=q('.extrasToggle'), extrasBody=q('.extrasBody');
