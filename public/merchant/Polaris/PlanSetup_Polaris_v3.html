@@ -245,6 +245,15 @@
   .ltype button{padding:5px 10px;font-size:12px}
   .tpill{display:inline-block;font-size:12px;font-weight:600;color:var(--p-muted);padding:5px 10px;border:1px solid var(--p-line);border-radius:8px;background:#f3f3f3}
   .lnk{text-align:left}
+  .frow{display:flex;gap:20px;flex-wrap:wrap;margin-top:12px;align-items:flex-end}
+  .fld{display:flex;flex-direction:column;gap:5px}
+  .fld > label{font-size:12px;font-weight:600;color:var(--p-muted)}
+  .fin{box-sizing:border-box;height:32px;min-width:56px;border:1px solid var(--p-line);border-radius:8px;background:#fff;padding:0 10px;display:inline-flex;align-items:center;font:inherit;font-size:13px;color:var(--p-ink)}
+  input.fin{width:64px}
+  .finsel{min-width:96px;justify-content:space-between}
+  .finro{color:var(--p-muted);background:#f6f6f6}
+  .ladrow .field{box-sizing:border-box;height:32px;display:inline-flex;align-items:center;font-family:inherit;font-size:13px;color:var(--p-ink);padding:0 10px}
+  .qhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
   .lgsel{font:inherit;font-size:12.5px;border:1px solid var(--p-line);border-radius:8px;padding:4px 8px;background:#fff;color:var(--p-ink);cursor:pointer}
   .lgsel[disabled]{background:#f3f3f3;cursor:default;appearance:none;-webkit-appearance:none}
   .prow.clk{cursor:pointer;border-radius:8px}
@@ -413,27 +422,23 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                     </div>
                     <div class="qgroup">
                       <p class="q">Schedule</p>
-                      <div class="rowline">
-                        <span class="seg durSeg">
+                      <span class="seg durSeg">
                           <button data-dur="fixed" class="on">Fixed length</button>
                           <button data-dur="choice">Customer decides</button>
                           <button data-dur="none" class="hide">No end date</button>
                         </span>
-                        <span class="sched-fixed">for <span class="field">5</span> deliveries</span>
-                        <span class="sched-choice hide rowline" style="gap:6px">customer picks <input class="field lin chMin" type="number" min="1" value="3" aria-label="Minimum deliveries" /> to <input class="field lin chMax" type="number" min="1" value="12" aria-label="Maximum deliveries" /> deliveries <span class="chErr hide" style="color:#b42318;font-size:12px">Minimum can't be more than maximum.</span></span>
-                        <span class="sched-none hide help">Runs continuously until the customer cancels. Available with pay-per-delivery only.</span>
+                      <div class="frow">
+                        <div class="fld sched-fixed"><label>Deliveries</label><span class="field fin">5</span></div>
+                        <div class="fld sched-choice hide"><label>Customer picks</label><span class="rowline" style="gap:8px;flex-wrap:nowrap"><input class="field fin chMin" type="number" min="1" value="3" aria-label="Minimum deliveries" /><span class="help">to</span><input class="field fin chMax" type="number" min="1" value="12" aria-label="Maximum deliveries" /></span></div>
+                        <div class="fld sched-none hide"><label>Deliveries</label><span class="fin finro">Until cancelled</span></div>
+                        <div class="fld"><label>Deliver every</label><span class="rowline" style="gap:8px;flex-wrap:nowrap"><span class="field fin">2</span><span class="field fin finsel">weeks &#9662;</span></span></div>
                       </div>
-                      <div class="rowline" style="margin-top:8px">
-                        <span>Deliver every</span><span class="field">2</span><span class="field">weeks &#9662;</span>
-                      </div>
+                      <p class="help chErr hide" style="color:#b42318;margin:6px 0 0">Minimum can't be more than maximum.</p>
                     </div>
                     <div class="qgroup">
-                      <p class="q">Discount</p>
-                      <div class="rowline">
-                        <span class="field" style="padding:0"><select class="discType" style="border:0;background:none;font:inherit;color:inherit;padding:6px 10px;cursor:pointer;font-family:ui-monospace,Menlo,monospace"><option value="pct">Percentage (%)</option><option value="amt">Amount off</option></select></span>
-                      </div>
+                      <div class="qhead"><p class="q" style="margin:0">Discount</p><span class="field fin finsel" style="padding:0"><select class="discType" style="border:0;background:none;font:inherit;color:inherit;padding:0 8px;cursor:pointer;height:30px"><option value="pct">Percentage (%)</option><option value="amt">Amount off</option></select></span></div>
                       <div class="ladder">
-                        <p class="help" style="margin:10px 0 8px">One row gives the same discount on every delivery. Add deliveries to change the discount later or to add free gifts. The last row covers every delivery after it. Only <b>paid</b> deliveries count.</p>
+                        <p class="help" style="margin:10px 0 8px">Same discount on every delivery. Add deliveries to change it later or to add free gifts; the last row covers every delivery after it. Only <b>paid</b> deliveries count.</p>
                         <div class="ladhead"><span>Delivery</span><span>Discount</span><span>Free gift</span><span></span></div>
                         <div class="ladrows"></div>
                         <div class="rowline" style="margin-top:10px"><button class="btnghost addstep">&#65291; Add delivery</button><span class="help ladcount"></span></div>
@@ -468,27 +473,23 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                     </div>
                     <div class="qgroup">
                       <p class="q">Schedule</p>
-                      <div class="rowline">
-                        <span class="seg durSeg">
+                      <span class="seg durSeg">
                           <button data-dur="fixed" class="on">Fixed length</button>
                           <button data-dur="choice">Customer decides</button>
                           <button data-dur="none" class="hide">No end date</button>
                         </span>
-                        <span class="sched-fixed">for <span class="field">6</span> deliveries</span>
-                        <span class="sched-choice hide rowline" style="gap:6px">customer picks <input class="field lin chMin" type="number" min="1" value="3" aria-label="Minimum deliveries" /> to <input class="field lin chMax" type="number" min="1" value="12" aria-label="Maximum deliveries" /> deliveries <span class="chErr hide" style="color:#b42318;font-size:12px">Minimum can't be more than maximum.</span></span>
-                        <span class="sched-none hide help">Runs continuously until the customer cancels. Available with pay-per-delivery only.</span>
+                      <div class="frow">
+                        <div class="fld sched-fixed"><label>Deliveries</label><span class="field fin">6</span></div>
+                        <div class="fld sched-choice hide"><label>Customer picks</label><span class="rowline" style="gap:8px;flex-wrap:nowrap"><input class="field fin chMin" type="number" min="1" value="3" aria-label="Minimum deliveries" /><span class="help">to</span><input class="field fin chMax" type="number" min="1" value="12" aria-label="Maximum deliveries" /></span></div>
+                        <div class="fld sched-none hide"><label>Deliveries</label><span class="fin finro">Until cancelled</span></div>
+                        <div class="fld"><label>Deliver every</label><span class="rowline" style="gap:8px;flex-wrap:nowrap"><span class="field fin">1</span><span class="field fin finsel">month &#9662;</span></span></div>
                       </div>
-                      <div class="rowline" style="margin-top:8px">
-                        <span>Deliver every</span><span class="field">1</span><span class="field">month &#9662;</span>
-                      </div>
+                      <p class="help chErr hide" style="color:#b42318;margin:6px 0 0">Minimum can't be more than maximum.</p>
                     </div>
                     <div class="qgroup">
-                      <p class="q">Discount</p>
-                      <div class="rowline">
-                        <span class="field" style="padding:0"><select class="discType" style="border:0;background:none;font:inherit;color:inherit;padding:6px 10px;cursor:pointer;font-family:ui-monospace,Menlo,monospace"><option value="pct">Percentage (%)</option><option value="amt">Amount off</option></select></span>
-                      </div>
+                      <div class="qhead"><p class="q" style="margin:0">Discount</p><span class="field fin finsel" style="padding:0"><select class="discType" style="border:0;background:none;font:inherit;color:inherit;padding:0 8px;cursor:pointer;height:30px"><option value="pct">Percentage (%)</option><option value="amt">Amount off</option></select></span></div>
                       <div class="ladder">
-                        <p class="help" style="margin:10px 0 8px">One row gives the same discount on every delivery. Add deliveries to change the discount later or to add free gifts. The last row covers every delivery after it. Only <b>paid</b> deliveries count.</p>
+                        <p class="help" style="margin:10px 0 8px">Same discount on every delivery. Add deliveries to change it later or to add free gifts; the last row covers every delivery after it. Only <b>paid</b> deliveries count.</p>
                         <div class="ladhead"><span>Delivery</span><span>Discount</span><span>Free gift</span><span></span></div>
                         <div class="ladrows"></div>
                         <div class="rowline" style="margin-top:10px"><button class="btnghost addstep">&#65291; Add delivery</button><span class="help ladcount"></span></div>
