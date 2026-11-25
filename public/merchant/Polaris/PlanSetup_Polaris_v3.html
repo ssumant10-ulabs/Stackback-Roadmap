@@ -439,12 +439,12 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                     <div class="qgroup">
                       <div class="qhead"><p class="q" style="margin:0">Discount</p><select class="discType fin fsel" aria-label="Discount unit"><option value="pct">Percentage (%)</option><option value="amt">Amount off</option></select></div>
                       <div class="ladder">
-                        <p class="help" style="margin:10px 0 8px">Same discount on every delivery. Add deliveries to change it later or to add free gifts; the last row covers every delivery after it. Only <b>paid</b> deliveries count.</p>
+                        <p class="help" style="margin:10px 0 8px">Give customers a different discount or a free gift on the deliveries you choose. A <b>discount</b> applies from its delivery onwards; a <b>free gift</b> ships once, with that delivery. Only <b>paid</b> deliveries count.</p>
                         <div class="ladhead"><span>Delivery</span><span>Discount</span><span>Free gift</span><span></span></div>
                         <div class="ladrows"></div>
                         <div class="rowline" style="margin-top:10px"><button class="btnghost addstep">&#65291; Add discount or gift</button><span class="help ladcount"></span></div>
                         <div class="warnbox ladwarn hide" style="margin-top:8px"></div>
-                        <p class="help ladPre hide" style="margin-top:10px">Prepaid is off for this option: with more than one discount level, each delivery is charged separately. Keep one discount level, or add a separate prepaid option.</p>
+                        <p class="help ladPre hide" style="margin-top:10px">Prepaid is off for this option: it gives different discounts on different deliveries, so each delivery is charged separately. Use one discount for every delivery, or add a separate prepaid option.</p>
                       </div>
                     </div>
                     <div class="qgroup" style="margin-bottom:12px">
@@ -485,12 +485,12 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                     <div class="qgroup">
                       <div class="qhead"><p class="q" style="margin:0">Discount</p><select class="discType fin fsel" aria-label="Discount unit"><option value="pct">Percentage (%)</option><option value="amt">Amount off</option></select></div>
                       <div class="ladder">
-                        <p class="help" style="margin:10px 0 8px">Same discount on every delivery. Add deliveries to change it later or to add free gifts; the last row covers every delivery after it. Only <b>paid</b> deliveries count.</p>
+                        <p class="help" style="margin:10px 0 8px">Give customers a different discount or a free gift on the deliveries you choose. A <b>discount</b> applies from its delivery onwards; a <b>free gift</b> ships once, with that delivery. Only <b>paid</b> deliveries count.</p>
                         <div class="ladhead"><span>Delivery</span><span>Discount</span><span>Free gift</span><span></span></div>
                         <div class="ladrows"></div>
                         <div class="rowline" style="margin-top:10px"><button class="btnghost addstep">&#65291; Add discount or gift</button><span class="help ladcount"></span></div>
                         <div class="warnbox ladwarn hide" style="margin-top:8px"></div>
-                        <p class="help ladPre hide" style="margin-top:10px">Prepaid is off for this option: with more than one discount level, each delivery is charged separately. Keep one discount level, or add a separate prepaid option.</p>
+                        <p class="help ladPre hide" style="margin-top:10px">Prepaid is off for this option: it gives different discounts on different deliveries, so each delivery is charged separately. Use one discount for every delivery, or add a separate prepaid option.</p>
                       </div>
                     </div>
                     <div class="qgroup" style="margin-bottom:12px">
@@ -1155,7 +1155,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       var ladPre=q('.ladPre'), preLocked=false;
       function applyPrepaidRule(){
         var multi=discMode(card)==='ladder';
-        if(multi && !preLocked){ payPre.classList.remove('on'); payPre.classList.add('locked'); payPre.title='Not available with more than one discount level'; if(!perDel()) payGo.classList.add('on'); preLocked=true; syncPay(); }
+        if(multi && !preLocked){ payPre.classList.remove('on'); payPre.classList.add('locked'); payPre.title='Not available when deliveries get different discounts'; if(!perDel()) payGo.classList.add('on'); preLocked=true; syncPay(); }
         else if(!multi && preLocked){ payPre.classList.remove('locked'); payPre.title=''; preLocked=false; syncPay(); }
         ladPre.classList.toggle('hide', !multi);
         if(typeof renderOptionChecks==='function') renderOptionChecks(false);
@@ -1166,6 +1166,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       // with no gift, and show as one summary line. The last row covers every delivery after it. Max 5 discount levels (LD-01).
       var GIFT_ICON='<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="8" width="14" height="9" rx="1.5"/><path d="M2.5 5.5h15v2.5h-15zM10 5.5V17M10 5.5C8.5 3 6 2.6 6 4.2 6 5.5 10 5.5 10 5.5zM10 5.5c1.5-2.5 4-2.9 4-1.3 0 1.3-4 1.3-4 1.3z"/></svg>';
       function levels(){ var c=0, prev=null; card._lad.forEach(function(s){ if(s.value!==prev) c++; prev=s.value; }); return c; }
+      function ladderHint(){ var n=levels(); return n<2 ? 'e.g. 20% off from delivery 3, or a free gift on delivery 6' : n+' of 5 different discounts used'+(n>=5?' (the maximum)':''); }
       function sortLadder(){ var L=card._lad; card._lad=[L[0]].concat(L.slice(1).sort(function(a,b){ return a.n-b.n; })); }
       function giftCard(x, gi){
         return '<div class="gcard glean" data-gi="'+gi+'">'+GIFT_ICON+'<button type="button" class="gtx lgchg" title="Change gift"><span class="gt">'+esc(giftLabel(x.g))+'</span></button>'+
@@ -1186,7 +1187,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
             '<span>'+(i===0?'':'<button class="btnsm ico-x lrm" title="Remove this delivery">&#10005;</button>')+'</span></div>';
         });
         ladrows.innerHTML=html;
-        ladcount.textContent='Up to 5 different discounts \u00b7 '+levels()+' in use';
+        ladcount.textContent=ladderHint();
         applyPrepaidRule(); validateLadder(); renderDeliveryPreview();
       }
       function validateLadder(){
@@ -1206,7 +1207,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         var row=e.target.closest('.ladrow'); if(!row) return; var s=card._lad[+row.dataset.i];
         if(e.target.classList.contains('lval')) s.value=parseFloat(e.target.value)||0;
         if(e.target.classList.contains('lfrom')) s.n=parseInt(e.target.value,10)||0;
-        ladcount.textContent='Up to 5 different discounts \u00b7 '+levels()+' in use'; applyPrepaidRule(); validateLadder(); renderDeliveryPreview();
+        ladcount.textContent=ladderHint(); applyPrepaidRule(); validateLadder(); renderDeliveryPreview();
       });
       ladrows.addEventListener('change', function(e){ if(e.target.classList.contains('lfrom')){ sortLadder(); renderLadder(); } });
       ladrows.addEventListener('click', function(e){
