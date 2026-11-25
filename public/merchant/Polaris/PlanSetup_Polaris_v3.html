@@ -255,6 +255,10 @@
   .ladrow .field{box-sizing:border-box;height:32px;display:inline-flex;align-items:center;font-family:inherit;font-size:13px;color:var(--p-ink);padding:0 10px}
   .fsel{appearance:none;-webkit-appearance:none;padding:0 30px 0 10px;cursor:pointer;width:auto;
     background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23616161' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 11px center}
+  .ssent{margin:12px 0 0;font-size:13.5px;line-height:44px;color:var(--p-ink)}
+  .ssent .fin{vertical-align:middle;margin:0 2px}
+  .ssent input.fin{width:58px}
+  .fchev{padding-right:28px;min-width:92px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23616161' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 11px center;cursor:pointer}
   .qhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
   .lgsel{font:inherit;font-size:12.5px;border:1px solid var(--p-line);border-radius:8px;padding:4px 8px;background:#fff;color:var(--p-ink);cursor:pointer}
   .lgsel[disabled]{background:#f3f3f3;cursor:default;appearance:none;-webkit-appearance:none}
@@ -429,12 +433,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                           <button data-dur="choice">Customer decides</button>
                           <button data-dur="none" class="hide">No end date</button>
                         </span>
-                      <div class="frow">
-                        <div class="fld sched-fixed"><label>Deliveries</label><span class="field fin">5</span></div>
-                        <div class="fld sched-choice hide"><label>Customer picks</label><span class="rowline" style="gap:8px;flex-wrap:nowrap"><input class="field fin chMin" type="number" min="1" value="3" aria-label="Minimum deliveries" /><span class="help">to</span><input class="field fin chMax" type="number" min="1" value="12" aria-label="Maximum deliveries" /></span></div>
-                        <div class="fld sched-none hide"><label>Deliveries</label><span class="fin finro">Until cancelled</span></div>
-                        <div class="fld"><label>Deliver every</label><span class="rowline" style="gap:8px;flex-wrap:nowrap"><span class="field fin">2</span><span class="field fin finsel">weeks &#9662;</span></span></div>
-                      </div>
+                      <p class="ssent">Deliver every <span class="field fin">2</span> <span class="field fin fchev">weeks</span><span class="sched-fixed"> for <span class="field fin">5</span> deliveries.</span><span class="sched-choice hide"> for <input class="field fin chMin" type="number" min="1" value="3" aria-label="Minimum deliveries" /> to <input class="field fin chMax" type="number" min="1" value="12" aria-label="Maximum deliveries" /> deliveries.</span><span class="sched-none hide"> until the customer cancels.</span></p>
                       <p class="help chErr hide" style="color:#b42318;margin:6px 0 0">Minimum can't be more than maximum.</p>
                     </div>
                     <div class="qgroup">
@@ -480,12 +479,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                           <button data-dur="choice">Customer decides</button>
                           <button data-dur="none" class="hide">No end date</button>
                         </span>
-                      <div class="frow">
-                        <div class="fld sched-fixed"><label>Deliveries</label><span class="field fin">6</span></div>
-                        <div class="fld sched-choice hide"><label>Customer picks</label><span class="rowline" style="gap:8px;flex-wrap:nowrap"><input class="field fin chMin" type="number" min="1" value="3" aria-label="Minimum deliveries" /><span class="help">to</span><input class="field fin chMax" type="number" min="1" value="12" aria-label="Maximum deliveries" /></span></div>
-                        <div class="fld sched-none hide"><label>Deliveries</label><span class="fin finro">Until cancelled</span></div>
-                        <div class="fld"><label>Deliver every</label><span class="rowline" style="gap:8px;flex-wrap:nowrap"><span class="field fin">1</span><span class="field fin finsel">month &#9662;</span></span></div>
-                      </div>
+                      <p class="ssent">Deliver every <span class="field fin">1</span> <span class="field fin fchev">month</span><span class="sched-fixed"> for <span class="field fin">6</span> deliveries.</span><span class="sched-choice hide"> for <input class="field fin chMin" type="number" min="1" value="3" aria-label="Minimum deliveries" /> to <input class="field fin chMax" type="number" min="1" value="12" aria-label="Maximum deliveries" /> deliveries.</span><span class="sched-none hide"> until the customer cancels.</span></p>
                       <p class="help chErr hide" style="color:#b42318;margin:6px 0 0">Minimum can't be more than maximum.</p>
                     </div>
                     <div class="qgroup">
