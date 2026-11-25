@@ -204,7 +204,10 @@
   .colblk .colhdr{border:0;background:none;margin:0}
   .colsync{display:flex;align-items:center;gap:12px;padding:8px 12px 10px;border-top:1px solid var(--p-line2)}
   /* v3b: ladder discount */
-  .ladhead,.ladrow{display:grid;grid-template-columns:176px 112px minmax(0,1fr) 36px;gap:12px;align-items:center}
+  .ladhead,.ladrow{display:grid;grid-template-columns:112px 104px minmax(0,1fr) 34px;gap:10px;align-items:center}
+  .ladrow .lfrom{width:46px!important}
+  .ladrow .lval{width:50px}
+  .ladrow > span{white-space:nowrap}
   .ladrow{padding:9px 0}
   .ladrow .gcol{display:flex;flex-direction:column;gap:6px;align-items:flex-start;min-width:0}
   .lgap{font-size:12px;color:var(--p-muted);padding:7px 2px;border-bottom:1px dashed var(--p-line2);background:repeating-linear-gradient(90deg,transparent 0 6px,#fafafa 6px 12px)}
@@ -216,6 +219,16 @@
   .gcard svg{margin-top:2px}
   .gcard .gmain{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
   .gcard .gsub{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+  .gcard.glean{align-items:center;padding:4px 6px 4px 10px;gap:8px}
+  .gcard.glean svg{margin-top:0}
+  .gcard.glean .gtx{flex:1;min-width:0}
+  .ladrow .gcol{width:100%}
+  .gcard.glean .qstep button{width:22px;height:24px;font-size:14px}
+  .gcard.glean .qstep .qv{width:22px;font-size:12.5px}
+  /* ladder rows: everything aligns to the top of the row */
+  .ladrow{align-items:start}
+  .ladrow > span{min-height:34px;display:flex;align-items:center}
+  .ladrow > span.gcol{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start}
   .gcard .qstep{border-color:#bcd3fb}
   .gcard .qstep button{width:24px;height:24px;font-size:14px}
   .gcard .qstep .qv{width:24px;font-size:12.5px}
@@ -1185,17 +1198,16 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       function levels(){ var c=0, prev=null; card._lad.forEach(function(s){ if(s.value!==prev) c++; prev=s.value; }); return c; }
       function sortLadder(){ var L=card._lad; card._lad=[L[0]].concat(L.slice(1).sort(function(a,b){ return a.n-b.n; })); }
       function giftCard(x, gi){
-        return '<div class="gcard" data-gi="'+gi+'">'+GIFT_ICON+'<div class="gmain"><button type="button" class="gtx lgchg" title="Change gift"><span class="gt">'+esc(giftLabel(x.g))+'</span></button>'+
-               '<span class="gsub"><span class="rowline" style="gap:5px;flex-wrap:nowrap"><span class="gs">Qty</span>'+qtyStep('lgq', x.q||1)+'</span></span></div>'+
-               '<button type="button" class="gx lgrm" title="Remove gift" aria-label="Remove gift">&#10005;</button></div>';
+        return '<div class="gcard glean" data-gi="'+gi+'">'+GIFT_ICON+'<button type="button" class="gtx lgchg" title="Change gift"><span class="gt">'+esc(giftLabel(x.g))+'</span></button>'+
+               qtyStep('lgq', x.q||1)+'<button type="button" class="gx lgrm" title="Remove gift" aria-label="Remove gift">&#10005;</button></div>';
       }
       function renderLadder(){
         var amt=unitSel.value==='amt', L=card._lad, html='', last=L.length-1;
         L.forEach(function(s,i){
           if(i>0 && s.n>L[i-1].n+1){ var a=L[i-1].n+1, b=s.n-1;
             html+='<div class="lgap">'+(a===b?'Delivery '+a:'Deliveries '+a+' to '+b)+': '+fmtVal(card,L[i-1].value)+' off, no gift (same as delivery '+L[i-1].n+')</div>'; }
-          var dl = i===0 ? '<span class="dname">Delivery 1'+(last===0?' onwards':'')+'</span>'
-                         : '<span class="rowline" style="gap:6px;flex-wrap:nowrap"><span class="dname">Delivery</span><input class="field lin lfrom" type="number" min="2" value="'+s.n+'" style="width:56px" aria-label="Delivery number" />'+(i===last?'<span class="help">onwards</span>':'')+'</span>';
+          var dl = i===0 ? '<span class="rowline" style="gap:6px;flex-wrap:nowrap"><span class="field lfix" style="width:46px" title="Delivery 1 is always the first row">1</span>'+(last===0?'<span class="help">onwards</span>':'')+'</span>'
+                         : '<span class="rowline" style="gap:6px;flex-wrap:nowrap"><input class="field lin lfrom" type="number" min="2" value="'+s.n+'" aria-label="Delivery number" />'+(i===last?'<span class="help">onwards</span>':'')+'</span>';
           var gifts = s.gifts.map(function(x,gi){ return giftCard(x,gi); }).join('')+
                       (s.gifts.length ? '<button type="button" class="lnk lgadd">&#65291; Add another gift</button>' : '<button type="button" class="btnghost lgadd">&#65291; Add gift</button>');
           html+='<div class="ladrow" data-i="'+i+'">'+dl+
