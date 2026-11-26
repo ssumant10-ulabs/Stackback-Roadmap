@@ -72,6 +72,7 @@
   .seg{display:inline-flex;border:1px solid var(--p-line);border-radius:8px;overflow:hidden;background:#fff}
   .seg button{border:0;background:#fff;padding:6px 12px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--p-muted)}
   .seg button.on{background:var(--p-primary);color:#fff}
+  .seg button[disabled]{opacity:.4;cursor:not-allowed}
 
   /* payment chips */
   .chkchip{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border:1px solid var(--p-line);border-radius:20px;font-size:12.5px;font-weight:600;color:var(--p-muted);cursor:pointer;background:#fff}
@@ -435,6 +436,13 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                         </span>
                       <p class="ssent">Deliver every <span class="field fin">2</span> <span class="field fin fchev">weeks</span><span class="sched-fixed"> for <span class="field fin">5</span> deliveries.</span><span class="sched-choice hide"> for <input class="field fin chMin" type="number" min="1" value="3" aria-label="Minimum deliveries" /> to <input class="field fin chMax" type="number" min="1" value="12" aria-label="Maximum deliveries" /> deliveries.</span><span class="sched-none hide"> until the customer cancels.</span></p>
                       <p class="help chErr hide" style="color:#b42318;margin:6px 0 0">Minimum can't be more than maximum.</p>
+                      <div class="renewBlk">
+                        <p class="q" style="margin:14px 0 6px">When it ends</p>
+                        <span class="seg renewSeg"><button data-rn="stop" class="on">Stop</button><button data-rn="auto">Renew automatically</button><button data-rn="ask">Ask the customer</button></span>
+                        <p class="ssent rnAuto hide">Renew for the same length, with <input class="field fin rnDays" type="number" min="1" value="3" aria-label="Days of notice before renewing" /> days' notice to the customer.</p>
+                        <p class="ssent rnAsk hide">Send a renewal link <input class="field fin rnAskDays" type="number" min="1" value="5" aria-label="Days before the last delivery" /> days before the last delivery.</p>
+                        <p class="help rnHelp" style="margin:4px 0 0"></p>
+                      </div>
                     </div>
                     <div class="qgroup">
                       <div class="qhead"><p class="q" style="margin:0">Discount</p><select class="discType fin fsel" aria-label="Discount unit"><option value="pct">Percentage (%)</option><option value="amt">Amount off</option></select></div>
@@ -481,6 +489,13 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                         </span>
                       <p class="ssent">Deliver every <span class="field fin">1</span> <span class="field fin fchev">month</span><span class="sched-fixed"> for <span class="field fin">6</span> deliveries.</span><span class="sched-choice hide"> for <input class="field fin chMin" type="number" min="1" value="3" aria-label="Minimum deliveries" /> to <input class="field fin chMax" type="number" min="1" value="12" aria-label="Maximum deliveries" /> deliveries.</span><span class="sched-none hide"> until the customer cancels.</span></p>
                       <p class="help chErr hide" style="color:#b42318;margin:6px 0 0">Minimum can't be more than maximum.</p>
+                      <div class="renewBlk">
+                        <p class="q" style="margin:14px 0 6px">When it ends</p>
+                        <span class="seg renewSeg"><button data-rn="stop" class="on">Stop</button><button data-rn="auto">Renew automatically</button><button data-rn="ask">Ask the customer</button></span>
+                        <p class="ssent rnAuto hide">Renew for the same length, with <input class="field fin rnDays" type="number" min="1" value="3" aria-label="Days of notice before renewing" /> days' notice to the customer.</p>
+                        <p class="ssent rnAsk hide">Send a renewal link <input class="field fin rnAskDays" type="number" min="1" value="5" aria-label="Days before the last delivery" /> days before the last delivery.</p>
+                        <p class="help rnHelp" style="margin:4px 0 0"></p>
+                      </div>
                     </div>
                     <div class="qgroup">
                       <div class="qhead"><p class="q" style="margin:0">Discount</p><select class="discType fin fsel" aria-label="Discount unit"><option value="pct">Percentage (%)</option><option value="amt">Amount off</option></select></div>
@@ -1089,7 +1104,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     function fmtVal(card, v){ return card.querySelector('.discType').value==='amt' ? 'INR '+v : v+'%'; }
     function initEditor(card){
       var q=function(s){ return card.querySelector(s); };
-      var durSeg=q('.durSeg'), payPre=q('.pay-prepaid'), payAuto=q('.pay-auto'), payPart=q('.pay-part'), payGo=q('.pay-payg'), ppCfg=q('.ppCfg'), ppNIn=q('.ppN'), ppErr=q('.ppErr'),
+      var durSeg=q('.durSeg'), payPre=q('.pay-prepaid'), payAuto=q('.pay-auto'), payPart=q('.pay-part'), payGo=q('.pay-payg'), ppCfg=q('.ppCfg'), renewBlk=q('.renewBlk'), rnSeg=q('.renewSeg'), rnAutoP=q('.rnAuto'), rnAskP=q('.rnAsk'), rnHelp=q('.rnHelp'), rnDays=q('.rnDays'), rnAskDays=q('.rnAskDays'), ppNIn=q('.ppN'), ppErr=q('.ppErr'),
           methodGroup=q('.methodGroup'), durNoneBtn=durSeg.querySelector('[data-dur="none"]'),
           deliveryPreview=q('.deliveryPreview'),
           schedFixed=q('.sched-fixed'), schedChoice=q('.sched-choice'), schedNone=q('.sched-none');
@@ -1118,6 +1133,32 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       // partial prepaid counts as per-delivery: after the first N, AutoPay charges each delivery
       function perDel(){ return on(payAuto) || on(payGo) || on(payPart); }
       function ppN(){ return parseInt(ppNIn.value,10)||0; }
+      // renewal (fixed length / customer decides). Prepaid never auto-renews: it has no saved payment.
+      function rnMode(){ var b=rnSeg.querySelector('button.on'); return b ? b.dataset.rn : 'stop'; }
+      function setRn(m){ rnSeg.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.dataset.rn===m); }); }
+      function renderRenew(){
+        var dur=curDur(); renewBlk.classList.toggle('hide', dur==='none');
+        var canAuto=on(payAuto)||on(payPart)||on(payGo), autoBtn=rnSeg.querySelector('[data-rn="auto"]');
+        autoBtn.disabled=!canAuto; autoBtn.title = canAuto ? '' : 'Prepaid never renews automatically. Add AutoPay, Partial prepaid or Pay as you go to offer it.';
+        if(!canAuto && rnMode()==='auto') setRn('ask');
+        var m=rnMode(), h=[];
+        rnAutoP.classList.toggle('hide', m!=='auto'); rnAskP.classList.toggle('hide', m!=='ask');
+        if(m==='stop') h.push('The subscription ends after its last delivery. Win-back messages belong in the flow builder.');
+        if(m==='auto'){
+          h.push('Renewals use the plan\'s current prices. A ladder carries on at its last step; a course restarts from the starter.'+(dur==='choice'?' Each customer renews for the number of deliveries they picked.':''));
+          if(on(payPart)) h.push('Partial prepaid renews on AutoPay only; nothing is charged upfront again.');
+          if(on(payPre)) h.push('Customers who chose Prepaid get a renewal link instead: prepaid never renews automatically.');
+        }
+        if(m==='ask') h.push('The customer renews with one click from the link. Extra reminders and offers belong in the flow builder.');
+        rnHelp.innerHTML=h.join('<br>');
+      }
+      function renewLine(){
+        var dur=curDur(); if(dur==='none') return '';
+        var m=rnMode();
+        return m==='auto' ? 'renews automatically for the same number of deliveries, with notice '+(parseInt(rnDays.value,10)||1)+' days before'
+             : m==='ask' ? 'the customer gets a renewal link '+(parseInt(rnAskDays.value,10)||1)+' days before the last delivery'
+             : 'it stops after the last delivery';
+      }
       function validatePP(){
         if(!on(payPart)){ ppErr.classList.add('hide'); return; }
         var n=ppN(), dur=curDur(), mm=minMax(), msg='';
@@ -1137,6 +1178,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         var body = !parts.length ? 'no payment option is selected yet' : parts.length===1 ? 'the customer will '+parts[0] : 'the customer chooses to '+parts.join('; or to ');
         var html='<b>When delivery happens:</b> '+body+'.';
         html+='<br><b>Discount on the widget:</b> '+ladderLine();
+        var rl=renewLine(); if(rl) html+='<br><b>When it ends:</b> '+rl+'.';
         deliveryPreview.innerHTML=html;
       }
       function syncPay(){
@@ -1146,15 +1188,18 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         if(on(payPart)) lines.push('<b>Partial prepaid + AutoPay:</b> one Razorpay checkout takes the upfront amount for the first deliveries (each at its own discount) and sets up the mandate for the rest. Cancelling or skipping in the prepaid part follows the prepaid rules.');
         if(on(payGo)) lines.push('<b>Pay as you go:</b> an invoice and email reminder to pay as each delivery ships.');
         methodGroup.innerHTML='<p class="help" style="margin:0">'+lines.join('<br>')+'</p>'; methodGroup.classList.toggle('hide', !lines.length);
-        ppCfg.classList.toggle('hide', !on(payPart)); validatePP();
+        ppCfg.classList.toggle('hide', !on(payPart)); validatePP(); renderRenew();
         var noEndOk = pd && !prepaid;
         durNoneBtn.classList.toggle('hide', !noEndOk);
         if(!noEndOk && durNoneBtn.classList.contains('on')) setDuration('fixed');
         renderDeliveryPreview(); validateLadder(); validateGifts(); validatePP();
         document.dispatchEvent(new Event('sb:pay'));
       }
-      durSeg.addEventListener('click', function(e){ if(!e.target.dataset.dur) return; setDuration(e.target.dataset.dur); renderLadder(); validateGifts(); validatePP(); });
+      durSeg.addEventListener('click', function(e){ if(!e.target.dataset.dur) return; setDuration(e.target.dataset.dur); renderLadder(); validateGifts(); validatePP(); renderRenew(); renderDeliveryPreview(); });
       ppNIn.addEventListener('input', function(){ validatePP(); renderDeliveryPreview(); if(typeof renderOptionChecks==='function') renderOptionChecks(false); });
+      rnSeg.addEventListener('click', function(e){ var b=e.target.closest('[data-rn]'); if(!b || b.disabled) return; setRn(b.dataset.rn); renderRenew(); renderDeliveryPreview(); });
+      rnDays.addEventListener('change', function(){ if((parseInt(rnDays.value,10)||0)<1){ rnDays.value=1; toast('Customers must get at least 1 day of notice before an automatic renewal.'); } renderDeliveryPreview(); });
+      rnDays.addEventListener('input', renderDeliveryPreview); rnAskDays.addEventListener('input', renderDeliveryPreview);
       [payPre, payAuto, payPart, payGo].forEach(function(chip){
         chip.addEventListener('click', function(){
           if(chip.classList.contains('locked')) return;
@@ -1268,9 +1313,11 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       L.forEach(function(x){ ng+=x.gifts.length; });
       disc = discMode(card)==='ladder' ? 'Ladder '+fmtVal(card,L[0].value)+' to '+fmtVal(card, Math.max.apply(null, L.map(function(x){ return x.value; }))) : fmtVal(card,L[0].value)+' off';
       if(ng) disc+=' + '+plural(ng,'gift');
+      var rb=card.querySelector('.renewSeg button.on'), rn = card.querySelector('.renewBlk.hide') ? '' : (rb && rb.dataset.rn==='auto' ? 'Auto-renews' : rb && rb.dataset.rn==='ask' ? 'Asks to renew' : '');
       var chips=card.querySelector('.chips'); chips.innerHTML='';
       if(ptype){ var a=document.createElement('span'); a.className='pill'; a.textContent=ptype; chips.appendChild(a); }
       var b=document.createElement('span'); b.className='pill'; b.textContent=disc; chips.appendChild(b);
+      if(rn){ var c=document.createElement('span'); c.className='pill'; c.textContent=rn; chips.appendChild(c); }
     }
 
     // ---------- unified Edit / Collapse toggle + init each option editor ----------
