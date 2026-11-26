@@ -423,8 +423,8 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                   <div class="opteditor hide">
                     <div class="qgroup">
                       <p class="q">Payment &amp; pricing</p>
-                      <div class="rowline"><span class="chkchip on pay-prepaid">Prepaid</span><span class="chkchip pay-auto">Pay per delivery (AutoPay)</span><span class="chkchip pay-payg">Pay as you go</span></div>
-                      <div class="methodGroup hide" style="margin-top:10px"><p class="help">Billed pay-as-you-go: the customer gets an invoice and email reminder to pay as each delivery ships.</p></div>
+                      <div class="rowline"><span class="chkchip on pay-prepaid">Prepaid</span><span class="chkchip pay-auto">Pay per delivery (AutoPay)</span><span class="chkchip pay-part">Partial prepaid + AutoPay</span><span class="chkchip pay-payg">Pay as you go</span></div>
+                      <div class="methodGroup hide" style="margin-top:10px"><p class="help">Billed pay-as-you-go: the customer gets an invoice and email reminder to pay as each delivery ships.</p></div><div class="ppCfg hide"><p class="ssent">Prepay the first <input class="field fin ppN" type="number" min="1" value="3" aria-label="Deliveries paid upfront" /> deliveries, then AutoPay for the rest.</p><p class="help ppErr hide" style="color:#b42318;margin:0"></p></div>
                     </div>
                     <div class="qgroup">
                       <p class="q">Schedule</p>
@@ -469,8 +469,8 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                   <div class="opteditor">
                     <div class="qgroup">
                       <p class="q">Payment &amp; pricing</p>
-                      <div class="rowline"><span class="chkchip on pay-prepaid">Prepaid</span><span class="chkchip pay-auto">Pay per delivery (AutoPay)</span><span class="chkchip pay-payg">Pay as you go</span></div>
-                      <div class="methodGroup hide" style="margin-top:10px"><p class="help">Billed pay-as-you-go: the customer gets an invoice and email reminder to pay as each delivery ships.</p></div>
+                      <div class="rowline"><span class="chkchip on pay-prepaid">Prepaid</span><span class="chkchip pay-auto">Pay per delivery (AutoPay)</span><span class="chkchip pay-part">Partial prepaid + AutoPay</span><span class="chkchip pay-payg">Pay as you go</span></div>
+                      <div class="methodGroup hide" style="margin-top:10px"><p class="help">Billed pay-as-you-go: the customer gets an invoice and email reminder to pay as each delivery ships.</p></div><div class="ppCfg hide"><p class="ssent">Prepay the first <input class="field fin ppN" type="number" min="1" value="3" aria-label="Deliveries paid upfront" /> deliveries, then AutoPay for the rest.</p><p class="help ppErr hide" style="color:#b42318;margin:0"></p></div>
                     </div>
                     <div class="qgroup">
                       <p class="q">Schedule</p>
@@ -552,7 +552,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                 <div><b>Sell subscriptions through a non-Shopify checkout?</b><div class="help">Turn this on if your store checks out on GoKwik, Shopflo or a similar checkout instead of Shopify's.</div></div>
                 <s-switch id="adaptSw"></s-switch>
               </div>
-              <p class="noteline hide" id="adaptOffNote" style="color:var(--p-attn)">Not available: every buying option uses Pay per delivery (AutoPay), which always checks out through Razorpay. Add a Prepaid or Pay as you go option to sell through a non-Shopify checkout.</p>
+              <p class="noteline hide" id="adaptOffNote" style="color:var(--p-attn)">Not available: every buying option uses AutoPay (per delivery or after a partial prepay), which always checks out through Razorpay. Add a Prepaid or Pay as you go option to sell through a non-Shopify checkout.</p>
               <div id="adaptCfg" class="hide">
                 <p class="help" style="margin:12px 0 0">StackBack creates this product, plus a discount code for each buying option, so that checkout can sell the plan.</p>
                 <div class="adaptprod">
@@ -1061,6 +1061,9 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         if(dur==='none') info.push('No end date: the course\'s last delivery repeats until the customer cancels.');
         if(card.querySelector('.discType').value==='amt'){ var cheap=Infinity; S.courses.forEach(function(c){ c.rows.forEach(function(r){ r.items.forEach(function(x){ cheap=Math.min(cheap, prod(x.pid).v[x.vi][1]); }); }); });
           if(cheap<Infinity) info.push('Amount-off discounts apply per delivery. Check them against your cheapest course item (INR '+cheap+').'); }
+        if(card.querySelector('.pay-part.on')){ var pn=parseInt(card.querySelector('.ppN').value,10)||0;
+          S.courses.forEach(function(c){ if(!c.rows.length) return; var vi=c.svs[0], tot=0; for(var d=1; d<=pn; d++) tot+=deliveryPrice(c,vi,d);
+            info.push('Partial prepaid: upfront for the first '+pn+' course deliveries ('+esc(prod(c.pid).t)+' '+esc(prod(c.pid).v[vi][0])+'): INR '+tot+', before discount. AutoPay charges each delivery after that.'); }); }
         if(card.querySelector('.pay-prepaid.on')){
           if(dur==='fixed') S.courses.forEach(function(c){ if(!c.rows.length) return; var vi=c.svs[0], tot=0; for(var d=1; d<=n; d++) tot+=deliveryPrice(c,vi,d);
             info.push('Prepaid course total for '+n+' deliveries ('+esc(prod(c.pid).t)+' '+esc(prod(c.pid).v[vi][0])+'): INR '+tot+', before discount.'); });
@@ -1086,7 +1089,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     function fmtVal(card, v){ return card.querySelector('.discType').value==='amt' ? 'INR '+v : v+'%'; }
     function initEditor(card){
       var q=function(s){ return card.querySelector(s); };
-      var durSeg=q('.durSeg'), payPre=q('.pay-prepaid'), payAuto=q('.pay-auto'), payGo=q('.pay-payg'),
+      var durSeg=q('.durSeg'), payPre=q('.pay-prepaid'), payAuto=q('.pay-auto'), payPart=q('.pay-part'), payGo=q('.pay-payg'), ppCfg=q('.ppCfg'), ppNIn=q('.ppN'), ppErr=q('.ppErr'),
           methodGroup=q('.methodGroup'), durNoneBtn=durSeg.querySelector('[data-dur="none"]'),
           deliveryPreview=q('.deliveryPreview'),
           schedFixed=q('.sched-fixed'), schedChoice=q('.sched-choice'), schedNone=q('.sched-none');
@@ -1112,13 +1115,24 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         return (parts.length===1 ? fmtVal(card,L[0].value)+' off every delivery' : parts.join(' &rsaquo; '))+(G.length?' &middot; Free gifts: '+G.join(', '):'');
       }
       function on(el){ return el.classList.contains('on'); }
-      function perDel(){ return on(payAuto) || on(payGo); }
+      // partial prepaid counts as per-delivery: after the first N, AutoPay charges each delivery
+      function perDel(){ return on(payAuto) || on(payGo) || on(payPart); }
+      function ppN(){ return parseInt(ppNIn.value,10)||0; }
+      function validatePP(){
+        if(!on(payPart)){ ppErr.classList.add('hide'); return; }
+        var n=ppN(), dur=curDur(), mm=minMax(), msg='';
+        if(n<1) msg='Prepay at least 1 delivery.';
+        else if(dur==='fixed'){ var f=parseInt(schedFixed.querySelector('.field').textContent,10); if(n>=f) msg='This option has '+f+' deliveries, so prepaying '+n+' covers all of them. Use Prepaid instead, or prepay fewer.'; }
+        else if(dur==='choice' && n>=mm.min) msg='Customers who pick '+n+' or fewer deliveries prepay all of them and never use AutoPay.';
+        ppErr.textContent=msg; ppErr.classList.toggle('hide', !msg);
+      }
       function renderDeliveryPreview(){
         var mode=curDur(), mm=minMax();
         var count = mode==='fixed' ? 'for the set number of deliveries' : mode==='choice' ? 'for the '+mm.min+' to '+mm.max+' deliveries the customer picks' : 'with no end date';
         var parts=[];
         if(on(payPre)) parts.push('prepay '+count+', then the plan ends');
         if(on(payAuto)) parts.push('pay per delivery '+count+' by AutoPay, charged automatically before each delivery');
+        if(on(payPart)) parts.push('prepay the first '+ppN()+' deliveries at checkout, then AutoPay charges each later delivery '+(mode==='none'?'until they cancel':mode==='choice'?'up to the number they picked':'until the plan ends'));
         if(on(payGo)) parts.push('pay as you go '+count+', billed by invoice and email reminder as each delivery ships');
         var body = !parts.length ? 'no payment option is selected yet' : parts.length===1 ? 'the customer will '+parts[0] : 'the customer chooses to '+parts.join('; or to ');
         var html='<b>When delivery happens:</b> '+body+'.';
@@ -1129,20 +1143,23 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         var prepaid=on(payPre), pd=perDel(), lines=[];
         if(prepaid) lines.push('<b>Prepaid:</b> pays for every delivery upfront.');
         if(on(payAuto)) lines.push('<b>Pay per delivery (AutoPay):</b> a Razorpay mandate charges each delivery automatically. Always checks out through Razorpay.');
+        if(on(payPart)) lines.push('<b>Partial prepaid + AutoPay:</b> one Razorpay checkout takes the upfront amount for the first deliveries (each at its own discount) and sets up the mandate for the rest. Cancelling or skipping in the prepaid part follows the prepaid rules.');
         if(on(payGo)) lines.push('<b>Pay as you go:</b> an invoice and email reminder to pay as each delivery ships.');
         methodGroup.innerHTML='<p class="help" style="margin:0">'+lines.join('<br>')+'</p>'; methodGroup.classList.toggle('hide', !lines.length);
+        ppCfg.classList.toggle('hide', !on(payPart)); validatePP();
         var noEndOk = pd && !prepaid;
         durNoneBtn.classList.toggle('hide', !noEndOk);
         if(!noEndOk && durNoneBtn.classList.contains('on')) setDuration('fixed');
-        renderDeliveryPreview(); validateLadder(); validateGifts();
+        renderDeliveryPreview(); validateLadder(); validateGifts(); validatePP();
         document.dispatchEvent(new Event('sb:pay'));
       }
-      durSeg.addEventListener('click', function(e){ if(!e.target.dataset.dur) return; setDuration(e.target.dataset.dur); renderLadder(); validateGifts(); });
-      [payPre, payAuto, payGo].forEach(function(chip){
+      durSeg.addEventListener('click', function(e){ if(!e.target.dataset.dur) return; setDuration(e.target.dataset.dur); renderLadder(); validateGifts(); validatePP(); });
+      ppNIn.addEventListener('input', function(){ validatePP(); renderDeliveryPreview(); if(typeof renderOptionChecks==='function') renderOptionChecks(false); });
+      [payPre, payAuto, payPart, payGo].forEach(function(chip){
         chip.addEventListener('click', function(){
           if(chip.classList.contains('locked')) return;
           // a ladder needs at least one per-delivery payment type left on
-          if(chip!==payPre && on(chip) && discMode(card)==='ladder' && (on(payAuto)+on(payGo))===1) return;
+          if(chip!==payPre && on(chip) && discMode(card)==='ladder' && (on(payAuto)+on(payGo)+on(payPart))===1) return;
           var wasPdOnly = !on(payPre) && perDel();
           chip.classList.toggle('on');
           if(!wasPdOnly && !on(payPre) && perDel()) setDuration('none');
@@ -1246,7 +1263,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     function summarize(card){
       var pre=card.querySelector('.pay-prepaid').classList.contains('on');
       var payg=card.querySelector('.pay-payg').classList.contains('on');
-      var pt=[]; if(pre) pt.push('Prepaid'); if(card.querySelector('.pay-auto').classList.contains('on')) pt.push('AutoPay'); if(payg) pt.push('Pay as you go'); var ptype=pt.join(' + ');
+      var pt=[]; if(pre) pt.push('Prepaid'); if(card.querySelector('.pay-auto').classList.contains('on')) pt.push('AutoPay'); if(card.querySelector('.pay-part').classList.contains('on')) pt.push('Partial prepaid'); if(payg) pt.push('Pay as you go'); var ptype=pt.join(' + ');
       var L=card._lad, disc, ng=0;
       L.forEach(function(x){ ng+=x.gifts.length; });
       disc = discMode(card)==='ladder' ? 'Ladder '+fmtVal(card,L[0].value)+' to '+fmtVal(card, Math.max.apply(null, L.map(function(x){ return x.value; }))) : fmtVal(card,L[0].value)+' off';
@@ -1322,7 +1339,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     function renderCheckout(){
       if(autoOnly()){
         coBadge.textContent='Razorpay (AutoPay)'; coBadge.className='badge2 sub';
-        coHelp.innerHTML='Every buying option uses Pay per delivery (AutoPay), so checkout always goes through Razorpay. Non-Shopify checkout isn\'t available.';
+        coHelp.innerHTML='Every buying option uses AutoPay, so checkout always goes through Razorpay. Non-Shopify checkout isn\'t available.';
         return;
       }
       if(adaptOn()){
@@ -1337,7 +1354,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       var b=e.target.closest('[data-goto]'); if(!b) return;
       openStep(+b.dataset.goto); steps[+b.dataset.goto].scrollIntoView({behavior:'smooth', block:'start'});
     });
-    function planPay(){ var t={pre:false,auto:false,payg:false}; document.querySelectorAll('.optcard').forEach(function(c){ if(c.querySelector('.pay-prepaid.on')) t.pre=true; if(c.querySelector('.pay-auto.on')) t.auto=true; if(c.querySelector('.pay-payg.on')) t.payg=true; }); return t; }
+    function planPay(){ var t={pre:false,auto:false,payg:false}; document.querySelectorAll('.optcard').forEach(function(c){ if(c.querySelector('.pay-prepaid.on')) t.pre=true; if(c.querySelector('.pay-auto.on') || c.querySelector('.pay-part.on')) t.auto=true; if(c.querySelector('.pay-payg.on')) t.payg=true; }); return t; }
     function autoOnly(){ var t=planPay(); return t.auto && !t.pre && !t.payg; }
     function renderAdaptAvail(){
       var ao=autoOnly();
