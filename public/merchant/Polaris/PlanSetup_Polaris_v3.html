@@ -74,6 +74,8 @@
   .seg button.on{background:var(--p-primary);color:#fff}
   .seg button[disabled]{opacity:.4;cursor:not-allowed}
   .enhsep{border-top:1px solid var(--p-line2);margin:16px 0}
+  .rnPre{margin-top:8px;background:var(--p-attn-bg);color:#5e4200;border-radius:8px;padding:8px 11px;font-size:12.5px}
+  .rnPre b{color:#4a3500}
 
   /* payment chips */
   .chkchip{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border:1px solid var(--p-line);border-radius:20px;font-size:12.5px;font-weight:600;color:var(--p-muted);cursor:pointer;background:#fff}
@@ -573,6 +575,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
               <div>
                 <b>When a subscription ends</b>
                 <div class="help">Applies to buying options with a set number of deliveries. Options with no end date keep going.</div>
+                <div class="rnPre"><b>Automatic renewal doesn't work with Prepaid.</b> Prepaid customers get a renewal link instead.</div>
                 <span class="seg" id="rnSeg" style="margin-top:10px"><button data-rn="stop" class="on">Stop</button><button data-rn="auto">Renew automatically</button><button data-rn="ask">Ask the customer</button></span>
                 <p class="ssent hide" id="rnAuto">Renew for the same length, with <input class="field fin" id="rnDays" type="number" min="1" value="3" aria-label="Days of notice before renewing" /> days' notice to the customer.</p>
                 <p class="ssent hide" id="rnAsk">Send a renewal link <input class="field fin" id="rnAskDays" type="number" min="1" value="5" aria-label="Days before the last delivery" /> days before the last delivery.</p>
@@ -1356,11 +1359,10 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       if(!anyEnd) h.push('Every buying option has no end date, so this doesn\'t apply yet.');
       if(m==='stop') h.push('Subscriptions end after their last delivery. Win-back messages belong in the flow builder.');
       if(m==='auto'){
-        h.push('Renewals use the plan\'s current prices and the same number of deliveries (a customer\'s own pick for Customer decides). A ladder carries on at its last step; a course restarts from the starter.');
-        if(anyPart) h.push('Partial prepaid renews on AutoPay only; nothing is charged upfront again.');
-        if(anyPre) h.push('Customers who chose Prepaid get a renewal link instead: prepaid never renews automatically.');
+        h.push('Renewals use the plan\'s <b>current prices</b> and the <b>same number of deliveries</b> (a customer\'s own pick for Customer decides). A ladder <b>carries on</b> at its last step; a course <b>restarts</b> from the starter.');
+        if(anyPart) h.push('Partial prepaid renews on <b>AutoPay only</b>; nothing is charged upfront again.');
       }
-      if(m==='ask') h.push('Customers renew with one click from the link. Extra reminders and offers belong in the flow builder.');
+      if(m==='ask') h.push('The renewal link goes by <b>email</b>, by <b>WhatsApp</b> if it\'s switched on, and on the <b>customer portal</b>. Customers renew with one click. Extra reminders and offers belong in the flow builder.');
       $('rnHelp').innerHTML=h.join('<br>');
       cards.forEach(function(c){ if(c._preview) c._preview(); });
       if(typeof updateEnhSummary==='function') updateEnhSummary();
