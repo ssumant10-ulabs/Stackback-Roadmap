@@ -575,7 +575,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
               <div>
                 <b>When a subscription ends</b>
                 <div class="help">Applies to buying options with a set number of deliveries. Options with no end date keep going.</div>
-                <div class="rnPre"><b>Automatic renewal doesn't work with Prepaid.</b> Prepaid customers get a renewal link instead.</div>
+                <div class="rnPre hide" id="rnPre"><b>Automatic renewal doesn't work with Prepaid.</b> Prepaid customers get a renewal link instead.</div>
                 <span class="seg" id="rnSeg" style="margin-top:10px"><button data-rn="stop" class="on">Stop</button><button data-rn="auto">Renew automatically</button><button data-rn="ask">Ask the customer</button></span>
                 <p class="ssent hide" id="rnAuto">Renew for the same length, with <input class="field fin" id="rnDays" type="number" min="1" value="3" aria-label="Days of notice before renewing" /> days' notice to the customer.</p>
                 <p class="ssent hide" id="rnAsk">Send a renewal link <input class="field fin" id="rnAskDays" type="number" min="1" value="5" aria-label="Days before the last delivery" /> days before the last delivery.</p>
@@ -1355,7 +1355,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       autoBtn.disabled=!canAuto; autoBtn.title = canAuto ? '' : 'Prepaid never renews automatically. Add AutoPay, Partial prepaid or Pay as you go to a buying option to offer it.';
       if(!canAuto && rnMode()==='auto') $('rnSeg').querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.dataset.rn==='ask'); });
       var m=rnMode(), h=[];
-      $('rnAuto').classList.toggle('hide', m!=='auto'); $('rnAsk').classList.toggle('hide', m!=='ask');
+      $('rnAuto').classList.toggle('hide', m!=='auto'); $('rnPre').classList.toggle('hide', !(m==='auto' && anyPre)); $('rnAsk').classList.toggle('hide', m!=='ask');
       if(!anyEnd) h.push('Every buying option has no end date, so this doesn\'t apply yet.');
       if(m==='stop') h.push('Subscriptions end after their last delivery. Win-back messages belong in the flow builder.');
       if(m==='auto'){
