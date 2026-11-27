@@ -77,20 +77,25 @@
   .deliveryPreview:has(.tl){background:#fff}
   .tl{display:grid;align-items:center;row-gap:8px;column-gap:0;font-size:12px}
   .tl .lb{color:var(--p-muted);font-size:11.5px;font-weight:500;padding-right:8px;white-space:nowrap}
-  .tl .trk{align-self:center;height:2px;background:#d4d4d4;margin:0 46px 0 14px;border-radius:2px}
-  .tl .node{justify-self:center;position:relative;z-index:1;display:grid;place-items:center}
+  .tl .node{justify-self:stretch;position:relative;display:grid;place-items:center}
+  .tl .node::before,.tl .node::after{content:'';position:absolute;top:50%;height:2px;margin-top:-1px;background:#d4d4d4}
+  .tl .node::before{left:0;right:50%}.tl .node::after{left:50%;right:0}
+  .tl .node.first::before,.tl .node.last::after{display:none}
+  .tl .node i{position:relative;z-index:1}
   .tl .node i{font-style:normal;min-width:22px;height:22px;padding:0 4px;box-sizing:border-box;border-radius:11px;background:#fff;border:1.5px solid #8a8a8a;display:grid;place-items:center;font-weight:600;font-size:11px;color:var(--p-ink)}
-  .tl .node.opt i{border-style:dashed;color:var(--p-muted)}
-  .tl .node.sk i{border:0;background:#fff;color:var(--p-faint);font-weight:500}
-  .tl .node.endn i{border:0;background:#303030;color:#fff;font-size:8px;min-width:18px;height:18px}
+  .tl .node.optn i{border-style:dashed;color:var(--p-muted)}
+  .tl .node.optn::before,.tl .node.optn::after{background:repeating-linear-gradient(90deg,#c9c9c9 0 4px,transparent 4px 7px)}
+  .tl .node.sk i{border:0;background:#fff;color:var(--p-faint);font-weight:500;font-size:10.5px;padding:0 5px;white-space:nowrap;min-width:0}
+  .tl .node.sk::before,.tl .node.sk::after{background:repeating-linear-gradient(90deg,#c9c9c9 0 2px,transparent 2px 5px)}
   .tl .gf{justify-self:center;display:inline-flex;align-items:center;gap:1px;color:#8a5b00}
   .tl .gf small{font-size:10px;font-weight:700}
-  .tl .bar{min-height:22px;box-sizing:border-box;display:flex;align-items:center;padding:2px 9px;margin:0 2px;border-radius:7px;font-size:11px;font-weight:600;line-height:1.25}
+  .tl .bar{min-height:22px;box-sizing:border-box;display:flex;align-items:center;padding:2px 9px;margin:0 2px;border-radius:7px;font-size:11px;font-weight:600;line-height:1.25;min-width:0}
+  .tl .bar.dsc{justify-content:center;white-space:nowrap;padding:2px 4px}
   .tl .bar.dsc{background:#e3f5de;color:#0c5132}.tl .bar.dsc.l1{background:#c6ebbb}.tl .bar.dsc.l2{background:#a6dd97}.tl .bar.dsc.l3{background:#7fcc6c}.tl .bar.dsc.l4{background:#4f9e3d;color:#fff}
   .tl .bar.pre{background:#e0ebff;color:#1d4b8f}.tl .bar.auto{background:#ede4ff;color:#5b2a91}.tl .bar.payg{background:#fff0d6;color:#7a4b00}
   .tl .end{font-size:11.5px;font-weight:600;color:var(--p-ink);padding-left:12px;white-space:nowrap}
   .tl .lb.sep{position:relative}
-  .tlfoot .ttd{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .tlfoot .ttd{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;color:var(--p-muted)}
   .tlfoot .ttd svg{color:var(--p-muted)}
   .tlfoot{display:flex;flex-direction:column;gap:4px;margin-top:10px;padding-top:9px;border-top:1px dashed #d4d4d4;font-size:12px}
   .adsub{margin-top:16px;display:flex;align-items:center;gap:8px}
@@ -99,9 +104,30 @@
   .adrow{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:8px 12px;font-size:12.5px;border-top:1px solid var(--p-line2)}
   .adrow:first-child{border-top:0}
   .adrow.cf{grid-template-columns:1fr auto}
-  .adrow code{font:600 12px ui-monospace,Menlo,monospace;background:#f1f1f1;border-radius:6px;padding:1px 7px}
+  .adrow .adcode{font:600 12px ui-monospace,Menlo,monospace;background:#f6f6f6;border:1px solid transparent;border-radius:6px;padding:3px 7px;width:128px;color:var(--p-ink);text-transform:uppercase}
+  .adrow .adcode:hover{border-color:#d4d4d4}.adrow .adcode:focus{border-color:#005bd3;background:#fff;outline:0}
+  .adrow .adcode[readonly]{border-color:transparent;background:#f1f1f1}
+  .adrow{grid-template-columns:auto 1fr auto auto}
+  .adrow.sub{border-top:1px dashed var(--p-line2)}
+  .tl .bar.gift{background:#fff1d6;color:#7a4b00;gap:5px}
+  .gevery{display:block;margin-top:4px;font-size:11.5px}
   .adrow .mu{color:var(--p-muted)}
   a.lnk{text-decoration:none}
+  .presets{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .preset{display:flex;flex-direction:column;gap:3px;text-align:left;border:1px solid var(--p-line);border-radius:10px;background:#fff;padding:10px 12px;font:inherit;cursor:pointer;color:var(--p-ink)}
+  .preset:hover{border-color:#8a8a8a;background:#fafafa}
+  .preset b{font-size:13px}.preset span{font-size:12px;color:var(--p-muted);line-height:1.35}
+  .mpn{margin:8px 0 0}
+  .alsoin{display:block;order:9;flex-basis:100%;padding-left:46px;margin-top:-2px;font-size:12px;color:var(--p-attn)}
+  .prow{flex-wrap:wrap}
+  .wiss{margin-top:8px;background:var(--p-attn-bg);color:#5e4200;border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.5}
+  .wiss b{color:#4a3500}
+  .errl{padding:6px 10px;max-height:50vh;overflow:auto}
+  .errrow{display:flex;justify-content:space-between;gap:12px;width:100%;border:0;border-bottom:1px solid var(--p-line2);background:none;padding:10px 8px;text-align:left;font:inherit;font-size:13px;color:var(--p-ink);cursor:pointer}
+  .errrow:last-child{border-bottom:0}.errrow:hover{background:#f6f6f7}
+  .errrow .lnk{flex:none}
+  .flash{outline:2px solid #e51c00;outline-offset:3px;border-radius:8px}
+  .tl .bar.shp{background:#eef0f2;color:#303030;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .rnPre{margin-top:8px;background:var(--p-attn-bg);color:#5e4200;border-radius:8px;padding:8px 11px;font-size:12.5px}
   .rnPre b{color:#4a3500}
 
@@ -466,16 +492,19 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                         </span>
                       <p class="ssent">Deliver every <span class="field fin">2</span> <span class="field fin fchev">weeks</span><span class="sched-fixed"> for <span class="field fin">5</span> deliveries.</span><span class="sched-choice hide"> for <input class="field fin chMin" type="number" min="1" value="3" aria-label="Minimum deliveries" /> to <input class="field fin chMax" type="number" min="1" value="12" aria-label="Maximum deliveries" /> deliveries.</span><span class="sched-none hide"> until the customer cancels.</span></p>
                       <p class="help chErr hide" style="color:#b42318;margin:6px 0 0">Minimum can't be more than maximum.</p>
+                      <p class="ssent cmRow hide">Customers can cancel after <input class="field fin cmN" type="number" min="1" value="1" aria-label="Paid deliveries before cancelling" /> paid deliveries.</p>
+                      <p class="help cmErr hide" style="color:#b42318;margin:6px 0 0"></p>
+                      <p class="help upiWarn hide" style="color:var(--p-attn);margin:6px 0 0"></p>
                     </div>
                     <div class="qgroup">
                       <div class="qhead"><p class="q" style="margin:0">Discount</p><select class="discType fin fsel" aria-label="Discount unit"><option value="pct">Percentage (%)</option><option value="amt">Amount off</option></select></div>
                       <div class="ladder">
-                        <p class="help" style="margin:10px 0 8px">Give customers a different discount or a free gift on the deliveries you choose. A <b>discount</b> applies from its delivery onwards; a <b>free gift</b> ships once, with that delivery. Only <b>paid</b> deliveries count.</p>
+                        <p class="help" style="margin:10px 0 8px">Give customers a different discount or a free gift on the deliveries you choose. A <b>discount</b> applies from its delivery onwards; a <b>free gift</b> ships with that delivery, and on the <b>onwards</b> row with every delivery after it. Only <b>paid</b> deliveries count.</p>
                         <div class="ladhead"><span>Delivery</span><span>Discount</span><span>Free gift</span><span></span></div>
                         <div class="ladrows"></div>
                         <div class="rowline" style="margin-top:10px"><button class="btnghost addstep">&#65291; Add discount or gift</button><span class="help ladcount"></span></div>
                         <div class="warnbox ladwarn hide" style="margin-top:8px"></div>
-                        <p class="help ladPre hide" style="margin-top:10px">Prepaid is off for this option: it gives different discounts on different deliveries, so each delivery is charged separately. Use one discount for every delivery, or add a separate prepaid option.</p>
+                        <p class="help ladPre hide" style="margin-top:10px">Prepaid charges every delivery upfront, each at its own discount.</p>
                       </div>
                     </div>
                     <div class="qgroup" style="margin-bottom:12px">
@@ -512,16 +541,19 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                         </span>
                       <p class="ssent">Deliver every <span class="field fin">1</span> <span class="field fin fchev">month</span><span class="sched-fixed"> for <span class="field fin">6</span> deliveries.</span><span class="sched-choice hide"> for <input class="field fin chMin" type="number" min="1" value="3" aria-label="Minimum deliveries" /> to <input class="field fin chMax" type="number" min="1" value="12" aria-label="Maximum deliveries" /> deliveries.</span><span class="sched-none hide"> until the customer cancels.</span></p>
                       <p class="help chErr hide" style="color:#b42318;margin:6px 0 0">Minimum can't be more than maximum.</p>
+                      <p class="ssent cmRow hide">Customers can cancel after <input class="field fin cmN" type="number" min="1" value="1" aria-label="Paid deliveries before cancelling" /> paid deliveries.</p>
+                      <p class="help cmErr hide" style="color:#b42318;margin:6px 0 0"></p>
+                      <p class="help upiWarn hide" style="color:var(--p-attn);margin:6px 0 0"></p>
                     </div>
                     <div class="qgroup">
                       <div class="qhead"><p class="q" style="margin:0">Discount</p><select class="discType fin fsel" aria-label="Discount unit"><option value="pct">Percentage (%)</option><option value="amt">Amount off</option></select></div>
                       <div class="ladder">
-                        <p class="help" style="margin:10px 0 8px">Give customers a different discount or a free gift on the deliveries you choose. A <b>discount</b> applies from its delivery onwards; a <b>free gift</b> ships once, with that delivery. Only <b>paid</b> deliveries count.</p>
+                        <p class="help" style="margin:10px 0 8px">Give customers a different discount or a free gift on the deliveries you choose. A <b>discount</b> applies from its delivery onwards; a <b>free gift</b> ships with that delivery, and on the <b>onwards</b> row with every delivery after it. Only <b>paid</b> deliveries count.</p>
                         <div class="ladhead"><span>Delivery</span><span>Discount</span><span>Free gift</span><span></span></div>
                         <div class="ladrows"></div>
                         <div class="rowline" style="margin-top:10px"><button class="btnghost addstep">&#65291; Add discount or gift</button><span class="help ladcount"></span></div>
                         <div class="warnbox ladwarn hide" style="margin-top:8px"></div>
-                        <p class="help ladPre hide" style="margin-top:10px">Prepaid is off for this option: it gives different discounts on different deliveries, so each delivery is charged separately. Use one discount for every delivery, or add a separate prepaid option.</p>
+                        <p class="help ladPre hide" style="margin-top:10px">Prepaid charges every delivery upfront, each at its own discount.</p>
                       </div>
                     </div>
                     <div class="qgroup" style="margin-bottom:12px">
@@ -592,7 +624,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                   <div style="min-width:0">
                     <div class="ap-t">Subscription variant</div>
                     <div class="ap-m">Added to <span id="adVarN">1 product</span> in this plan &middot; created when you publish</div>
-                    <div class="ap-m" style="margin-top:2px">Needs one free option slot on each product.</div>
+                    <div class="ap-m" style="margin-top:2px">Priced like the product; the discount comes from the codes below. Needs one free option slot on each product.</div>
                   </div>
                 </div></div>
                 <div class="adaptprod" id="adProd">
@@ -604,7 +636,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                   </div>
                   <span class="ap-a"><button class="lnk" id="adaptEdit">Edit in Shopify &#8599;</button></span>
                 </div>
-                <div class="adsub"><b>Discount codes</b><span class="help">One per buying option, created when you publish</span></div>
+                <div class="adsub"><b>Discount codes</b><span class="help">One per buying option and discount level. <span id="adCodeNote"></span></span></div>
                 <div class="adtbl" id="adCodes"></div>
                 <div class="adsub"><b>Conflicting automatic discounts</b><span class="badge2 attn" id="adConfN">2</span></div>
                 <div class="help">These don't combine with the codes above, so they can replace the plan's discount at checkout.</div>
@@ -668,6 +700,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                 <span class="dact"><span class="badge2 info" id="wBadge">Goes live on publish</span></span>
               </div>
               <div class="help" style="margin-top:4px">Each product shows the widget assigned to it in Widgets.</div>
+              <div id="wIssues"></div>
               <div style="margin-top:8px"><a class="lnk" id="wSelect" href="Widgets_Polaris_v1.html#plan=fj" target="_blank">Assign widgets &#8594;</a></div>
             </div>
 
@@ -712,7 +745,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     // ---------- v3: catalog + selection model ----------
     // w = the widget a product shows today (from another plan); drives the widget-switch notice.
     var CATALOG=[
-      {id:'p1',t:'Organic Cold-Pressed Juice',w:'multi-frequency',v:[['500ml',180],['1L',320],['2L',590]]},
+      {id:'p1',t:'Organic Cold-Pressed Juice',w:'multi-frequency',other:'Juice Cleanse Weekly',v:[['500ml',180],['1L',320],['2L',590]]},
       {id:'p2',t:'Green Detox Juice',w:'single-plan',v:[['300ml',150],['500ml',230]]},
       {id:'p3',t:'Beetroot Ginger Shot',v:[['6 x 60ml',299],['12 x 60ml',549]]},
       {id:'p4',t:'Orange Carrot Juice',v:[['500ml',190],['1L',340]]},
@@ -721,13 +754,13 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       {id:'p7',t:'Celery Cleanse',v:[['500ml',240]]},
       {id:'p8',t:'Amla Shot',v:[['6 x 60ml',249]]},
       {id:'p9',t:'Pomegranate Juice',v:[['500ml',260],['1L',470]]},
-      {id:'p10',t:'Tender Coconut Water',w:'multi-frequency',v:[['330ml',90],['1L',220]]},
+      {id:'p10',t:'Tender Coconut Water',w:'multi-frequency',other:'Plant Milk Weekly',v:[['330ml',90],['1L',220]]},
       {id:'p11',t:'ABC Juice',v:[['500ml',210],['1L',380]]},
       {id:'p12',t:'Kokum Cooler',v:[['500ml',160]]},
       {id:'p13',t:'Apple Cinnamon Juice',v:[['500ml',220],['1L',400]]},
       {id:'p14',t:'Jamun Juice',v:[['500ml',230]]},
-      {id:'p15',t:'Cold Brew Coffee',v:[['250ml',199],['1L',649]]},
-      {id:'p16',t:'Almond Milk',v:[['1L',299]]},
+      {id:'p15',t:'Cold Brew Coffee',tpl:'product.alt',v:[['250ml',199],['1L',649]]},
+      {id:'p16',t:'Almond Milk',tpl:'product.alt',v:[['1L',299]]},
       {id:'p17',t:'Oat Milk',v:[['1L',279]]},
       {id:'p18',t:'Glass Bottle',v:[['750ml',249]]},
       {id:'p19',t:'Travel Sample Kit',v:[['Mini',99],['Regular',199]]},
@@ -741,12 +774,13 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       {id:'c4',t:'Coffee',p:['p15']}
     ];
     var ROW_CAP=5;
-    var TPL_NAMES={'subscription-widget':'Subscription Widget','purchase-options':'Purchase Options','single-plan':'Single Plan','prepaid-only':'Prepaid Only','payg-only':'PAYG Only','multi-frequency':'Multi-Frequency','multi-delivery':'Multi-Delivery','international-plan':'International Plan'};
+    var TPL_NAMES={'subscription-widget':'Subscription Widget','purchase-options':'Purchase Options','single-plan':'Single Plan','prepaid-only':'Prepaid Only','payg-only':'Pay per delivery','multi-frequency':'Multi-Frequency','multi-delivery':'Multi-Delivery','international-plan':'International Plan'};
     function vid(p,i){ return p.id+'-'+i; }
     function esc(s){ return String(s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
     function prod(id){ return CATALOG.find(function(x){ return x.id===id; }); }
     function coll(id){ return COLLECTIONS.find(function(x){ return x.id===id; }); }
     // S.cols = chosen collections; S.sync[cid] = auto-add new products (off = snapshot); S.col = included variants
+    var NOBLOCK={'product.alt':true};   // product templates where the StackBack widget block is not added yet
     var S={ mode:'pv', pv:new Set(['p1-0','p1-1']), cols:[], sync:{}, col:new Set() };
     function scopeOf(cids){ var ids={}; cids.forEach(function(c){ coll(c).p.forEach(function(p){ ids[p]=1; }); }); return CATALOG.filter(function(p){ return ids[p.id]; }); }
     function colScope(){ return scopeOf(S.cols); }
@@ -763,10 +797,11 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       var gs=groups(set, scope), html='';
       gs.slice(0,ROW_CAP).forEach(function(g){
         var meta = g.n===g.p.v.length ? (g.p.v.length===1?'1 variant':'all '+g.p.v.length+' variants') : g.n+' of '+g.p.v.length+' variants';
-        html+='<div class="prow clk" data-edit="'+g.p.id+'" title="Click to edit variants"><s-thumbnail size="small"></s-thumbnail><span class="pname">'+esc(g.p.t)+'</span><span class="pmeta">&middot; '+meta+'</span>'+
+        html+='<div class="prow clk" data-edit="'+g.p.id+'" title="Click to edit variants"><s-thumbnail size="small"></s-thumbnail><span class="pname">'+esc(g.p.t)+'</span><span class="pmeta">&middot; '+meta+'</span>'+(g.p.other?'<span class="alsoin">Also in '+esc(g.p.other)+'</span>':'')+(NOBLOCK[g.p.tpl]?'<span class="alsoin">No widget block on its template</span>':'')+
               '<span class="pacts"><button class="x" data-rm="'+g.p.id+'">Remove &#10005;</button></span></div>';
       });
       if(gs.length>ROW_CAP) html+='<button class="lnk showall" data-all="1">Show all '+gs.length+' products &#8594;</button>';
+      if(gs.some(function(g){ return g.p.other; })) html+='<p class="help mpn">Products in two plans show both in one widget, the older plan first.</p>';
       if(!gs.length) html='<p class="help" style="margin:4px 0 0">No products selected yet.</p>';
       box.innerHTML=html;
       box.onclick=function(e){
@@ -1137,7 +1172,6 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     document.addEventListener('change', function(e){ if(e.target.closest('.optcard .discType')) renderOptionChecks(false); });
 
     // ---------- per-card buying-option editor (scoped) ----------
-    var TTD_DAYS=7, TTD_SET=false;   // store's order timing; default 7 days until set in Settings
     var PAYG_LABEL='by invoice and email reminder (pay-as-you-go)', LAD_MAX=10;   // rows in all; discount steps cap at 5 (LD-01)
     function ord(n){ var s=['th','st','nd','rd'], v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); }
     // one discount table: one discount level = flat, more = ladder (saved as LD-01 flat / ladder)
@@ -1167,7 +1201,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       function ladderLine(){
         var L=card._lad, parts=[], prev=null;
         L.forEach(function(s,i){ if(s.value!==prev) parts.push(fmtVal(card,s.value)+(i===0?' now':' from '+ord(s.n))); prev=s.value; });
-        var G=[]; L.forEach(function(s){ s.gifts.forEach(function(x){ G.push(((x.q||1)>1?x.q+' &times; ':'')+esc(giftLabel(x.g))+' on the '+ord(s.n)); }); });
+        var G=[]; L.forEach(function(s,i){ s.gifts.forEach(function(x){ G.push(((x.q||1)>1?x.q+' &times; ':'')+esc(giftLabel(x.g))+(i===L.length-1?' with every delivery from the '+ord(s.n):' on the '+ord(s.n))); }); });
         return (parts.length===1 ? fmtVal(card,L[0].value)+' off every delivery' : parts.join(' &rsaquo; '))+(G.length?' &middot; Free gifts: '+G.join(', '):'');
       }
       function on(el){ return el.classList.contains('on'); }
@@ -1184,7 +1218,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       }
       function fmtShort(v){ return card.querySelector('.discType').value==='amt' ? '&#8377;'+v : v+'%'; }
       card._discText=function(){ var L=card._lad, parts=[], prev=null; L.forEach(function(s,i){ if(s.value!==prev) parts.push(fmtVal(card,s.value)+(i===0?'':' from '+ord(s.n))); prev=s.value; }); return parts.length===1 ? parts[0]+' off' : parts.join(' &rsaquo; '); };
-      // visual breakup: a delivery track, then one bar row each for discount, gifts and every payment type; TTD under it
+      // visual breakup: a delivery track, then one bar row each for discount, gifts and every payment type; order cadence under it
       var IC_GIFT='<svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.5" y="8" width="13" height="8.5" rx="1"/><path d="M2.5 5.5h15V8h-15zM10 5.5v11M10 5.5C8.5 3 6 3 6 4.5S8.5 5.5 10 5.5c1.5 0 4-.5 4-1S11.5 3 10 5.5"/></svg>',
           IC_CLOCK='<svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l2.5 2"/></svg>';
       function breakupHTML(){
@@ -1193,32 +1227,40 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         var keys={1:1}; L.forEach(function(s){ keys[s.n]=1; }); if(pp){ keys[pp]=1; keys[pp+1]=1; } if(mode==='choice') keys[mm.min]=1; keys[N]=1;
         if(N<=8) for(var k=1;k<=N;k++) keys[k]=1;
         var ns=Object.keys(keys).map(Number).filter(function(n){ return n>=1 && n<=N; }).sort(function(a,b){ return a-b; }), C=[];
-        ns.forEach(function(n,i){ if(i && n-ns[i-1]>1) C.push({gap:1, a:ns[i-1]+1, b:n-1, n:ns[i-1]+1}); C.push({n:n}); });
+        ns.forEach(function(n,i){ var g=i ? n-ns[i-1]-1 : 0; if(g===1) C.push({n:n-1}); else if(g>1) C.push({gap:1, a:ns[i-1]+1, b:n-1, n:ns[i-1]+1}); C.push({n:n}); });
         if(mode==='none') C.push({more:1, n:N+1});
         var types=[]; if(on(payPre)) types.push('pre'); if(on(payAuto)) types.push('auto'); if(on(payPart)) types.push('part'); if(on(payGo)) types.push('payg');
         if(!types.length) return '<span class="help">Pick a payment type to see how this option runs.</span>';
         var lv=[], prev=null; L.forEach(function(s){ if(s.value!==prev) lv.push(s.value); prev=s.value; });
         function discAt(n){ var v=L[0].value; L.forEach(function(s){ if(s.n<=n) v=s.value; }); return v; }
-        function giftsAt(n){ var g=[]; L.forEach(function(s){ if(s.n===n) g=g.concat(s.gifts); }); return g; }
-        var endCol=C.length+2, r=0, h='<div class="tl" style="grid-template-columns:96px repeat('+C.length+',minmax(30px,1fr)) 92px">';
+        function giftsAt(n){ var g=[]; L.forEach(function(s,i){ if(s.n===n && i<L.length-1) g=g.concat(s.gifts); }); return g; }
+        var endCol=C.length+2, r=0, h='<div class="tl" style="grid-template-columns:96px '+C.map(function(c){ return c.gap ? 'minmax(48px,1.25fr)' : 'minmax(30px,1fr)'; }).join(' ')+' 92px">';
         function at(row,c1,c2,cls,html,title){ return '<span class="'+cls+'"'+(title?' title="'+esc(title)+'"':'')+' style="grid-row:'+row+';grid-column:'+c1+' / '+c2+'">'+html+'</span>'; }
         function runs(vals, row, cls, label){ for(var i=0;i<vals.length;){ var j=i; while(j+1<vals.length && vals[j+1]===vals[i]) j++; h+=at(row,i+2,j+3,cls(vals[i]),label(vals[i]),label(vals[i]).replace(/<[^>]+>/g,'')); i=j+1; } }
         // track
         r++; h+=at(r,1,2,'lb','Delivery');
-        h+=at(r,2,endCol+1,'trk','');
         C.forEach(function(c,i){
           var html = c.gap ? (c.a===c.b?c.a:c.a+'-'+c.b) : c.more ? '&hellip;' : c.n;
-          h+=at(r,i+2,i+3,'node'+(c.gap||c.more?' sk':'')+(mode==='choice' && !c.gap && !c.more && c.n>mm.min?' opt':''), '<i>'+html+'</i>', c.gap?'Deliveries '+c.a+' to '+c.b:c.more?'Continues until the customer cancels':'');
+          var optn = mode==='choice' && !c.more && c.n>mm.min;
+          h+=at(r,i+2,i+3,'node'+(i===0?' first':'')+(i===C.length-1?' last':'')+(c.gap||c.more?' sk':'')+(optn?' optn':''), '<i>'+html+'</i>', c.gap?'Deliveries '+c.a+' to '+c.b+(optn?' (optional)':''):c.more?'Continues until the customer cancels':optn?'Optional: the customer may stop before this':'');
         });
-        h+=at(r,endCol,endCol+1,'node endn','<i>'+(mode==='none'?'&infin;':'&#9632;')+'</i>');
         // discount
         r++; h+=at(r,1,2,'lb','Discount');
-        runs(C.map(function(c){ return discAt(c.n); }), r, function(v){ return 'bar dsc l'+Math.min(lv.indexOf(v),4); }, function(v){ return fmtShort(v)+' off'; });
+        runs(C.map(function(c){ return discAt(c.n); }), r, function(v){ return 'bar dsc l'+Math.min(lv.indexOf(v),4); }, function(v){ return fmtShort(v); });
+        // course: what ships on each delivery (the first starter's course)
+        if(S.mode==='course' && S.courses && S.courses.length){
+          var CO=S.courses[0];
+          var shipAt=function(n){ var row=null; (CO.rows||[]).forEach(function(rw){ if(rw.n<=n) row=rw; }); return row && row.items.length ? row.items.map(function(it){ return it.pid; }) : [CO.pid]; };
+          r++; h+=at(r,1,2,'lb','Ships');
+          runs(C.map(function(c){ return shipAt(c.n).join(','); }), r, function(){ return 'bar shp'; }, function(v){ var ids=v.split(','); var t=prod(ids[0]).t; return esc(t.length>18?t.slice(0,17)+'...':t)+(ids.length>1?' +'+(ids.length-1):''); });
+        }
         // gifts
         if(L.some(function(s){ return s.gifts.length; })){
           r++; h+=at(r,1,2,'lb','Free gift');
           C.forEach(function(c,i){ var g=(c.gap||c.more)?[]:giftsAt(c.n); if(!g.length) return; var q=g.reduce(function(a,x){ return a+(x.q||1); },0);
             h+=at(r,i+2,i+3,'gf',IC_GIFT+(q>1?'<small>'+q+'</small>':''), g.map(function(x){ return ((x.q||1)>1?x.q+' x ':'')+giftLabel(x.g); }).join(', ')); });
+          var LG=L[L.length-1], gi0=-1; C.forEach(function(c,i){ if(gi0<0 && c.n>=LG.n) gi0=i; });
+          if(LG.gifts.length && gi0>=0) h+=at(r,gi0+2,C.length+2,'bar gift',IC_GIFT+'<span>Every delivery</span>', LG.gifts.map(function(x){ return ((x.q||1)>1?x.q+' x ':'')+giftLabel(x.g); }).join(', ')+', with every delivery from '+LG.n);
         }
         // payment
         var LBL={pre:'Prepaid',auto:'AutoPay',part:'Partial prepaid',payg:'Pay as you go'}, TXT={pre:'Paid at checkout',auto:'Charged before each delivery',payg:'Invoice each delivery'}, m=rnMode();
@@ -1229,8 +1271,10 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
           h+=at(r,endCol,endCol+1,'end',end);
         });
         h+='</div><div class="tlfoot">';
-        if(mode==='choice') h+='<span>Dashed: the customer can stop before this delivery.</span>';
-        h+='<span class="ttd">'+IC_CLOCK+'Order placed <b>'+TTD_DAYS+' days</b> before each delivery (TTD)'+(TTD_SET?'':' <span class="badge2 attn">Store default</span>')+'</span></div>';
+        if(mode==='choice') h+='<span>The customer picks '+mm.min+' to '+mm.max+' deliveries. Dashed ones are optional.</span>';
+        if(card._cmN && card._cmN()>1) h+='<span>Customers can cancel after delivery '+card._cmN()+'.</span>';
+        var fq=schedFixed.parentNode.querySelectorAll('.field'), fn=(fq[0]&&fq[0].textContent.trim())||'1', fu=(fq[1]&&fq[1].textContent.trim())||'month';
+        h+='<span class="ttd">'+IC_CLOCK+'First order at checkout, then one '+(fn==='1' ? 'every '+fu.replace(/s$/,'') : 'every '+fn+' '+fu)+'</span></div>';
         return h;
       }
       function renderDeliveryPreview(){
@@ -1243,6 +1287,8 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         if(on(payGo)) parts.push('pay as you go '+count+', billed by invoice and email reminder as each delivery ships');
         var body = !parts.length ? 'no payment option is selected yet' : parts.length===1 ? 'the customer will '+parts[0] : 'the customer chooses to '+parts.join('; or to ');
         deliveryPreview.innerHTML=breakupHTML();
+        if(card._checks) card._checks();
+        if(typeof renderWidget==='function') renderWidget();
         if(typeof renderAdaptCodes==='function') renderAdaptCodes();
       }
       function syncPay(){
@@ -1255,6 +1301,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         ppCfg.classList.toggle('hide', !on(payPart)); validatePP();
         var noEndOk = pd && !prepaid;
         durNoneBtn.classList.toggle('hide', !noEndOk);
+        if(ladPre) ladPre.classList.toggle('hide', !(discMode(card)==='ladder' && on(payPre)));
         if(!noEndOk && durNoneBtn.classList.contains('on')) setDuration('fixed');
         renderDeliveryPreview(); validateLadder(); validateGifts(); validatePP();
         document.dispatchEvent(new Event('sb:pay'));
@@ -1264,8 +1311,6 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       [payPre, payAuto, payPart, payGo].forEach(function(chip){
         chip.addEventListener('click', function(){
           if(chip.classList.contains('locked')) return;
-          // a ladder needs at least one per-delivery payment type left on
-          if(chip!==payPre && on(chip) && discMode(card)==='ladder' && (on(payAuto)+on(payGo)+on(payPart))===1) return;
           var wasPdOnly = !on(payPre) && perDel();
           chip.classList.toggle('on');
           if(!wasPdOnly && !on(payPre) && perDel()) setDuration('none');
@@ -1274,13 +1319,11 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       });
 
       unitSel.addEventListener('change', function(){ renderLadder(); });
-      // Prepaid needs one price per delivery, so it locks off once the table has more than one discount level (LD-01 R3)
+      // Prepaid works with a ladder: the upfront amount is every delivery at its own discount
       var ladPre=q('.ladPre'), preLocked=false;
       function applyPrepaidRule(){
         var multi=discMode(card)==='ladder';
-        if(multi && !preLocked){ payPre.classList.remove('on'); payPre.classList.add('locked'); payPre.title='Not available when deliveries get different discounts'; if(!perDel()) payGo.classList.add('on'); preLocked=true; syncPay(); }
-        else if(!multi && preLocked){ payPre.classList.remove('locked'); payPre.title=''; preLocked=false; syncPay(); }
-        ladPre.classList.toggle('hide', !multi);
+        ladPre.classList.toggle('hide', !(multi && on(payPre)));
         if(typeof renderOptionChecks==='function') renderOptionChecks(false);
       }
 
@@ -1302,7 +1345,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
             html+='<div class="lgap">'+(a===b?'Delivery '+a:'Deliveries '+a+' to '+b)+': '+fmtVal(card,L[i-1].value)+' off, no gift (same as delivery '+L[i-1].n+')</div>'; }
           var dl = i===0 ? '<span class="rowline" style="gap:6px;flex-wrap:nowrap"><span class="field lfix" style="width:46px" title="Delivery 1 is always the first row">1</span>'+(last===0?'<span class="help">onwards</span>':'')+'</span>'
                          : '<span class="rowline" style="gap:6px;flex-wrap:nowrap"><input class="field lin lfrom" type="number" min="2" value="'+s.n+'" aria-label="Delivery number" />'+(i===last?'<span class="help">onwards</span>':'')+'</span>';
-          var gifts = s.gifts.map(function(x,gi){ return giftCard(x,gi); }).join('')+
+          var gifts = s.gifts.map(function(x,gi){ return giftCard(x,gi); }).join('')+(i===last && s.gifts.length ? '<span class="help gevery">Ships with every delivery from '+s.n+'</span>' : '')+
                       (s.gifts.length ? '<button type="button" class="lnk lgadd">&#65291; Add another gift</button>' : '<button type="button" class="btnghost lgadd">&#65291; Add gift</button>');
           html+='<div class="ladrow" data-i="'+i+'">'+dl+
             '<span class="rowline" style="gap:6px;flex-wrap:nowrap">'+(amt?'<span class="help">INR</span>':'')+'<input class="field lin lval" type="number" min="0" value="'+s.value+'" aria-label="Discount" /><span class="help">'+(amt?'off':'% off')+'</span></span>'+
@@ -1362,6 +1405,28 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       bTxt.addEventListener('input', function(){ bChip.textContent=bTxt.value; bChip.classList.toggle('hide', !bTxt.value.trim()); });
       setCol(bCol.value);
 
+      // commitment (per-delivery payments only) and the UPI AutoPay per-debit limit
+      var cmRow=q('.cmRow'), cmN=q('.cmN'), cmErr=q('.cmErr'), upiWarn=q('.upiWarn'), UPI_MAX=15000;
+      function checkCommit(){
+        var show=perDel(); cmRow.classList.toggle('hide', !show);
+        var n=parseInt(cmN.value,10)||1, dur=curDur(), mm=minMax(), msg='';
+        if(show && dur==='fixed'){ var f=parseInt(schedFixed.querySelector('.field').textContent,10)||0; if(n>f) msg='This option has '+f+' deliveries, so customers could never cancel early. Use '+f+' or fewer.'; }
+        if(show && dur==='choice' && n>mm.min) msg='The shortest choice is '+mm.min+' deliveries. Keep the commitment at '+mm.min+' or fewer.';
+        cmErr.textContent=msg; cmErr.classList.toggle('hide', !msg);
+      }
+      function checkUpi(){
+        var a=on(payAuto)||on(payPart), top=0, qmax=1;
+        groups(activeSet(), CATALOG).forEach(function(g){ g.p.v.forEach(function(v){ top=Math.max(top, v[1]); }); });
+        var minOff=Math.min.apply(null, card._lad.map(function(x){ return x.value; })), amt=unitSel.value==='amt';
+        var charge=Math.round(amt ? (top-minOff)*qmax : top*qmax*(1-minOff/100));
+        var over=a && charge>UPI_MAX;
+        upiWarn.textContent = over ? 'One AutoPay charge can reach INR '+charge.toLocaleString('en-IN')+', above the UPI AutoPay limit of INR 15,000. Customers paying by UPI will be asked for a card or eNACH mandate instead.' : '';
+        upiWarn.classList.toggle('hide', !over);
+      }
+      card._cmN=function(){ return perDel() ? (parseInt(cmN.value,10)||1) : 1; };
+      card._checks=function(){ checkCommit(); checkUpi(); };
+      cmN.addEventListener('input', function(){ checkCommit(); renderDeliveryPreview(); });
+      card._relad=renderLadder;
       card._preview=renderDeliveryPreview;
       syncPay(); renderLadder();
     }
@@ -1470,14 +1535,30 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       var box=$('adCodes'); if(!box || !AUTO_DISC) return;
       var pn=(typeof planName!=='undefined' && planName && planName.value) || 'Plan',
           pre=pn.replace(/[^A-Za-z ]/g,'').split(/\s+/).filter(Boolean).map(function(w){ return w[0]; }).join('').toUpperCase().slice(0,4) || 'SB', rows=[];
+      var live=(typeof pState!=='undefined' && pState==='live');
       [].slice.call(document.querySelectorAll('.optcard[data-opt]')).forEach(function(c,i){
         if(!c.querySelector('.pay-prepaid.on,.pay-payg.on')) return;
-        rows.push('<div class="adrow"><code>SB-'+pre+'-'+(i+1)+'</code><span>'+esc(c.querySelector('.optsum .title').textContent)+'</span><span class="mu">'+(c._discText?c._discText():'')+'</span></div>');
+        var L=c._lad||[{n:1,value:0}], runs=[], prev=null, amt=c.querySelector('.discType').value==='amt';
+        L.forEach(function(s){ if(s.value!==prev) runs.push({v:s.value, a:s.n}); prev=s.value; });
+        runs.forEach(function(r,j){ r.b = j+1<runs.length ? runs[j+1].a-1 : null; });
+        if(!c._codeEdit) c._codeEdit={};
+        runs.forEach(function(r,j){
+          var code=c._codeEdit[j] || ('SB-'+pre+'-'+(i+1)+(runs.length>1 ? String.fromCharCode(65+j) : ''));
+          var when = runs.length===1 ? 'every delivery' : r.b===null ? 'from delivery '+r.a : (r.a===r.b ? 'delivery '+r.a : 'deliveries '+r.a+' to '+r.b);
+          rows.push('<div class="adrow'+(j?' sub':'')+'"><input class="adcode" data-i="'+i+'" data-l="'+j+'" value="'+esc(code)+'" maxlength="24" aria-label="Discount code"'+(live?' readonly':'')+' /><span>'+(j?'':esc(c.querySelector('.optsum .title').textContent))+'</span><span class="mu">'+(amt?'INR '+r.v:r.v+'%')+' off &middot; '+when+'</span>'+(live?'<button class="lnk adEditD">Edit in Shopify &#8599;</button>':'')+'</div>');
+        });
       });
       box.innerHTML = rows.length ? rows.join('') : '<div class="adrow"><span class="mu">No Prepaid or Pay as you go option yet.</span></div>';
+      $('adCodeNote').textContent = (typeof pState!=='undefined' && pState==='live') ? 'Codes live in Shopify Discounts now; rename them there.' : 'You can rename a code until you publish.';
       $('adConf').innerHTML = AUTO_DISC.map(function(d){ return '<div class="adrow cf"><span><b>'+esc(d.t)+'</b><br><span class="mu">Automatic &middot; doesn\'t combine with product discounts</span></span><button class="lnk adEditD">Edit in Shopify &#8599;</button></div>'; }).join('');
       $('adConfN').textContent=AUTO_DISC.length;
     }
+    document.addEventListener('input', function(e){
+      var t=e.target.closest && e.target.closest('.adcode'); if(!t) return;
+      var v=t.value.toUpperCase().replace(/[^A-Z0-9_-]/g,''); if(v!==t.value) t.value=v;
+      var c=document.querySelectorAll('.optcard[data-opt]')[+t.dataset.i]; if(c){ c._codeEdit=c._codeEdit||{}; c._codeEdit[t.dataset.l]=v; }
+    });
+    document.addEventListener('focusout', function(e){ var t=e.target.closest && e.target.closest('.adcode'); if(t && !t.value){ var c=document.querySelectorAll('.optcard[data-opt]')[+t.dataset.i]; if(c._codeEdit) delete c._codeEdit[t.dataset.l]; renderAdaptCodes(); toast('A code needs at least one character, so the default is back.'); } });
     document.addEventListener('click', function(e){ if(e.target.closest('.adEditD')) toast('Opens this discount in Shopify Discounts. Turn on combining with product discounts, or exclude the plan\'s products.'); });
     function renderAdapt(){
       var on=adaptOn(), txt = on ? 'Non-Shopify checkout on' : 'Non-Shopify checkout off';
@@ -1526,11 +1607,39 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     // ---------- widget template: one pick, with a switch notice ----------
     // Picking a template makes it live on this plan's products at publish. A product that shows a
     // different widget today is switched over and turned off in that widget; activation from Widgets is unchanged.
-    var wTpl={value:'subscription-widget'}, wBadge=$('wBadge');   // chosen in Widgets; this screen only shows it
+    var wTpl={value:'purchase-options'}, wBadge=$('wBadge');   // chosen in Widgets; this screen only shows it
+    // what this plan offers, for checking the widget each product already shows
+    function planFacts(){
+      var cards=[].slice.call(document.querySelectorAll('.optcard[data-opt]')), pay={}, fr={}, len={};
+      cards.forEach(function(c){
+        ['prepaid','auto','part','payg'].forEach(function(k){ if(c.querySelector('.pay-'+k+'.on')) pay[k]=1; });
+        var f=c.querySelector('.sched-fixed').closest('.ssent').querySelectorAll('.field'); fr[(f[0]?f[0].textContent:'')+' '+(f[1]?f[1].textContent:'')]=1;
+        var d=c.querySelector('.durSeg button.on'); len[d && d.dataset.dur==='fixed' ? (f[2]?f[2].textContent:'') : (d?d.dataset.dur:'')]=1;
+      });
+      return {n:cards.length, pay:pay, fr:Object.keys(fr).length, len:Object.keys(len).length};
+    }
+    var PAYN={prepaid:'Prepaid',auto:'AutoPay',part:'Partial prepaid',payg:'Pay as you go'};
+    function widgetIssue(k, F){
+      var have=Object.keys(F.pay), hid;
+      if(k==='single-plan' && F.n>1) return 'shows only the first of '+F.n+' buying options';
+      if(k==='prepaid-only'){ if(!F.pay.prepaid) return 'shows nothing: this plan has no Prepaid option'; hid=have.filter(function(x){ return x!=='prepaid'; }); if(hid.length) return 'hides '+hid.map(function(x){ return PAYN[x]; }).join(', '); }
+      if(k==='payg-only'){ hid=have.filter(function(x){ return x==='prepaid'||x==='part'; }); if(hid.length===have.length) return 'shows nothing: this plan has no AutoPay or Pay as you go option'; if(hid.length) return 'hides '+hid.map(function(x){ return PAYN[x]; }).join(', '); }
+      if(k==='multi-frequency' && F.fr<2) return 'needs two or more delivery frequencies';
+      if(k==='multi-delivery' && F.len<2) return 'needs two or more plan lengths';
+      if(k==='international-plan') return 'needs an international market, which this store has not set up';
+      return '';
+    }
     function renderWidget(){
+      if(!wBadge) return;
       var name=TPL_NAMES[wTpl.value], has=groups(activeSet(), activeScope()).length>0;
+      var F=planFacts(), iss=[];
+      groups(activeSet(), CATALOG).forEach(function(g){ var k=g.p.w||'purchase-options', m=widgetIssue(k,F); if(m) iss.push('<b>'+esc(g.p.t)+'</b> &middot; '+esc(TPL_NAMES[k]||k)+' '+m+'.'); });
+      var nb=groups(activeSet(), CATALOG).filter(function(g){ return NOBLOCK[g.p.tpl]; });
+      var nbHtml = nb.length ? '<div class="wiss"><b>'+nb.map(function(g){ return esc(g.p.t); }).join(', ')+'</b> '+(nb.length>1?'show':'shows')+' no widget: the '+esc(nb[0].p.tpl)+' template has no widget block.<div style="margin-top:6px"><button class="lnk thGo">Open theme editor &#8599;</button></div></div>' : '';
+      $('wIssues').innerHTML = nbHtml + (iss.length ? '<div class="wiss">'+iss.join('<br>')+'</div>' : '');
+      if(nb.length) iss.push('noblock');
       var live=pState==='live';
-      wBadge.textContent = !has ? 'No products yet' : live ? 'Live' : 'Goes live on publish'; wBadge.className = !has ? 'badge2 sub' : live ? 'badge2 ok' : 'badge2 info';
+      wBadge.textContent = !has ? 'No products yet' : iss.length ? 'Check widgets' : live ? 'Live' : 'Goes live on publish'; wBadge.className = !has ? 'badge2 sub' : iss.length ? 'badge2 attn' : live ? 'badge2 ok' : 'badge2 info';
       $('wSelect').title='Opens Widgets, where you assign a widget to each product';
     }
 
@@ -1547,9 +1656,55 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       if(st==='live'){ btn('secondary-actions','Duplicate','dup'); btn('secondary-actions','Move to draft','todraft'); btn('primary-action','Save','save',1); }
       if(st==='draft'){ btn('secondary-actions','Duplicate','dup'); btn('primary-action','Publish','publish',1); }
       PG.setAttribute('heading', st==='new' ? 'Create subscription plan' : pName());
-      renderWidget();
+      renderWidget(); renderAdaptCodes();
       var b=$('planState'); b.textContent = st==='live' ? 'Live' : st==='draft' ? 'Draft' : 'Not live yet'; b.className='badge2 '+(st==='live'?'ok':st==='draft'?'sub':'info');
     }
+    // everything that must be fixed before a plan can go live
+    function planErrors(){
+      var E=[], cards=[].slice.call(document.querySelectorAll('.optcard[data-opt]'));
+      if(!(planName && planName.value && planName.value.trim())) E.push({t:'Give the plan a name.', el:planName});
+      if(!groups(activeSet(), CATALOG).length) E.push({t:'Add at least one product.', el:steps[0]});
+      if(!cards.length) E.push({t:'Add at least one buying option.', el:steps[1]});
+      cards.forEach(function(c){
+        var nm=c.querySelector('.optsum .title').textContent;
+        if(!c.querySelector('.pay-prepaid.on,.pay-auto.on,.pay-part.on,.pay-payg.on')) E.push({t:nm+': pick a payment type.', el:c});
+        ['.ppErr','.chErr','.cmErr','.ladwarn'].forEach(function(sl){ var el=c.querySelector(sl); if(el && !el.classList.contains('hide') && el.textContent.trim()) E.push({t:nm+': '+el.textContent.trim(), el:c}); });
+      });
+      if(adaptOn()){ var seen={}; document.querySelectorAll('.adcode').forEach(function(i){ var v=i.value.trim(); if(!v) E.push({t:'A discount code is empty.', el:i}); else if(seen[v]) E.push({t:'Discount code '+v+' is used twice.', el:i}); seen[v]=1; }); }
+      return E;
+    }
+    function goTo(el){
+      var st=el.closest && el.closest('.step'); if(st){ var b=st.querySelector('.stepbody'); if(b) b.classList.remove('collapsed'); }
+      var oc=el.closest && el.closest('.optcard'); if(oc && oc.querySelector('.opteditor').classList.contains('hide')) oc.querySelector('.t-edit').click();
+      el.scrollIntoView({block:'center', behavior:'smooth'}); el.classList.add('flash'); setTimeout(function(){ el.classList.remove('flash'); }, 1600);
+    }
+    function showErrors(E){
+      var back=document.createElement('div'); back.className='mback';
+      back.innerHTML='<div class="modal" role="dialog" aria-modal="true" style="width:520px"><div class="mhdr"><h3>Fix '+E.length+' thing'+(E.length>1?'s':'')+' before publishing</h3><button class="mclose" data-close="1" aria-label="Close">&#10005;</button></div>'+
+        '<div class="errl">'+E.map(function(x,i){ return '<button class="errrow" data-i="'+i+'"><span>'+esc(x.t)+'</span><span class="lnk">Go to &#8594;</span></button>'; }).join('')+'</div>'+
+        '<div class="mfoot"><span></span><span class="macts"><button class="pbtn" data-close="1">Close</button></span></div></div>';
+      document.body.appendChild(back);
+      back.addEventListener('click', function(e){
+        if(e.target===back || e.target.closest('[data-close]')){ back.remove(); return; }
+        var r=e.target.closest('.errrow'); if(r){ back.remove(); goTo(E[+r.dataset.i].el); }
+      });
+    }
+    // presets fill the first buying option
+    function applyPreset(k, fromLink){
+      if(k==='course'){ aseg.querySelector('[data-lvl="course"]').click(); goTo(steps[0]); toast('Course plan: add a starter product, then the products for later deliveries.'); return; }
+      var c=document.querySelector('.optcard[data-opt]'); if(!c) return;
+      var stb=steps[1].querySelector('.stepbody'); if(stb) stb.classList.remove('collapsed');
+      if(c.querySelector('.opteditor').classList.contains('hide')) c.querySelector('.t-edit').click();
+      var want = k==='save' ? {auto:1,payg:1} : k==='prepaid' ? {prepaid:1} : {auto:1};
+      ['prepaid','auto','part','payg'].forEach(function(x){ var ch=c.querySelector('.pay-'+x); if(want[x] && !ch.classList.contains('on')) ch.click(); });
+      ['prepaid','auto','part','payg'].forEach(function(x){ var ch=c.querySelector('.pay-'+x); if(!want[x] && ch.classList.contains('on')) ch.click(); });
+      var f=c.querySelector('.sched-fixed').closest('.ssent').querySelectorAll('.field');
+      if(k==='save'){ f[0].textContent='1'; f[1].textContent='month'; c.querySelector('[data-dur="none"]').click(); c._lad=[{n:1,value:10,gifts:[]}]; c.querySelector('.optsum .title').innerHTML='Every month &middot; no end date'; }
+      if(k==='prepaid'){ f[0].textContent='1'; f[1].textContent='month'; c.querySelector('[data-dur="fixed"]').click(); f[2].textContent='3'; c._lad=[{n:1,value:15,gifts:[]}]; c.querySelector('.optsum .title').innerHTML='Every month &middot; 3 deliveries'; }
+      if(k==='ladder'){ f[0].textContent='1'; f[1].textContent='month'; c.querySelector('[data-dur="fixed"]').click(); f[2].textContent='6'; c._lad=[{n:1,value:10,gifts:[]},{n:3,value:15,gifts:[]},{n:5,value:20,gifts:[]}]; c.querySelector('.optsum .title').innerHTML='Every month &middot; 6 deliveries'; }
+      c._relad(); if(!fromLink) goTo(c); toast('Started from a preset. Change anything you like.');
+    }
+    document.addEventListener('click', function(e){ if(e.target.closest && e.target.closest('.thGo')) toast('Opens the theme editor on that template, with the StackBack block ready to add.'); });
     function confirmToDraft(){
       var back=document.createElement('div'); back.className='mback';
       back.innerHTML='<div class="modal" role="dialog" aria-modal="true" style="width:440px"><div class="mhdr"><h3>Move this plan to draft?</h3><button class="mclose" data-close="1" aria-label="Close">&#10005;</button></div>'+
@@ -1564,13 +1719,14 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     document.addEventListener('click', function(e){
       var a=e.target.closest && e.target.closest('[data-pa]'); if(!a) return;
       var k=a.dataset.pa;
-      if(k==='publish'){ setPlanState('live'); toast('Plan published. It\'s live on its products.'); }
+      if(k==='publish'){ var errs=planErrors(); if(errs.length){ showErrors(errs); return; } setPlanState('live'); toast('Plan published. It\'s live on its products.'); }
       if(k==='draft'){ setPlanState('draft'); toast('Saved as draft.'); }
-      if(k==='dup') toast('Copy created as a draft: '+pName()+' (copy).');
+      if(k==='dup') toast('Copy created as a draft: '+pName()+' (copy). It gets its own discount codes.');
       if(k==='todraft') confirmToDraft();
       if(k==='save') toast('Saved. Changes apply to new subscriptions only.');
     });
     setPlanState(/live/.test(location.hash) ? 'live' : 'new');
+    var pm=location.hash.match(/preset=([a-z]+)/); if(pm) setTimeout(function(){ applyPreset(pm[1], true); window.scrollTo(0,0); }, 0);
     setLevel(S.cols.length && !S.pv.size ? 'collection' : 'pv'); renderAdaptAvail(); renderRenewPlan();
   })();
 </script>
