@@ -77,12 +77,14 @@
   .deliveryPreview:has(.tl){background:#fff}
   .tl{display:grid;align-items:center;row-gap:8px;column-gap:0;font-size:12px}
   .tl .lb{color:var(--p-muted);font-size:11.5px;font-weight:500;padding-right:8px;white-space:nowrap}
-  .tl .trk{align-self:center;height:2px;background:#d4d4d4;margin:0 14px;border-radius:2px}
-  .tl .node{justify-self:center;position:relative;z-index:1;display:grid;place-items:center}
+  .tl .node{justify-self:stretch;position:relative;display:grid;place-items:center}
+  .tl .node::before,.tl .node::after{content:'';position:absolute;top:50%;height:2px;margin-top:-1px;background:#d4d4d4}
+  .tl .node::before{left:0;right:50%}.tl .node::after{left:50%;right:0}
+  .tl .node.first::before,.tl .node.last::after{display:none}
+  .tl .node i{position:relative;z-index:1}
   .tl .node i{font-style:normal;min-width:22px;height:22px;padding:0 4px;box-sizing:border-box;border-radius:11px;background:#fff;border:1.5px solid #8a8a8a;display:grid;place-items:center;font-weight:600;font-size:11px;color:var(--p-ink)}
   .tl .node.opt i{border-style:dashed;color:var(--p-muted)}
   .tl .node.sk i{border:0;background:#fff;color:var(--p-faint);font-weight:500}
-  .tl .node.endn i{border:0;background:#303030;color:#fff;font-size:8px;min-width:18px;height:18px}
   .tl .gf{justify-self:center;display:inline-flex;align-items:center;gap:1px;color:#8a5b00}
   .tl .gf small{font-size:10px;font-weight:700}
   .tl .bar{min-height:22px;box-sizing:border-box;display:flex;align-items:center;padding:2px 9px;margin:0 2px;border-radius:7px;font-size:11px;font-weight:600;line-height:1.25}
@@ -361,7 +363,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
   .wrow.hd .bsel{grid-column:2 / -1;display:flex;align-items:center;gap:12px;font-weight:600}
   .wrow.hd .bsel .wsel{width:240px;flex:none;font-weight:400;padding-top:3px;padding-bottom:3px}
   .wtbl{border-top:1px solid var(--p-line)}
-  .wrow{display:grid;grid-template-columns:28px minmax(220px,1.4fr) minmax(180px,1fr) 260px;gap:14px;align-items:center;min-height:44px;padding:10px 16px;border-bottom:1px solid var(--p-line2);font-size:13px}
+  .wrow{display:grid;grid-template-columns:28px minmax(220px,1.3fr) minmax(180px,1fr) 320px;gap:14px;align-items:center;min-height:44px;padding:10px 16px;border-bottom:1px solid var(--p-line2);font-size:13px}
   .wrow.hd{font-size:12px;font-weight:600;color:var(--p-muted);background:#f7f7f7;padding:7px 16px}
   .wrow:last-child{border-bottom:0}
   .wprod{display:flex;gap:10px;align-items:center;min-width:0}
@@ -378,7 +380,45 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
   .wcard{border:1px solid var(--p-line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
   .wcard .t{font-weight:600;display:flex;gap:6px;align-items:center}
   .wcard .m{font-size:12px;color:var(--p-muted)}
-  .wacts{display:flex;gap:14px;margin-top:4px}
+  .wacts{display:flex;gap:14px;margin-top:6px}
+  .wcard{padding:0;overflow:hidden;gap:0}
+  .wcard .wbody{padding:12px 14px;display:flex;flex-direction:column;gap:3px}
+  .wcard .m b{color:var(--p-ink);font-weight:600}
+  .wcard .m.u{margin-top:2px}
+  .wthumb{display:flex;align-items:center;justify-content:center;width:100%;height:178px;box-sizing:border-box;border:0;border-bottom:1px solid var(--p-line);background:#f6f6f7;padding:12px 18px;cursor:zoom-in;font:inherit}
+  .wthumb .mw{width:100%;text-align:left}
+  .mw .mt{text-align:center}
+  .wcard .wbody{flex:1}
+  .wcard .wacts{margin-top:auto;padding-top:6px}
+  .wcell{display:flex;align-items:center;gap:10px}
+  .wcell .wsel{flex:1}
+  .mw{--acc:#1f6f43;background:#fff;border:1px solid #e3e3e3;border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:6px;font-size:10.5px;color:#303030;pointer-events:none;max-width:260px;margin:0 auto}
+  .mw .mr{display:flex;align-items:center;gap:7px;border:1px solid #e3e3e3;border-radius:7px;padding:5px 7px}
+  .mw .mr.on{border-color:var(--acc);background:#f1f8f4}
+  .mw .rd{width:9px;height:9px;border-radius:50%;border:1.5px solid #8a8a8a;flex:none}
+  .mw .mr.on .rd{border-color:var(--acc);background:radial-gradient(var(--acc) 45%,transparent 50%)}
+  .mw .ml{flex:1;display:flex;flex-direction:column;font-weight:600}
+  .mw .ml small,.mw .mp small{font-weight:400;color:#616161;font-size:9px}
+  .mw .mp{font-weight:700}
+  .mw .mcs{display:flex;gap:4px;flex-wrap:wrap}
+  .mw .mc{border:1px solid #d4d4d4;border-radius:999px;padding:1px 7px;font-size:9.5px;white-space:nowrap}
+  .mw .mc.on{background:var(--acc);border-color:var(--acc);color:#fff}
+  .mw .mq{font-weight:600;font-size:10px}
+  .mw .mtiles{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .mw .mt{border:1px solid #e3e3e3;border-radius:7px;padding:6px;display:flex;flex-direction:column;gap:2px;text-align:center}
+  .mw .mt.on{border-color:var(--acc);background:#f1f8f4}
+  .mw .mbtn{background:var(--acc);color:#fff;text-align:center;border-radius:7px;padding:5px;font-weight:700}
+  .mw .mempty{color:#8a6116;background:#fff5e0;border-radius:6px;padding:12px 8px;text-align:center}
+  .mw.big{font-size:13px;max-width:340px;gap:9px;padding:14px}
+  .mw.big .mc{font-size:12px;padding:2px 10px}.mw.big .ml small,.mw.big .mp small{font-size:11px}.mw.big .mq{font-size:13px}.mw.big .rd{width:12px;height:12px}
+  .pvbody{display:grid;grid-template-columns:220px 1fr;gap:18px;padding:16px 18px}
+  .pvctl{display:flex;flex-direction:column;gap:12px}
+  .pvctl label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--p-muted)}
+  .pvctl .m{font-size:12px;color:var(--p-muted);line-height:1.5}
+  .pvctl .m b{color:var(--p-ink)}
+  .pvstage{background:#f6f6f7;border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px}
+  .pvprod{display:flex;gap:10px;align-items:center;font-size:13px}
+  .pvprod .m{font-size:12px;color:var(--p-muted)}
   .wempty{padding:24px 16px;color:var(--p-muted);text-align:center}
 </style>
 </head>
@@ -445,31 +485,38 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
   var PAY={pre:'Prepaid',auto:'AutoPay',part:'Partial prepaid',payg:'Pay as you go'};
   // widget templates; shows = payment types it can display (null = all), one = shows a single buying option
   var TPL=[
-    {k:'subscription-widget',n:'Subscription Widget',d:'Every payment type and frequency.'},
-    {k:'purchase-options',n:'Purchase Options',d:'One-time purchase or subscribe.'},
-    {k:'single-plan',n:'Single Plan',d:'One buying option, no choices.',one:1},
-    {k:'prepaid-only',n:'Prepaid Only',d:'Prepaid options only.',shows:['pre']},
-    {k:'payg-only',n:'PAYG Only',d:'Pay as you go options only.',shows:['payg']},
-    {k:'multi-frequency',n:'Multi-Frequency',d:'Customer picks how often.'},
-    {k:'multi-delivery',n:'Multi-Delivery',d:'Customer picks how many deliveries.'},
-    {k:'international-plan',n:'International Plan',d:'Pricing for international markets.'}
+    {k:'subscription-widget',n:'Subscription Widget',best:'Most products',show:'Every buying option and payment type'},
+    {k:'purchase-options',n:'Purchase Options',best:'Products also sold as a one-time buy',show:'One-time purchase next to Subscribe'},
+    {k:'single-plan',n:'Single Plan',best:'Products with one buying option',show:'That one option, no choices',one:1},
+    {k:'prepaid-only',n:'Prepaid Only',best:'Plans paid upfront',show:'Prepaid options only',shows:['pre']},
+    {k:'payg-only',n:'Pay per delivery',best:'Products paid as each delivery comes',show:'Pay as you go and AutoPay',shows:['payg','auto']},
+    {k:'multi-frequency',n:'Multi-Frequency',best:'Products bought at different rhythms',show:'A picker for how often'},
+    {k:'multi-delivery',n:'Multi-Delivery',best:'Plans offered in different lengths',show:'A picker for how many deliveries'},
+    {k:'international-plan',n:'International Plan',best:'Stores selling abroad',show:'Prices in the customer currency'}
   ];
-  var PLANS={fj:{n:'Fresh Juice Subscription',draft:1,pay:['pre','auto','part'],opts:2},cb:{n:'Cold Brew Monthly',pay:['pre'],opts:1},mk:{n:'Plant Milk Weekly',pay:['payg','auto'],opts:3}};
+  var PLANS={
+    fj:{n:'Fresh Juice Subscription',draft:1,pay:['pre','auto','part'],opts:[{f:'Every 2 weeks',c:'5 deliveries',d:10},{f:'Every month',c:'6 deliveries',d:15}]},
+    cb:{n:'Cold Brew Monthly',pay:['pre'],opts:[{f:'Every month',c:'3 deliveries',d:10}]},
+    mk:{n:'Plant Milk Weekly',pay:['payg','auto'],opts:[{f:'Every week',c:'4 deliveries',d:5},{f:'Every 2 weeks',c:'6 deliveries',d:8},{f:'Every week',c:'No end date',d:5}]}
+  };
   var PRODS=[
-    {id:'p1',t:'Organic Cold-Pressed Juice',v:3,plans:['fj'],w:'multi-frequency'},
-    {id:'p2',t:'Green Detox Juice',v:2,plans:['fj'],w:'single-plan'},
-    {id:'p3',t:'Beetroot Ginger Shot',v:2,plans:['fj'],w:null},
-    {id:'p10',t:'Tender Coconut Water',v:2,plans:['fj','mk'],w:null},
-    {id:'p15',t:'Cold Brew Coffee',v:2,plans:['cb'],w:'prepaid-only'},
-    {id:'p16',t:'Almond Milk',v:1,plans:['mk'],w:'payg-only'},
-    {id:'p17',t:'Oat Milk',v:1,plans:['mk'],w:null},
-    {id:'p18',t:'Glass Bottle',v:1,plans:[],w:null}
+    {id:'p1',t:'Organic Cold-Pressed Juice',v:3,pr:180,plans:['fj'],w:'multi-frequency'},
+    {id:'p2',t:'Green Detox Juice',v:2,pr:150,plans:['fj'],w:'single-plan'},
+    {id:'p3',t:'Beetroot Ginger Shot',v:2,pr:299,plans:['fj'],w:null},
+    {id:'p10',t:'Tender Coconut Water',v:2,pr:90,plans:['fj','mk'],w:null},
+    {id:'p15',t:'Cold Brew Coffee',v:2,pr:199,plans:['cb'],w:'prepaid-only'},
+    {id:'p16',t:'Almond Milk',v:1,pr:299,plans:['mk'],w:'payg-only'},
+    {id:'p17',t:'Oat Milk',v:1,pr:279,plans:['mk'],w:null},
+    {id:'p18',t:'Glass Bottle',v:1,pr:249,plans:[],w:null}
   ];
   var DEF='subscription-widget', sel=new Set(), tpl=function(k){ return TPL.filter(function(x){ return x.k===k; })[0]; };
   var planQ=((location.search+location.hash).match(/plan=([a-z]+)/)||[])[1] || 'all';
 
   function warnFor(p){
-    var t=tpl(p.w||DEF), pay={}, opts=0; p.plans.forEach(function(id){ PLANS[id].pay.forEach(function(x){ pay[x]=1; }); opts+=PLANS[id].opts; });
+    return warnWith(p, p.w||DEF);
+  }
+  function warnWith(p, k){
+    var t=tpl(k), pay={}, opts=0; p.plans.forEach(function(id){ PLANS[id].pay.forEach(function(x){ pay[x]=1; }); opts+=PLANS[id].opts.length; });
     var have=Object.keys(pay);
     if(t.shows){ var shown=have.filter(function(x){ return t.shows.indexOf(x)>-1; }), hid=have.filter(function(x){ return t.shows.indexOf(x)<0; });
       if(!shown.length) return 'Shows nothing: no '+t.shows.map(function(x){ return PAY[x]; }).join(' or ')+' option on this product.';
@@ -502,7 +549,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       h+='<div class="wrow" data-id="'+p.id+'"><input type="checkbox" class="rc" '+(sel.has(p.id)?'checked':'')+(off?' disabled':'')+' aria-label="Select '+esc(p.t)+'" />'
         +'<div class="wprod"><s-thumbnail size="small"></s-thumbnail><div style="min-width:0"><div class="t">'+esc(p.t)+'</div><div class="m">'+p.v+' variant'+(p.v>1?'s':'')+'</div></div></div>'
         +'<div class="pchips">'+(p.plans.length?p.plans.map(function(id){ return '<span class="pchip" title="'+esc(PLANS[id].n)+'">'+esc(PLANS[id].n)+(PLANS[id].draft?'<span class="dr">Draft</span>':'')+'</span>'; }).join(''):'<span class="help" style="margin:0">None</span>')+'</div>'
-        +'<div><select class="wsel ws"'+(off?' disabled':'')+' aria-label="Widget for '+esc(p.t)+'">'+opts(true)+'</select>'+(w&&!off?'<div class="wwarn">'+esc(w)+'</div>':'')+'</div>'
+        +'<div><div class="wcell"><select class="wsel ws"'+(off?' disabled':'')+' aria-label="Widget for '+esc(p.t)+'">'+opts(true)+'</select>'+(off?'':'<button class="lnk pvP" data-id="'+p.id+'">Preview</button>')+'</div>'+(w&&!off?'<div class="wwarn">'+esc(w)+'</div>':'')+'</div>'
         +'</div>';
     });
     if(!rows.length) h+='<div class="wempty">No products match.</div>';
@@ -511,10 +558,60 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     $('defNote').innerHTML='Products with no widget of their own show <b>'+esc(tpl(DEF).n)+'</b>.';
     renderLib();
   }
+  var SAMPLE=PRODS[0], PAYN={pre:'Prepaid',auto:'AutoPay',part:'Partial prepaid',payg:'Pay as you go'};
+  function inr(n){ return '&#8377;'+Math.round(n); }
+  // a drawn widget in the store colours: same markup for the card thumbnail and the large preview
+  function mini(k, p){
+    var O=[], pay={}; p.plans.forEach(function(id){ O=O.concat(PLANS[id].opts); PLANS[id].pay.forEach(function(x){ pay[x]=1; }); });
+    if(!O.length) O=[{f:'Every 2 weeks',c:'5 deliveries',d:10}];
+    var P=Object.keys(pay), t=tpl(k), maxd=Math.max.apply(null,O.map(function(o){ return o.d; })), pr=p.pr||180;
+    if(t.shows) P=P.filter(function(x){ return t.shows.indexOf(x)>-1; });
+    var h='<div class="mw">', chip=function(x,on){ return '<span class="mc'+(on?' on':'')+'">'+x+'</span>'; },
+        row=function(lbl,price,on,sub){ return '<div class="mr'+(on?' on':'')+'"><span class="rd"></span><span class="ml">'+lbl+(sub?'<small>'+sub+'</small>':'')+'</span><span class="mp">'+price+'</span></div>'; };
+    if(t.shows && !P.length) return h+'<div class="mempty">Nothing to show on this product</div></div>';
+    if(k==='subscription-widget'){ h+=row('One-time purchase',inr(pr))+row('Subscribe and save up to '+maxd+'%',inr(pr*(1-maxd/100)),1,O[0].f+', '+O[0].c); h+='<div class="mcs">'+P.map(function(x,i){ return chip(PAYN[x],i===0); }).join('')+'</div>'; }
+    else if(k==='purchase-options'){ h+='<div class="mtiles"><div class="mt">One-time<b>'+inr(pr)+'</b></div><div class="mt on">Subscribe<b>'+inr(pr*(1-O[0].d/100))+'</b></div></div>'; }
+    else if(k==='single-plan'){ h+=row(O[0].f+', '+O[0].c,inr(pr*(1-O[0].d/100)),1,'Save '+O[0].d+'%'); }
+    else if(k==='prepaid-only'){ var n=parseInt(O[0].c,10)||1; h+=row('Prepay '+O[0].c,inr(pr*n*(1-O[0].d/100)),1,O[0].f+', save '+O[0].d+'%'); }
+    else if(k==='payg-only'){ h+='<div class="mcs">'+P.map(function(x,i){ return chip(PAYN[x],i===0); }).join('')+'</div>'+row(O[0].f,inr(pr*(1-O[0].d/100))+'<small>/delivery</small>',1,'Pay as each delivery comes'); }
+    else if(k==='multi-frequency'){ h+='<div class="mq">How often?</div><div class="mcs">'+O.map(function(o,i){ return chip(o.f,i===0); }).filter(function(x,i,a){ return a.indexOf(x)===i; }).join('')+'</div>'+row('Subscribe, save '+O[0].d+'%',inr(pr*(1-O[0].d/100)),1); }
+    else if(k==='multi-delivery'){ h+='<div class="mq">How many deliveries?</div><div class="mcs">'+O.map(function(o,i){ return chip(o.c,i===0); }).join('')+'</div>'+row('Subscribe, save '+O[0].d+'%',inr(pr*(1-O[0].d/100)),1); }
+    else { h+='<div class="mcs">'+chip('INR',1)+chip('USD')+chip('EUR')+'</div>'+row('Subscribe, save '+O[0].d+'%',inr(pr*(1-O[0].d/100)),1); }
+    return h+'<div class="mbtn">Subscribe</div></div>';
+  }
+  function openPreview(k, pid){
+    var back=document.createElement('div'); back.className='mback';
+    var inPlan=PRODS.filter(function(x){ return x.plans.length; });
+    back.innerHTML='<div class="modal" role="dialog" aria-modal="true" style="width:720px"><div class="mhdr"><h3>Preview</h3><button class="mclose" data-close="1" aria-label="Close">&#10005;</button></div>'
+      +'<div class="pvbody"><div class="pvctl"><label>Widget<select class="wsel" id="pvW">'+TPL.map(function(t){ return '<option value="'+t.k+'">'+esc(t.n)+'</option>'; }).join('')+'</select></label>'
+      +'<label>On product<select class="wsel" id="pvP">'+inPlan.map(function(x){ return '<option value="'+x.id+'">'+esc(x.t)+'</option>'; }).join('')+'</select></label>'
+      +'<div class="m" id="pvInfo"></div></div><div class="pvstage"><div class="pvprod"><s-thumbnail size="small"></s-thumbnail><div><b id="pvName"></b><div class="m" id="pvPrice"></div></div></div><div id="pvW2"></div></div></div>'
+      +'<div class="mfoot"><span class="wwarn" id="pvWarn"></span><span class="macts"><button class="pbtn" data-close="1">Close</button><button class="pbtn primary" id="pvUse">Use on this product</button></span></div></div>';
+    document.body.appendChild(back);
+    var wS=back.querySelector('#pvW'), pS=back.querySelector('#pvP');
+    wS.value=k; pS.value=pid || (inPlan.filter(function(x){ return (x.w||DEF)===k; })[0]||inPlan[0]).id;
+    function draw(){
+      var p=PRODS.filter(function(x){ return x.id===pS.value; })[0], t=tpl(wS.value), w=warnWith(p, wS.value);
+      back.querySelector('#pvW2').innerHTML=mini(wS.value, p).replace('class="mw"','class="mw big"');
+      back.querySelector('#pvName').textContent=p.t; back.querySelector('#pvPrice').innerHTML=inr(p.pr)+' &middot; '+p.plans.map(function(id){ return esc(PLANS[id].n); }).join(', ');
+      back.querySelector('#pvInfo').innerHTML='<b>Best for:</b> '+esc(t.best)+'<br><b>Shows:</b> '+esc(t.show);
+      back.querySelector('#pvWarn').textContent=w;
+      var cur=(p.w||DEF)===wS.value; back.querySelector('#pvUse').textContent= cur ? 'In use on this product' : 'Use on this product'; back.querySelector('#pvUse').disabled=cur;
+    }
+    wS.onchange=draw; pS.onchange=draw; draw();
+    back.addEventListener('click', function(e){
+      if(e.target===back || e.target.closest('[data-close]')) back.remove();
+      if(e.target.id==='pvUse' && !e.target.disabled){ var p=PRODS.filter(function(x){ return x.id===pS.value; })[0]; p.w = wS.value===DEF ? null : wS.value; render(); draw(); toast(p.t+' now shows '+tpl(wS.value).n+'.'); }
+    });
+  }
   function renderLib(){
     $('wlib').innerHTML=TPL.map(function(t){
       var used=PRODS.filter(function(p){ return p.plans.length && (p.w||DEF)===t.k; }).length;
-      return '<div class="wcard"><div class="t">'+esc(t.n)+(t.k===DEF?' <span class="badge2 sub">Store default</span>':'')+'</div><div class="m">'+esc(t.d)+'</div><div class="m">Used on '+used+' product'+(used===1?'':'s')+'</div><div class="wacts"><button class="lnk edT" data-k="'+t.k+'">Edit design &#8599;</button>'+(t.k===DEF?'':'<button class="lnk mkD" data-k="'+t.k+'">Make default</button>')+'</div></div>';
+      return '<div class="wcard"><button class="wthumb pvT" data-k="'+t.k+'" aria-label="Preview '+esc(t.n)+'">'+mini(t.k, SAMPLE)+'</button>'
+        +'<div class="wbody"><div class="t">'+esc(t.n)+(t.k===DEF?' <span class="badge2 sub">Store default</span>':'')+'</div>'
+        +'<div class="m"><b>Best for:</b> '+esc(t.best)+'</div><div class="m"><b>Shows:</b> '+esc(t.show)+'</div>'
+        +'<div class="m u">Used on '+used+' product'+(used===1?'':'s')+'</div>'
+        +'<div class="wacts"><button class="lnk pvT" data-k="'+t.k+'">Preview</button><button class="lnk edT" data-k="'+t.k+'">Edit design &#8599;</button>'+(t.k===DEF?'':'<button class="lnk mkD" data-k="'+t.k+'">Make default</button>')+'</div></div></div>';
     }).join('');
   }
 
@@ -533,6 +630,8 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
   $('tabSeg').addEventListener('click', function(e){ var b=e.target.closest('[data-tab]'); if(!b) return; this.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x===b); }); $('tabProd').classList.toggle('hide', b.dataset.tab!=='prod'); $('tabLib').classList.toggle('hide', b.dataset.tab!=='lib'); });
   document.addEventListener('click', function(e){
     if(e.target.closest('.mkD')){ DEF=e.target.closest('.mkD').dataset.k; render(); toast('Store default is now '+tpl(DEF).n+'.'); }
+    if(e.target.closest('.pvT')) openPreview(e.target.closest('.pvT').dataset.k);
+    if(e.target.closest('.pvP')){ var pp=PRODS.filter(function(x){ return x.id===e.target.closest('.pvP').dataset.id; })[0]; openPreview(pp.w||DEF, pp.id); }
     if(e.target.closest('.edT')) toast('Opens the widget template editor for '+tpl(e.target.closest('.edT').dataset.k).n+'.');
   });
   render();

@@ -77,12 +77,14 @@
   .deliveryPreview:has(.tl){background:#fff}
   .tl{display:grid;align-items:center;row-gap:8px;column-gap:0;font-size:12px}
   .tl .lb{color:var(--p-muted);font-size:11.5px;font-weight:500;padding-right:8px;white-space:nowrap}
-  .tl .trk{align-self:center;height:2px;background:#d4d4d4;margin:0 46px 0 14px;border-radius:2px}
-  .tl .node{justify-self:center;position:relative;z-index:1;display:grid;place-items:center}
+  .tl .node{justify-self:stretch;position:relative;display:grid;place-items:center}
+  .tl .node::before,.tl .node::after{content:'';position:absolute;top:50%;height:2px;margin-top:-1px;background:#d4d4d4}
+  .tl .node::before{left:0;right:50%}.tl .node::after{left:50%;right:0}
+  .tl .node.first::before,.tl .node.last::after{display:none}
+  .tl .node i{position:relative;z-index:1}
   .tl .node i{font-style:normal;min-width:22px;height:22px;padding:0 4px;box-sizing:border-box;border-radius:11px;background:#fff;border:1.5px solid #8a8a8a;display:grid;place-items:center;font-weight:600;font-size:11px;color:var(--p-ink)}
   .tl .node.opt i{border-style:dashed;color:var(--p-muted)}
   .tl .node.sk i{border:0;background:#fff;color:var(--p-faint);font-weight:500}
-  .tl .node.endn i{border:0;background:#303030;color:#fff;font-size:8px;min-width:18px;height:18px}
   .tl .gf{justify-self:center;display:inline-flex;align-items:center;gap:1px;color:#8a5b00}
   .tl .gf small{font-size:10px;font-weight:700}
   .tl .bar{min-height:22px;box-sizing:border-box;display:flex;align-items:center;padding:2px 9px;margin:0 2px;border-radius:7px;font-size:11px;font-weight:600;line-height:1.25}
@@ -741,7 +743,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       {id:'c4',t:'Coffee',p:['p15']}
     ];
     var ROW_CAP=5;
-    var TPL_NAMES={'subscription-widget':'Subscription Widget','purchase-options':'Purchase Options','single-plan':'Single Plan','prepaid-only':'Prepaid Only','payg-only':'PAYG Only','multi-frequency':'Multi-Frequency','multi-delivery':'Multi-Delivery','international-plan':'International Plan'};
+    var TPL_NAMES={'subscription-widget':'Subscription Widget','purchase-options':'Purchase Options','single-plan':'Single Plan','prepaid-only':'Prepaid Only','payg-only':'Pay per delivery','multi-frequency':'Multi-Frequency','multi-delivery':'Multi-Delivery','international-plan':'International Plan'};
     function vid(p,i){ return p.id+'-'+i; }
     function esc(s){ return String(s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
     function prod(id){ return CATALOG.find(function(x){ return x.id===id; }); }
@@ -1205,12 +1207,10 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         function runs(vals, row, cls, label){ for(var i=0;i<vals.length;){ var j=i; while(j+1<vals.length && vals[j+1]===vals[i]) j++; h+=at(row,i+2,j+3,cls(vals[i]),label(vals[i]),label(vals[i]).replace(/<[^>]+>/g,'')); i=j+1; } }
         // track
         r++; h+=at(r,1,2,'lb','Delivery');
-        h+=at(r,2,endCol+1,'trk','');
         C.forEach(function(c,i){
           var html = c.gap ? (c.a===c.b?c.a:c.a+'-'+c.b) : c.more ? '&hellip;' : c.n;
-          h+=at(r,i+2,i+3,'node'+(c.gap||c.more?' sk':'')+(mode==='choice' && !c.gap && !c.more && c.n>mm.min?' opt':''), '<i>'+html+'</i>', c.gap?'Deliveries '+c.a+' to '+c.b:c.more?'Continues until the customer cancels':'');
+          h+=at(r,i+2,i+3,'node'+(i===0?' first':'')+(i===C.length-1?' last':'')+(c.gap||c.more?' sk':'')+(mode==='choice' && !c.gap && !c.more && c.n>mm.min?' opt':''), '<i>'+html+'</i>', c.gap?'Deliveries '+c.a+' to '+c.b:c.more?'Continues until the customer cancels':'');
         });
-        h+=at(r,endCol,endCol+1,'node endn','<i>'+(mode==='none'?'&infin;':'&#9632;')+'</i>');
         // discount
         r++; h+=at(r,1,2,'lb','Discount');
         runs(C.map(function(c){ return discAt(c.n); }), r, function(v){ return 'bar dsc l'+Math.min(lv.indexOf(v),4); }, function(v){ return fmtShort(v)+' off'; });
