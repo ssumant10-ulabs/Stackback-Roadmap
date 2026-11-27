@@ -621,6 +621,15 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
               <div class="help" id="coHelp" style="margin-top:4px"></div>
             </div>
 
+            <div class="drow" id="ttdRow">
+              <div class="dtop">
+                <span class="dname">Order timing</span>
+                <span class="dact"><span class="badge2 attn">Not set up</span></span>
+              </div>
+              <div class="help" style="margin-top:4px">Days before each delivery that the order is placed (TTD). Not set yet, so the default of <b>7 days</b> applies.</div>
+              <div style="margin-top:8px"><button class="lnk" id="ttdGo">Set up order timing &#8594;</button></div>
+            </div>
+
             <div class="drow">
               <div class="dtop">
                 <span class="dname">Widget</span>
@@ -1413,7 +1422,10 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       renderAdapt();
     }
     document.addEventListener('sb:pay', renderAdaptAvail);
-    recheck.addEventListener('click', function(){ recheck.textContent='Checking…'; setTimeout(function(){ recheck.textContent='Re-check'; },700); });
+    // Order timing (TTD): row shows only while the store has never configured it
+    var ttdOpened=false;
+    $('ttdGo').addEventListener('click', function(){ ttdOpened=true; toast('Opens Settings > Orders and scheduling in a new tab. Come back and Re-check.'); });
+    recheck.addEventListener('click', function(){ recheck.textContent='Checking…'; setTimeout(function(){ recheck.textContent='Re-check'; if(ttdOpened){ $('ttdRow').classList.add('hide'); toast('Order timing is set up.'); } },700); });
 
     // ---------- widget template: one pick, with a switch notice ----------
     // Picking a template makes it live on this plan's products at publish. A product that shows a
