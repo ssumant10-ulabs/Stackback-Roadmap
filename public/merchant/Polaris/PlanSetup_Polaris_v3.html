@@ -74,20 +74,24 @@
   .seg button.on{background:var(--p-primary);color:#fff}
   .seg button[disabled]{opacity:.4;cursor:not-allowed}
   .enhsep{border-top:1px solid var(--p-line2);margin:16px 0}
-  .tl{display:grid;align-items:center;row-gap:7px;column-gap:0;font-size:12px}
+  .deliveryPreview:has(.tl){background:#fff}
+  .tl{display:grid;align-items:center;row-gap:8px;column-gap:0;font-size:12px}
   .tl .lb{color:var(--p-muted);font-size:11.5px;font-weight:500;padding-right:8px;white-space:nowrap}
-  .tl .lb.end0{padding-left:10px}
-  .tl .dn{justify-self:center;width:22px;height:22px;border-radius:50%;background:#fff;border:1.5px solid #8a8a8a;display:grid;place-items:center;font-weight:600;font-size:11px;color:var(--p-ink)}
-  .tl .dn.opt{border-style:dashed;color:var(--p-muted)}
-  .tl .gp{justify-self:center;color:var(--p-faint);font-size:11px;white-space:nowrap}
-  .tl .dc{justify-self:center;border-radius:6px;padding:0 6px;font-weight:600;font-size:11px;white-space:nowrap;background:#e4f4df;color:#0c5132}
-  .tl .dc.l1{background:#c6ebbb}.tl .dc.l2{background:#a6dd97}.tl .dc.l3{background:#7fcc6c}.tl .dc.l4{background:#57b443;color:#fff}
-  .tl .dc.mu{opacity:.55}
-  .tl .gf{justify-self:center;font-size:14px;line-height:1}
-  .tl .gf small{font-size:10px;font-weight:700;color:var(--p-muted);margin-left:1px}
-  .tl .bar{min-height:20px;box-sizing:border-box;display:flex;align-items:center;padding:2px 8px;margin:0 1px;border-radius:6px;font-size:11px;font-weight:600;line-height:1.25}
-  .tl .bar.pre{background:#dfeaff;color:#1d4b8f}.tl .bar.auto{background:#ece2ff;color:#5b2a91}.tl .bar.payg{background:#ffeccc;color:#7a4b00}
-  .tl .end{font-size:11.5px;font-weight:600;color:var(--p-ink);padding-left:10px;white-space:nowrap}
+  .tl .trk{align-self:center;height:2px;background:#d4d4d4;margin:0 46px 0 14px;border-radius:2px}
+  .tl .node{justify-self:center;position:relative;z-index:1;display:grid;place-items:center}
+  .tl .node i{font-style:normal;min-width:22px;height:22px;padding:0 4px;box-sizing:border-box;border-radius:11px;background:#fff;border:1.5px solid #8a8a8a;display:grid;place-items:center;font-weight:600;font-size:11px;color:var(--p-ink)}
+  .tl .node.opt i{border-style:dashed;color:var(--p-muted)}
+  .tl .node.sk i{border:0;background:#fff;color:var(--p-faint);font-weight:500}
+  .tl .node.endn i{border:0;background:#303030;color:#fff;font-size:8px;min-width:18px;height:18px}
+  .tl .gf{justify-self:center;display:inline-flex;align-items:center;gap:1px;color:#8a5b00}
+  .tl .gf small{font-size:10px;font-weight:700}
+  .tl .bar{min-height:22px;box-sizing:border-box;display:flex;align-items:center;padding:2px 9px;margin:0 2px;border-radius:7px;font-size:11px;font-weight:600;line-height:1.25}
+  .tl .bar.dsc{background:#e3f5de;color:#0c5132}.tl .bar.dsc.l1{background:#c6ebbb}.tl .bar.dsc.l2{background:#a6dd97}.tl .bar.dsc.l3{background:#7fcc6c}.tl .bar.dsc.l4{background:#4f9e3d;color:#fff}
+  .tl .bar.pre{background:#e0ebff;color:#1d4b8f}.tl .bar.auto{background:#ede4ff;color:#5b2a91}.tl .bar.payg{background:#fff0d6;color:#7a4b00}
+  .tl .end{font-size:11.5px;font-weight:600;color:var(--p-ink);padding-left:12px;white-space:nowrap}
+  .tl .lb.sep{position:relative}
+  .tlfoot .ttd{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .tlfoot .ttd svg{color:var(--p-muted)}
   .tlfoot{display:flex;flex-direction:column;gap:4px;margin-top:10px;padding-top:9px;border-top:1px dashed #d4d4d4;font-size:12px}
   .adsub{margin-top:16px;display:flex;align-items:center;gap:8px}
   .adsub .help{margin:0}
@@ -1180,7 +1184,9 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       }
       function fmtShort(v){ return card.querySelector('.discType').value==='amt' ? '&#8377;'+v : v+'%'; }
       card._discText=function(){ var L=card._lad, parts=[], prev=null; L.forEach(function(s,i){ if(s.value!==prev) parts.push(fmtVal(card,s.value)+(i===0?'':' from '+ord(s.n))); prev=s.value; }); return parts.length===1 ? parts[0]+' off' : parts.join(' &rsaquo; '); };
-      // visual breakup: deliveries across, rows for discount, gifts and each payment type; TTD under it
+      // visual breakup: a delivery track, then one bar row each for discount, gifts and every payment type; TTD under it
+      var IC_GIFT='<svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.5" y="8" width="13" height="8.5" rx="1"/><path d="M2.5 5.5h15V8h-15zM10 5.5v11M10 5.5C8.5 3 6 3 6 4.5S8.5 5.5 10 5.5c1.5 0 4-.5 4-1S11.5 3 10 5.5"/></svg>',
+          IC_CLOCK='<svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l2.5 2"/></svg>';
       function breakupHTML(){
         var mode=curDur(), mm=minMax(), L=card._lad, last=L[L.length-1].n, pp=on(payPart)?Math.max(1,ppN()):0;
         var N = mode==='fixed' ? (parseInt(schedFixed.querySelector('.field').textContent,10)||1) : mode==='choice' ? Math.max(mm.min,mm.max,1) : Math.max(last, pp+1, 4);
@@ -1194,33 +1200,37 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         var lv=[], prev=null; L.forEach(function(s){ if(s.value!==prev) lv.push(s.value); prev=s.value; });
         function discAt(n){ var v=L[0].value; L.forEach(function(s){ if(s.n<=n) v=s.value; }); return v; }
         function giftsAt(n){ var g=[]; L.forEach(function(s){ if(s.n===n) g=g.concat(s.gifts); }); return g; }
-        var endCol=C.length+2, h='<div class="tl" style="grid-template-columns:100px repeat('+C.length+',minmax(30px,1fr)) 84px">';
-        h+='<span class="lb" style="grid-column:1">Delivery</span>';
-        C.forEach(function(c){
-          if(c.gap) h+='<span class="gp" title="Deliveries '+c.a+' to '+c.b+'">'+(c.a===c.b?c.a:c.a+'-'+c.b)+'</span>';
-          else if(c.more) h+='<span class="gp" title="Continues until the customer cancels">&hellip;</span>';
-          else h+='<span class="dn'+(mode==='choice' && c.n>mm.min?' opt':'')+'">'+c.n+'</span>';
+        var endCol=C.length+2, r=0, h='<div class="tl" style="grid-template-columns:96px repeat('+C.length+',minmax(30px,1fr)) 92px">';
+        function at(row,c1,c2,cls,html,title){ return '<span class="'+cls+'"'+(title?' title="'+esc(title)+'"':'')+' style="grid-row:'+row+';grid-column:'+c1+' / '+c2+'">'+html+'</span>'; }
+        function runs(vals, row, cls, label){ for(var i=0;i<vals.length;){ var j=i; while(j+1<vals.length && vals[j+1]===vals[i]) j++; h+=at(row,i+2,j+3,cls(vals[i]),label(vals[i]),label(vals[i]).replace(/<[^>]+>/g,'')); i=j+1; } }
+        // track
+        r++; h+=at(r,1,2,'lb','Delivery');
+        h+=at(r,2,endCol+1,'trk','');
+        C.forEach(function(c,i){
+          var html = c.gap ? (c.a===c.b?c.a:c.a+'-'+c.b) : c.more ? '&hellip;' : c.n;
+          h+=at(r,i+2,i+3,'node'+(c.gap||c.more?' sk':'')+(mode==='choice' && !c.gap && !c.more && c.n>mm.min?' opt':''), '<i>'+html+'</i>', c.gap?'Deliveries '+c.a+' to '+c.b:c.more?'Continues until the customer cancels':'');
         });
-        h+='<span class="lb end0" style="grid-column:'+endCol+'">At the end</span>';
-        h+='<span class="lb" style="grid-column:1">Discount</span>';
-        C.forEach(function(c){ var v=discAt(c.n); h+='<span class="dc l'+Math.min(lv.indexOf(v),4)+(c.gap||c.more?' mu':'')+'">'+fmtShort(v)+'</span>'; });
+        h+=at(r,endCol,endCol+1,'node endn','<i>'+(mode==='none'?'&infin;':'&#9632;')+'</i>');
+        // discount
+        r++; h+=at(r,1,2,'lb','Discount');
+        runs(C.map(function(c){ return discAt(c.n); }), r, function(v){ return 'bar dsc l'+Math.min(lv.indexOf(v),4); }, function(v){ return fmtShort(v)+' off'; });
+        // gifts
         if(L.some(function(s){ return s.gifts.length; })){
-          h+='<span class="lb" style="grid-column:1">Free gift</span>';
-          C.forEach(function(c){ var g=(c.gap||c.more)?[]:giftsAt(c.n), q=g.reduce(function(a,x){ return a+(x.q||1); },0);
-            h+= g.length ? '<span class="gf" title="'+esc(g.map(function(x){ return ((x.q||1)>1?x.q+' x ':'')+giftLabel(x.g); }).join(', '))+'">&#127873;'+(q>1?'<small>'+q+'</small>':'')+'</span>' : '<span></span>'; });
+          r++; h+=at(r,1,2,'lb','Free gift');
+          C.forEach(function(c,i){ var g=(c.gap||c.more)?[]:giftsAt(c.n); if(!g.length) return; var q=g.reduce(function(a,x){ return a+(x.q||1); },0);
+            h+=at(r,i+2,i+3,'gf',IC_GIFT+(q>1?'<small>'+q+'</small>':''), g.map(function(x){ return ((x.q||1)>1?x.q+' x ':'')+giftLabel(x.g); }).join(', ')); });
         }
-        var LBL={pre:'Prepaid',auto:'AutoPay',part:'Partial prepaid',payg:'Pay as you go'}, m=rnMode();
-        types.forEach(function(t){
-          var txt = {pre:'Paid at checkout',auto:'Charged before each delivery',payg:'Invoice each delivery'};
-          var cls=C.map(function(c){ return t==='part' ? (c.n<=pp?'pre':'auto') : t; });
-          h+='<span class="lb" style="grid-column:1">'+LBL[t]+'</span>';
-          for(var i=0;i<cls.length;){ var j=i; while(j+1<cls.length && cls[j+1]===cls[i]) j++; h+='<span class="bar '+cls[i]+'" title="'+txt[cls[i]]+'" style="grid-column:'+(i+2)+' / '+(j+3)+'">'+txt[cls[i]]+'</span>'; i=j+1; }
+        // payment
+        var LBL={pre:'Prepaid',auto:'AutoPay',part:'Partial prepaid',payg:'Pay as you go'}, TXT={pre:'Paid at checkout',auto:'Charged before each delivery',payg:'Invoice each delivery'}, m=rnMode();
+        types.forEach(function(t, ti){
+          r++; h+=at(r,1,2,'lb'+(ti===0?' sep':''),LBL[t]);
+          runs(C.map(function(c){ return t==='part' ? (c.n<=pp?'pre':'auto') : t; }), r, function(v){ return 'bar '+v; }, function(v){ return TXT[v]; });
           var end = mode==='none' ? 'Until cancelled' : m==='stop' ? 'Ends' : m==='ask' || t==='pre' ? 'Renewal link' : 'Renews';
-          h+='<span class="end" style="grid-column:'+endCol+'">'+end+'</span>';
+          h+=at(r,endCol,endCol+1,'end',end);
         });
         h+='</div><div class="tlfoot">';
         if(mode==='choice') h+='<span>Dashed: the customer can stop before this delivery.</span>';
-        h+='<span>&#128339; Order placed <b>'+TTD_DAYS+' days</b> before each delivery (TTD)'+(TTD_SET?'':' <span class="badge2 attn">Store default</span>')+'</span></div>';
+        h+='<span class="ttd">'+IC_CLOCK+'Order placed <b>'+TTD_DAYS+' days</b> before each delivery (TTD)'+(TTD_SET?'':' <span class="badge2 attn">Store default</span>')+'</span></div>';
         return h;
       }
       function renderDeliveryPreview(){

@@ -74,20 +74,24 @@
   .seg button.on{background:var(--p-primary);color:#fff}
   .seg button[disabled]{opacity:.4;cursor:not-allowed}
   .enhsep{border-top:1px solid var(--p-line2);margin:16px 0}
-  .tl{display:grid;align-items:center;row-gap:7px;column-gap:0;font-size:12px}
+  .deliveryPreview:has(.tl){background:#fff}
+  .tl{display:grid;align-items:center;row-gap:8px;column-gap:0;font-size:12px}
   .tl .lb{color:var(--p-muted);font-size:11.5px;font-weight:500;padding-right:8px;white-space:nowrap}
-  .tl .lb.end0{padding-left:10px}
-  .tl .dn{justify-self:center;width:22px;height:22px;border-radius:50%;background:#fff;border:1.5px solid #8a8a8a;display:grid;place-items:center;font-weight:600;font-size:11px;color:var(--p-ink)}
-  .tl .dn.opt{border-style:dashed;color:var(--p-muted)}
-  .tl .gp{justify-self:center;color:var(--p-faint);font-size:11px;white-space:nowrap}
-  .tl .dc{justify-self:center;border-radius:6px;padding:0 6px;font-weight:600;font-size:11px;white-space:nowrap;background:#e4f4df;color:#0c5132}
-  .tl .dc.l1{background:#c6ebbb}.tl .dc.l2{background:#a6dd97}.tl .dc.l3{background:#7fcc6c}.tl .dc.l4{background:#57b443;color:#fff}
-  .tl .dc.mu{opacity:.55}
-  .tl .gf{justify-self:center;font-size:14px;line-height:1}
-  .tl .gf small{font-size:10px;font-weight:700;color:var(--p-muted);margin-left:1px}
-  .tl .bar{min-height:20px;box-sizing:border-box;display:flex;align-items:center;padding:2px 8px;margin:0 1px;border-radius:6px;font-size:11px;font-weight:600;line-height:1.25}
-  .tl .bar.pre{background:#dfeaff;color:#1d4b8f}.tl .bar.auto{background:#ece2ff;color:#5b2a91}.tl .bar.payg{background:#ffeccc;color:#7a4b00}
-  .tl .end{font-size:11.5px;font-weight:600;color:var(--p-ink);padding-left:10px;white-space:nowrap}
+  .tl .trk{align-self:center;height:2px;background:#d4d4d4;margin:0 14px;border-radius:2px}
+  .tl .node{justify-self:center;position:relative;z-index:1;display:grid;place-items:center}
+  .tl .node i{font-style:normal;min-width:22px;height:22px;padding:0 4px;box-sizing:border-box;border-radius:11px;background:#fff;border:1.5px solid #8a8a8a;display:grid;place-items:center;font-weight:600;font-size:11px;color:var(--p-ink)}
+  .tl .node.opt i{border-style:dashed;color:var(--p-muted)}
+  .tl .node.sk i{border:0;background:#fff;color:var(--p-faint);font-weight:500}
+  .tl .node.endn i{border:0;background:#303030;color:#fff;font-size:8px;min-width:18px;height:18px}
+  .tl .gf{justify-self:center;display:inline-flex;align-items:center;gap:1px;color:#8a5b00}
+  .tl .gf small{font-size:10px;font-weight:700}
+  .tl .bar{min-height:22px;box-sizing:border-box;display:flex;align-items:center;padding:2px 9px;margin:0 2px;border-radius:7px;font-size:11px;font-weight:600;line-height:1.25}
+  .tl .bar.dsc{background:#e3f5de;color:#0c5132}.tl .bar.dsc.l1{background:#c6ebbb}.tl .bar.dsc.l2{background:#a6dd97}.tl .bar.dsc.l3{background:#7fcc6c}.tl .bar.dsc.l4{background:#4f9e3d;color:#fff}
+  .tl .bar.pre{background:#e0ebff;color:#1d4b8f}.tl .bar.auto{background:#ede4ff;color:#5b2a91}.tl .bar.payg{background:#fff0d6;color:#7a4b00}
+  .tl .end{font-size:11.5px;font-weight:600;color:var(--p-ink);padding-left:12px;white-space:nowrap}
+  .tl .lb.sep{position:relative}
+  .tlfoot .ttd{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .tlfoot .ttd svg{color:var(--p-muted)}
   .tlfoot{display:flex;flex-direction:column;gap:4px;margin-top:10px;padding-top:9px;border-top:1px dashed #d4d4d4;font-size:12px}
   .adsub{margin-top:16px;display:flex;align-items:center;gap:8px}
   .adsub .help{margin:0}
@@ -346,8 +350,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
 <style>html.bare .navL,html.bare .appbar,html.bare .savebar{display:none!important}html.bare .admin{min-height:0}html.bare,html.bare body{background:#f1f1f1}</style>
 <style>
   .wgwrap{display:flex;flex-direction:column;gap:16px}
-  .wdef{display:flex;align-items:center;gap:16px;justify-content:space-between}
-  .wdef .wsel{width:280px;flex:none}
+  .wtop{display:flex;align-items:center;gap:16px;justify-content:space-between}
   .wfilters .wsel{width:260px;flex:none}
   .wsel{box-sizing:border-box;font:inherit;font-size:13px;border:1px solid #c9c9c9;border-radius:8px;padding:5px 28px 5px 10px;background:#fff;color:var(--p-ink);min-width:200px}
   .wbanner{margin:0 16px 12px;background:#eaf4ff;color:#00527c;border-radius:8px;padding:8px 12px;font-size:12.5px;display:flex;gap:10px;align-items:center}
@@ -358,7 +361,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
   .wrow.hd .bsel{grid-column:2 / -1;display:flex;align-items:center;gap:12px;font-weight:600}
   .wrow.hd .bsel .wsel{width:240px;flex:none;font-weight:400;padding-top:3px;padding-bottom:3px}
   .wtbl{border-top:1px solid var(--p-line)}
-  .wrow{display:grid;grid-template-columns:28px minmax(200px,1.3fr) minmax(170px,1fr) 250px 160px;gap:14px;align-items:center;min-height:44px;padding:10px 16px;border-bottom:1px solid var(--p-line2);font-size:13px}
+  .wrow{display:grid;grid-template-columns:28px minmax(220px,1.4fr) minmax(180px,1fr) 260px;gap:14px;align-items:center;min-height:44px;padding:10px 16px;border-bottom:1px solid var(--p-line2);font-size:13px}
   .wrow.hd{font-size:12px;font-weight:600;color:var(--p-muted);background:#f7f7f7;padding:7px 16px}
   .wrow:last-child{border-bottom:0}
   .wprod{display:flex;gap:10px;align-items:center;min-width:0}
@@ -368,12 +371,14 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
   .pchip{display:inline-flex;align-items:center;gap:6px;max-width:100%;background:#f1f1f1;border-radius:6px;padding:1px 8px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .pchip .dr{color:#00527c;font-weight:600}
   .wwarn{font-size:11.5px;color:var(--p-attn);margin-top:3px}
-  .wrow .wsel{min-width:0;width:100%}
+  .wrow .wsel{min-width:0;width:100%;border-color:transparent;background-color:#f6f6f6}
+  .wrow .wsel:hover,.wrow .wsel:focus{border-color:#c9c9c9;background-color:#fff}
+  .wrow .wsel:disabled{background-color:transparent;color:var(--p-faint)}
   .wlib{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;padding:0 16px 16px}
   .wcard{border:1px solid var(--p-line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
   .wcard .t{font-weight:600;display:flex;gap:6px;align-items:center}
   .wcard .m{font-size:12px;color:var(--p-muted)}
-  .wcard .lnk{align-self:flex-start;margin-top:4px}
+  .wacts{display:flex;gap:14px;margin-top:4px}
   .wempty{padding:24px 16px;color:var(--p-muted);text-align:center}
 </style>
 </head>
@@ -410,13 +415,8 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
 
     <s-page heading="Widgets" inline-size="large">
       <div class="wgwrap">
-        <div class="card"><div class="cardpad wdef">
-          <div><b>Store default</b><div class="help">Products with no widget of their own show this one.</div></div>
-          <select class="wsel" id="defSel" aria-label="Store default widget"></select>
-        </div></div>
-
         <div class="card">
-          <div class="cardpad"><span class="seg" id="tabSeg"><button data-tab="prod" class="on">By product</button><button data-tab="lib">Widget library</button></span></div>
+          <div class="cardpad wtop"><span class="seg" id="tabSeg"><button data-tab="prod" class="on">By product</button><button data-tab="lib">Widget library</button></span><span class="help" id="defNote" style="margin:0"></span></div>
           <div id="tabProd">
             <div class="wfilters">
               <input class="wsearch" id="q" placeholder="Search products" />
@@ -496,30 +496,30 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
   function render(){
     var rows=visible(), n=sel.size, h = n
       ? '<div class="wrow hd on"><input type="checkbox" id="all" checked aria-label="Clear selection" /><span class="bsel">'+n+' selected<select class="wsel" id="bulkSel" aria-label="Assign widget to selected"><option value="-">Assign widget</option>'+opts(true)+'</select></span></div>'
-      : '<div class="wrow hd"><input type="checkbox" id="all" aria-label="Select all" /><span>Product</span><span>Plans</span><span>Widget</span><span>Status</span></div>';
+      : '<div class="wrow hd"><input type="checkbox" id="all" aria-label="Select all" /><span>Product</span><span>Plans</span><span>Widget</span></div>';
     rows.forEach(function(p){
       var w=warnFor(p), off=!p.plans.length;
       h+='<div class="wrow" data-id="'+p.id+'"><input type="checkbox" class="rc" '+(sel.has(p.id)?'checked':'')+(off?' disabled':'')+' aria-label="Select '+esc(p.t)+'" />'
         +'<div class="wprod"><s-thumbnail size="small"></s-thumbnail><div style="min-width:0"><div class="t">'+esc(p.t)+'</div><div class="m">'+p.v+' variant'+(p.v>1?'s':'')+'</div></div></div>'
         +'<div class="pchips">'+(p.plans.length?p.plans.map(function(id){ return '<span class="pchip" title="'+esc(PLANS[id].n)+'">'+esc(PLANS[id].n)+(PLANS[id].draft?'<span class="dr">Draft</span>':'')+'</span>'; }).join(''):'<span class="help" style="margin:0">None</span>')+'</div>'
         +'<div><select class="wsel ws"'+(off?' disabled':'')+' aria-label="Widget for '+esc(p.t)+'">'+opts(true)+'</select>'+(w&&!off?'<div class="wwarn">'+esc(w)+'</div>':'')+'</div>'
-        +'<div>'+status(p)+'</div></div>';
+        +'</div>';
     });
     if(!rows.length) h+='<div class="wempty">No products match.</div>';
     $('wtbl').innerHTML=h;
     rows.forEach(function(p){ var s=$('wtbl').querySelector('[data-id="'+p.id+'"] .ws'); s.value=p.w||''; });
+    $('defNote').innerHTML='Products with no widget of their own show <b>'+esc(tpl(DEF).n)+'</b>.';
     renderLib();
   }
   function renderLib(){
     $('wlib').innerHTML=TPL.map(function(t){
       var used=PRODS.filter(function(p){ return p.plans.length && (p.w||DEF)===t.k; }).length;
-      return '<div class="wcard"><div class="t">'+esc(t.n)+(t.k===DEF?' <span class="badge2 sub">Store default</span>':'')+'</div><div class="m">'+esc(t.d)+'</div><div class="m">Used on '+used+' product'+(used===1?'':'s')+'</div><button class="lnk edT" data-k="'+t.k+'">Edit design &#8599;</button></div>';
+      return '<div class="wcard"><div class="t">'+esc(t.n)+(t.k===DEF?' <span class="badge2 sub">Store default</span>':'')+'</div><div class="m">'+esc(t.d)+'</div><div class="m">Used on '+used+' product'+(used===1?'':'s')+'</div><div class="wacts"><button class="lnk edT" data-k="'+t.k+'">Edit design &#8599;</button>'+(t.k===DEF?'':'<button class="lnk mkD" data-k="'+t.k+'">Make default</button>')+'</div></div>';
     }).join('');
   }
-  $('defSel').innerHTML=opts(false); $('defSel').value=DEF;
+
   $('planF').innerHTML='<option value="all">All plans</option>'+Object.keys(PLANS).map(function(id){ return '<option value="'+id+'">'+esc(PLANS[id].n)+'</option>'; }).join('')+'<option value="none">Not in a plan</option>';
   $('planF').value=PLANS[planQ]||planQ==='none'?planQ:'all';
-  $('defSel').addEventListener('change', function(){ DEF=this.value; render(); toast('Store default is now '+tpl(DEF).n+'.'); });
   $('planF').addEventListener('change', function(){ planQ=this.value; sel.clear(); render(); });
   $('q').addEventListener('input', render);
   $('wtbl').addEventListener('change', function(e){
@@ -532,6 +532,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
   });
   $('tabSeg').addEventListener('click', function(e){ var b=e.target.closest('[data-tab]'); if(!b) return; this.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x===b); }); $('tabProd').classList.toggle('hide', b.dataset.tab!=='prod'); $('tabLib').classList.toggle('hide', b.dataset.tab!=='lib'); });
   document.addEventListener('click', function(e){
+    if(e.target.closest('.mkD')){ DEF=e.target.closest('.mkD').dataset.k; render(); toast('Store default is now '+tpl(DEF).n+'.'); }
     if(e.target.closest('.edT')) toast('Opens the widget template editor for '+tpl(e.target.closest('.edT').dataset.k).n+'.');
   });
   render();
