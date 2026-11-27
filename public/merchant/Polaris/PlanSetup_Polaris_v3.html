@@ -113,6 +113,20 @@
   .gevery{display:block;margin-top:4px;font-size:11.5px}
   .adrow .mu{color:var(--p-muted)}
   a.lnk{text-decoration:none}
+  .presets{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .preset{display:flex;flex-direction:column;gap:3px;text-align:left;border:1px solid var(--p-line);border-radius:10px;background:#fff;padding:10px 12px;font:inherit;cursor:pointer;color:var(--p-ink)}
+  .preset:hover{border-color:#8a8a8a;background:#fafafa}
+  .preset b{font-size:13px}.preset span{font-size:12px;color:var(--p-muted);line-height:1.35}
+  .mpn{margin:8px 0 0}
+  .prow .badge2.attn{margin-left:8px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .wiss{margin-top:8px;background:var(--p-attn-bg);color:#5e4200;border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.5}
+  .wiss b{color:#4a3500}
+  .errl{padding:6px 10px;max-height:50vh;overflow:auto}
+  .errrow{display:flex;justify-content:space-between;gap:12px;width:100%;border:0;border-bottom:1px solid var(--p-line2);background:none;padding:10px 8px;text-align:left;font:inherit;font-size:13px;color:var(--p-ink);cursor:pointer}
+  .errrow:last-child{border-bottom:0}.errrow:hover{background:#f6f6f7}
+  .errrow .lnk{flex:none}
+  .flash{outline:2px solid #e51c00;outline-offset:3px;border-radius:8px}
+  .tl .bar.shp{background:#eef0f2;color:#303030;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .rnPre{margin-top:8px;background:var(--p-attn-bg);color:#5e4200;border-radius:8px;padding:8px 11px;font-size:12.5px}
   .rnPre b{color:#4a3500}
 
@@ -401,6 +415,18 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         <!-- ================= MAIN COLUMN ================= -->
         <div class="maincol">
 
+          <!-- Presets: fill the first buying option, new plans only -->
+          <div class="card" id="presetCard"><div class="cardpad">
+            <div class="rowline" style="justify-content:space-between"><b style="font-size:13.5px">Start from a preset</b><button class="lnk" id="presetX">Hide</button></div>
+            <div class="help" style="margin:2px 0 10px">Fills in the first buying option. You can change everything after.</div>
+            <div class="presets">
+              <button class="preset" data-p="save"><b>Subscribe and save</b><span>AutoPay or Pay as you go, 10% off, no end date</span></button>
+              <button class="preset" data-p="prepaid"><b>Prepaid pack</b><span>3 monthly deliveries paid upfront, 15% off</span></button>
+              <button class="preset" data-p="ladder"><b>Discount ladder</b><span>10% now, 15% from delivery 3, 20% from delivery 5</span></button>
+              <button class="preset" data-p="course"><b>Course</b><span>A starter, then set products on later deliveries</span></button>
+            </div>
+          </div></div>
+
           <!-- Plan name (always visible identity) -->
           <div class="card"><div class="cardpad">
             <s-text-field label="Plan name" required value="Fresh Juice Subscription" details="Customers see this on the widget and at checkout."></s-text-field>
@@ -477,6 +503,9 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                         </span>
                       <p class="ssent">Deliver every <span class="field fin">2</span> <span class="field fin fchev">weeks</span><span class="sched-fixed"> for <span class="field fin">5</span> deliveries.</span><span class="sched-choice hide"> for <input class="field fin chMin" type="number" min="1" value="3" aria-label="Minimum deliveries" /> to <input class="field fin chMax" type="number" min="1" value="12" aria-label="Maximum deliveries" /> deliveries.</span><span class="sched-none hide"> until the customer cancels.</span></p>
                       <p class="help chErr hide" style="color:#b42318;margin:6px 0 0">Minimum can't be more than maximum.</p>
+                      <p class="ssent cmRow hide">Customers can cancel after <input class="field fin cmN" type="number" min="1" value="1" aria-label="Paid deliveries before cancelling" /> paid deliveries.</p>
+                      <p class="help cmErr hide" style="color:#b42318;margin:6px 0 0"></p>
+                      <p class="help upiWarn hide" style="color:var(--p-attn);margin:6px 0 0"></p>
                     </div>
                     <div class="qgroup">
                       <div class="qhead"><p class="q" style="margin:0">Discount</p><select class="discType fin fsel" aria-label="Discount unit"><option value="pct">Percentage (%)</option><option value="amt">Amount off</option></select></div>
@@ -523,6 +552,9 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                         </span>
                       <p class="ssent">Deliver every <span class="field fin">1</span> <span class="field fin fchev">month</span><span class="sched-fixed"> for <span class="field fin">6</span> deliveries.</span><span class="sched-choice hide"> for <input class="field fin chMin" type="number" min="1" value="3" aria-label="Minimum deliveries" /> to <input class="field fin chMax" type="number" min="1" value="12" aria-label="Maximum deliveries" /> deliveries.</span><span class="sched-none hide"> until the customer cancels.</span></p>
                       <p class="help chErr hide" style="color:#b42318;margin:6px 0 0">Minimum can't be more than maximum.</p>
+                      <p class="ssent cmRow hide">Customers can cancel after <input class="field fin cmN" type="number" min="1" value="1" aria-label="Paid deliveries before cancelling" /> paid deliveries.</p>
+                      <p class="help cmErr hide" style="color:#b42318;margin:6px 0 0"></p>
+                      <p class="help upiWarn hide" style="color:var(--p-attn);margin:6px 0 0"></p>
                     </div>
                     <div class="qgroup">
                       <div class="qhead"><p class="q" style="margin:0">Discount</p><select class="discType fin fsel" aria-label="Discount unit"><option value="pct">Percentage (%)</option><option value="amt">Amount off</option></select></div>
@@ -603,7 +635,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                   <div style="min-width:0">
                     <div class="ap-t">Subscription variant</div>
                     <div class="ap-m">Added to <span id="adVarN">1 product</span> in this plan &middot; created when you publish</div>
-                    <div class="ap-m" style="margin-top:2px">Needs one free option slot on each product.</div>
+                    <div class="ap-m" style="margin-top:2px">Priced like the product; the discount comes from the codes below. Needs one free option slot on each product.</div>
                   </div>
                 </div></div>
                 <div class="adaptprod" id="adProd">
@@ -622,6 +654,23 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                 <div class="adtbl" id="adConf"></div>
                 <p class="noteline">Covers Prepaid and Pay as you go options. Pay per delivery (AutoPay) always checks out through Razorpay.</p>
                 <p class="noteline hide" id="adaptCourseNote">Course plan: the product made for your checkout must carry each delivery's own price, and the full course total for prepaid. Dev to confirm before launch.</p>
+              </div>
+              <div class="enhsep"></div>
+              <div>
+                <b>What customers can change</b>
+                <div class="help">Skip, pause and cancel follow your Portal settings. These apply to this plan.</div>
+                <p class="ssent">Swaps to <select class="field fin fsel" id="swapSel" aria-label="Swap options"><option value="plan">products in this plan</option><option value="store">any product in the store</option><option value="none">no swaps</option></select>, <input class="field fin" id="qtyMin" type="number" min="1" value="1" aria-label="Minimum units" /> to <input class="field fin" id="qtyMax" type="number" min="1" value="10" aria-label="Maximum units" /> units per delivery.</p>
+                <p class="help qtyErr hide" style="color:#b42318;margin:6px 0 0">The minimum can't be more than the maximum.</p>
+              </div>
+              <div class="enhsep"></div>
+              <div class="rowline" style="justify-content:space-between;flex-wrap:nowrap">
+                <div><b>Also sell as a one-time purchase?</b><div class="help">Shows a one-time option next to Subscribe on the widget.</div></div>
+                <s-switch id="otpSw"></s-switch>
+              </div>
+              <div class="enhsep"></div>
+              <div class="rowline" style="justify-content:space-between;flex-wrap:nowrap">
+                <div><b>Let customers gift a prepaid plan?</b><div class="help" id="giftHelp">Checkout asks for the recipient email and a message.</div></div>
+                <s-switch id="giftSw"></s-switch>
               </div>
               <div class="enhsep"></div>
               <div>
@@ -679,6 +728,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                 <span class="dact"><span class="badge2 info" id="wBadge">Goes live on publish</span></span>
               </div>
               <div class="help" style="margin-top:4px">Each product shows the widget assigned to it in Widgets.</div>
+              <div id="wIssues"></div>
               <div style="margin-top:8px"><a class="lnk" id="wSelect" href="Widgets_Polaris_v1.html#plan=fj" target="_blank">Assign widgets &#8594;</a></div>
             </div>
 
@@ -723,7 +773,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     // ---------- v3: catalog + selection model ----------
     // w = the widget a product shows today (from another plan); drives the widget-switch notice.
     var CATALOG=[
-      {id:'p1',t:'Organic Cold-Pressed Juice',w:'multi-frequency',v:[['500ml',180],['1L',320],['2L',590]]},
+      {id:'p1',t:'Organic Cold-Pressed Juice',w:'multi-frequency',other:'Juice Cleanse Weekly',v:[['500ml',180],['1L',320],['2L',590]]},
       {id:'p2',t:'Green Detox Juice',w:'single-plan',v:[['300ml',150],['500ml',230]]},
       {id:'p3',t:'Beetroot Ginger Shot',v:[['6 x 60ml',299],['12 x 60ml',549]]},
       {id:'p4',t:'Orange Carrot Juice',v:[['500ml',190],['1L',340]]},
@@ -732,7 +782,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       {id:'p7',t:'Celery Cleanse',v:[['500ml',240]]},
       {id:'p8',t:'Amla Shot',v:[['6 x 60ml',249]]},
       {id:'p9',t:'Pomegranate Juice',v:[['500ml',260],['1L',470]]},
-      {id:'p10',t:'Tender Coconut Water',w:'multi-frequency',v:[['330ml',90],['1L',220]]},
+      {id:'p10',t:'Tender Coconut Water',w:'multi-frequency',other:'Plant Milk Weekly',v:[['330ml',90],['1L',220]]},
       {id:'p11',t:'ABC Juice',v:[['500ml',210],['1L',380]]},
       {id:'p12',t:'Kokum Cooler',v:[['500ml',160]]},
       {id:'p13',t:'Apple Cinnamon Juice',v:[['500ml',220],['1L',400]]},
@@ -774,10 +824,11 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       var gs=groups(set, scope), html='';
       gs.slice(0,ROW_CAP).forEach(function(g){
         var meta = g.n===g.p.v.length ? (g.p.v.length===1?'1 variant':'all '+g.p.v.length+' variants') : g.n+' of '+g.p.v.length+' variants';
-        html+='<div class="prow clk" data-edit="'+g.p.id+'" title="Click to edit variants"><s-thumbnail size="small"></s-thumbnail><span class="pname">'+esc(g.p.t)+'</span><span class="pmeta">&middot; '+meta+'</span>'+
+        html+='<div class="prow clk" data-edit="'+g.p.id+'" title="Click to edit variants"><s-thumbnail size="small"></s-thumbnail><span class="pname">'+esc(g.p.t)+'</span><span class="pmeta">&middot; '+meta+'</span>'+(g.p.other?'<span class="badge2 attn" title="Also in '+esc(g.p.other)+'">Also in '+esc(g.p.other)+'</span>':'')+
               '<span class="pacts"><button class="x" data-rm="'+g.p.id+'">Remove &#10005;</button></span></div>';
       });
       if(gs.length>ROW_CAP) html+='<button class="lnk showall" data-all="1">Show all '+gs.length+' products &#8594;</button>';
+      if(gs.some(function(g){ return g.p.other; })) html+='<p class="help mpn">A product in another plan shows the options of both plans in one widget, the older plan first. A schedule in both shows once.</p>';
       if(!gs.length) html='<p class="help" style="margin:4px 0 0">No products selected yet.</p>';
       box.innerHTML=html;
       box.onclick=function(e){
@@ -1223,6 +1274,13 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         // discount
         r++; h+=at(r,1,2,'lb','Discount');
         runs(C.map(function(c){ return discAt(c.n); }), r, function(v){ return 'bar dsc l'+Math.min(lv.indexOf(v),4); }, function(v){ return fmtShort(v); });
+        // course: what ships on each delivery (the first starter's course)
+        if(S.mode==='course' && S.courses && S.courses.length){
+          var CO=S.courses[0];
+          var shipAt=function(n){ var row=null; (CO.rows||[]).forEach(function(rw){ if(rw.n<=n) row=rw; }); return row && row.items.length ? row.items.map(function(it){ return it.pid; }) : [CO.pid]; };
+          r++; h+=at(r,1,2,'lb','Ships');
+          runs(C.map(function(c){ return shipAt(c.n).join(','); }), r, function(){ return 'bar shp'; }, function(v){ var ids=v.split(','); var t=prod(ids[0]).t; return esc(t.length>18?t.slice(0,17)+'...':t)+(ids.length>1?' +'+(ids.length-1):''); });
+        }
         // gifts
         if(L.some(function(s){ return s.gifts.length; })){
           r++; h+=at(r,1,2,'lb','Free gift');
@@ -1241,6 +1299,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         });
         h+='</div><div class="tlfoot">';
         if(mode==='choice') h+='<span>The customer picks '+mm.min+' to '+mm.max+' deliveries. Dashed ones are optional.</span>';
+        if(card._cmN && card._cmN()>1) h+='<span>Customers can cancel after delivery '+card._cmN()+'.</span>';
         var fq=schedFixed.parentNode.querySelectorAll('.field'), fn=(fq[0]&&fq[0].textContent.trim())||'1', fu=(fq[1]&&fq[1].textContent.trim())||'month';
         h+='<span class="ttd">'+IC_CLOCK+'First order at checkout, then one '+(fn==='1' ? 'every '+fu.replace(/s$/,'') : 'every '+fn+' '+fu)+'</span></div>';
         return h;
@@ -1255,6 +1314,8 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         if(on(payGo)) parts.push('pay as you go '+count+', billed by invoice and email reminder as each delivery ships');
         var body = !parts.length ? 'no payment option is selected yet' : parts.length===1 ? 'the customer will '+parts[0] : 'the customer chooses to '+parts.join('; or to ');
         deliveryPreview.innerHTML=breakupHTML();
+        if(card._checks) card._checks();
+        if(typeof renderWidget==='function') renderWidget();
         if(typeof renderAdaptCodes==='function') renderAdaptCodes();
       }
       function syncPay(){
@@ -1277,8 +1338,6 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       [payPre, payAuto, payPart, payGo].forEach(function(chip){
         chip.addEventListener('click', function(){
           if(chip.classList.contains('locked')) return;
-          // a ladder needs at least one per-delivery payment type left on
-          if(chip!==payPre && on(chip) && discMode(card)==='ladder' && (on(payAuto)+on(payGo)+on(payPart))===1) return;
           var wasPdOnly = !on(payPre) && perDel();
           chip.classList.toggle('on');
           if(!wasPdOnly && !on(payPre) && perDel()) setDuration('none');
@@ -1287,7 +1346,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       });
 
       unitSel.addEventListener('change', function(){ renderLadder(); });
-      // Prepaid needs one price per delivery, so it locks off once the table has more than one discount level (LD-01 R3)
+      // Prepaid works with a ladder: the upfront amount is every delivery at its own discount
       var ladPre=q('.ladPre'), preLocked=false;
       function applyPrepaidRule(){
         var multi=discMode(card)==='ladder';
@@ -1373,6 +1432,28 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       bTxt.addEventListener('input', function(){ bChip.textContent=bTxt.value; bChip.classList.toggle('hide', !bTxt.value.trim()); });
       setCol(bCol.value);
 
+      // commitment (per-delivery payments only) and the UPI AutoPay per-debit limit
+      var cmRow=q('.cmRow'), cmN=q('.cmN'), cmErr=q('.cmErr'), upiWarn=q('.upiWarn'), UPI_MAX=15000;
+      function checkCommit(){
+        var show=perDel(); cmRow.classList.toggle('hide', !show);
+        var n=parseInt(cmN.value,10)||1, dur=curDur(), mm=minMax(), msg='';
+        if(show && dur==='fixed'){ var f=parseInt(schedFixed.querySelector('.field').textContent,10)||0; if(n>f) msg='This option has '+f+' deliveries, so customers could never cancel early. Use '+f+' or fewer.'; }
+        if(show && dur==='choice' && n>mm.min) msg='The shortest choice is '+mm.min+' deliveries. Keep the commitment at '+mm.min+' or fewer.';
+        cmErr.textContent=msg; cmErr.classList.toggle('hide', !msg);
+      }
+      function checkUpi(){
+        var a=on(payAuto)||on(payPart), top=0, qmax=parseInt(($('qtyMax')||{}).value,10)||1;
+        groups(activeSet(), CATALOG).forEach(function(g){ g.p.v.forEach(function(v){ top=Math.max(top, v[1]); }); });
+        var minOff=Math.min.apply(null, card._lad.map(function(x){ return x.value; })), amt=unitSel.value==='amt';
+        var charge=Math.round(amt ? (top-minOff)*qmax : top*qmax*(1-minOff/100));
+        var over=a && charge>UPI_MAX;
+        upiWarn.textContent = over ? 'One AutoPay charge can reach INR '+charge.toLocaleString('en-IN')+' ('+qmax+' units), above the UPI AutoPay limit of INR 15,000. Customers paying by UPI will be asked for a card or eNACH mandate instead.' : '';
+        upiWarn.classList.toggle('hide', !over);
+      }
+      card._cmN=function(){ return perDel() ? (parseInt(cmN.value,10)||1) : 1; };
+      card._checks=function(){ checkCommit(); checkUpi(); };
+      cmN.addEventListener('input', function(){ checkCommit(); renderDeliveryPreview(); });
+      card._relad=renderLadder;
       card._preview=renderDeliveryPreview;
       syncPay(); renderLadder();
     }
@@ -1554,10 +1635,35 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     // Picking a template makes it live on this plan's products at publish. A product that shows a
     // different widget today is switched over and turned off in that widget; activation from Widgets is unchanged.
     var wTpl={value:'purchase-options'}, wBadge=$('wBadge');   // chosen in Widgets; this screen only shows it
+    // what this plan offers, for checking the widget each product already shows
+    function planFacts(){
+      var cards=[].slice.call(document.querySelectorAll('.optcard[data-opt]')), pay={}, fr={}, len={};
+      cards.forEach(function(c){
+        ['prepaid','auto','part','payg'].forEach(function(k){ if(c.querySelector('.pay-'+k+'.on')) pay[k]=1; });
+        var f=c.querySelector('.sched-fixed').closest('.ssent').querySelectorAll('.field'); fr[(f[0]?f[0].textContent:'')+' '+(f[1]?f[1].textContent:'')]=1;
+        var d=c.querySelector('.durSeg button.on'); len[d && d.dataset.dur==='fixed' ? (f[2]?f[2].textContent:'') : (d?d.dataset.dur:'')]=1;
+      });
+      return {n:cards.length, pay:pay, fr:Object.keys(fr).length, len:Object.keys(len).length};
+    }
+    var PAYN={prepaid:'Prepaid',auto:'AutoPay',part:'Partial prepaid',payg:'Pay as you go'};
+    function widgetIssue(k, F){
+      var have=Object.keys(F.pay), hid;
+      if(k==='single-plan' && F.n>1) return 'shows only the first of '+F.n+' buying options';
+      if(k==='prepaid-only'){ if(!F.pay.prepaid) return 'shows nothing: this plan has no Prepaid option'; hid=have.filter(function(x){ return x!=='prepaid'; }); if(hid.length) return 'hides '+hid.map(function(x){ return PAYN[x]; }).join(', '); }
+      if(k==='payg-only'){ hid=have.filter(function(x){ return x==='prepaid'||x==='part'; }); if(hid.length===have.length) return 'shows nothing: this plan has no AutoPay or Pay as you go option'; if(hid.length) return 'hides '+hid.map(function(x){ return PAYN[x]; }).join(', '); }
+      if(k==='multi-frequency' && F.fr<2) return 'needs two or more delivery frequencies';
+      if(k==='multi-delivery' && F.len<2) return 'needs two or more plan lengths';
+      if(k==='international-plan') return 'needs an international market, which this store has not set up';
+      return '';
+    }
     function renderWidget(){
+      if(!wBadge) return;
       var name=TPL_NAMES[wTpl.value], has=groups(activeSet(), activeScope()).length>0;
+      var F=planFacts(), iss=[];
+      groups(activeSet(), CATALOG).forEach(function(g){ var k=g.p.w||'purchase-options', m=widgetIssue(k,F); if(m) iss.push('<b>'+esc(g.p.t)+'</b> &middot; '+esc(TPL_NAMES[k]||k)+' '+m+'.'); });
+      $('wIssues').innerHTML = iss.length ? '<div class="wiss">'+iss.join('<br>')+'</div>' : '';
       var live=pState==='live';
-      wBadge.textContent = !has ? 'No products yet' : live ? 'Live' : 'Goes live on publish'; wBadge.className = !has ? 'badge2 sub' : live ? 'badge2 ok' : 'badge2 info';
+      wBadge.textContent = !has ? 'No products yet' : iss.length ? 'Check widgets' : live ? 'Live' : 'Goes live on publish'; wBadge.className = !has ? 'badge2 sub' : iss.length ? 'badge2 attn' : live ? 'badge2 ok' : 'badge2 info';
       $('wSelect').title='Opens Widgets, where you assign a widget to each product';
     }
 
@@ -1574,9 +1680,67 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       if(st==='live'){ btn('secondary-actions','Duplicate','dup'); btn('secondary-actions','Move to draft','todraft'); btn('primary-action','Save','save',1); }
       if(st==='draft'){ btn('secondary-actions','Duplicate','dup'); btn('primary-action','Publish','publish',1); }
       PG.setAttribute('heading', st==='new' ? 'Create subscription plan' : pName());
-      renderWidget(); renderAdaptCodes();
+      renderWidget(); renderAdaptCodes(); $('presetCard').classList.toggle('hide', st!=='new');
       var b=$('planState'); b.textContent = st==='live' ? 'Live' : st==='draft' ? 'Draft' : 'Not live yet'; b.className='badge2 '+(st==='live'?'ok':st==='draft'?'sub':'info');
     }
+    // everything that must be fixed before a plan can go live
+    function planErrors(){
+      var E=[], cards=[].slice.call(document.querySelectorAll('.optcard[data-opt]'));
+      if(!(planName && planName.value && planName.value.trim())) E.push({t:'Give the plan a name.', el:planName});
+      if(!groups(activeSet(), CATALOG).length) E.push({t:'Add at least one product.', el:steps[0]});
+      if(!cards.length) E.push({t:'Add at least one buying option.', el:steps[1]});
+      cards.forEach(function(c){
+        var nm=c.querySelector('.optsum .title').textContent;
+        if(!c.querySelector('.pay-prepaid.on,.pay-auto.on,.pay-part.on,.pay-payg.on')) E.push({t:nm+': pick a payment type.', el:c});
+        ['.ppErr','.chErr','.cmErr','.ladwarn'].forEach(function(sl){ var el=c.querySelector(sl); if(el && !el.classList.contains('hide') && el.textContent.trim()) E.push({t:nm+': '+el.textContent.trim(), el:c}); });
+      });
+      if((parseInt($('qtyMin').value,10)||1) > (parseInt($('qtyMax').value,10)||1)) E.push({t:'Units per delivery: the minimum is more than the maximum.', el:$('qtyMin')});
+      if(adaptOn()){ var seen={}; document.querySelectorAll('.adcode').forEach(function(i){ var v=i.value.trim(); if(!v) E.push({t:'A discount code is empty.', el:i}); else if(seen[v]) E.push({t:'Discount code '+v+' is used twice.', el:i}); seen[v]=1; }); }
+      return E;
+    }
+    function goTo(el){
+      var st=el.closest && el.closest('.step'); if(st){ var b=st.querySelector('.stepbody'); if(b) b.classList.remove('collapsed'); }
+      var oc=el.closest && el.closest('.optcard'); if(oc && oc.querySelector('.opteditor').classList.contains('hide')) oc.querySelector('.t-edit').click();
+      el.scrollIntoView({block:'center', behavior:'smooth'}); el.classList.add('flash'); setTimeout(function(){ el.classList.remove('flash'); }, 1600);
+    }
+    function showErrors(E){
+      var back=document.createElement('div'); back.className='mback';
+      back.innerHTML='<div class="modal" role="dialog" aria-modal="true" style="width:520px"><div class="mhdr"><h3>Fix '+E.length+' thing'+(E.length>1?'s':'')+' before publishing</h3><button class="mclose" data-close="1" aria-label="Close">&#10005;</button></div>'+
+        '<div class="errl">'+E.map(function(x,i){ return '<button class="errrow" data-i="'+i+'"><span>'+esc(x.t)+'</span><span class="lnk">Go to &#8594;</span></button>'; }).join('')+'</div>'+
+        '<div class="mfoot"><span></span><span class="macts"><button class="pbtn" data-close="1">Close</button></span></div></div>';
+      document.body.appendChild(back);
+      back.addEventListener('click', function(e){
+        if(e.target===back || e.target.closest('[data-close]')){ back.remove(); return; }
+        var r=e.target.closest('.errrow'); if(r){ back.remove(); goTo(E[+r.dataset.i].el); }
+      });
+    }
+    // presets fill the first buying option
+    function applyPreset(k){
+      if(k==='course'){ aseg.querySelector('[data-lvl="course"]').click(); goTo(steps[0]); toast('Course plan: add a starter product, then the products for later deliveries.'); return; }
+      var c=document.querySelector('.optcard[data-opt]'); if(!c) return;
+      var stb=steps[1].querySelector('.stepbody'); if(stb) stb.classList.remove('collapsed');
+      if(c.querySelector('.opteditor').classList.contains('hide')) c.querySelector('.t-edit').click();
+      var want = k==='save' ? {auto:1,payg:1} : k==='prepaid' ? {prepaid:1} : {auto:1};
+      ['prepaid','auto','part','payg'].forEach(function(x){ var ch=c.querySelector('.pay-'+x); if(want[x] && !ch.classList.contains('on')) ch.click(); });
+      ['prepaid','auto','part','payg'].forEach(function(x){ var ch=c.querySelector('.pay-'+x); if(!want[x] && ch.classList.contains('on')) ch.click(); });
+      var f=c.querySelector('.sched-fixed').closest('.ssent').querySelectorAll('.field');
+      if(k==='save'){ f[0].textContent='1'; f[1].textContent='month'; c.querySelector('[data-dur="none"]').click(); c._lad=[{n:1,value:10,gifts:[]}]; c.querySelector('.optsum .title').innerHTML='Every month &middot; no end date'; }
+      if(k==='prepaid'){ f[0].textContent='1'; f[1].textContent='month'; c.querySelector('[data-dur="fixed"]').click(); f[2].textContent='3'; c._lad=[{n:1,value:15,gifts:[]}]; c.querySelector('.optsum .title').innerHTML='Every month &middot; 3 deliveries'; }
+      if(k==='ladder'){ f[0].textContent='1'; f[1].textContent='month'; c.querySelector('[data-dur="fixed"]').click(); f[2].textContent='6'; c._lad=[{n:1,value:10,gifts:[]},{n:3,value:15,gifts:[]},{n:5,value:20,gifts:[]}]; c.querySelector('.optsum .title').innerHTML='Every month &middot; 6 deliveries'; }
+      c._relad(); goTo(c); toast('Preset applied to the first buying option. Change anything you like.');
+    }
+    document.addEventListener('click', function(e){ var b=e.target.closest && e.target.closest('.preset'); if(b) applyPreset(b.dataset.p); if(e.target.id==='presetX') $('presetCard').classList.add('hide'); });
+    // customer changes, one-time, gifting
+    function renderExtras(){
+      var mn=parseInt($('qtyMin').value,10)||1, mx=parseInt($('qtyMax').value,10)||1;
+      document.querySelector('.qtyErr').classList.toggle('hide', !(mn>mx));
+      var anyPre=!!document.querySelector('.optcard[data-opt] .pay-prepaid.on'), g=$('giftSw');
+      if(!anyPre){ g.checked=false; g.setAttribute('disabled',''); } else g.removeAttribute('disabled');
+      $('giftHelp').textContent = anyPre ? 'Checkout asks for the recipient email and a message.' : 'Needs a Prepaid buying option.';
+      document.querySelectorAll('.optcard[data-opt]').forEach(function(c){ if(c._checks) c._checks(); });
+    }
+    ['qtyMin','qtyMax'].forEach(function(id){ $(id).addEventListener('input', renderExtras); });
+    document.addEventListener('sb:pay', renderExtras);
     function confirmToDraft(){
       var back=document.createElement('div'); back.className='mback';
       back.innerHTML='<div class="modal" role="dialog" aria-modal="true" style="width:440px"><div class="mhdr"><h3>Move this plan to draft?</h3><button class="mclose" data-close="1" aria-label="Close">&#10005;</button></div>'+
@@ -1591,13 +1755,14 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     document.addEventListener('click', function(e){
       var a=e.target.closest && e.target.closest('[data-pa]'); if(!a) return;
       var k=a.dataset.pa;
-      if(k==='publish'){ setPlanState('live'); toast('Plan published. It\'s live on its products.'); }
+      if(k==='publish'){ var errs=planErrors(); if(errs.length){ showErrors(errs); return; } setPlanState('live'); toast('Plan published. It\'s live on its products.'); }
       if(k==='draft'){ setPlanState('draft'); toast('Saved as draft.'); }
-      if(k==='dup') toast('Copy created as a draft: '+pName()+' (copy).');
+      if(k==='dup') toast('Copy created as a draft: '+pName()+' (copy). It gets its own discount codes.');
       if(k==='todraft') confirmToDraft();
       if(k==='save') toast('Saved. Changes apply to new subscriptions only.');
     });
-    setPlanState(/live/.test(location.hash) ? 'live' : 'new');
+    $('otpSw').checked=true;
+    setPlanState(/live/.test(location.hash) ? 'live' : 'new'); renderExtras();
     setLevel(S.cols.length && !S.pv.size ? 'collection' : 'pv'); renderAdaptAvail(); renderRenewPlan();
   })();
 </script>
