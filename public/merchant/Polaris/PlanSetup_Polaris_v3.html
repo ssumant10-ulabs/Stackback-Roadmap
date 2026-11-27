@@ -83,8 +83,10 @@
   .tl .node.first::before,.tl .node.last::after{display:none}
   .tl .node i{position:relative;z-index:1}
   .tl .node i{font-style:normal;min-width:22px;height:22px;padding:0 4px;box-sizing:border-box;border-radius:11px;background:#fff;border:1.5px solid #8a8a8a;display:grid;place-items:center;font-weight:600;font-size:11px;color:var(--p-ink)}
-  .tl .node.opt i{border-style:dashed;color:var(--p-muted)}
-  .tl .node.sk i{border:1px dashed #c9c9c9;background:#fff;color:var(--p-muted);font-weight:500;font-size:10.5px;padding:0 6px;white-space:nowrap}
+  .tl .node.optn i{border-style:dashed;color:var(--p-muted)}
+  .tl .node.optn::before,.tl .node.optn::after{background:repeating-linear-gradient(90deg,#c9c9c9 0 4px,transparent 4px 7px)}
+  .tl .node.sk i{border:0;background:#fff;color:var(--p-faint);font-weight:500;font-size:10.5px;padding:0 5px;white-space:nowrap;min-width:0}
+  .tl .node.sk::before,.tl .node.sk::after{background:repeating-linear-gradient(90deg,#c9c9c9 0 2px,transparent 2px 5px)}
   .tl .gf{justify-self:center;display:inline-flex;align-items:center;gap:1px;color:#8a5b00}
   .tl .gf small{font-size:10px;font-weight:700}
   .tl .bar{min-height:22px;box-sizing:border-box;display:flex;align-items:center;padding:2px 9px;margin:0 2px;border-radius:7px;font-size:11px;font-weight:600;line-height:1.25;min-width:0}
@@ -1198,7 +1200,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         var keys={1:1}; L.forEach(function(s){ keys[s.n]=1; }); if(pp){ keys[pp]=1; keys[pp+1]=1; } if(mode==='choice') keys[mm.min]=1; keys[N]=1;
         if(N<=8) for(var k=1;k<=N;k++) keys[k]=1;
         var ns=Object.keys(keys).map(Number).filter(function(n){ return n>=1 && n<=N; }).sort(function(a,b){ return a-b; }), C=[];
-        ns.forEach(function(n,i){ if(i && n-ns[i-1]>1) C.push({gap:1, a:ns[i-1]+1, b:n-1, n:ns[i-1]+1}); C.push({n:n}); });
+        ns.forEach(function(n,i){ var g=i ? n-ns[i-1]-1 : 0; if(g===1) C.push({n:n-1}); else if(g>1) C.push({gap:1, a:ns[i-1]+1, b:n-1, n:ns[i-1]+1}); C.push({n:n}); });
         if(mode==='none') C.push({more:1, n:N+1});
         var types=[]; if(on(payPre)) types.push('pre'); if(on(payAuto)) types.push('auto'); if(on(payPart)) types.push('part'); if(on(payGo)) types.push('payg');
         if(!types.length) return '<span class="help">Pick a payment type to see how this option runs.</span>';
@@ -1212,7 +1214,8 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         r++; h+=at(r,1,2,'lb','Delivery');
         C.forEach(function(c,i){
           var html = c.gap ? (c.a===c.b?c.a:c.a+'-'+c.b) : c.more ? '&hellip;' : c.n;
-          h+=at(r,i+2,i+3,'node'+(i===0?' first':'')+(i===C.length-1?' last':'')+(c.gap||c.more?' sk':'')+(mode==='choice' && !c.gap && !c.more && c.n>mm.min?' opt':''), '<i>'+html+'</i>', c.gap?'Deliveries '+c.a+' to '+c.b:c.more?'Continues until the customer cancels':'');
+          var optn = mode==='choice' && !c.more && c.n>mm.min;
+          h+=at(r,i+2,i+3,'node'+(i===0?' first':'')+(i===C.length-1?' last':'')+(c.gap||c.more?' sk':'')+(optn?' optn':''), '<i>'+html+'</i>', c.gap?'Deliveries '+c.a+' to '+c.b+(optn?' (optional)':''):c.more?'Continues until the customer cancels':optn?'Optional: the customer may stop before this':'');
         });
         // discount
         r++; h+=at(r,1,2,'lb','Discount');
@@ -1232,7 +1235,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
           h+=at(r,endCol,endCol+1,'end',end);
         });
         h+='</div><div class="tlfoot">';
-        if(mode==='choice') h+='<span>Dashed: the customer can stop before this delivery.</span>';
+        if(mode==='choice') h+='<span>The customer picks '+mm.min+' to '+mm.max+' deliveries. Dashed ones are optional.</span>';
         var fq=schedFixed.parentNode.querySelectorAll('.field'), fn=(fq[0]&&fq[0].textContent.trim())||'1', fu=(fq[1]&&fq[1].textContent.trim())||'month';
         h+='<span class="ttd">'+IC_CLOCK+'First order at checkout, then one '+(fn==='1' ? 'every '+fu.replace(/s$/,'') : 'every '+fn+' '+fu)+'</span></div>';
         return h;

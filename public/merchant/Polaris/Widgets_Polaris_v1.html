@@ -83,8 +83,10 @@
   .tl .node.first::before,.tl .node.last::after{display:none}
   .tl .node i{position:relative;z-index:1}
   .tl .node i{font-style:normal;min-width:22px;height:22px;padding:0 4px;box-sizing:border-box;border-radius:11px;background:#fff;border:1.5px solid #8a8a8a;display:grid;place-items:center;font-weight:600;font-size:11px;color:var(--p-ink)}
-  .tl .node.opt i{border-style:dashed;color:var(--p-muted)}
-  .tl .node.sk i{border:1px dashed #c9c9c9;background:#fff;color:var(--p-muted);font-weight:500;font-size:10.5px;padding:0 6px;white-space:nowrap}
+  .tl .node.optn i{border-style:dashed;color:var(--p-muted)}
+  .tl .node.optn::before,.tl .node.optn::after{background:repeating-linear-gradient(90deg,#c9c9c9 0 4px,transparent 4px 7px)}
+  .tl .node.sk i{border:0;background:#fff;color:var(--p-faint);font-weight:500;font-size:10.5px;padding:0 5px;white-space:nowrap;min-width:0}
+  .tl .node.sk::before,.tl .node.sk::after{background:repeating-linear-gradient(90deg,#c9c9c9 0 2px,transparent 2px 5px)}
   .tl .gf{justify-self:center;display:inline-flex;align-items:center;gap:1px;color:#8a5b00}
   .tl .gf small{font-size:10px;font-weight:700}
   .tl .bar{min-height:22px;box-sizing:border-box;display:flex;align-items:center;padding:2px 9px;margin:0 2px;border-radius:7px;font-size:11px;font-weight:600;line-height:1.25;min-width:0}
@@ -398,11 +400,11 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
   .wpf.thumb iframe{width:400px;transform-origin:0 0;pointer-events:none}
   .wpf.thumb::after{content:'';position:absolute;left:0;right:0;bottom:0;height:44px;background:linear-gradient(rgba(255,255,255,0),#fff)}
   .wpf.big{width:400px;min-height:120px;margin:0 auto;border-radius:12px;box-shadow:0 0 0 1px #e3e3e3}
-  .wpf.big iframe{width:400px}
+  .wpf.big iframe{width:400px;transform-origin:0 0}
   .wpf:not(.ok)::before{content:'Loading preview';position:absolute;inset:0;display:grid;place-items:center;color:var(--p-faint);font-size:12px}
   .wpf.nox::before{content:'Preview loads on the hosted admin'}
   /* picker */
-  .modal.wpk{width:900px;max-height:88vh}
+  .modal.wpk{width:940px;height:86vh;max-height:86vh}
   .pkbody{display:grid;grid-template-columns:280px 1fr;min-height:0;flex:1;overflow:hidden}
   .pklist{border-right:1px solid var(--p-line2);overflow:auto;padding:8px}
   .pkrow{display:flex;gap:10px;align-items:flex-start;width:100%;border:0;background:none;border-radius:8px;padding:8px 10px;text-align:left;font:inherit;cursor:pointer;color:var(--p-ink)}
@@ -413,7 +415,14 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
   .pkrow .tx{display:flex;flex-direction:column;gap:1px;min-width:0}
   .pkrow .tx b{font-size:13px;font-weight:600;display:flex;gap:6px;align-items:center}
   .pkrow .tx small{font-size:12px;color:var(--p-muted)}
-  .pkstage{background:#f6f6f7;overflow:auto;padding:14px 18px 18px;display:flex;flex-direction:column;gap:12px}
+  .pkstage{background:#f6f6f7;overflow:hidden;padding:14px 18px 16px;display:flex;flex-direction:column;gap:10px;min-height:0}
+  .pkshow{flex:1;min-height:0;display:flex;justify-content:center;align-items:flex-start}
+  .pkshow .wpf.big{margin:0;flex:none}
+  .pktok{display:grid;grid-template-columns:repeat(3,1fr);gap:6px 12px;background:#fff;border:1px solid var(--p-line);border-radius:10px;padding:10px 12px}
+  .pktok label{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--p-ink)}
+  .pktok input{width:28px;height:22px;border:1px solid #d4d4d4;border-radius:6px;padding:0;background:none;cursor:pointer}
+  .pkleft{display:flex;align-items:center;gap:12px;min-width:0}
+  .mfoot{gap:12px}
   .pkhead label{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--p-muted)}
   .pkhead .wsel{width:240px}
   .pkwhat{font-size:12px;color:var(--p-muted);text-align:center}
@@ -511,6 +520,8 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     {id:'p18',t:'Glass Bottle',v:1,pr:249,plans:[],w:null}
   ];
   var DEF='purchase-options', sel=new Set();
+  var TOK={primary:'#2a431c',secondary:'#d7f5d1',accent:'#f5b400',tileText:'#282828',tile:'#fcfaf8',bg:'#ffffff'};
+  var TOKN=[['primary','Primary'],['secondary','Secondary'],['accent','Accent'],['tileText','Tile text'],['tile','Tile'],['bg','Background']];
   function tpl(k){ return TPL.filter(function(x){ return x.k===k; })[0]; }
   function prod(id){ return PRODS.filter(function(x){ return x.id===id; })[0]; }
   var planQ=((location.search+location.hash).match(/plan=([a-z]+)/)||[])[1] || 'all';
@@ -528,16 +539,16 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
   // ---------- real widget preview: the Widget Lab product page, cut down to the widget ----------
   var LAB='/widget-lab/pdp.html', THUMB_W=400;
   function b64u(o){ var bytes=new TextEncoder().encode(JSON.stringify(o)), bin=''; bytes.forEach(function(b){ bin+=String.fromCharCode(b); }); return btoa(bin).split('+').join('-').split('/').join('_').split('=').join(''); }
-  function cfgFor(k, p){
+  function cfgFor(k, p, tok){
     var pay={}, d={}; p.plans.forEach(function(id){ PLANS[id].pay.forEach(function(x){ pay[x]=1; }); PLANS[id].opts.forEach(function(o){ d[o.f]=Math.max(d[o.f]||0,o.d); }); });
     var pm=[]; if(pay.pre||pay.part) pm.push('prepaid'); if(pay.auto||pay.payg||pay.part) pm.push('ppd');
-    return {w:k, pm:pm, d:d, def:'sub', p:{title:p.t, price:p.pr}};
+    return {w:k, pm:pm, d:d, def:'sub', t:tok||TOK, p:{title:p.t, price:p.pr}};
   }
-  function frame(k, p, mode){
+  function frame(k, p, mode, tok){
     var box=document.createElement('div'); box.className='wpf '+mode;
     var f=document.createElement('iframe'); f.title='Widget preview'; f.setAttribute('tabindex','-1');
     if(mode==='thumb') f.loading='lazy';
-    f.src=LAB+'#c='+b64u(cfgFor(k,p));
+    f.src=LAB+'#c='+b64u(cfgFor(k,p,tok));
     box.appendChild(f);
     f.addEventListener('load', function(){ isolate(f, box, mode); });
     return box;
@@ -560,7 +571,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         var h=Math.ceil(host.getBoundingClientRect().height);
         f.style.height=h+'px';
         if(mode==='thumb'){ f.style.transform='scale('+(box.clientWidth/THUMB_W)+')'; }
-        else box.style.height=h+'px';
+        else { var av=box.parentNode ? box.parentNode.clientHeight : h, sc=Math.min(1, av/h); f.style.transform='scale('+sc+')'; box.style.height=Math.floor(h*sc)+'px'; box.style.width=Math.floor(400*sc)+'px'; }
         box.classList.add('ok');
       }
       fit();
@@ -629,25 +640,33 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     var title = ids ? (ids.length>1 ? 'Widget for '+ids.length+' products' : 'Widget for '+esc(pv.t)) : 'Widget preview';
     back.innerHTML='<div class="modal wpk" role="dialog" aria-modal="true"><div class="mhdr"><h3>'+title+'</h3><button class="mclose" data-close="1" aria-label="Close">&#10005;</button></div>'
       +'<div class="pkbody"><div class="pklist">'+TPL.map(function(t){ return '<button class="pkrow" data-k="'+t.k+'"><span class="rd"></span><span class="tx"><b>'+esc(t.n)+(t.k===DEF?' <span class="badge2 sub">Default</span>':'')+'</b><small>'+esc(t.best)+'</small></span></button>'; }).join('')+'</div>'
-      +'<div class="pkstage"><div class="pkhead"><label>Previewing on <select class="wsel" id="pkP">'+inPlan.map(function(x){ return '<option value="'+x.id+'">'+esc(x.t)+'</option>'; }).join('')+'</select></label></div>'
+      +'<div class="pkstage"><div class="pktok hide" id="pkTokP">'+TOKN.map(function(x){ return '<label><input type="color" data-t="'+x[0]+'" value="'+TOK[x[0]]+'" /><span>'+x[1]+'</span></label>'; }).join('')+'</div><div class="pkhead"><label>Previewing on <select class="wsel" id="pkP">'+inPlan.map(function(x){ return '<option value="'+x.id+'">'+esc(x.t)+'</option>'; }).join('')+'</select></label></div>'
       +'<div class="pkshow" id="pkShow"></div><div class="m pkwhat" id="pkWhat"></div></div></div>'
-      +'<div class="mfoot"><span class="wwarn" id="pkWarn"></span><span class="macts"><button class="pbtn" data-close="1">Cancel</button><button class="pbtn primary" id="pkGo"></button></span></div></div>';
+      +'<div class="mfoot"><span class="pkleft"><button class="pbtn" id="pkTok">Edit tokens</button><span class="wwarn" id="pkWarn"></span></span><span class="macts"><button class="pbtn" data-close="1">Cancel</button><button class="pbtn primary" id="pkGo"></button></span></div></div>';
     document.body.appendChild(back);
     var pS=back.querySelector('#pkP'); pS.value=pv.id;
+    var draft=null, tmr=0;   // token edits stay a draft until saved
+    function drawFrame(){ var show=back.querySelector('#pkShow'); show.innerHTML=''; show.appendChild(frame(cur, prod(pS.value), 'big', draft||TOK)); }
     function draw(){
       back.querySelectorAll('.pkrow').forEach(function(r){ r.classList.toggle('on', r.dataset.k===cur); });
       var p=prod(pS.value), t=tpl(cur);
-      var show=back.querySelector('#pkShow'); show.innerHTML=''; show.appendChild(frame(cur, p, 'big'));
+      drawFrame();
       back.querySelector('#pkWhat').innerHTML='<b>Shows</b> '+esc(t.show);
       back.querySelector('#pkWarn').textContent=warnWith(p, cur);
       var go=back.querySelector('#pkGo');
+      back.querySelector('#pkTok').textContent = draft ? 'Discard token changes' : 'Edit tokens';
+      back.querySelector('#pkTokP').classList.toggle('hide', !draft);
+      if(draft){ go.textContent='Save tokens'; go.disabled=false; return; }
       if(ids){ var same=ids.every(function(id){ return (prod(id).w||DEF)===cur; }); go.textContent= same ? 'In use' : (ids.length>1 ? 'Use on '+ids.length+' products' : 'Use this widget'); go.disabled=same; }
       else { go.textContent= cur===DEF ? 'Store default' : 'Make store default'; go.disabled = cur===DEF; }
     }
     pS.onchange=draw; draw();
+    back.querySelector('#pkTokP').addEventListener('input', function(e){ var i=e.target.closest('input'); if(!i||!draft) return; draft[i.dataset.t]=i.value; clearTimeout(tmr); tmr=setTimeout(drawFrame, 250); });
     back.addEventListener('click', function(e){
       if(e.target===back || e.target.closest('[data-close]')){ back.remove(); return; }
       var r=e.target.closest('.pkrow'); if(r){ cur=r.dataset.k; draw(); return; }
+      if(e.target.id==='pkTok'){ if(draft){ draft=null; back.querySelectorAll('#pkTokP input').forEach(function(i){ i.value=TOK[i.dataset.t]; }); } else draft=Object.assign({},TOK); draw(); return; }
+      if(e.target.id==='pkGo' && draft){ TOK=draft; draft=null; libBuilt=false; renderLib(); draw(); toast('Widget tokens saved. Every widget on the store uses them.'); return; }
       if(e.target.id==='pkGo' && !e.target.disabled){
         if(ids){ ids.forEach(function(id){ prod(id).w = cur===DEF ? null : cur; }); sel.clear(); toast((ids.length>1 ? ids.length+' products now show ' : prod(ids[0]).t+' now shows ')+tpl(cur).n+'.'); }
         else { DEF=cur; toast('Store default is now '+tpl(DEF).n+'.'); }
