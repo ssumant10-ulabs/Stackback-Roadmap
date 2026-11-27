@@ -637,10 +637,10 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                   <span class="ap-a"><button class="lnk" id="adaptEdit">Edit in Shopify &#8599;</button></span>
                 </div>
                 <div class="adsub"><b>Discount codes</b><span class="help">One per buying option and discount level. <span id="adCodeNote"></span></span></div>
-                <div class="adtbl" id="adCodes"></div>
+                <div class="adtbl" id="adCodes"><div class="adrow"><span class="mu">Codes for each buying option appear here.</span></div></div>
                 <div class="adsub"><b>Conflicting automatic discounts</b><span class="badge2 attn" id="adConfN">2</span></div>
                 <div class="help">These don't combine with the codes above, so they can replace the plan's discount at checkout.</div>
-                <div class="adtbl" id="adConf"></div>
+                <div class="adtbl" id="adConf"><div class="adrow cf"><span><b>Winter Sale: 20% off all juices</b><br><span class="mu">Automatic &middot; doesn&#39;t combine with product discounts</span></span><button class="lnk adEditD">Edit in Shopify &#8599;</button></div><div class="adrow cf"><span><b>Buy 2, get 10% off</b><br><span class="mu">Automatic &middot; doesn&#39;t combine with product discounts</span></span><button class="lnk adEditD">Edit in Shopify &#8599;</button></div></div>
                 <p class="noteline">Covers Prepaid and Pay as you go options. Pay per delivery (AutoPay) always checks out through Razorpay.</p>
                 <p class="noteline hide" id="adaptCourseNote">Course plan: the product made for your checkout must carry each delivery's own price, and the full course total for prepaid. Dev to confirm before launch.</p>
               </div>
@@ -1533,6 +1533,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     var AUTO_DISC=[{t:'Winter Sale: 20% off all juices'},{t:'Buy 2, get 10% off'}];
     function renderAdaptCodes(){
       var box=$('adCodes'); if(!box || !AUTO_DISC) return;
+      try{
       var pn=(typeof planName!=='undefined' && planName && planName.value) || 'Plan',
           pre=pn.replace(/[^A-Za-z ]/g,'').split(/\s+/).filter(Boolean).map(function(w){ return w[0]; }).join('').toUpperCase().slice(0,4) || 'SB', rows=[];
       var live=(typeof pState!=='undefined' && pState==='live');
@@ -1552,6 +1553,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       $('adCodeNote').textContent = (typeof pState!=='undefined' && pState==='live') ? 'Codes live in Shopify Discounts now; rename them there.' : 'You can rename a code until you publish.';
       $('adConf').innerHTML = AUTO_DISC.map(function(d){ return '<div class="adrow cf"><span><b>'+esc(d.t)+'</b><br><span class="mu">Automatic &middot; doesn\'t combine with product discounts</span></span><button class="lnk adEditD">Edit in Shopify &#8599;</button></div>'; }).join('');
       $('adConfN').textContent=AUTO_DISC.length;
+      }catch(err){ if(window.console) console.error('Discount codes', err); }
     }
     document.addEventListener('input', function(e){
       var t=e.target.closest && e.target.closest('.adcode'); if(!t) return;
@@ -1725,7 +1727,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       if(k==='todraft') confirmToDraft();
       if(k==='save') toast('Saved. Changes apply to new subscriptions only.');
     });
-    setPlanState(/live/.test(location.hash) ? 'live' : 'new');
+    setPlanState(/live/.test(location.hash) ? 'live' : 'new'); renderAdaptCodes();
     var pm=location.hash.match(/preset=([a-z]+)/); if(pm) setTimeout(function(){ applyPreset(pm[1], true); window.scrollTo(0,0); }, 0);
     setLevel(S.cols.length && !S.pv.size ? 'collection' : 'pv'); renderAdaptAvail(); renderRenewPlan();
   })();
