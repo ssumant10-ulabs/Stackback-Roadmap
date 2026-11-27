@@ -84,15 +84,16 @@
   .tl .node i{position:relative;z-index:1}
   .tl .node i{font-style:normal;min-width:22px;height:22px;padding:0 4px;box-sizing:border-box;border-radius:11px;background:#fff;border:1.5px solid #8a8a8a;display:grid;place-items:center;font-weight:600;font-size:11px;color:var(--p-ink)}
   .tl .node.opt i{border-style:dashed;color:var(--p-muted)}
-  .tl .node.sk i{border:0;background:#fff;color:var(--p-faint);font-weight:500}
+  .tl .node.sk i{border:1px dashed #c9c9c9;background:#fff;color:var(--p-muted);font-weight:500;font-size:10.5px;padding:0 6px;white-space:nowrap}
   .tl .gf{justify-self:center;display:inline-flex;align-items:center;gap:1px;color:#8a5b00}
   .tl .gf small{font-size:10px;font-weight:700}
-  .tl .bar{min-height:22px;box-sizing:border-box;display:flex;align-items:center;padding:2px 9px;margin:0 2px;border-radius:7px;font-size:11px;font-weight:600;line-height:1.25}
+  .tl .bar{min-height:22px;box-sizing:border-box;display:flex;align-items:center;padding:2px 9px;margin:0 2px;border-radius:7px;font-size:11px;font-weight:600;line-height:1.25;min-width:0}
+  .tl .bar.dsc{justify-content:center;white-space:nowrap;padding:2px 4px}
   .tl .bar.dsc{background:#e3f5de;color:#0c5132}.tl .bar.dsc.l1{background:#c6ebbb}.tl .bar.dsc.l2{background:#a6dd97}.tl .bar.dsc.l3{background:#7fcc6c}.tl .bar.dsc.l4{background:#4f9e3d;color:#fff}
   .tl .bar.pre{background:#e0ebff;color:#1d4b8f}.tl .bar.auto{background:#ede4ff;color:#5b2a91}.tl .bar.payg{background:#fff0d6;color:#7a4b00}
   .tl .end{font-size:11.5px;font-weight:600;color:var(--p-ink);padding-left:12px;white-space:nowrap}
   .tl .lb.sep{position:relative}
-  .tlfoot .ttd{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .tlfoot .ttd{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;color:var(--p-muted)}
   .tlfoot .ttd svg{color:var(--p-muted)}
   .tlfoot{display:flex;flex-direction:column;gap:4px;margin-top:10px;padding-top:9px;border-top:1px dashed #d4d4d4;font-size:12px}
   .adsub{margin-top:16px;display:flex;align-items:center;gap:8px}
@@ -101,7 +102,10 @@
   .adrow{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:8px 12px;font-size:12.5px;border-top:1px solid var(--p-line2)}
   .adrow:first-child{border-top:0}
   .adrow.cf{grid-template-columns:1fr auto}
-  .adrow code{font:600 12px ui-monospace,Menlo,monospace;background:#f1f1f1;border-radius:6px;padding:1px 7px}
+  .adrow .adcode{font:600 12px ui-monospace,Menlo,monospace;background:#f6f6f6;border:1px solid transparent;border-radius:6px;padding:3px 7px;width:128px;color:var(--p-ink);text-transform:uppercase}
+  .adrow .adcode:hover{border-color:#d4d4d4}.adrow .adcode:focus{border-color:#005bd3;background:#fff;outline:0}
+  .adrow .adcode[readonly]{border-color:transparent;background:#f1f1f1}
+  .adrow{grid-template-columns:auto 1fr auto auto}
   .adrow .mu{color:var(--p-muted)}
   a.lnk{text-decoration:none}
   .rnPre{margin-top:8px;background:var(--p-attn-bg);color:#5e4200;border-radius:8px;padding:8px 11px;font-size:12.5px}
@@ -606,7 +610,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                   </div>
                   <span class="ap-a"><button class="lnk" id="adaptEdit">Edit in Shopify &#8599;</button></span>
                 </div>
-                <div class="adsub"><b>Discount codes</b><span class="help">One per buying option, created when you publish</span></div>
+                <div class="adsub"><b>Discount codes</b><span class="help">One per buying option. <span id="adCodeNote"></span></span></div>
                 <div class="adtbl" id="adCodes"></div>
                 <div class="adsub"><b>Conflicting automatic discounts</b><span class="badge2 attn" id="adConfN">2</span></div>
                 <div class="help">These don't combine with the codes above, so they can replace the plan's discount at checkout.</div>
@@ -1139,7 +1143,6 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     document.addEventListener('change', function(e){ if(e.target.closest('.optcard .discType')) renderOptionChecks(false); });
 
     // ---------- per-card buying-option editor (scoped) ----------
-    var TTD_DAYS=7, TTD_SET=false;   // store's order timing; default 7 days until set in Settings
     var PAYG_LABEL='by invoice and email reminder (pay-as-you-go)', LAD_MAX=10;   // rows in all; discount steps cap at 5 (LD-01)
     function ord(n){ var s=['th','st','nd','rd'], v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); }
     // one discount table: one discount level = flat, more = ladder (saved as LD-01 flat / ladder)
@@ -1186,7 +1189,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       }
       function fmtShort(v){ return card.querySelector('.discType').value==='amt' ? '&#8377;'+v : v+'%'; }
       card._discText=function(){ var L=card._lad, parts=[], prev=null; L.forEach(function(s,i){ if(s.value!==prev) parts.push(fmtVal(card,s.value)+(i===0?'':' from '+ord(s.n))); prev=s.value; }); return parts.length===1 ? parts[0]+' off' : parts.join(' &rsaquo; '); };
-      // visual breakup: a delivery track, then one bar row each for discount, gifts and every payment type; TTD under it
+      // visual breakup: a delivery track, then one bar row each for discount, gifts and every payment type; order cadence under it
       var IC_GIFT='<svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.5" y="8" width="13" height="8.5" rx="1"/><path d="M2.5 5.5h15V8h-15zM10 5.5v11M10 5.5C8.5 3 6 3 6 4.5S8.5 5.5 10 5.5c1.5 0 4-.5 4-1S11.5 3 10 5.5"/></svg>',
           IC_CLOCK='<svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l2.5 2"/></svg>';
       function breakupHTML(){
@@ -1202,7 +1205,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         var lv=[], prev=null; L.forEach(function(s){ if(s.value!==prev) lv.push(s.value); prev=s.value; });
         function discAt(n){ var v=L[0].value; L.forEach(function(s){ if(s.n<=n) v=s.value; }); return v; }
         function giftsAt(n){ var g=[]; L.forEach(function(s){ if(s.n===n) g=g.concat(s.gifts); }); return g; }
-        var endCol=C.length+2, r=0, h='<div class="tl" style="grid-template-columns:96px repeat('+C.length+',minmax(30px,1fr)) 92px">';
+        var endCol=C.length+2, r=0, h='<div class="tl" style="grid-template-columns:96px '+C.map(function(c){ return c.gap ? 'minmax(48px,1.25fr)' : 'minmax(30px,1fr)'; }).join(' ')+' 92px">';
         function at(row,c1,c2,cls,html,title){ return '<span class="'+cls+'"'+(title?' title="'+esc(title)+'"':'')+' style="grid-row:'+row+';grid-column:'+c1+' / '+c2+'">'+html+'</span>'; }
         function runs(vals, row, cls, label){ for(var i=0;i<vals.length;){ var j=i; while(j+1<vals.length && vals[j+1]===vals[i]) j++; h+=at(row,i+2,j+3,cls(vals[i]),label(vals[i]),label(vals[i]).replace(/<[^>]+>/g,'')); i=j+1; } }
         // track
@@ -1213,7 +1216,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         });
         // discount
         r++; h+=at(r,1,2,'lb','Discount');
-        runs(C.map(function(c){ return discAt(c.n); }), r, function(v){ return 'bar dsc l'+Math.min(lv.indexOf(v),4); }, function(v){ return fmtShort(v)+' off'; });
+        runs(C.map(function(c){ return discAt(c.n); }), r, function(v){ return 'bar dsc l'+Math.min(lv.indexOf(v),4); }, function(v){ return fmtShort(v); });
         // gifts
         if(L.some(function(s){ return s.gifts.length; })){
           r++; h+=at(r,1,2,'lb','Free gift');
@@ -1230,7 +1233,8 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         });
         h+='</div><div class="tlfoot">';
         if(mode==='choice') h+='<span>Dashed: the customer can stop before this delivery.</span>';
-        h+='<span class="ttd">'+IC_CLOCK+'Order placed <b>'+TTD_DAYS+' days</b> before each delivery (TTD)'+(TTD_SET?'':' <span class="badge2 attn">Store default</span>')+'</span></div>';
+        var fq=schedFixed.parentNode.querySelectorAll('.field'), fn=(fq[0]&&fq[0].textContent.trim())||'1', fu=(fq[1]&&fq[1].textContent.trim())||'month';
+        h+='<span class="ttd">'+IC_CLOCK+'First order at checkout, then one '+(fn==='1' ? 'every '+fu.replace(/s$/,'') : 'every '+fn+' '+fu)+'</span></div>';
         return h;
       }
       function renderDeliveryPreview(){
@@ -1472,12 +1476,21 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
           pre=pn.replace(/[^A-Za-z ]/g,'').split(/\s+/).filter(Boolean).map(function(w){ return w[0]; }).join('').toUpperCase().slice(0,4) || 'SB', rows=[];
       [].slice.call(document.querySelectorAll('.optcard[data-opt]')).forEach(function(c,i){
         if(!c.querySelector('.pay-prepaid.on,.pay-payg.on')) return;
-        rows.push('<div class="adrow"><code>SB-'+pre+'-'+(i+1)+'</code><span>'+esc(c.querySelector('.optsum .title').textContent)+'</span><span class="mu">'+(c._discText?c._discText():'')+'</span></div>');
+        if(!c._code) c._code='SB-'+pre+'-'+(i+1);
+        var live=(typeof pState!=='undefined' && pState==='live');
+        rows.push('<div class="adrow"><input class="adcode" data-i="'+i+'" value="'+esc(c._code)+'" maxlength="24" aria-label="Discount code"'+(live?' readonly':'')+' /><span>'+esc(c.querySelector('.optsum .title').textContent)+'</span><span class="mu">'+(c._discText?c._discText():'')+'</span>'+(live?'<button class="lnk adEditD">Edit in Shopify &#8599;</button>':'')+'</div>');
       });
       box.innerHTML = rows.length ? rows.join('') : '<div class="adrow"><span class="mu">No Prepaid or Pay as you go option yet.</span></div>';
+      $('adCodeNote').textContent = (typeof pState!=='undefined' && pState==='live') ? 'Codes live in Shopify Discounts now; rename them there.' : 'You can rename a code until you publish.';
       $('adConf').innerHTML = AUTO_DISC.map(function(d){ return '<div class="adrow cf"><span><b>'+esc(d.t)+'</b><br><span class="mu">Automatic &middot; doesn\'t combine with product discounts</span></span><button class="lnk adEditD">Edit in Shopify &#8599;</button></div>'; }).join('');
       $('adConfN').textContent=AUTO_DISC.length;
     }
+    document.addEventListener('input', function(e){
+      var t=e.target.closest && e.target.closest('.adcode'); if(!t) return;
+      var v=t.value.toUpperCase().replace(/[^A-Z0-9_-]/g,''); if(v!==t.value) t.value=v;
+      var c=document.querySelectorAll('.optcard[data-opt]')[+t.dataset.i]; if(c) c._code=v;
+    });
+    document.addEventListener('focusout', function(e){ var t=e.target.closest && e.target.closest('.adcode'); if(t && !t.value){ var c=document.querySelectorAll('.optcard[data-opt]')[+t.dataset.i]; c._code=''; renderAdaptCodes(); toast('A code needs at least one character, so the default is back.'); } });
     document.addEventListener('click', function(e){ if(e.target.closest('.adEditD')) toast('Opens this discount in Shopify Discounts. Turn on combining with product discounts, or exclude the plan\'s products.'); });
     function renderAdapt(){
       var on=adaptOn(), txt = on ? 'Non-Shopify checkout on' : 'Non-Shopify checkout off';
@@ -1526,7 +1539,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     // ---------- widget template: one pick, with a switch notice ----------
     // Picking a template makes it live on this plan's products at publish. A product that shows a
     // different widget today is switched over and turned off in that widget; activation from Widgets is unchanged.
-    var wTpl={value:'subscription-widget'}, wBadge=$('wBadge');   // chosen in Widgets; this screen only shows it
+    var wTpl={value:'purchase-options'}, wBadge=$('wBadge');   // chosen in Widgets; this screen only shows it
     function renderWidget(){
       var name=TPL_NAMES[wTpl.value], has=groups(activeSet(), activeScope()).length>0;
       var live=pState==='live';
@@ -1547,7 +1560,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       if(st==='live'){ btn('secondary-actions','Duplicate','dup'); btn('secondary-actions','Move to draft','todraft'); btn('primary-action','Save','save',1); }
       if(st==='draft'){ btn('secondary-actions','Duplicate','dup'); btn('primary-action','Publish','publish',1); }
       PG.setAttribute('heading', st==='new' ? 'Create subscription plan' : pName());
-      renderWidget();
+      renderWidget(); renderAdaptCodes();
       var b=$('planState'); b.textContent = st==='live' ? 'Live' : st==='draft' ? 'Draft' : 'Not live yet'; b.className='badge2 '+(st==='live'?'ok':st==='draft'?'sub':'info');
     }
     function confirmToDraft(){

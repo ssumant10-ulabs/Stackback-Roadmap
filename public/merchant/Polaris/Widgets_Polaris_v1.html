@@ -84,15 +84,16 @@
   .tl .node i{position:relative;z-index:1}
   .tl .node i{font-style:normal;min-width:22px;height:22px;padding:0 4px;box-sizing:border-box;border-radius:11px;background:#fff;border:1.5px solid #8a8a8a;display:grid;place-items:center;font-weight:600;font-size:11px;color:var(--p-ink)}
   .tl .node.opt i{border-style:dashed;color:var(--p-muted)}
-  .tl .node.sk i{border:0;background:#fff;color:var(--p-faint);font-weight:500}
+  .tl .node.sk i{border:1px dashed #c9c9c9;background:#fff;color:var(--p-muted);font-weight:500;font-size:10.5px;padding:0 6px;white-space:nowrap}
   .tl .gf{justify-self:center;display:inline-flex;align-items:center;gap:1px;color:#8a5b00}
   .tl .gf small{font-size:10px;font-weight:700}
-  .tl .bar{min-height:22px;box-sizing:border-box;display:flex;align-items:center;padding:2px 9px;margin:0 2px;border-radius:7px;font-size:11px;font-weight:600;line-height:1.25}
+  .tl .bar{min-height:22px;box-sizing:border-box;display:flex;align-items:center;padding:2px 9px;margin:0 2px;border-radius:7px;font-size:11px;font-weight:600;line-height:1.25;min-width:0}
+  .tl .bar.dsc{justify-content:center;white-space:nowrap;padding:2px 4px}
   .tl .bar.dsc{background:#e3f5de;color:#0c5132}.tl .bar.dsc.l1{background:#c6ebbb}.tl .bar.dsc.l2{background:#a6dd97}.tl .bar.dsc.l3{background:#7fcc6c}.tl .bar.dsc.l4{background:#4f9e3d;color:#fff}
   .tl .bar.pre{background:#e0ebff;color:#1d4b8f}.tl .bar.auto{background:#ede4ff;color:#5b2a91}.tl .bar.payg{background:#fff0d6;color:#7a4b00}
   .tl .end{font-size:11.5px;font-weight:600;color:var(--p-ink);padding-left:12px;white-space:nowrap}
   .tl .lb.sep{position:relative}
-  .tlfoot .ttd{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .tlfoot .ttd{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;color:var(--p-muted)}
   .tlfoot .ttd svg{color:var(--p-muted)}
   .tlfoot{display:flex;flex-direction:column;gap:4px;margin-top:10px;padding-top:9px;border-top:1px dashed #d4d4d4;font-size:12px}
   .adsub{margin-top:16px;display:flex;align-items:center;gap:8px}
@@ -101,7 +102,10 @@
   .adrow{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:8px 12px;font-size:12.5px;border-top:1px solid var(--p-line2)}
   .adrow:first-child{border-top:0}
   .adrow.cf{grid-template-columns:1fr auto}
-  .adrow code{font:600 12px ui-monospace,Menlo,monospace;background:#f1f1f1;border-radius:6px;padding:1px 7px}
+  .adrow .adcode{font:600 12px ui-monospace,Menlo,monospace;background:#f6f6f6;border:1px solid transparent;border-radius:6px;padding:3px 7px;width:128px;color:var(--p-ink);text-transform:uppercase}
+  .adrow .adcode:hover{border-color:#d4d4d4}.adrow .adcode:focus{border-color:#005bd3;background:#fff;outline:0}
+  .adrow .adcode[readonly]{border-color:transparent;background:#f1f1f1}
+  .adrow{grid-template-columns:auto 1fr auto auto}
   .adrow .mu{color:var(--p-muted)}
   a.lnk{text-decoration:none}
   .rnPre{margin-top:8px;background:var(--p-attn-bg);color:#5e4200;border-radius:8px;padding:8px 11px;font-size:12.5px}
@@ -353,73 +357,67 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
 <style>
   .wgwrap{display:flex;flex-direction:column;gap:16px}
   .wtop{display:flex;align-items:center;gap:16px;justify-content:space-between}
-  .wfilters .wsel{width:260px;flex:none}
-  .wsel{box-sizing:border-box;font:inherit;font-size:13px;border:1px solid #c9c9c9;border-radius:8px;padding:5px 28px 5px 10px;background:#fff;color:var(--p-ink);min-width:200px}
-  .wbanner{margin:0 16px 12px;background:#eaf4ff;color:#00527c;border-radius:8px;padding:8px 12px;font-size:12.5px;display:flex;gap:10px;align-items:center}
-  .wbanner .lnk{margin-left:auto}
+  .wsel{box-sizing:border-box;font:inherit;font-size:13px;border:1px solid #c9c9c9;border-radius:8px;padding:5px 28px 5px 10px;background:#fff;color:var(--p-ink);min-width:0}
   .wfilters{display:flex;gap:8px;padding:0 16px 12px;flex-wrap:wrap}
+  .wfilters .wsel{width:260px;flex:none}
   .wsearch{flex:1;min-width:180px;font:inherit;font-size:13px;border:1px solid #c9c9c9;border-radius:8px;padding:6px 10px}
+  .wtbl{border-top:1px solid var(--p-line)}
+  .wrow{display:grid;grid-template-columns:28px minmax(220px,1.3fr) minmax(180px,1fr) 300px;gap:14px;align-items:center;min-height:48px;padding:10px 16px;border-bottom:1px solid var(--p-line2);font-size:13px}
+  .wrow:last-child{border-bottom:0}
+  .wrow.hd{font-size:12px;font-weight:600;color:var(--p-muted);background:#f7f7f7;padding:7px 16px;min-height:0}
   .wrow.hd.on{background:#eef4ff;color:var(--p-ink)}
   .wrow.hd .bsel{grid-column:2 / -1;display:flex;align-items:center;gap:12px;font-weight:600}
-  .wrow.hd .bsel .wsel{width:240px;flex:none;font-weight:400;padding-top:3px;padding-bottom:3px}
-  .wtbl{border-top:1px solid var(--p-line)}
-  .wrow{display:grid;grid-template-columns:28px minmax(220px,1.3fr) minmax(180px,1fr) 320px;gap:14px;align-items:center;min-height:44px;padding:10px 16px;border-bottom:1px solid var(--p-line2);font-size:13px}
-  .wrow.hd{font-size:12px;font-weight:600;color:var(--p-muted);background:#f7f7f7;padding:7px 16px}
-  .wrow:last-child{border-bottom:0}
+  .pbtn.sm{padding:3px 10px;font-size:12px}
   .wprod{display:flex;gap:10px;align-items:center;min-width:0}
   .wprod .t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .wprod .m{font-size:12px;color:var(--p-muted)}
   .pchips{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0}
   .pchip{display:inline-flex;align-items:center;gap:6px;max-width:100%;background:#f1f1f1;border-radius:6px;padding:1px 8px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .pchip .dr{color:#00527c;font-weight:600}
-  .wwarn{font-size:11.5px;color:var(--p-attn);margin-top:3px}
-  .wrow .wsel{min-width:0;width:100%;border-color:transparent;background-color:#f6f6f6}
-  .wrow .wsel:hover,.wrow .wsel:focus{border-color:#c9c9c9;background-color:#fff}
-  .wrow .wsel:disabled{background-color:transparent;color:var(--p-faint)}
-  .wlib{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;padding:0 16px 16px}
-  .wcard{border:1px solid var(--p-line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
-  .wcard .t{font-weight:600;display:flex;gap:6px;align-items:center}
-  .wcard .m{font-size:12px;color:var(--p-muted)}
-  .wacts{display:flex;gap:14px;margin-top:6px}
-  .wcard{padding:0;overflow:hidden;gap:0}
-  .wcard .wbody{padding:12px 14px;display:flex;flex-direction:column;gap:3px}
-  .wcard .m b{color:var(--p-ink);font-weight:600}
-  .wcard .m.u{margin-top:2px}
-  .wthumb{display:flex;align-items:center;justify-content:center;width:100%;height:178px;box-sizing:border-box;border:0;border-bottom:1px solid var(--p-line);background:#f6f6f7;padding:12px 18px;cursor:zoom-in;font:inherit}
-  .wthumb .mw{width:100%;text-align:left}
-  .mw .mt{text-align:center}
-  .wcard .wbody{flex:1}
-  .wcard .wacts{margin-top:auto;padding-top:6px}
-  .wcell{display:flex;align-items:center;gap:10px}
-  .wcell .wsel{flex:1}
-  .mw{--acc:#1f6f43;background:#fff;border:1px solid #e3e3e3;border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:6px;font-size:10.5px;color:#303030;pointer-events:none;max-width:260px;margin:0 auto}
-  .mw .mr{display:flex;align-items:center;gap:7px;border:1px solid #e3e3e3;border-radius:7px;padding:5px 7px}
-  .mw .mr.on{border-color:var(--acc);background:#f1f8f4}
-  .mw .rd{width:9px;height:9px;border-radius:50%;border:1.5px solid #8a8a8a;flex:none}
-  .mw .mr.on .rd{border-color:var(--acc);background:radial-gradient(var(--acc) 45%,transparent 50%)}
-  .mw .ml{flex:1;display:flex;flex-direction:column;font-weight:600}
-  .mw .ml small,.mw .mp small{font-weight:400;color:#616161;font-size:9px}
-  .mw .mp{font-weight:700}
-  .mw .mcs{display:flex;gap:4px;flex-wrap:wrap}
-  .mw .mc{border:1px solid #d4d4d4;border-radius:999px;padding:1px 7px;font-size:9.5px;white-space:nowrap}
-  .mw .mc.on{background:var(--acc);border-color:var(--acc);color:#fff}
-  .mw .mq{font-weight:600;font-size:10px}
-  .mw .mtiles{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-  .mw .mt{border:1px solid #e3e3e3;border-radius:7px;padding:6px;display:flex;flex-direction:column;gap:2px;text-align:center}
-  .mw .mt.on{border-color:var(--acc);background:#f1f8f4}
-  .mw .mbtn{background:var(--acc);color:#fff;text-align:center;border-radius:7px;padding:5px;font-weight:700}
-  .mw .mempty{color:#8a6116;background:#fff5e0;border-radius:6px;padding:12px 8px;text-align:center}
-  .mw.big{font-size:13px;max-width:340px;gap:9px;padding:14px}
-  .mw.big .mc{font-size:12px;padding:2px 10px}.mw.big .ml small,.mw.big .mp small{font-size:11px}.mw.big .mq{font-size:13px}.mw.big .rd{width:12px;height:12px}
-  .pvbody{display:grid;grid-template-columns:220px 1fr;gap:18px;padding:16px 18px}
-  .pvctl{display:flex;flex-direction:column;gap:12px}
-  .pvctl label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--p-muted)}
-  .pvctl .m{font-size:12px;color:var(--p-muted);line-height:1.5}
-  .pvctl .m b{color:var(--p-ink)}
-  .pvstage{background:#f6f6f7;border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px}
-  .pvprod{display:flex;gap:10px;align-items:center;font-size:13px}
-  .pvprod .m{font-size:12px;color:var(--p-muted)}
+  .wpick{display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;border:1px solid #d4d4d4;border-radius:8px;background:#fff;padding:6px 10px;font:inherit;font-size:13px;color:var(--p-ink);cursor:pointer;text-align:left}
+  .wpick:hover{border-color:#8a8a8a;background:#fafafa}
+  .wpick .wn{font-weight:500;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .wpick .cv{color:var(--p-faint);font-size:16px;line-height:1}
+  .wwarn{font-size:11.5px;color:var(--p-attn);margin-top:4px}
   .wempty{padding:24px 16px;color:var(--p-muted);text-align:center}
+  /* library */
+  .wlib{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;padding:0 16px 16px}
+  .wcard{border:1px solid var(--p-line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;background:#fff}
+  .wthumb{display:block;width:100%;border:0;border-bottom:1px solid var(--p-line);background:#f6f6f7;padding:14px 14px 0;cursor:zoom-in;font:inherit}
+  .wbody{padding:12px 14px;display:flex;flex-direction:column;gap:3px;flex:1}
+  .wbody .t{font-weight:600;font-size:13.5px;display:flex;gap:6px;align-items:center}
+  .wbody .m{font-size:12px;color:var(--p-muted);line-height:1.45}
+  .wbody .m b{color:var(--p-ink);font-weight:600;margin-right:3px}
+  .wfoot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding-top:8px}
+  .wacts{display:flex;gap:12px}
+  /* real widget previews */
+  .wpf{position:relative;overflow:hidden;background:#fff}
+  .wpf iframe{border:0;display:block;opacity:0;transition:opacity .2s}
+  .wpf.ok iframe{opacity:1}
+  .wpf.thumb{height:206px;border-radius:10px 10px 0 0;box-shadow:0 0 0 1px #e3e3e3}
+  .wpf.thumb iframe{width:400px;transform-origin:0 0;pointer-events:none}
+  .wpf.thumb::after{content:'';position:absolute;left:0;right:0;bottom:0;height:44px;background:linear-gradient(rgba(255,255,255,0),#fff)}
+  .wpf.big{width:400px;min-height:120px;margin:0 auto;border-radius:12px;box-shadow:0 0 0 1px #e3e3e3}
+  .wpf.big iframe{width:400px}
+  .wpf:not(.ok)::before{content:'Loading preview';position:absolute;inset:0;display:grid;place-items:center;color:var(--p-faint);font-size:12px}
+  .wpf.nox::before{content:'Preview loads on the hosted admin'}
+  /* picker */
+  .modal.wpk{width:900px;max-height:88vh}
+  .pkbody{display:grid;grid-template-columns:280px 1fr;min-height:0;flex:1;overflow:hidden}
+  .pklist{border-right:1px solid var(--p-line2);overflow:auto;padding:8px}
+  .pkrow{display:flex;gap:10px;align-items:flex-start;width:100%;border:0;background:none;border-radius:8px;padding:8px 10px;text-align:left;font:inherit;cursor:pointer;color:var(--p-ink)}
+  .pkrow:hover{background:#f6f6f7}
+  .pkrow.on{background:#eef4ff}
+  .pkrow .rd{width:14px;height:14px;border-radius:50%;border:1.5px solid #8a8a8a;flex:none;margin-top:2px;box-sizing:border-box}
+  .pkrow.on .rd{border:4.5px solid #005bd3}
+  .pkrow .tx{display:flex;flex-direction:column;gap:1px;min-width:0}
+  .pkrow .tx b{font-size:13px;font-weight:600;display:flex;gap:6px;align-items:center}
+  .pkrow .tx small{font-size:12px;color:var(--p-muted)}
+  .pkstage{background:#f6f6f7;overflow:auto;padding:14px 18px 18px;display:flex;flex-direction:column;gap:12px}
+  .pkhead label{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--p-muted)}
+  .pkhead .wsel{width:240px}
+  .pkwhat{font-size:12px;color:var(--p-muted);text-align:center}
+  .pkwhat b{color:var(--p-ink)}
 </style>
 </head>
 <body>
@@ -483,21 +481,24 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     setTimeout(function(){ t.classList.add('out'); setTimeout(function(){ t.remove(); }, 300); }, 4000);
   }
   var PAY={pre:'Prepaid',auto:'AutoPay',part:'Partial prepaid',payg:'Pay as you go'};
-  // widget templates; shows = payment types it can display (null = all), one = shows a single buying option
+  // the real storefront widgets (Widget Lab types); shows = payment types it can display, one = a single buying option
   var TPL=[
-    {k:'subscription-widget',n:'Subscription Widget',best:'Most products',show:'Every buying option and payment type'},
-    {k:'purchase-options',n:'Purchase Options',best:'Products also sold as a one-time buy',show:'One-time purchase next to Subscribe'},
-    {k:'single-plan',n:'Single Plan',best:'Products with one buying option',show:'That one option, no choices',one:1},
-    {k:'prepaid-only',n:'Prepaid Only',best:'Plans paid upfront',show:'Prepaid options only',shows:['pre']},
-    {k:'payg-only',n:'Pay per delivery',best:'Products paid as each delivery comes',show:'Pay as you go and AutoPay',shows:['payg','auto']},
-    {k:'multi-frequency',n:'Multi-Frequency',best:'Products bought at different rhythms',show:'A picker for how often'},
-    {k:'multi-delivery',n:'Multi-Delivery',best:'Plans offered in different lengths',show:'A picker for how many deliveries'},
-    {k:'international-plan',n:'International Plan',best:'Stores selling abroad',show:'Prices in the customer currency'}
+    {k:'purchase-options',n:'Purchase Options',best:'Most products. This is the live widget',show:'One-time or Subscribe and Save, payment type, schedule cards'},
+    {k:'subscription-dropdown',n:'Subscription, dropdown',best:'Many schedules in a small space',show:'How often and how many, as two dropdowns'},
+    {k:'subscription-grid',n:'Subscription, grid',best:'Two to six schedules side by side',show:'Schedule cards in a two-column grid'},
+    {k:'subscription-list',n:'Subscription, list',best:'Comparing schedules with badges',show:'Schedules as a list with badges and savings'},
+    {k:'subscription-collapsible',n:'Subscription, collapsible',best:'Long schedule lists on mobile',show:'One schedule row that opens a menu'},
+    {k:'single-plan',n:'Single Plan',best:'One fixed plan',show:'One-time plus that plan for each payment type',one:1},
+    {k:'multi-delivery',n:'Multi-Delivery',best:'One frequency in different lengths',show:'A picker for how many deliveries'},
+    {k:'multi-frequency',n:'Multi-Frequency',best:'One length at different rhythms',show:'A picker for how often'},
+    {k:'payg-only',n:'Pay per delivery',best:'Products paid as each delivery comes',show:'Pay per delivery only (AutoPay or Pay as you go)',shows:['payg','auto']},
+    {k:'prepaid-only',n:'Prepaid Only',best:'Plans paid upfront',show:'Prepaid plan cards',shows:['pre']},
+    {k:'international-plan',n:'International Plan',best:'Shoppers abroad',show:'Supply cards in their own currency'}
   ];
   var PLANS={
-    fj:{n:'Fresh Juice Subscription',draft:1,pay:['pre','auto','part'],opts:[{f:'Every 2 weeks',c:'5 deliveries',d:10},{f:'Every month',c:'6 deliveries',d:15}]},
-    cb:{n:'Cold Brew Monthly',pay:['pre'],opts:[{f:'Every month',c:'3 deliveries',d:10}]},
-    mk:{n:'Plant Milk Weekly',pay:['payg','auto'],opts:[{f:'Every week',c:'4 deliveries',d:5},{f:'Every 2 weeks',c:'6 deliveries',d:8},{f:'Every week',c:'No end date',d:5}]}
+    fj:{n:'Fresh Juice Subscription',draft:1,pay:['pre','auto','part'],opts:[{f:'2w',d:10},{f:'1m',d:15}]},
+    cb:{n:'Cold Brew Monthly',pay:['pre'],opts:[{f:'1m',d:10}]},
+    mk:{n:'Plant Milk Weekly',pay:['payg','auto'],opts:[{f:'2w',d:5},{f:'1m',d:8},{f:'2m',d:10}]}
   };
   var PRODS=[
     {id:'p1',t:'Organic Cold-Pressed Juice',v:3,pr:180,plans:['fj'],w:'multi-frequency'},
@@ -509,24 +510,66 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     {id:'p17',t:'Oat Milk',v:1,pr:279,plans:['mk'],w:null},
     {id:'p18',t:'Glass Bottle',v:1,pr:249,plans:[],w:null}
   ];
-  var DEF='subscription-widget', sel=new Set(), tpl=function(k){ return TPL.filter(function(x){ return x.k===k; })[0]; };
+  var DEF='purchase-options', sel=new Set();
+  function tpl(k){ return TPL.filter(function(x){ return x.k===k; })[0]; }
+  function prod(id){ return PRODS.filter(function(x){ return x.id===id; })[0]; }
   var planQ=((location.search+location.hash).match(/plan=([a-z]+)/)||[])[1] || 'all';
 
-  function warnFor(p){
-    return warnWith(p, p.w||DEF);
-  }
   function warnWith(p, k){
     var t=tpl(k), pay={}, opts=0; p.plans.forEach(function(id){ PLANS[id].pay.forEach(function(x){ pay[x]=1; }); opts+=PLANS[id].opts.length; });
     var have=Object.keys(pay);
     if(t.shows){ var shown=have.filter(function(x){ return t.shows.indexOf(x)>-1; }), hid=have.filter(function(x){ return t.shows.indexOf(x)<0; });
-      if(!shown.length) return 'Shows nothing: no '+t.shows.map(function(x){ return PAY[x]; }).join(' or ')+' option on this product.';
+      if(!shown.length) return 'Shows nothing: this product has no '+t.shows.map(function(x){ return PAY[x]; }).join(' or ')+' option.';
       if(hid.length) return 'Hides '+hid.map(function(x){ return PAY[x]; }).join(', ')+'.'; }
     if(t.one && opts>1) return 'Shows only the first of '+opts+' buying options.';
     return '';
   }
-  function opts(withDefault){
-    return (withDefault?'<option value="">Default: '+esc(tpl(DEF).n)+'</option>':'')+TPL.map(function(t){ return '<option value="'+t.k+'">'+esc(t.n)+'</option>'; }).join('');
+
+  // ---------- real widget preview: the Widget Lab product page, cut down to the widget ----------
+  var LAB='/widget-lab/pdp.html', THUMB_W=400;
+  function b64u(o){ var bytes=new TextEncoder().encode(JSON.stringify(o)), bin=''; bytes.forEach(function(b){ bin+=String.fromCharCode(b); }); return btoa(bin).split('+').join('-').split('/').join('_').split('=').join(''); }
+  function cfgFor(k, p){
+    var pay={}, d={}; p.plans.forEach(function(id){ PLANS[id].pay.forEach(function(x){ pay[x]=1; }); PLANS[id].opts.forEach(function(o){ d[o.f]=Math.max(d[o.f]||0,o.d); }); });
+    var pm=[]; if(pay.pre||pay.part) pm.push('prepaid'); if(pay.auto||pay.payg||pay.part) pm.push('ppd');
+    return {w:k, pm:pm, d:d, def:'sub', p:{title:p.t, price:p.pr}};
   }
+  function frame(k, p, mode){
+    var box=document.createElement('div'); box.className='wpf '+mode;
+    var f=document.createElement('iframe'); f.title='Widget preview'; f.setAttribute('tabindex','-1');
+    if(mode==='thumb') f.loading='lazy';
+    f.src=LAB+'#c='+b64u(cfgFor(k,p));
+    box.appendChild(f);
+    f.addEventListener('load', function(){ isolate(f, box, mode); });
+    return box;
+  }
+  function isolate(f, box, mode){
+    var tries=0;
+    (function go(){
+      var d=null; try{ d=f.contentDocument; }catch(e){}
+      if(!d){ box.classList.add('nox'); return; }
+      var host=d.getElementById('sbw-host');
+      if(!host || !host.children.length){ if(tries++<50) return setTimeout(go,100); box.classList.add('nox'); return; }
+      if(!host.dataset.iso){
+        host.dataset.iso='1';
+        var st=d.createElement('style'); st.textContent='html,body{background:#fff!important;margin:0!important;padding:0!important}#sbw-host{margin:0!important;padding:16px!important;box-sizing:border-box!important;width:100%!important;max-width:none!important}';
+        d.head.appendChild(st);
+        [].slice.call(d.body.children).forEach(function(el){ if(el!==host && el.tagName!=='SCRIPT') el.style.setProperty('display','none','important'); });
+        d.body.insertBefore(host, d.body.firstChild);
+      }
+      function fit(){
+        var h=Math.ceil(host.getBoundingClientRect().height);
+        f.style.height=h+'px';
+        if(mode==='thumb'){ f.style.transform='scale('+(box.clientWidth/THUMB_W)+')'; }
+        else box.style.height=h+'px';
+        box.classList.add('ok');
+      }
+      fit();
+      var RO=f.contentWindow.ResizeObserver; if(RO) new RO(fit).observe(host);
+      if(mode==='thumb' && window.ResizeObserver) new ResizeObserver(fit).observe(box);
+    })();
+  }
+
+  // ---------- By product ----------
   function visible(){
     var q=$('q').value.trim().toLowerCase();
     return PRODS.filter(function(p){
@@ -535,104 +578,100 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       return planQ==='all' || p.plans.indexOf(planQ)>-1;
     });
   }
-  function status(p){
-    if(!p.plans.length) return '<span class="badge2 sub">Not in a plan</span>';
-    var live=p.plans.some(function(id){ return !PLANS[id].draft; });
-    return live ? '<span class="badge2 ok">Live</span>' : '<span class="badge2 info">Goes live on publish</span>';
-  }
   function render(){
     var rows=visible(), n=sel.size, h = n
-      ? '<div class="wrow hd on"><input type="checkbox" id="all" checked aria-label="Clear selection" /><span class="bsel">'+n+' selected<select class="wsel" id="bulkSel" aria-label="Assign widget to selected"><option value="-">Assign widget</option>'+opts(true)+'</select></span></div>'
+      ? '<div class="wrow hd on"><input type="checkbox" id="all" checked aria-label="Clear selection" /><span class="bsel">'+n+' selected <button class="pbtn sm" id="bulkGo">Assign widget</button></span></div>'
       : '<div class="wrow hd"><input type="checkbox" id="all" aria-label="Select all" /><span>Product</span><span>Plans</span><span>Widget</span></div>';
     rows.forEach(function(p){
-      var w=warnFor(p), off=!p.plans.length;
+      var off=!p.plans.length, k=p.w||DEF, w=off?'':warnWith(p,k);
       h+='<div class="wrow" data-id="'+p.id+'"><input type="checkbox" class="rc" '+(sel.has(p.id)?'checked':'')+(off?' disabled':'')+' aria-label="Select '+esc(p.t)+'" />'
         +'<div class="wprod"><s-thumbnail size="small"></s-thumbnail><div style="min-width:0"><div class="t">'+esc(p.t)+'</div><div class="m">'+p.v+' variant'+(p.v>1?'s':'')+'</div></div></div>'
         +'<div class="pchips">'+(p.plans.length?p.plans.map(function(id){ return '<span class="pchip" title="'+esc(PLANS[id].n)+'">'+esc(PLANS[id].n)+(PLANS[id].draft?'<span class="dr">Draft</span>':'')+'</span>'; }).join(''):'<span class="help" style="margin:0">None</span>')+'</div>'
-        +'<div><div class="wcell"><select class="wsel ws"'+(off?' disabled':'')+' aria-label="Widget for '+esc(p.t)+'">'+opts(true)+'</select>'+(off?'':'<button class="lnk pvP" data-id="'+p.id+'">Preview</button>')+'</div>'+(w&&!off?'<div class="wwarn">'+esc(w)+'</div>':'')+'</div>'
+        +'<div>'+(off ? '<span class="help" style="margin:0">Add it to a plan first</span>'
+          : '<button class="wpick" data-id="'+p.id+'"><span class="wn">'+esc(tpl(k).n)+'</span>'+(p.w?'':'<span class="badge2 sub">Default</span>')+'<span class="cv">&#8250;</span></button>'+(w?'<div class="wwarn">'+esc(w)+'</div>':''))+'</div>'
         +'</div>';
     });
     if(!rows.length) h+='<div class="wempty">No products match.</div>';
     $('wtbl').innerHTML=h;
-    rows.forEach(function(p){ var s=$('wtbl').querySelector('[data-id="'+p.id+'"] .ws'); s.value=p.w||''; });
     $('defNote').innerHTML='Products with no widget of their own show <b>'+esc(tpl(DEF).n)+'</b>.';
     renderLib();
   }
-  var SAMPLE=PRODS[0], PAYN={pre:'Prepaid',auto:'AutoPay',part:'Partial prepaid',payg:'Pay as you go'};
-  function inr(n){ return '&#8377;'+Math.round(n); }
-  // a drawn widget in the store colours: same markup for the card thumbnail and the large preview
-  function mini(k, p){
-    var O=[], pay={}; p.plans.forEach(function(id){ O=O.concat(PLANS[id].opts); PLANS[id].pay.forEach(function(x){ pay[x]=1; }); });
-    if(!O.length) O=[{f:'Every 2 weeks',c:'5 deliveries',d:10}];
-    var P=Object.keys(pay), t=tpl(k), maxd=Math.max.apply(null,O.map(function(o){ return o.d; })), pr=p.pr||180;
-    if(t.shows) P=P.filter(function(x){ return t.shows.indexOf(x)>-1; });
-    var h='<div class="mw">', chip=function(x,on){ return '<span class="mc'+(on?' on':'')+'">'+x+'</span>'; },
-        row=function(lbl,price,on,sub){ return '<div class="mr'+(on?' on':'')+'"><span class="rd"></span><span class="ml">'+lbl+(sub?'<small>'+sub+'</small>':'')+'</span><span class="mp">'+price+'</span></div>'; };
-    if(t.shows && !P.length) return h+'<div class="mempty">Nothing to show on this product</div></div>';
-    if(k==='subscription-widget'){ h+=row('One-time purchase',inr(pr))+row('Subscribe and save up to '+maxd+'%',inr(pr*(1-maxd/100)),1,O[0].f+', '+O[0].c); h+='<div class="mcs">'+P.map(function(x,i){ return chip(PAYN[x],i===0); }).join('')+'</div>'; }
-    else if(k==='purchase-options'){ h+='<div class="mtiles"><div class="mt">One-time<b>'+inr(pr)+'</b></div><div class="mt on">Subscribe<b>'+inr(pr*(1-O[0].d/100))+'</b></div></div>'; }
-    else if(k==='single-plan'){ h+=row(O[0].f+', '+O[0].c,inr(pr*(1-O[0].d/100)),1,'Save '+O[0].d+'%'); }
-    else if(k==='prepaid-only'){ var n=parseInt(O[0].c,10)||1; h+=row('Prepay '+O[0].c,inr(pr*n*(1-O[0].d/100)),1,O[0].f+', save '+O[0].d+'%'); }
-    else if(k==='payg-only'){ h+='<div class="mcs">'+P.map(function(x,i){ return chip(PAYN[x],i===0); }).join('')+'</div>'+row(O[0].f,inr(pr*(1-O[0].d/100))+'<small>/delivery</small>',1,'Pay as each delivery comes'); }
-    else if(k==='multi-frequency'){ h+='<div class="mq">How often?</div><div class="mcs">'+O.map(function(o,i){ return chip(o.f,i===0); }).filter(function(x,i,a){ return a.indexOf(x)===i; }).join('')+'</div>'+row('Subscribe, save '+O[0].d+'%',inr(pr*(1-O[0].d/100)),1); }
-    else if(k==='multi-delivery'){ h+='<div class="mq">How many deliveries?</div><div class="mcs">'+O.map(function(o,i){ return chip(o.c,i===0); }).join('')+'</div>'+row('Subscribe, save '+O[0].d+'%',inr(pr*(1-O[0].d/100)),1); }
-    else { h+='<div class="mcs">'+chip('INR',1)+chip('USD')+chip('EUR')+'</div>'+row('Subscribe, save '+O[0].d+'%',inr(pr*(1-O[0].d/100)),1); }
-    return h+'<div class="mbtn">Subscribe</div></div>';
-  }
-  function openPreview(k, pid){
-    var back=document.createElement('div'); back.className='mback';
-    var inPlan=PRODS.filter(function(x){ return x.plans.length; });
-    back.innerHTML='<div class="modal" role="dialog" aria-modal="true" style="width:720px"><div class="mhdr"><h3>Preview</h3><button class="mclose" data-close="1" aria-label="Close">&#10005;</button></div>'
-      +'<div class="pvbody"><div class="pvctl"><label>Widget<select class="wsel" id="pvW">'+TPL.map(function(t){ return '<option value="'+t.k+'">'+esc(t.n)+'</option>'; }).join('')+'</select></label>'
-      +'<label>On product<select class="wsel" id="pvP">'+inPlan.map(function(x){ return '<option value="'+x.id+'">'+esc(x.t)+'</option>'; }).join('')+'</select></label>'
-      +'<div class="m" id="pvInfo"></div></div><div class="pvstage"><div class="pvprod"><s-thumbnail size="small"></s-thumbnail><div><b id="pvName"></b><div class="m" id="pvPrice"></div></div></div><div id="pvW2"></div></div></div>'
-      +'<div class="mfoot"><span class="wwarn" id="pvWarn"></span><span class="macts"><button class="pbtn" data-close="1">Close</button><button class="pbtn primary" id="pvUse">Use on this product</button></span></div></div>';
-    document.body.appendChild(back);
-    var wS=back.querySelector('#pvW'), pS=back.querySelector('#pvP');
-    wS.value=k; pS.value=pid || (inPlan.filter(function(x){ return (x.w||DEF)===k; })[0]||inPlan[0]).id;
-    function draw(){
-      var p=PRODS.filter(function(x){ return x.id===pS.value; })[0], t=tpl(wS.value), w=warnWith(p, wS.value);
-      back.querySelector('#pvW2').innerHTML=mini(wS.value, p).replace('class="mw"','class="mw big"');
-      back.querySelector('#pvName').textContent=p.t; back.querySelector('#pvPrice').innerHTML=inr(p.pr)+' &middot; '+p.plans.map(function(id){ return esc(PLANS[id].n); }).join(', ');
-      back.querySelector('#pvInfo').innerHTML='<b>Best for:</b> '+esc(t.best)+'<br><b>Shows:</b> '+esc(t.show);
-      back.querySelector('#pvWarn').textContent=w;
-      var cur=(p.w||DEF)===wS.value; back.querySelector('#pvUse').textContent= cur ? 'In use on this product' : 'Use on this product'; back.querySelector('#pvUse').disabled=cur;
-    }
-    wS.onchange=draw; pS.onchange=draw; draw();
-    back.addEventListener('click', function(e){
-      if(e.target===back || e.target.closest('[data-close]')) back.remove();
-      if(e.target.id==='pvUse' && !e.target.disabled){ var p=PRODS.filter(function(x){ return x.id===pS.value; })[0]; p.w = wS.value===DEF ? null : wS.value; render(); draw(); toast(p.t+' now shows '+tpl(wS.value).n+'.'); }
-    });
+
+  // ---------- Widget library: cards built once (the previews are live pages), text refreshed ----------
+  var libBuilt=false;
+  function cardBody(t){
+    var used=PRODS.filter(function(p){ return p.plans.length && (p.w||DEF)===t.k; }).length;
+    return '<div class="t">'+esc(t.n)+(t.k===DEF?' <span class="badge2 sub">Store default</span>':'')+'</div>'
+      +'<div class="m"><b>Best for</b> '+esc(t.best)+'</div><div class="m"><b>Shows</b> '+esc(t.show)+'</div>'
+      +'<div class="wfoot"><span class="m">Used on '+used+' product'+(used===1?'':'s')+'</span><span class="wacts"><button class="lnk pvT" data-k="'+t.k+'">Preview</button><button class="lnk edT" data-k="'+t.k+'">Edit design &#8599;</button></span></div>';
   }
   function renderLib(){
-    $('wlib').innerHTML=TPL.map(function(t){
-      var used=PRODS.filter(function(p){ return p.plans.length && (p.w||DEF)===t.k; }).length;
-      return '<div class="wcard"><button class="wthumb pvT" data-k="'+t.k+'" aria-label="Preview '+esc(t.n)+'">'+mini(t.k, SAMPLE)+'</button>'
-        +'<div class="wbody"><div class="t">'+esc(t.n)+(t.k===DEF?' <span class="badge2 sub">Store default</span>':'')+'</div>'
-        +'<div class="m"><b>Best for:</b> '+esc(t.best)+'</div><div class="m"><b>Shows:</b> '+esc(t.show)+'</div>'
-        +'<div class="m u">Used on '+used+' product'+(used===1?'':'s')+'</div>'
-        +'<div class="wacts"><button class="lnk pvT" data-k="'+t.k+'">Preview</button><button class="lnk edT" data-k="'+t.k+'">Edit design &#8599;</button>'+(t.k===DEF?'':'<button class="lnk mkD" data-k="'+t.k+'">Make default</button>')+'</div></div></div>';
-    }).join('');
+    if(!libBuilt && !$('tabLib').classList.contains('hide')){
+      libBuilt=true;
+      $('wlib').innerHTML='';
+      TPL.forEach(function(t){
+        var c=document.createElement('div'); c.className='wcard'; c.dataset.k=t.k;
+        var th=document.createElement('button'); th.className='wthumb pvT'; th.dataset.k=t.k; th.setAttribute('aria-label','Preview '+t.n);
+        th.appendChild(frame(t.k, PRODS[0], 'thumb'));
+        var b=document.createElement('div'); b.className='wbody';
+        c.appendChild(th); c.appendChild(b); $('wlib').appendChild(c);
+      });
+    }
+    [].slice.call($('wlib').querySelectorAll('.wcard')).forEach(function(c){ c.querySelector('.wbody').innerHTML=cardBody(tpl(c.dataset.k)); });
   }
 
+  // ---------- picker: the widget list next to a real preview ----------
+  function openPicker(o){
+    // o.pid = one product, o.ids = bulk, o.k = start widget (library)
+    var ids=o.ids || (o.pid?[o.pid]:null), inPlan=PRODS.filter(function(x){ return x.plans.length; });
+    var pv=prod(o.pid || (ids&&ids[0]) || inPlan[0].id), cur=o.k || (o.pid ? (pv.w||DEF) : DEF);
+    var back=document.createElement('div'); back.className='mback';
+    var title = ids ? (ids.length>1 ? 'Widget for '+ids.length+' products' : 'Widget for '+esc(pv.t)) : 'Widget preview';
+    back.innerHTML='<div class="modal wpk" role="dialog" aria-modal="true"><div class="mhdr"><h3>'+title+'</h3><button class="mclose" data-close="1" aria-label="Close">&#10005;</button></div>'
+      +'<div class="pkbody"><div class="pklist">'+TPL.map(function(t){ return '<button class="pkrow" data-k="'+t.k+'"><span class="rd"></span><span class="tx"><b>'+esc(t.n)+(t.k===DEF?' <span class="badge2 sub">Default</span>':'')+'</b><small>'+esc(t.best)+'</small></span></button>'; }).join('')+'</div>'
+      +'<div class="pkstage"><div class="pkhead"><label>Previewing on <select class="wsel" id="pkP">'+inPlan.map(function(x){ return '<option value="'+x.id+'">'+esc(x.t)+'</option>'; }).join('')+'</select></label></div>'
+      +'<div class="pkshow" id="pkShow"></div><div class="m pkwhat" id="pkWhat"></div></div></div>'
+      +'<div class="mfoot"><span class="wwarn" id="pkWarn"></span><span class="macts"><button class="pbtn" data-close="1">Cancel</button><button class="pbtn primary" id="pkGo"></button></span></div></div>';
+    document.body.appendChild(back);
+    var pS=back.querySelector('#pkP'); pS.value=pv.id;
+    function draw(){
+      back.querySelectorAll('.pkrow').forEach(function(r){ r.classList.toggle('on', r.dataset.k===cur); });
+      var p=prod(pS.value), t=tpl(cur);
+      var show=back.querySelector('#pkShow'); show.innerHTML=''; show.appendChild(frame(cur, p, 'big'));
+      back.querySelector('#pkWhat').innerHTML='<b>Shows</b> '+esc(t.show);
+      back.querySelector('#pkWarn').textContent=warnWith(p, cur);
+      var go=back.querySelector('#pkGo');
+      if(ids){ var same=ids.every(function(id){ return (prod(id).w||DEF)===cur; }); go.textContent= same ? 'In use' : (ids.length>1 ? 'Use on '+ids.length+' products' : 'Use this widget'); go.disabled=same; }
+      else { go.textContent= cur===DEF ? 'Store default' : 'Make store default'; go.disabled = cur===DEF; }
+    }
+    pS.onchange=draw; draw();
+    back.addEventListener('click', function(e){
+      if(e.target===back || e.target.closest('[data-close]')){ back.remove(); return; }
+      var r=e.target.closest('.pkrow'); if(r){ cur=r.dataset.k; draw(); return; }
+      if(e.target.id==='pkGo' && !e.target.disabled){
+        if(ids){ ids.forEach(function(id){ prod(id).w = cur===DEF ? null : cur; }); sel.clear(); toast((ids.length>1 ? ids.length+' products now show ' : prod(ids[0]).t+' now shows ')+tpl(cur).n+'.'); }
+        else { DEF=cur; toast('Store default is now '+tpl(DEF).n+'.'); }
+        back.remove(); render();
+      }
+    });
+  }
+
+  // ---------- wiring ----------
   $('planF').innerHTML='<option value="all">All plans</option>'+Object.keys(PLANS).map(function(id){ return '<option value="'+id+'">'+esc(PLANS[id].n)+'</option>'; }).join('')+'<option value="none">Not in a plan</option>';
-  $('planF').value=PLANS[planQ]||planQ==='none'?planQ:'all';
+  $('planF').value = (PLANS[planQ] || planQ==='none') ? planQ : 'all';
   $('planF').addEventListener('change', function(){ planQ=this.value; sel.clear(); render(); });
   $('q').addEventListener('input', render);
   $('wtbl').addEventListener('change', function(e){
-    var row=e.target.closest('.wrow'), id=row&&row.dataset.id, p=PRODS.filter(function(x){ return x.id===id; })[0];
     if(e.target.id==='all'){ if(sel.size) sel.clear(); else visible().forEach(function(x){ if(x.plans.length) sel.add(x.id); }); render(); return; }
-    if(e.target.id==='bulkSel'){ if(e.target.value==='-') return; var v=e.target.value||null, k=sel.size; PRODS.forEach(function(x){ if(sel.has(x.id)) x.w=v; }); sel.clear(); render(); toast(k+' product'+(k===1?'':'s')+' now show'+(k===1?'s ':' ')+tpl(v||DEF).n+'.'); return; }
-    if(!p) return;
-    if(e.target.classList.contains('rc')){ e.target.checked?sel.add(id):sel.delete(id); render(); return; }
-    if(e.target.classList.contains('ws')){ p.w=e.target.value||null; render(); toast(p.t+' now shows '+tpl(p.w||DEF).n+'.'); }
+    var row=e.target.closest('.wrow'); if(row && e.target.classList.contains('rc')){ e.target.checked?sel.add(row.dataset.id):sel.delete(row.dataset.id); render(); }
   });
-  $('tabSeg').addEventListener('click', function(e){ var b=e.target.closest('[data-tab]'); if(!b) return; this.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x===b); }); $('tabProd').classList.toggle('hide', b.dataset.tab!=='prod'); $('tabLib').classList.toggle('hide', b.dataset.tab!=='lib'); });
+  $('tabSeg').addEventListener('click', function(e){ var b=e.target.closest('[data-tab]'); if(!b) return; this.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x===b); }); $('tabProd').classList.toggle('hide', b.dataset.tab!=='prod'); $('tabLib').classList.toggle('hide', b.dataset.tab!=='lib'); renderLib(); });
   document.addEventListener('click', function(e){
-    if(e.target.closest('.mkD')){ DEF=e.target.closest('.mkD').dataset.k; render(); toast('Store default is now '+tpl(DEF).n+'.'); }
-    if(e.target.closest('.pvT')) openPreview(e.target.closest('.pvT').dataset.k);
-    if(e.target.closest('.pvP')){ var pp=PRODS.filter(function(x){ return x.id===e.target.closest('.pvP').dataset.id; })[0]; openPreview(pp.w||DEF, pp.id); }
-    if(e.target.closest('.edT')) toast('Opens the widget template editor for '+tpl(e.target.closest('.edT').dataset.k).n+'.');
+    var t=e.target.closest && e.target.closest('.wpick, #bulkGo, .pvT, .edT'); if(!t) return;
+    if(t.classList.contains('wpick')) openPicker({pid:t.dataset.id});
+    else if(t.id==='bulkGo') openPicker({ids:Array.from(sel)});
+    else if(t.classList.contains('pvT')) openPicker({k:t.dataset.k});
+    else toast('Opens the widget template editor for '+tpl(t.dataset.k).n+'.');
   });
   render();
 })();
