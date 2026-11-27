@@ -74,6 +74,30 @@
   .seg button.on{background:var(--p-primary);color:#fff}
   .seg button[disabled]{opacity:.4;cursor:not-allowed}
   .enhsep{border-top:1px solid var(--p-line2);margin:16px 0}
+  .tl{display:grid;align-items:center;row-gap:7px;column-gap:0;font-size:12px}
+  .tl .lb{color:var(--p-muted);font-size:11.5px;font-weight:500;padding-right:8px;white-space:nowrap}
+  .tl .lb.end0{padding-left:10px}
+  .tl .dn{justify-self:center;width:22px;height:22px;border-radius:50%;background:#fff;border:1.5px solid #8a8a8a;display:grid;place-items:center;font-weight:600;font-size:11px;color:var(--p-ink)}
+  .tl .dn.opt{border-style:dashed;color:var(--p-muted)}
+  .tl .gp{justify-self:center;color:var(--p-faint);font-size:11px;white-space:nowrap}
+  .tl .dc{justify-self:center;border-radius:6px;padding:0 6px;font-weight:600;font-size:11px;white-space:nowrap;background:#e4f4df;color:#0c5132}
+  .tl .dc.l1{background:#c6ebbb}.tl .dc.l2{background:#a6dd97}.tl .dc.l3{background:#7fcc6c}.tl .dc.l4{background:#57b443;color:#fff}
+  .tl .dc.mu{opacity:.55}
+  .tl .gf{justify-self:center;font-size:14px;line-height:1}
+  .tl .gf small{font-size:10px;font-weight:700;color:var(--p-muted);margin-left:1px}
+  .tl .bar{height:20px;display:flex;align-items:center;padding:0 8px;margin:0 1px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tl .bar.pre{background:#dfeaff;color:#1d4b8f}.tl .bar.auto{background:#ece2ff;color:#5b2a91}.tl .bar.payg{background:#ffeccc;color:#7a4b00}
+  .tl .end{font-size:11.5px;font-weight:600;color:var(--p-ink);padding-left:10px;white-space:nowrap}
+  .tlfoot{display:flex;flex-direction:column;gap:4px;margin-top:10px;padding-top:9px;border-top:1px dashed #d4d4d4;font-size:12px}
+  .adsub{margin-top:16px;display:flex;align-items:center;gap:8px}
+  .adsub .help{margin:0}
+  .adtbl{border:1px solid var(--p-line);border-radius:10px;margin-top:6px;background:#fff}
+  .adrow{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:8px 12px;font-size:12.5px;border-top:1px solid var(--p-line2)}
+  .adrow:first-child{border-top:0}
+  .adrow.cf{grid-template-columns:1fr auto}
+  .adrow code{font:600 12px ui-monospace,Menlo,monospace;background:#f1f1f1;border-radius:6px;padding:1px 7px}
+  .adrow .mu{color:var(--p-muted)}
+  a.lnk{text-decoration:none}
   .rnPre{margin-top:8px;background:var(--p-attn-bg);color:#5e4200;border-radius:8px;padding:8px 11px;font-size:12.5px}
   .rnPre b{color:#4a3500}
 
@@ -558,8 +582,17 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
               </div>
               <p class="noteline hide" id="adaptOffNote" style="color:var(--p-attn)">Not available: every buying option uses AutoPay (per delivery or after a partial prepay), which always checks out through Razorpay. Add a Prepaid or Pay as you go option to sell through a non-Shopify checkout.</p>
               <div id="adaptCfg" class="hide">
-                <p class="help" style="margin:12px 0 0">StackBack creates this product, plus a discount code for each buying option, so that checkout can sell the plan.</p>
-                <div class="adaptprod">
+                <div class="adsub"><b>How it's sold at checkout</b></div>
+                <span class="seg" id="adModeSeg" style="margin-top:6px"><button data-am="product" class="on">New product</button><button data-am="variant">Variant on the live product</button></span>
+                <div id="adVar" class="hide"><div class="adaptprod">
+                  <s-thumbnail size="small"></s-thumbnail>
+                  <div style="min-width:0">
+                    <div class="ap-t">Subscription variant</div>
+                    <div class="ap-m">Added to <span id="adVarN">1 product</span> in this plan &middot; created when you publish</div>
+                    <div class="ap-m" style="margin-top:2px">Needs one free option slot on each product.</div>
+                  </div>
+                </div></div>
+                <div class="adaptprod" id="adProd">
                   <s-thumbnail size="small" id="adaptThumb"></s-thumbnail>
                   <div style="min-width:0">
                     <div class="ap-t" id="adaptTitle">Fresh Juice Subscription</div>
@@ -568,6 +601,11 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                   </div>
                   <span class="ap-a"><button class="lnk" id="adaptEdit">Edit in Shopify &#8599;</button></span>
                 </div>
+                <div class="adsub"><b>Discount codes</b><span class="help">One per buying option, created when you publish</span></div>
+                <div class="adtbl" id="adCodes"></div>
+                <div class="adsub"><b>Conflicting automatic discounts</b><span class="badge2 attn" id="adConfN">2</span></div>
+                <div class="help">These don't combine with the codes above, so they can replace the plan's discount at checkout.</div>
+                <div class="adtbl" id="adConf"></div>
                 <p class="noteline">Covers Prepaid and Pay as you go options. Pay per delivery (AutoPay) always checks out through Razorpay.</p>
                 <p class="noteline hide" id="adaptCourseNote">Course plan: the product made for your checkout must carry each delivery's own price, and the full course total for prepaid. Dev to confirm before launch.</p>
               </div>
@@ -621,23 +659,13 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
               <div class="help" id="coHelp" style="margin-top:4px"></div>
             </div>
 
-            <div class="drow" id="ttdRow">
-              <div class="dtop">
-                <span class="dname">Order timing</span>
-                <span class="dact"><span class="badge2 attn">Not set up</span></span>
-              </div>
-              <div class="help" style="margin-top:4px">Days before each delivery that the order is placed (TTD). Not set yet, so the default of <b>7 days</b> applies.</div>
-              <div style="margin-top:8px"><button class="lnk" id="ttdGo">Set up order timing &#8594;</button></div>
-            </div>
-
             <div class="drow">
               <div class="dtop">
                 <span class="dname">Widget</span>
                 <span class="dact"><span class="badge2 info" id="wBadge">Goes live on publish</span></span>
               </div>
-              <div class="help" style="margin-top:4px">The widget this plan's products show. It goes live on them when you publish.</div>
-              <div class="wtpl"><span class="wlbl" style="margin:0">Widget template</span><span class="wname" id="wName">Subscription Widget</span><span class="badge2 sub">Default</span></div>
-              <div style="margin-top:8px"><button class="lnk" id="wSelect">Select widget &#8594;</button></div>
+              <div class="help" style="margin-top:4px">Each product shows the widget assigned to it in Widgets.</div>
+              <div style="margin-top:8px"><a class="lnk" id="wSelect" href="Widgets_Polaris_v1.html#plan=fj" target="_blank">Assign widgets &#8594;</a></div>
             </div>
 
             <div class="drow">
@@ -645,7 +673,8 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                 <span class="dname">Landing page</span>
                 <span class="dact"><span class="badge2 sub">Not created</span></span>
               </div>
-              <div class="help" style="margin-top:4px">A shareable page for just this plan. <button class="lnk">Create in Portal &#8594;</button></div>
+              <div class="help" style="margin-top:4px">A shareable page for just this plan.</div>
+              <div style="margin-top:8px"><button class="lnk" id="lpGo">Go to Landing pages &#8594;</button></div>
             </div>
           </div></div>
 
@@ -790,7 +819,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       $('pvNote').classList.toggle('hide', !hasCol);
       aseg.querySelector('[data-lvl="pv"]').textContent='Products & Variants'+(pc.prods?' ('+pc.prods+')':'');
       aseg.querySelector('[data-lvl="collection"]').textContent='Collections'+(hasCol?' ('+S.cols.length+')':'');
-      $('adaptVars').textContent=plural(c.vars,'variant');
+      $('adaptVars').textContent=plural(c.vars,'variant'); $('adVarN').textContent=plural(c.prods,'product');
     }
 
     var aseg=$('applyseg');
@@ -1105,6 +1134,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     document.addEventListener('change', function(e){ if(e.target.closest('.optcard .discType')) renderOptionChecks(false); });
 
     // ---------- per-card buying-option editor (scoped) ----------
+    var TTD_DAYS=7, TTD_SET=false;   // store's order timing; default 7 days until set in Settings
     var PAYG_LABEL='by invoice and email reminder (pay-as-you-go)', LAD_MAX=10;   // rows in all; discount steps cap at 5 (LD-01)
     function ord(n){ var s=['th','st','nd','rd'], v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); }
     // one discount table: one discount level = flat, more = ladder (saved as LD-01 flat / ladder)
@@ -1149,6 +1179,51 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         else if(dur==='choice' && n>=mm.min) msg='Customers who pick '+n+' or fewer deliveries prepay all of them and never use AutoPay.';
         ppErr.textContent=msg; ppErr.classList.toggle('hide', !msg);
       }
+      function fmtShort(v){ return card.querySelector('.discType').value==='amt' ? '&#8377;'+v : v+'%'; }
+      card._discText=function(){ var L=card._lad, parts=[], prev=null; L.forEach(function(s,i){ if(s.value!==prev) parts.push(fmtVal(card,s.value)+(i===0?'':' from '+ord(s.n))); prev=s.value; }); return parts.length===1 ? parts[0]+' off' : parts.join(' &rsaquo; '); };
+      // visual breakup: deliveries across, rows for discount, gifts and each payment type; TTD under it
+      function breakupHTML(){
+        var mode=curDur(), mm=minMax(), L=card._lad, last=L[L.length-1].n, pp=on(payPart)?Math.max(1,ppN()):0;
+        var N = mode==='fixed' ? (parseInt(schedFixed.querySelector('.field').textContent,10)||1) : mode==='choice' ? Math.max(mm.min,mm.max,1) : Math.max(last, pp+1, 4);
+        var keys={1:1}; L.forEach(function(s){ keys[s.n]=1; }); if(pp){ keys[pp]=1; keys[pp+1]=1; } if(mode==='choice') keys[mm.min]=1; keys[N]=1;
+        if(N<=8) for(var k=1;k<=N;k++) keys[k]=1;
+        var ns=Object.keys(keys).map(Number).filter(function(n){ return n>=1 && n<=N; }).sort(function(a,b){ return a-b; }), C=[];
+        ns.forEach(function(n,i){ if(i && n-ns[i-1]>1) C.push({gap:1, a:ns[i-1]+1, b:n-1, n:ns[i-1]+1}); C.push({n:n}); });
+        if(mode==='none') C.push({more:1, n:N+1});
+        var types=[]; if(on(payPre)) types.push('pre'); if(on(payAuto)) types.push('auto'); if(on(payPart)) types.push('part'); if(on(payGo)) types.push('payg');
+        if(!types.length) return '<span class="help">Pick a payment type to see how this option runs.</span>';
+        var lv=[], prev=null; L.forEach(function(s){ if(s.value!==prev) lv.push(s.value); prev=s.value; });
+        function discAt(n){ var v=L[0].value; L.forEach(function(s){ if(s.n<=n) v=s.value; }); return v; }
+        function giftsAt(n){ var g=[]; L.forEach(function(s){ if(s.n===n) g=g.concat(s.gifts); }); return g; }
+        var endCol=C.length+2, h='<div class="tl" style="grid-template-columns:100px repeat('+C.length+',minmax(30px,1fr)) 84px">';
+        h+='<span class="lb" style="grid-column:1">Delivery</span>';
+        C.forEach(function(c){
+          if(c.gap) h+='<span class="gp" title="Deliveries '+c.a+' to '+c.b+'">'+(c.a===c.b?c.a:c.a+'-'+c.b)+'</span>';
+          else if(c.more) h+='<span class="gp" title="Continues until the customer cancels">&hellip;</span>';
+          else h+='<span class="dn'+(mode==='choice' && c.n>mm.min?' opt':'')+'">'+c.n+'</span>';
+        });
+        h+='<span class="lb end0" style="grid-column:'+endCol+'">At the end</span>';
+        h+='<span class="lb" style="grid-column:1">Discount</span>';
+        C.forEach(function(c){ var v=discAt(c.n); h+='<span class="dc l'+Math.min(lv.indexOf(v),4)+(c.gap||c.more?' mu':'')+'">'+fmtShort(v)+'</span>'; });
+        if(L.some(function(s){ return s.gifts.length; })){
+          h+='<span class="lb" style="grid-column:1">Free gift</span>';
+          C.forEach(function(c){ var g=(c.gap||c.more)?[]:giftsAt(c.n), q=g.reduce(function(a,x){ return a+(x.q||1); },0);
+            h+= g.length ? '<span class="gf" title="'+esc(g.map(function(x){ return ((x.q||1)>1?x.q+' x ':'')+giftLabel(x.g); }).join(', '))+'">&#127873;'+(q>1?'<small>'+q+'</small>':'')+'</span>' : '<span></span>'; });
+        }
+        var LBL={pre:'Prepaid',auto:'AutoPay',part:'Partial prepaid',payg:'Pay as you go'}, m=rnMode();
+        types.forEach(function(t){
+          var txt = t==='part' ? {pre:'Paid at checkout',auto:'AutoPay'} : {pre:'Paid at checkout',auto:'Charged before each',payg:'Invoice each delivery'};
+          var cls=C.map(function(c){ return t==='part' ? (c.n<=pp?'pre':'auto') : t; });
+          h+='<span class="lb" style="grid-column:1">'+LBL[t]+'</span>';
+          for(var i=0;i<cls.length;){ var j=i; while(j+1<cls.length && cls[j+1]===cls[i]) j++; h+='<span class="bar '+cls[i]+'" style="grid-column:'+(i+2)+' / '+(j+3)+'">'+txt[cls[i]]+'</span>'; i=j+1; }
+          var end = mode==='none' ? 'Until cancelled' : m==='stop' ? 'Ends' : m==='ask' || t==='pre' ? 'Renewal link' : 'Renews';
+          h+='<span class="end" style="grid-column:'+endCol+'">'+end+'</span>';
+        });
+        h+='</div><div class="tlfoot">';
+        if(mode==='choice') h+='<span>Dashed: the customer can stop before this delivery.</span>';
+        h+='<span>&#128339; Order placed <b>'+TTD_DAYS+' days</b> before each delivery (TTD)'+(TTD_SET?'':' <span class="badge2 attn">Store default</span> <button class="lnk ttdGo">Set up order timing &#8594;</button>')+'</span></div>';
+        return h;
+      }
       function renderDeliveryPreview(){
         var mode=curDur(), mm=minMax();
         var count = mode==='fixed' ? 'for the set number of deliveries' : mode==='choice' ? 'for the '+mm.min+' to '+mm.max+' deliveries the customer picks' : 'with no end date';
@@ -1158,10 +1233,8 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         if(on(payPart)) parts.push('prepay the first '+ppN()+' deliveries at checkout, then AutoPay charges each later delivery '+(mode==='none'?'until they cancel':mode==='choice'?'up to the number they picked':'until the plan ends'));
         if(on(payGo)) parts.push('pay as you go '+count+', billed by invoice and email reminder as each delivery ships');
         var body = !parts.length ? 'no payment option is selected yet' : parts.length===1 ? 'the customer will '+parts[0] : 'the customer chooses to '+parts.join('; or to ');
-        var html='<b>When delivery happens:</b> '+body+'.';
-        html+='<br><b>Discount on the widget:</b> '+ladderLine();
-        var rl=renewLine(card, curDur(), on(payPre)); if(rl) html+='<br><b>When it ends:</b> '+rl+'.';
-        deliveryPreview.innerHTML=html;
+        deliveryPreview.innerHTML=breakupHTML();
+        if(typeof renderAdaptCodes==='function') renderAdaptCodes();
       }
       function syncPay(){
         var prepaid=on(payPre), pd=perDel(), lines=[];
@@ -1382,10 +1455,25 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     document.addEventListener('sb:pay', function(){ renderRenewPlan(); });
     function updateEnhSummary(){ var on=adaptOn(), m=rnMode(), txt=(on?'Non-Shopify checkout on':'Non-Shopify checkout off')+' \u00b7 '+rnLabel(); setSumRow($('sumEnh'), on || m!=='stop', txt); steps[3].querySelector('.collsum').textContent=txt; }
     function adaptOn(){ return !!adaptSw.checked; }
+    // store's automatic discounts that don't combine with product discount codes (read from Shopify)
+    var AUTO_DISC=[{t:'Winter Sale: 20% off all juices'},{t:'Buy 2, get 10% off'}];
+    function renderAdaptCodes(){
+      var box=$('adCodes'); if(!box || !AUTO_DISC) return;
+      var pn=(typeof planName!=='undefined' && planName && planName.value) || 'Plan',
+          pre=pn.replace(/[^A-Za-z ]/g,'').split(/\s+/).filter(Boolean).map(function(w){ return w[0]; }).join('').toUpperCase().slice(0,4) || 'SB', rows=[];
+      [].slice.call(document.querySelectorAll('.optcard[data-opt]')).forEach(function(c,i){
+        if(!c.querySelector('.pay-prepaid.on,.pay-payg.on')) return;
+        rows.push('<div class="adrow"><code>SB-'+pre+'-'+(i+1)+'</code><span>'+esc(c.querySelector('.optsum .title').textContent)+'</span><span class="mu">'+(c._discText?c._discText():'')+'</span></div>');
+      });
+      box.innerHTML = rows.length ? rows.join('') : '<div class="adrow"><span class="mu">No Prepaid or Pay as you go option yet.</span></div>';
+      $('adConf').innerHTML = AUTO_DISC.map(function(d){ return '<div class="adrow cf"><span><b>'+esc(d.t)+'</b><br><span class="mu">Automatic &middot; doesn\'t combine with product discounts</span></span><button class="lnk adEditD">Edit in Shopify &#8599;</button></div>'; }).join('');
+      $('adConfN').textContent=AUTO_DISC.length;
+    }
+    document.addEventListener('click', function(e){ if(e.target.closest('.adEditD')) toast('Opens this discount in Shopify Discounts. Turn on combining with product discounts, or exclude the plan\'s products.'); });
     function renderAdapt(){
       var on=adaptOn(), txt = on ? 'Non-Shopify checkout on' : 'Non-Shopify checkout off';
       adaptCfg.classList.toggle('hide', !on);
-      updateEnhSummary();
+      updateEnhSummary(); renderAdaptCodes();
       $('adaptTitle').textContent = (planName && planName.value) || 'Untitled plan';
       renderCheckout();
     }
@@ -1422,10 +1510,11 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       renderAdapt();
     }
     document.addEventListener('sb:pay', renderAdaptAvail);
-    // Order timing (TTD): row shows only while the store has never configured it
-    var ttdOpened=false;
-    $('ttdGo').addEventListener('click', function(){ ttdOpened=true; toast('Opens Settings > Orders and scheduling in a new tab. Come back and Re-check.'); });
-    recheck.addEventListener('click', function(){ recheck.textContent='Checking…'; setTimeout(function(){ recheck.textContent='Re-check'; if(ttdOpened){ $('ttdRow').classList.add('hide'); toast('Order timing is set up.'); } },700); });
+    $('adModeSeg').addEventListener('click', function(e){ var b=e.target.closest('[data-am]'); if(!b) return; this.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x===b); }); $('adProd').classList.toggle('hide', b.dataset.am!=='product'); $('adVar').classList.toggle('hide', b.dataset.am!=='variant'); });
+    recheck.addEventListener('click', function(){ recheck.textContent='Checking…'; setTimeout(function(){ recheck.textContent='Re-check'; },700); });
+    // Order timing (TTD) lives in each option's breakup; store default until set in Settings
+    document.addEventListener('click', function(e){ if(e.target.closest('.ttdGo')) toast('Opens Settings > Orders and scheduling in a new tab.'); });
+    $('lpGo').addEventListener('click', function(){ toast('Opens Landing pages, where each plan can get its own page.'); });
 
     // ---------- widget template: one pick, with a switch notice ----------
     // Picking a template makes it live on this plan's products at publish. A product that shows a
@@ -1434,7 +1523,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     function renderWidget(){
       var name=TPL_NAMES[wTpl.value], has=groups(activeSet(), activeScope()).length>0;
       wBadge.textContent = has ? 'Goes live on publish' : 'No products yet'; wBadge.className = has ? 'badge2 info' : 'badge2 sub';
-      $('wName').textContent=name; $('wSelect').title='Opens Widgets to pick a different template';
+      $('wSelect').title='Opens Widgets, where you assign a widget to each product';
     }
 
     function renderAll(){ renderSelection(); renderWidget(); }
