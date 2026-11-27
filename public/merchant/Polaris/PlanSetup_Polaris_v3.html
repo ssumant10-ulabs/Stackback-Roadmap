@@ -85,7 +85,7 @@
   .tl .dc.mu{opacity:.55}
   .tl .gf{justify-self:center;font-size:14px;line-height:1}
   .tl .gf small{font-size:10px;font-weight:700;color:var(--p-muted);margin-left:1px}
-  .tl .bar{height:20px;display:flex;align-items:center;padding:0 8px;margin:0 1px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tl .bar{min-height:20px;box-sizing:border-box;display:flex;align-items:center;padding:2px 8px;margin:0 1px;border-radius:6px;font-size:11px;font-weight:600;line-height:1.25}
   .tl .bar.pre{background:#dfeaff;color:#1d4b8f}.tl .bar.auto{background:#ece2ff;color:#5b2a91}.tl .bar.payg{background:#ffeccc;color:#7a4b00}
   .tl .end{font-size:11.5px;font-weight:600;color:var(--p-ink);padding-left:10px;white-space:nowrap}
   .tlfoot{display:flex;flex-direction:column;gap:4px;margin-top:10px;padding-top:9px;border-top:1px dashed #d4d4d4;font-size:12px}
@@ -136,6 +136,7 @@
   .opteditor{border-top:1px solid var(--p-line2);padding:15px;background:#fbfbfb}
   .q{font-weight:600;margin:0 0 8px;font-size:13.5px}
   .qgroup{margin-bottom:16px}
+  .opteditor > .qgroup + .qgroup{border-top:1px solid var(--p-line2);padding-top:16px}
   .btnsm{border:1px solid var(--p-line);background:#fff;border-radius:8px;padding:4px 10px;font:inherit;font-size:12px;font-weight:600;color:var(--p-ink);cursor:pointer}
   .btnsm.ico-x{padding:4px 8px;color:var(--p-muted)}
   .btnghost{border:1px dashed var(--p-line);background:#fff;border-radius:8px;padding:6px 12px;font:inherit;font-size:12.5px;font-weight:500;color:var(--p-muted);cursor:pointer}
@@ -380,8 +381,6 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
 
     <s-page heading="Create subscription plan" inline-size="large">
       <s-link slot="breadcrumb-actions" href="#">Manage Purchase Options</s-link>
-      <s-button slot="secondary-actions">Save as draft</s-button>
-      <s-button slot="primary-action" variant="primary">Publish</s-button>
 
       <div class="pcols">
         <!-- ================= MAIN COLUMN ================= -->
@@ -631,7 +630,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
           <div class="card"><div class="cardpad">
             <div class="rowline" style="justify-content:space-between;margin-bottom:10px">
               <b style="font-size:13.5px">Plan summary</b>
-              <span class="badge2 info">Not live yet</span>
+              <span class="badge2 info" id="planState">Not live yet</span>
             </div>
             <div class="sumsteps">
               <div class="sumrow"><span class="sicon ok"></span><div><div class="sname">Plan name <span class="req-star">*</span></div><div class="sval">What customers see on the widget and at checkout.</div></div></div>
@@ -1212,16 +1211,16 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         }
         var LBL={pre:'Prepaid',auto:'AutoPay',part:'Partial prepaid',payg:'Pay as you go'}, m=rnMode();
         types.forEach(function(t){
-          var txt = t==='part' ? {pre:'Paid at checkout',auto:'AutoPay'} : {pre:'Paid at checkout',auto:'Charged before each',payg:'Invoice each delivery'};
+          var txt = {pre:'Paid at checkout',auto:'Charged before each delivery',payg:'Invoice each delivery'};
           var cls=C.map(function(c){ return t==='part' ? (c.n<=pp?'pre':'auto') : t; });
           h+='<span class="lb" style="grid-column:1">'+LBL[t]+'</span>';
-          for(var i=0;i<cls.length;){ var j=i; while(j+1<cls.length && cls[j+1]===cls[i]) j++; h+='<span class="bar '+cls[i]+'" style="grid-column:'+(i+2)+' / '+(j+3)+'">'+txt[cls[i]]+'</span>'; i=j+1; }
+          for(var i=0;i<cls.length;){ var j=i; while(j+1<cls.length && cls[j+1]===cls[i]) j++; h+='<span class="bar '+cls[i]+'" title="'+txt[cls[i]]+'" style="grid-column:'+(i+2)+' / '+(j+3)+'">'+txt[cls[i]]+'</span>'; i=j+1; }
           var end = mode==='none' ? 'Until cancelled' : m==='stop' ? 'Ends' : m==='ask' || t==='pre' ? 'Renewal link' : 'Renews';
           h+='<span class="end" style="grid-column:'+endCol+'">'+end+'</span>';
         });
         h+='</div><div class="tlfoot">';
         if(mode==='choice') h+='<span>Dashed: the customer can stop before this delivery.</span>';
-        h+='<span>&#128339; Order placed <b>'+TTD_DAYS+' days</b> before each delivery (TTD)'+(TTD_SET?'':' <span class="badge2 attn">Store default</span> <button class="lnk ttdGo">Set up order timing &#8594;</button>')+'</span></div>';
+        h+='<span>&#128339; Order placed <b>'+TTD_DAYS+' days</b> before each delivery (TTD)'+(TTD_SET?'':' <span class="badge2 attn">Store default</span>')+'</span></div>';
         return h;
       }
       function renderDeliveryPreview(){
@@ -1512,8 +1511,6 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     document.addEventListener('sb:pay', renderAdaptAvail);
     $('adModeSeg').addEventListener('click', function(e){ var b=e.target.closest('[data-am]'); if(!b) return; this.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x===b); }); $('adProd').classList.toggle('hide', b.dataset.am!=='product'); $('adVar').classList.toggle('hide', b.dataset.am!=='variant'); });
     recheck.addEventListener('click', function(){ recheck.textContent='Checking…'; setTimeout(function(){ recheck.textContent='Re-check'; },700); });
-    // Order timing (TTD) lives in each option's breakup; store default until set in Settings
-    document.addEventListener('click', function(e){ if(e.target.closest('.ttdGo')) toast('Opens Settings > Orders and scheduling in a new tab.'); });
     $('lpGo').addEventListener('click', function(){ toast('Opens Landing pages, where each plan can get its own page.'); });
 
     // ---------- widget template: one pick, with a switch notice ----------
@@ -1522,11 +1519,48 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     var wTpl={value:'subscription-widget'}, wBadge=$('wBadge');   // chosen in Widgets; this screen only shows it
     function renderWidget(){
       var name=TPL_NAMES[wTpl.value], has=groups(activeSet(), activeScope()).length>0;
-      wBadge.textContent = has ? 'Goes live on publish' : 'No products yet'; wBadge.className = has ? 'badge2 info' : 'badge2 sub';
+      var live=pState==='live';
+      wBadge.textContent = !has ? 'No products yet' : live ? 'Live' : 'Goes live on publish'; wBadge.className = !has ? 'badge2 sub' : live ? 'badge2 ok' : 'badge2 info';
       $('wSelect').title='Opens Widgets, where you assign a widget to each product';
     }
 
     function renderAll(){ renderSelection(); renderWidget(); }
+
+    // ---------- plan states: new > draft / live; a live plan can be duplicated or moved back to draft ----------
+    var PG=document.querySelector('s-page'), pState='new';
+    function pName(){ return (planName && planName.value) || 'Untitled plan'; }
+    function setPlanState(st){
+      pState=st;
+      PG.querySelectorAll('[data-pa]').forEach(function(e){ e.remove(); });
+      function btn(slot,label,key,primary){ var b=document.createElement('s-button'); b.setAttribute('slot',slot); if(primary) b.setAttribute('variant','primary'); b.dataset.pa=key; b.textContent=label; PG.insertBefore(b, PG.querySelector('.pcols')); }
+      if(st==='new'){ btn('secondary-actions','Save as draft','draft'); btn('primary-action','Publish','publish',1); }
+      if(st==='live'){ btn('secondary-actions','Duplicate','dup'); btn('secondary-actions','Move to draft','todraft'); btn('primary-action','Save','save',1); }
+      if(st==='draft'){ btn('secondary-actions','Duplicate','dup'); btn('primary-action','Publish','publish',1); }
+      PG.setAttribute('heading', st==='new' ? 'Create subscription plan' : pName());
+      renderWidget();
+      var b=$('planState'); b.textContent = st==='live' ? 'Live' : st==='draft' ? 'Draft' : 'Not live yet'; b.className='badge2 '+(st==='live'?'ok':st==='draft'?'sub':'info');
+    }
+    function confirmToDraft(){
+      var back=document.createElement('div'); back.className='mback';
+      back.innerHTML='<div class="modal" role="dialog" aria-modal="true" style="width:440px"><div class="mhdr"><h3>Move this plan to draft?</h3><button class="mclose" data-close="1" aria-label="Close">&#10005;</button></div>'+
+        '<div style="padding:14px 18px;font-size:13px">Customers can\'t subscribe to it until you publish again. Existing subscriptions keep running.</div>'+
+        '<div class="mfoot"><span></span><span class="macts"><button class="pbtn" data-close="1">Cancel</button><button class="pbtn primary" data-ok="1">Move to draft</button></span></div></div>';
+      document.body.appendChild(back);
+      back.addEventListener('click', function(e){
+        if(e.target===back || e.target.closest('[data-close]')) back.remove();
+        if(e.target.closest('[data-ok]')){ back.remove(); setPlanState('draft'); toast('Plan moved to draft.'); }
+      });
+    }
+    document.addEventListener('click', function(e){
+      var a=e.target.closest && e.target.closest('[data-pa]'); if(!a) return;
+      var k=a.dataset.pa;
+      if(k==='publish'){ setPlanState('live'); toast('Plan published. It\'s live on its products.'); }
+      if(k==='draft'){ setPlanState('draft'); toast('Saved as draft.'); }
+      if(k==='dup') toast('Copy created as a draft: '+pName()+' (copy).');
+      if(k==='todraft') confirmToDraft();
+      if(k==='save') toast('Saved. Changes apply to new subscriptions only.');
+    });
+    setPlanState(/live/.test(location.hash) ? 'live' : 'new');
     setLevel(S.cols.length && !S.pv.size ? 'collection' : 'pv'); renderAdaptAvail(); renderRenewPlan();
   })();
 </script>
