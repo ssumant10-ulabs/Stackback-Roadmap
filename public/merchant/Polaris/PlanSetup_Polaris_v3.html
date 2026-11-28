@@ -98,20 +98,20 @@
   .tlfoot .ttd{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;color:var(--p-muted)}
   .tlfoot .ttd svg{color:var(--p-muted)}
   .tlfoot{display:flex;flex-direction:column;gap:4px;margin-top:10px;padding-top:9px;border-top:1px dashed #d4d4d4;font-size:12px}
-  .adsub{margin-top:16px;display:flex;align-items:center;gap:8px}
-  .adsub .help{margin:0}
-  .adtbl{border:1px solid var(--p-line);border-radius:10px;margin-top:6px;background:#fff}
-  .adrow{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:8px 12px;font-size:12.5px;border-top:1px solid var(--p-line2)}
-  .adrow:first-child{border-top:0}
-  .adrow.cf{grid-template-columns:1fr auto}
-  .adrow .adcode{font:600 12px ui-monospace,Menlo,monospace;background:#f6f6f6;border:1px solid transparent;border-radius:6px;padding:3px 7px;width:128px;color:var(--p-ink);text-transform:uppercase}
-  .adrow .adcode:hover{border-color:#d4d4d4}.adrow .adcode:focus{border-color:#005bd3;background:#fff;outline:0}
-  .adrow .adcode[readonly]{border-color:transparent;background:#f1f1f1}
-  .adrow{grid-template-columns:auto 1fr auto auto}
-  .adrow.sub{border-top:1px dashed var(--p-line2)}
+  .cksub{margin-top:16px;display:flex;align-items:center;gap:8px}
+  .cksub .help{margin:0}
+  .cktbl{border:1px solid var(--p-line);border-radius:10px;margin-top:6px;background:#fff}
+  .ckrow{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:8px 12px;font-size:12.5px;border-top:1px solid var(--p-line2)}
+  .ckrow:first-child{border-top:0}
+  .ckrow.cf{grid-template-columns:1fr auto}
+  .ckrow .ckcode{font:600 12px ui-monospace,Menlo,monospace;background:#f6f6f6;border:1px solid transparent;border-radius:6px;padding:3px 7px;width:128px;color:var(--p-ink);text-transform:uppercase}
+  .ckrow .ckcode:hover{border-color:#d4d4d4}.ckrow .ckcode:focus{border-color:#005bd3;background:#fff;outline:0}
+  .ckrow .ckcode[readonly]{border-color:transparent;background:#f1f1f1}
+  .ckrow{grid-template-columns:auto 1fr auto auto}
+  .ckrow.sub{border-top:1px dashed var(--p-line2)}
   .tl .bar.gift{background:#fff1d6;color:#7a4b00;gap:5px}
   .gevery{display:block;margin-top:4px;font-size:11.5px}
-  .adrow .mu{color:var(--p-muted)}
+  .ckrow .mu{color:var(--p-muted)}
   a.lnk{text-decoration:none}
   .presets{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
   .preset{display:flex;flex-direction:column;gap:3px;text-align:left;border:1px solid var(--p-line);border-radius:10px;background:#fff;padding:10px 12px;font:inherit;cursor:pointer;color:var(--p-ink)}
@@ -242,10 +242,10 @@
   input[type=checkbox].ck{width:16px;height:16px;margin:0;accent-color:var(--p-primary);cursor:pointer;flex:none}
 
   /* v3: Adapt product card */
-  .adaptprod{display:flex;gap:12px;align-items:center;border:1px solid var(--p-line);border-radius:10px;padding:12px 14px;margin-top:12px;background:#fafafa}
-  .adaptprod .ap-t{font-weight:600}
-  .adaptprod .ap-m{font-size:12px;color:var(--p-muted)}
-  .adaptprod .ap-a{margin-left:auto;flex:none}
+  .ckprod{display:flex;gap:12px;align-items:center;border:1px solid var(--p-line);border-radius:10px;padding:12px 14px;margin-top:12px;background:#fafafa}
+  .ckprod .ap-t{font-weight:600}
+  .ckprod .ap-m{font-size:12px;color:var(--p-muted)}
+  .ckprod .ap-a{margin-left:auto;flex:none}
   .noteline{font-size:12px;color:var(--p-muted);margin-top:10px}
 
   /* v3: widget template picker + conflict notice */
@@ -617,17 +617,17 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
               </div>
               <p class="noteline hide" id="adaptOffNote" style="color:var(--p-attn)">Not available: every buying option uses AutoPay (per delivery or after a partial prepay), which always checks out through Razorpay. Add a Prepaid or Pay as you go option to sell through a non-Shopify checkout.</p>
               <div id="adaptCfg" class="hide">
-                <div class="adsub"><b>How it's sold at checkout</b></div>
-                <span class="seg" id="adModeSeg" style="margin-top:6px"><button data-am="product" class="on">New product</button><button data-am="variant">Variant on the live product</button></span>
-                <div id="adVar" class="hide"><div class="adaptprod">
+                <div class="cksub"><b>How it's sold at checkout</b></div>
+                <span class="seg" id="ckModeSeg" style="margin-top:6px"><button data-am="product" class="on">New product</button><button data-am="variant">Variant on the live product</button></span>
+                <div id="ckVar" class="hide"><div class="ckprod">
                   <s-thumbnail size="small"></s-thumbnail>
                   <div style="min-width:0">
                     <div class="ap-t">Subscription variant</div>
-                    <div class="ap-m">Added to <span id="adVarN">1 product</span> in this plan &middot; created when you publish</div>
+                    <div class="ap-m">Added to <span id="ckVarN">1 product</span> in this plan &middot; created when you publish</div>
                     <div class="ap-m" style="margin-top:2px">Priced like the product; the discount comes from the codes below. Needs one free option slot on each product.</div>
                   </div>
                 </div></div>
-                <div class="adaptprod" id="adProd">
+                <div class="ckprod" id="ckProd">
                   <s-thumbnail size="small" id="adaptThumb"></s-thumbnail>
                   <div style="min-width:0">
                     <div class="ap-t" id="adaptTitle">Fresh Juice Subscription</div>
@@ -636,11 +636,11 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
                   </div>
                   <span class="ap-a"><button class="lnk" id="adaptEdit">Edit in Shopify &#8599;</button></span>
                 </div>
-                <div class="adsub"><b>Discount codes</b><span class="help">One per buying option and discount level. <span id="adCodeNote"></span></span></div>
-                <div class="adtbl" id="adCodes"><div class="adrow"><span class="mu">Codes for each buying option appear here.</span></div></div>
-                <div class="adsub"><b>Conflicting automatic discounts</b><span class="badge2 attn" id="adConfN">2</span></div>
+                <div class="cksub"><b>Discount codes</b><span class="help">One per buying option and discount level. <span id="ckCodeNote"></span></span></div>
+                <div class="cktbl" id="ckCodes"><div class="ckrow"><span class="mu">Codes for each buying option appear here.</span></div></div>
+                <div class="cksub"><b>Conflicting automatic discounts</b><span class="badge2 attn" id="ckConfN">2</span></div>
                 <div class="help">These don't combine with the codes above, so they can replace the plan's discount at checkout.</div>
-                <div class="adtbl" id="adConf"><div class="adrow cf"><span><b>Winter Sale: 20% off all juices</b><br><span class="mu">Automatic &middot; doesn&#39;t combine with product discounts</span></span><button class="lnk adEditD">Edit in Shopify &#8599;</button></div><div class="adrow cf"><span><b>Buy 2, get 10% off</b><br><span class="mu">Automatic &middot; doesn&#39;t combine with product discounts</span></span><button class="lnk adEditD">Edit in Shopify &#8599;</button></div></div>
+                <div class="cktbl" id="ckConf"><div class="ckrow cf"><span><b>Winter Sale: 20% off all juices</b><br><span class="mu">Automatic &middot; doesn&#39;t combine with product discounts</span></span><button class="lnk ckEditD">Edit in Shopify &#8599;</button></div><div class="ckrow cf"><span><b>Buy 2, get 10% off</b><br><span class="mu">Automatic &middot; doesn&#39;t combine with product discounts</span></span><button class="lnk ckEditD">Edit in Shopify &#8599;</button></div></div>
                 <p class="noteline">Covers Prepaid and Pay as you go options. Pay per delivery (AutoPay) always checks out through Razorpay.</p>
                 <p class="noteline hide" id="adaptCourseNote">Course plan: the product made for your checkout must carry each delivery's own price, and the full course total for prepaid. Dev to confirm before launch.</p>
               </div>
@@ -857,7 +857,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       $('pvNote').classList.toggle('hide', !hasCol);
       aseg.querySelector('[data-lvl="pv"]').textContent='Products & Variants'+(pc.prods?' ('+pc.prods+')':'');
       aseg.querySelector('[data-lvl="collection"]').textContent='Collections'+(hasCol?' ('+S.cols.length+')':'');
-      $('adaptVars').textContent=plural(c.vars,'variant'); $('adVarN').textContent=plural(c.prods,'product');
+      $('adaptVars').textContent=plural(c.vars,'variant'); $('ckVarN').textContent=plural(c.prods,'product');
     }
 
     var aseg=$('applyseg');
@@ -1532,7 +1532,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     // store's automatic discounts that don't combine with product discount codes (read from Shopify)
     var AUTO_DISC=[{t:'Winter Sale: 20% off all juices'},{t:'Buy 2, get 10% off'}];
     function renderAdaptCodes(){
-      var box=$('adCodes'); if(!box || !AUTO_DISC) return;
+      var box=$('ckCodes'); if(!box || !AUTO_DISC) return;
       try{
       var pn=(typeof planName!=='undefined' && planName && planName.value) || 'Plan',
           pre=pn.replace(/[^A-Za-z ]/g,'').split(/\s+/).filter(Boolean).map(function(w){ return w[0]; }).join('').toUpperCase().slice(0,4) || 'SB', rows=[];
@@ -1546,22 +1546,22 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         runs.forEach(function(r,j){
           var code=c._codeEdit[j] || ('SB-'+pre+'-'+(i+1)+(runs.length>1 ? String.fromCharCode(65+j) : ''));
           var when = runs.length===1 ? 'every delivery' : r.b===null ? 'from delivery '+r.a : (r.a===r.b ? 'delivery '+r.a : 'deliveries '+r.a+' to '+r.b);
-          rows.push('<div class="adrow'+(j?' sub':'')+'"><input class="adcode" data-i="'+i+'" data-l="'+j+'" value="'+esc(code)+'" maxlength="24" aria-label="Discount code"'+(live?' readonly':'')+' /><span>'+(j?'':esc(c.querySelector('.optsum .title').textContent))+'</span><span class="mu">'+(amt?'INR '+r.v:r.v+'%')+' off &middot; '+when+'</span>'+(live?'<button class="lnk adEditD">Edit in Shopify &#8599;</button>':'')+'</div>');
+          rows.push('<div class="ckrow'+(j?' sub':'')+'"><input class="ckcode" data-i="'+i+'" data-l="'+j+'" value="'+esc(code)+'" maxlength="24" aria-label="Discount code"'+(live?' readonly':'')+' /><span>'+(j?'':esc(c.querySelector('.optsum .title').textContent))+'</span><span class="mu">'+(amt?'INR '+r.v:r.v+'%')+' off &middot; '+when+'</span>'+(live?'<button class="lnk ckEditD">Edit in Shopify &#8599;</button>':'')+'</div>');
         });
       });
-      box.innerHTML = rows.length ? rows.join('') : '<div class="adrow"><span class="mu">No Prepaid or Pay as you go option yet.</span></div>';
-      $('adCodeNote').textContent = (typeof pState!=='undefined' && pState==='live') ? 'Codes live in Shopify Discounts now; rename them there.' : 'You can rename a code until you publish.';
-      $('adConf').innerHTML = AUTO_DISC.map(function(d){ return '<div class="adrow cf"><span><b>'+esc(d.t)+'</b><br><span class="mu">Automatic &middot; doesn\'t combine with product discounts</span></span><button class="lnk adEditD">Edit in Shopify &#8599;</button></div>'; }).join('');
-      $('adConfN').textContent=AUTO_DISC.length;
+      box.innerHTML = rows.length ? rows.join('') : '<div class="ckrow"><span class="mu">No Prepaid or Pay as you go option yet.</span></div>';
+      $('ckCodeNote').textContent = (typeof pState!=='undefined' && pState==='live') ? 'Codes live in Shopify Discounts now; rename them there.' : 'You can rename a code until you publish.';
+      $('ckConf').innerHTML = AUTO_DISC.map(function(d){ return '<div class="ckrow cf"><span><b>'+esc(d.t)+'</b><br><span class="mu">Automatic &middot; doesn\'t combine with product discounts</span></span><button class="lnk ckEditD">Edit in Shopify &#8599;</button></div>'; }).join('');
+      $('ckConfN').textContent=AUTO_DISC.length;
       }catch(err){ if(window.console) console.error('Discount codes', err); }
     }
     document.addEventListener('input', function(e){
-      var t=e.target.closest && e.target.closest('.adcode'); if(!t) return;
+      var t=e.target.closest && e.target.closest('.ckcode'); if(!t) return;
       var v=t.value.toUpperCase().replace(/[^A-Z0-9_-]/g,''); if(v!==t.value) t.value=v;
       var c=document.querySelectorAll('.optcard[data-opt]')[+t.dataset.i]; if(c){ c._codeEdit=c._codeEdit||{}; c._codeEdit[t.dataset.l]=v; }
     });
-    document.addEventListener('focusout', function(e){ var t=e.target.closest && e.target.closest('.adcode'); if(t && !t.value){ var c=document.querySelectorAll('.optcard[data-opt]')[+t.dataset.i]; if(c._codeEdit) delete c._codeEdit[t.dataset.l]; renderAdaptCodes(); toast('A code needs at least one character, so the default is back.'); } });
-    document.addEventListener('click', function(e){ if(e.target.closest('.adEditD')) toast('Opens this discount in Shopify Discounts. Turn on combining with product discounts, or exclude the plan\'s products.'); });
+    document.addEventListener('focusout', function(e){ var t=e.target.closest && e.target.closest('.ckcode'); if(t && !t.value){ var c=document.querySelectorAll('.optcard[data-opt]')[+t.dataset.i]; if(c._codeEdit) delete c._codeEdit[t.dataset.l]; renderAdaptCodes(); toast('A code needs at least one character, so the default is back.'); } });
+    document.addEventListener('click', function(e){ if(e.target.closest('.ckEditD')) toast('Opens this discount in Shopify Discounts. Turn on combining with product discounts, or exclude the plan\'s products.'); });
     function renderAdapt(){
       var on=adaptOn(), txt = on ? 'Non-Shopify checkout on' : 'Non-Shopify checkout off';
       adaptCfg.classList.toggle('hide', !on);
@@ -1602,7 +1602,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       renderAdapt();
     }
     document.addEventListener('sb:pay', renderAdaptAvail);
-    $('adModeSeg').addEventListener('click', function(e){ var b=e.target.closest('[data-am]'); if(!b) return; this.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x===b); }); $('adProd').classList.toggle('hide', b.dataset.am!=='product'); $('adVar').classList.toggle('hide', b.dataset.am!=='variant'); });
+    $('ckModeSeg').addEventListener('click', function(e){ var b=e.target.closest('[data-am]'); if(!b) return; this.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x===b); }); $('ckProd').classList.toggle('hide', b.dataset.am!=='product'); $('ckVar').classList.toggle('hide', b.dataset.am!=='variant'); });
     recheck.addEventListener('click', function(){ recheck.textContent='Checking…'; setTimeout(function(){ recheck.textContent='Re-check'; },700); });
     $('lpGo').addEventListener('click', function(){ toast('Opens Landing pages, where each plan can get its own page.'); });
 
@@ -1672,7 +1672,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
         if(!c.querySelector('.pay-prepaid.on,.pay-auto.on,.pay-part.on,.pay-payg.on')) E.push({t:nm+': pick a payment type.', el:c});
         ['.ppErr','.chErr','.cmErr','.ladwarn'].forEach(function(sl){ var el=c.querySelector(sl); if(el && !el.classList.contains('hide') && el.textContent.trim()) E.push({t:nm+': '+el.textContent.trim(), el:c}); });
       });
-      if(adaptOn()){ var seen={}; document.querySelectorAll('.adcode').forEach(function(i){ var v=i.value.trim(); if(!v) E.push({t:'A discount code is empty.', el:i}); else if(seen[v]) E.push({t:'Discount code '+v+' is used twice.', el:i}); seen[v]=1; }); }
+      if(adaptOn()){ var seen={}; document.querySelectorAll('.ckcode').forEach(function(i){ var v=i.value.trim(); if(!v) E.push({t:'A discount code is empty.', el:i}); else if(seen[v]) E.push({t:'Discount code '+v+' is used twice.', el:i}); seen[v]=1; }); }
       return E;
     }
     function goTo(el){
