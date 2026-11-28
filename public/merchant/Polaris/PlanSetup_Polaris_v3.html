@@ -746,7 +746,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     // w = the widget a product shows today (from another plan); drives the widget-switch notice.
     var CATALOG=[
       {id:'p1',t:'Organic Cold-Pressed Juice',w:'multi-frequency',other:'Juice Cleanse Weekly',v:[['500ml',180],['1L',320],['2L',590]]},
-      {id:'p2',t:'Green Detox Juice',w:'single-plan',v:[['300ml',150],['500ml',230]]},
+      {id:'p2',t:'Green Detox Juice',w:'single-plan',tpl:'product.alt',v:[['300ml',150],['500ml',230]]},
       {id:'p3',t:'Beetroot Ginger Shot',v:[['6 x 60ml',299],['12 x 60ml',549]]},
       {id:'p4',t:'Orange Carrot Juice',v:[['500ml',190],['1L',340]]},
       {id:'p5',t:'Watermelon Mint Cooler',v:[['500ml',170]]},
@@ -781,7 +781,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
     function coll(id){ return COLLECTIONS.find(function(x){ return x.id===id; }); }
     // S.cols = chosen collections; S.sync[cid] = auto-add new products (off = snapshot); S.col = included variants
     var NOBLOCK={'product.alt':true};   // product templates where the StackBack widget block is not added yet
-    var S={ mode:'pv', pv:new Set(['p1-0','p1-1']), cols:[], sync:{}, col:new Set() };
+    var S={ mode:'pv', pv:new Set(['p1-0','p1-1','p2-0','p2-1']), cols:[], sync:{}, col:new Set() };
     function scopeOf(cids){ var ids={}; cids.forEach(function(c){ coll(c).p.forEach(function(p){ ids[p]=1; }); }); return CATALOG.filter(function(p){ return ids[p.id]; }); }
     function colScope(){ return scopeOf(S.cols); }
     // both lists apply: the plan = collection picks + extra single products
