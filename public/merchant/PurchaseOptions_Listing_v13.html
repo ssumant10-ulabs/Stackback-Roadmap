@@ -138,8 +138,8 @@
   .emptysub{font-size:13px;color:var(--muted);max-width:440px;line-height:1.55}
   .empty .btn{margin-top:8px}
   .emptyctas{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:8px}
-  .presetgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:8px;max-width:760px;width:100%}
-  .presetgrid.two{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:0}
+  .presetgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-top:8px;max-width:940px;width:100%}
+  .presetgrid.two{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:0}
   .presetc{display:flex;flex-direction:column;gap:3px;text-align:left;border:1px solid var(--line);border-radius:10px;background:#fff;padding:11px 13px;color:var(--ink);text-decoration:none;cursor:pointer}
   .presetc:hover{border-color:#8a8a8a;background:#fafafa}
   .presetc b{font-size:13px}.presetc span{font-size:12px;color:var(--muted);line-height:1.4}
@@ -294,7 +294,7 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       </div>
 
       <p class="pagenote">
-        <b>v13 change (2026-11-27):</b> + Create Plan opens a starter popup (Start from scratch, or a preset: Subscribe and save, Prepaid pack, Discount ladder, Course); the plan empty state offers the same four presets. Each opens Create subscription plan with that preset filled in.<br>
+        <b>v13 change (2026-11-27):</b> + Create Plan opens a starter popup (Start from scratch, or a preset: AutoPay subscription, Prepaid pack, Prepaid or pay per delivery, Discount ladder, Course); the plan empty state offers the same four presets. Each opens Create subscription plan with that preset filled in.<br>
         <b>v12 change:</b> bundle empty-state presets now use the same "Start with…" construction as the plan presets (Start with a fixed bundle / Build Your Box / Mix &amp; Match) for label hygiene.<br>
         <b>v11 changes:</b> the options column is renamed <b>Buying options</b> (plan + bundle + By-Product action + popup title). Added a <b>Draft</b> status with a <b>Publish</b> action (inline button on draft rows + in the ⋯ menu) and a <b>Draft</b> filter segment, reflecting the create screen's Save-as-draft. Removed the page-header <b>back button</b>. The <b>bundle empty state</b> offers bundle-type quick starts (Fixed / Build Your Box / Mix &amp; Match), mirroring the plan monthly/weekly presets.<br>
         <b>v10 changes:</b> the <b>By Product</b> view carries the plan-options popup too (a "View options" action in each expanded row, plus clicking a plan chip). Bundles can now be <b>one-time only</b> (a grey "One-time" payment capsule; their options popup shows a one-time purchase, no subscription schedule). <b>By Product now works for Bundles</b> (which bundles a product appears in). Empty state offers quick-start presets: <b>Start with a monthly plan / weekly plan</b> alongside Create plan.<br>
@@ -535,8 +535,9 @@ function emptyArt(){
 /* v13: plan presets. Each opens Create subscription plan with that preset filled in (#preset=...). */
 var PLAN_URL='Polaris/PlanSetup_Polaris_v3.html';
 var PRESETS=[
-  ['save','Subscribe and save','AutoPay or Pay as you go, 10% off, no end date'],
+  ['autopay','AutoPay subscription','Charged automatically before each delivery, 10% off, no end date'],
   ['prepaid','Prepaid pack','3 monthly deliveries paid upfront, 15% off'],
+  ['choice','Prepaid or pay per delivery','Customers pick upfront, AutoPay or Pay as you go, 6 monthly deliveries'],
   ['ladder','Discount ladder','10% now, 15% from delivery 3, 20% from delivery 5'],
   ['course','Course','A starter, then set products on later deliveries']
 ];
