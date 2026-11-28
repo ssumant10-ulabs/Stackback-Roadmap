@@ -1697,10 +1697,12 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       var c=document.querySelector('.optcard[data-opt]'); if(!c) return;
       var stb=steps[1].querySelector('.stepbody'); if(stb) stb.classList.remove('collapsed');
       if(c.querySelector('.opteditor').classList.contains('hide')) c.querySelector('.t-edit').click();
-      var want = k==='save' ? {auto:1,payg:1} : k==='prepaid' ? {prepaid:1} : {auto:1};
+      var want = k==='save' ? {auto:1,payg:1} : k==='prepaid' ? {prepaid:1} : k==='choice' ? {prepaid:1,auto:1,payg:1} : {auto:1};
       ['prepaid','auto','part','payg'].forEach(function(x){ var ch=c.querySelector('.pay-'+x); if(want[x] && !ch.classList.contains('on')) ch.click(); });
       ['prepaid','auto','part','payg'].forEach(function(x){ var ch=c.querySelector('.pay-'+x); if(!want[x] && ch.classList.contains('on')) ch.click(); });
       var f=c.querySelector('.sched-fixed').closest('.ssent').querySelectorAll('.field');
+      if(k==='autopay'){ f[0].textContent='1'; f[1].textContent='month'; c.querySelector('[data-dur="none"]').click(); c._lad=[{n:1,value:10,gifts:[]}]; c.querySelector('.optsum .title').innerHTML='Every month &middot; no end date'; }
+      if(k==='choice'){ f[0].textContent='1'; f[1].textContent='month'; c.querySelector('[data-dur="fixed"]').click(); f[2].textContent='6'; c._lad=[{n:1,value:10,gifts:[]}]; c.querySelector('.optsum .title').innerHTML='Every month &middot; 6 deliveries'; }
       if(k==='save'){ f[0].textContent='1'; f[1].textContent='month'; c.querySelector('[data-dur="none"]').click(); c._lad=[{n:1,value:10,gifts:[]}]; c.querySelector('.optsum .title').innerHTML='Every month &middot; no end date'; }
       if(k==='prepaid'){ f[0].textContent='1'; f[1].textContent='month'; c.querySelector('[data-dur="fixed"]').click(); f[2].textContent='3'; c._lad=[{n:1,value:15,gifts:[]}]; c.querySelector('.optsum .title').innerHTML='Every month &middot; 3 deliveries'; }
       if(k==='ladder'){ f[0].textContent='1'; f[1].textContent='month'; c.querySelector('[data-dur="fixed"]').click(); f[2].textContent='6'; c._lad=[{n:1,value:10,gifts:[]},{n:3,value:15,gifts:[]},{n:5,value:20,gifts:[]}]; c.querySelector('.optsum .title').innerHTML='Every month &middot; 6 deliveries'; }
