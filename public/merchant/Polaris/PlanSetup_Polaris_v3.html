@@ -118,8 +118,6 @@
   .preset:hover{border-color:#8a8a8a;background:#fafafa}
   .preset b{font-size:13px}.preset span{font-size:12px;color:var(--p-muted);line-height:1.35}
   .mpn{margin:8px 0 0}
-  .nbb{display:flex;gap:12px;align-items:center;justify-content:space-between;background:var(--p-attn-bg);color:#5e4200;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12.5px;line-height:1.45}
-  .nbb b{color:#4a3500}.nbb .pbtn{flex:none;padding:4px 10px;font-size:12px}
   .alsoin{display:block;order:9;flex-basis:100%;padding-left:46px;margin-top:-2px;font-size:12px;color:var(--p-attn)}
   .prow{flex-wrap:wrap}
   .wiss{margin-top:8px;background:var(--p-attn-bg);color:#5e4200;border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.5}
@@ -431,7 +429,6 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
               <span class="stepchev">&#8250;</span>
             </div>
             <div class="stepbody">
-              <div id="nbBanner"></div>
               <div class="rowline" style="margin-bottom:12px">
                 <span class="help" style="font-weight:600;text-transform:uppercase;letter-spacing:.04em">Apply to</span>
                 <span class="seg" id="applyseg">
@@ -841,13 +838,8 @@ so the shell is not drawn twice. Standalone viewing is unaffected. -->
       renderAll();
     }
 
-    function renderNoBlock(){
-      var nb=groups(activeSet(), CATALOG).filter(function(g){ return NOBLOCK[g.p.tpl]; }), el=$('nbBanner'); if(!el) return;
-      el.innerHTML = nb.length ? '<div class="nbb"><div><b>'+nb.length+' product'+(nb.length>1?'s':'')+' will show no widget.</b> '+nb.map(function(g){ return esc(g.p.t); }).join(', ')+' use'+(nb.length>1?'':'s')+' the '+esc(nb[0].p.tpl)+' template, which has no StackBack widget block.</div><button class="pbtn sm thGo">Open theme editor &#8599;</button></div>' : '';
-    }
     function renderSelection(){
       var pc=renderList($('pvList'), S.pv, CATALOG, 'pv');
-      renderNoBlock();
       $('pvCount').textContent=plural(pc.prods,'product')+' · '+plural(pc.vars,'variant');
       var hasCol=S.cols.length>0;
       $('colEmpty').classList.toggle('hide', hasCol); $('colFilled').classList.toggle('hide', !hasCol);
